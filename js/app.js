@@ -669,6 +669,7 @@ function getFilteredEmployees() {
     });
 }
 
+
 function renderRoster() {
     const body = safeGet('empBody');
     if (!body) return;
@@ -690,72 +691,8 @@ function renderRoster() {
               <button class="link-button" data-view-id="${esc(e.id)}" type="button">
                 ${esc(e.first)} ${esc(e.last)}
               </button>
-              ${(() => {
-            const riskMeta = currentAtRiskRosterMap[String(e.dbId)] || currentAtRiskRosterMap[String(e.id)];
-            if (!riskMeta) return '';
-
-            const lines = ['At-Risk Flag'];
-
-            if (riskMeta.manualReason) {
-                lines.push('', `Reason: ${riskMeta.manualReason}`);
-            }
-
-            if (riskMeta.lowReview && riskMeta.reviewScore !== null && riskMeta.reviewScore !== undefined) {
-                lines.push('', `Review Score: ${Number(riskMeta.reviewScore).toFixed(1)}`);
-            }
-
-            if (riskMeta.openIncidentCount > 0) {
-                lines.push('', `Open Incidents: ${riskMeta.openIncidentCount}`);
-            }
-
-            if (riskMeta.flaggedDate) {
-                const flaggedDateLabel = new Date(`${riskMeta.flaggedDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                lines.push('', `Flagged: ${flaggedDateLabel}`);
-            }
-
-            if (riskMeta.flaggedBy) {
-                lines.push('', `By: ${riskMeta.flaggedBy}`);
-            }
-
-            return `<span 
-        class="badge badge-leave" 
-        style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; font-weight:700;"
-        title="${esc(lines.join('\n'))}"
-    >
-        At-Risk
-    </span>`;
-        })()}
-              ${(() => {
-            const impactMeta = currentImpactPlayerRosterMap[String(e.dbId)] || currentImpactPlayerRosterMap[String(e.id)];
-            if (!impactMeta) return '';
-
-            const lines = ['Impact Player'];
-
-            if (impactMeta.manualReason) {
-                lines.push('', `Reason: ${impactMeta.manualReason}`);
-            }
-
-            if (impactMeta.highReview && impactMeta.reviewScore !== null && impactMeta.reviewScore !== undefined) {
-                lines.push('', `Review Score: ${Number(impactMeta.reviewScore).toFixed(1)}`);
-            }
-
-            if (impactMeta.flaggedDate) {
-                const flaggedDateLabel = new Date(`${impactMeta.flaggedDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                lines.push('', `Flagged: ${flaggedDateLabel}`);
-            }
-
-            if (impactMeta.flaggedBy) {
-                lines.push('', `By: ${impactMeta.flaggedBy}`);
-            }
-
-            return `<span 
-        class="badge" 
-        style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;"
-        title="${esc(lines.join('\n'))}"
-    >
-        Impact Player
-    </span>`;
-        })()}
+              ${buildRiskBadgeHtml(getEmployeeRiskMeta(e))}
+              ${buildImpactBadgeHtml(getEmployeeImpactMeta(e))}
             </div>
           </td>
           <td>${esc(e.dept || '')}</td>
@@ -774,129 +711,6 @@ function renderRoster() {
             if (employee) openDrawer(employee);
         });
     });
-}
-function updateEmployeeRowBadges(employeeId) {
-
-    const trigger = document.querySelector(`[data-view-id="${CSS.escape(String(employeeId))}"]`);
-
-    const row = trigger ? trigger.closest('tr') : null;
-
-    if (!row) return;
-
-    const employee = EMPLOYEES.find(e => String(e.id) === String(employeeId) || String(e.dbId) === String(employeeId));
-
-    if (!employee) return;
-
-    const container = row.querySelector('td:nth-child(2) > div');
-
-    if (!container) return;
-
-    container.querySelectorAll('.badge').forEach(el => el.remove());
-
-    const riskMeta = currentAtRiskRosterMap[String(employee.dbId)] || currentAtRiskRosterMap[String(employee.id)];
-
-    const impactMeta = currentImpactPlayerRosterMap[String(employee.dbId)] || currentImpactPlayerRosterMap[String(employee.id)];
-
-    const createBadge = (html) => {
-
-        const wrapper = document.createElement('div');
-
-        wrapper.innerHTML = html.trim();
-
-        return wrapper.firstElementChild;
-
-    };
-
-    if (riskMeta) {
-
-        const lines = ['At-Risk Flag'];
-
-        if (riskMeta.manualReason) lines.push('', `Reason: ${riskMeta.manualReason}`);
-
-        if (riskMeta.lowReview && riskMeta.reviewScore !== null && riskMeta.reviewScore !== undefined) {
-
-            lines.push('', `Review Score: ${Number(riskMeta.reviewScore).toFixed(1)}`);
-
-        }
-
-        if (riskMeta.openIncidentCount > 0) lines.push('', `Open Incidents: ${riskMeta.openIncidentCount}`);
-
-        if (riskMeta.flaggedDate) {
-
-            const flaggedDateLabel = new Date(`${riskMeta.flaggedDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-            lines.push('', `Flagged: ${flaggedDateLabel}`);
-
-        }
-
-        if (riskMeta.flaggedBy) lines.push('', `By: ${riskMeta.flaggedBy}`);
-
-        const badge = createBadge(`
-
-            <span
-
-                class="badge badge-leave"
-
-                style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; font-weight:700;"
-
-                title="${esc(lines.join('\n'))}"
-
-            >
-
-                At-Risk
-
-            </span>
-
-        `);
-
-        if (badge) container.appendChild(badge);
-
-    }
-
-    if (impactMeta) {
-
-        const lines = ['Impact Player'];
-
-        if (impactMeta.manualReason) lines.push('', `Reason: ${impactMeta.manualReason}`);
-
-        if (impactMeta.highReview && impactMeta.reviewScore !== null && impactMeta.reviewScore !== undefined) {
-
-            lines.push('', `Review Score: ${Number(impactMeta.reviewScore).toFixed(1)}`);
-
-        }
-
-        if (impactMeta.flaggedDate) {
-
-            const flaggedDateLabel = new Date(`${impactMeta.flaggedDate}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-            lines.push('', `Flagged: ${flaggedDateLabel}`);
-
-        }
-
-        if (impactMeta.flaggedBy) lines.push('', `By: ${impactMeta.flaggedBy}`);
-
-        const badge = createBadge(`
-
-            <span
-
-                class="badge"
-
-                style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;"
-
-                title="${esc(lines.join('\n'))}"
-
-            >
-
-                Impact Player
-
-            </span>
-
-        `);
-
-        if (badge) container.appendChild(badge);
-
-    }
-
 }
 
 function clearFilters() {
@@ -972,11 +786,18 @@ function renderKpiEmployeeMetrics() {
 
     setText('kActiveHC', active.length);
     setText('kDepartments', departments.length);
-    setText('kTurnoverRisk', turnoverRisk);
-    setText(
-        'kTurnoverRiskSub',
-        `${turnoverRiskContributors} employee${turnoverRiskContributors === 1 ? '' : 's'} contributing to risk`
-    );
+    if (typeof window.updateTurnoverRiskKpi === 'function') {
+        window.updateTurnoverRiskKpi(
+            turnoverRisk,
+            `${turnoverRiskContributors} employee${turnoverRiskContributors === 1 ? '' : 's'} contributing to risk`
+        );
+    } else {
+        setText('kTurnoverRisk', turnoverRisk);
+        setText(
+            'kTurnoverRiskSub',
+            `${turnoverRiskContributors} employee${turnoverRiskContributors === 1 ? '' : 's'} contributing to risk`
+        );
+    }
 
     const turnoverRiskCard = safeGet('kTurnoverRisk')?.closest('.kpi-card');
     if (turnoverRiskCard) {
@@ -987,7 +808,11 @@ function renderKpiEmployeeMetrics() {
     }
 
     setText('kOnLeave', onLeave);
-    setText('kReviewsDue', reviewsDue);
+    if (typeof window.updateReviewsDueKpi === 'function') {
+        window.updateReviewsDueKpi(reviewsDue);
+    } else {
+        setText('kReviewsDue', reviewsDue);
+    }
 
     const reviewsDueInfo = safeGet('kReviewsDueInfo');
     if (reviewsDueInfo) {
@@ -1219,8 +1044,7 @@ async function loadSummaryMetrics() {
 
         } else {
             console.error(manualRiskRes.error);
-            currentAtRiskRosterMap = {}
-            // Refresh roster so manual At-Risk badge is cleared
+            // Preserve existing manual state when the notes query fails.
             if (Array.isArray(EMPLOYEES) && EMPLOYEES.length) {
                 renderRoster();
             }
@@ -1262,7 +1086,7 @@ async function loadSummaryMetrics() {
             }
         } else {
             console.error(impactPlayerRes.error);
-            currentImpactPlayerRosterMap = {};
+            // Preserve existing impact player state when the notes query fails.
             if (Array.isArray(EMPLOYEES) && EMPLOYEES.length) {
                 renderRoster();
             }
@@ -1301,40 +1125,48 @@ async function loadSummaryMetrics() {
         const hasAnyData = !reviewsRes.error || !incidentsRes.error;
 
         if (hasAnyData) {
-            setText('kAtRiskEmployees', atRiskEmployees);
-            setText(
-                'kAtRiskEmployeesSub',
-                atRiskEmployees === 0
-                    ? 'No employees currently flagged from latest review scores or HR indicators'
-                    : `${atRiskEmployees} employee${atRiskEmployees === 1 ? '' : 's'} currently flagged by review score or incident activity`
-            );
+            if (typeof window.updateAtRiskKpi === 'function') {
+                window.updateAtRiskKpi(atRiskEmployees);
+            } else {
+                setText('kAtRiskEmployees', atRiskEmployees);
+                setText(
+                    'kAtRiskEmployeesSub',
+                    atRiskEmployees === 0
+                        ? 'No employees currently flagged from latest review scores or HR indicators'
+                        : `${atRiskEmployees} employee${atRiskEmployees === 1 ? '' : 's'} currently flagged by review score or incident activity`
+                );
+            }
         } else {
             setText('kAtRiskEmployees', '—');
             setText('kAtRiskEmployeesSub', 'Could not load review score data');
         }
 
-        const impactValueEl = safeGet('kImpactPlayers');
-        const impactSubEl = safeGet('kImpactPlayersSub');
+        if (typeof window.updateImpactPlayersKpi === 'function') {
+            window.updateImpactPlayersKpi(impactPlayers);
+        } else {
+            const impactValueEl = safeGet('kImpactPlayers');
+            const impactSubEl = safeGet('kImpactPlayersSub');
 
-        if (impactValueEl) {
-            impactValueEl.textContent = String(impactPlayers);
-        }
+            if (impactValueEl) {
+                impactValueEl.textContent = String(impactPlayers);
+            }
 
-        if (impactSubEl) {
-            impactSubEl.textContent = impactPlayers === 0
-                ? 'No employees currently flagged as high-impact contributors'
-                : `${impactPlayers} high-impact employee${impactPlayers === 1 ? '' : 's'} based on reviews or recognition`;
+            if (impactSubEl) {
+                impactSubEl.textContent = impactPlayers === 0
+                    ? 'No employees currently flagged as high-impact contributors'
+                    : `${impactPlayers} high-impact employee${impactPlayers === 1 ? '' : 's'} based on reviews or recognition`;
+            }
         }
     } catch (err) {
         console.error(err);
-        currentAtRiskRosterMap = {};
         if (Array.isArray(EMPLOYEES) && EMPLOYEES.length) {
             renderRoster();
         }
         setText('kOpenDiscipline', '—');
         setText('kAtRiskEmployees', '—');
         setText('kAtRiskEmployeesSub', 'Could not load review score data');
-
+        setText('kImpactPlayers', '—');
+        setText('kImpactPlayersSub', 'Could not load impact player data');
     }
 }
 async function loadReviewDashboard() {
@@ -1832,94 +1664,6 @@ async function loadRecentActivity() {
     }
 }
 
-function openDrawer(employee) {
-    resetDrawerForms();
-    currentEmployee = employee;
-    isCreatingEmployee = false;
-    applyRolePermissions();
-    switchTab('profile');
-
-    setText('drawerTitle', `${esc(employee.first)} ${esc(employee.last)}`);
-    setText('drawerSub', `${esc(employee.position || 'Employee')} • ${esc(employee.dept || 'No department')}`);
-    populateEmployeeAdminForm(employee);
-    ensureDeleteEmployeeButton();
-
-    const detailRows = [
-        ['Employee ID', employee.id],
-        ['Status', employee.status],
-        ['Department', employee.dept],
-        ['Position', employee.position],
-        ['Supervisor', employee.supervisor],
-        ['Pay Type', employee.payType],
-        ['Standard Hours', employee.stdHours],
-        ['Hire Date', fmtDate(employee.hireDate)],
-        ['Next Review', fmtDate(employee.nextReview)],
-        ['Anniversary', fmtDate(employee.anniversaryDate)],
-        ['Tenure Months', employee.tenureMonths],
-        ['Tenure Years', employee.tenureYears],
-        ['Benefits Status', employee.benefitsStatus],
-        ['Tenure Bracket', employee.tenureBracket]
-    ];
-
-    const details = safeGet('drawerDetails');
-    if (details) {
-        details.innerHTML = detailRows.map(([label, value]) => `
-      <div class="detail-card">
-        <div class="detail-label">${esc(label)}</div>
-        <div class="detail-value">${esc(value)}</div>
-      </div>
-    `).join('');
-    }
-
-    safeGet('notesHistory').innerHTML = '<div class="empty">Loading notes...</div>';
-    safeGet('disciplineHistory').innerHTML = '<div class="empty">Loading discipline history...</div>';
-    safeGet('meetingsHistory').innerHTML = '<div class="empty">Loading meetings...</div>';
-    safeGet('ecHistory').innerHTML = '<div class="empty">Loading emergency contact...</div>';
-    safeGet('docHistory').innerHTML = '<div class="empty">Loading documents...</div>';
-    safeGet('reviewsHistory').innerHTML = '<div class="empty">Loading reviews...</div>';
-
-    safeGet('drawerBackdrop')?.classList.add('open');
-    safeGet('employeeDrawer')?.classList.add('open');
-
-    loadEmployeeNotes(employee.id);
-
-    loadEmployeeDiscipline(employee.id);
-
-    loadEmployeeMeetings(employee.id);
-
-    loadEmergencyContacts(employee.id);
-
-    loadEmployeeDocuments(employee.id);
-
-    loadEmployeeReviews(employee.id);
-
-    loadEmployeeIncidents(employee.id);
-
-    loadStayInterviews(employee.id);
-
-    loadEmployeeManualAtRisk(employee.id);
-    loadEmployeeManualImpactPlayer(employee.id);
-
-    if (safeGet('markAtRiskBtn')) {
-
-        safeGet('markAtRiskBtn').onclick = markEmployeeAtRisk;
-
-    }
-
-    if (safeGet('clearAtRiskBtn')) {
-
-        safeGet('clearAtRiskBtn').onclick = clearAtRiskStatus;
-
-    }
-
-    if (safeGet('markImpactPlayerBtn')) {
-        safeGet('markImpactPlayerBtn').onclick = markImpactPlayer;
-    }
-
-    if (safeGet('clearImpactPlayerBtn')) {
-        safeGet('clearImpactPlayerBtn').onclick = clearImpactPlayerStatus;
-    }
-}
 
 function populateEmployeeAdminForm(employee) {
     if (!employee) return;

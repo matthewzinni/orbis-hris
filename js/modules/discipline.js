@@ -146,7 +146,81 @@ async function saveDisciplineReport() {
 
     const incident_date = safeGet('disciplineDate')?.value || '';
     const issue_type = safeGet('disciplineType')?.value || '';
-    const discipline_level = safeGet('disciplineLevel')?.value || '';
+    let discipline_level = safeGet('disciplineLevel')?.value || '';
+    // --- Auto Escalation Logic ---
+
+    let suggestedLevel = '';
+
+    try {
+
+        let escalationQuery = supabaseClient
+            .from('discipline_reports')
+            .select('id, discipline_level, issue_type, report_status')
+            .eq('employee_id', currentEmployee?.dbId || currentEmployee?.id);
+
+        if (currentDisciplineReportId) {
+            escalationQuery = escalationQuery.neq('id', currentDisciplineReportId);
+        }
+
+        const { data: priorRecords } = await escalationQuery;
+
+        const relevantRecords = (priorRecords || []).filter(r => String(r.report_status || '').toLowerCase() !== 'closed');
+
+        if (relevantRecords.length) {
+
+            const count = relevantRecords.length;
+
+            // Escalation ladder
+
+            if (count === 1) suggestedLevel = 'Level 2 - Verbal Warning';
+
+            else if (count === 2) suggestedLevel = 'Level 3 - Written Warning';
+
+            else if (count === 3) suggestedLevel = 'Level 4 - Final Warning';
+
+            else if (count >= 4) suggestedLevel = 'Level 5 - Termination';
+
+            // Repeat issue detection
+
+            const sameTypeCount = relevantRecords.filter(r => r.issue_type === issue_type).length;
+
+            if (sameTypeCount >= 2) {
+
+                showToast('⚠️ Repeat issue detected for this employee.', 'error');
+
+            }
+
+
+            const levelRank = (level) => {
+                if (!level) return 0;
+                if (String(level).startsWith('Level 1')) return 1;
+                if (String(level).startsWith('Level 2')) return 2;
+                if (String(level).startsWith('Level 3')) return 3;
+                if (String(level).startsWith('Level 4')) return 4;
+                if (String(level).startsWith('Level 5')) return 5;
+                return 0;
+            };
+
+            if (!discipline_level && suggestedLevel && safeGet('disciplineLevel')) {
+                safeGet('disciplineLevel').value = suggestedLevel;
+                discipline_level = suggestedLevel;
+                showToast(`Suggested Level: ${suggestedLevel}`);
+            }
+
+            if (discipline_level && suggestedLevel && levelRank(discipline_level) < levelRank(suggestedLevel)) {
+                showToast(`⚠️ Selected level is lower than recommended (${suggestedLevel}).`, 'error');
+                return;
+            }
+
+        }
+
+    } catch (e) {
+
+        console.warn('Escalation check failed', e);
+
+    }
+
+
     const description = safeGet('disciplineDescription')?.value.trim() || '';
     const action_taken = safeGet('disciplineAction')?.value.trim() || '';
     const report_status = safeGet('disciplineStatus')?.value || 'Open';
