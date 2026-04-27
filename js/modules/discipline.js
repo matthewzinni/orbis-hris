@@ -39,6 +39,9 @@ function startDisciplineEdit(record) {
     safeGet('disciplineAction').value = record.action_taken || '';
     safeGet('disciplineStatus').value = record.report_status || 'Open';
     if (safeGet('disciplineRefusedToSign')) safeGet('disciplineRefusedToSign').checked = record.refused_to_sign === true;
+    loadDisciplineSignature('disciplineEmployeeSignature', 'disciplineEmployeeSigStatus', record.employee_signature);
+    loadDisciplineSignature('disciplineManagerSignature', 'disciplineManagerSigStatus', record.manager_signature);
+    loadDisciplineSignature('disciplineWitnessSignature', 'disciplineWitnessSigStatus', record.witness_signature);
     if (safeGet('saveDisciplineBtn')) safeGet('saveDisciplineBtn').textContent = 'Update Discipline';
     safeGet('cancelDisciplineEditBtn')?.classList.remove('hidden');
     safeGet('disciplineEditStatus')?.classList.remove('hidden');
@@ -54,9 +57,91 @@ function cancelDisciplineEdit() {
     if (safeGet('disciplineAction')) safeGet('disciplineAction').value = '';
     if (safeGet('disciplineStatus')) safeGet('disciplineStatus').value = 'Open';
     if (safeGet('disciplineRefusedToSign')) safeGet('disciplineRefusedToSign').checked = false;
+    clearDisciplineSignature('disciplineEmployeeSignature', 'disciplineEmployeeSigStatus');
+    clearDisciplineSignature('disciplineManagerSignature', 'disciplineManagerSigStatus');
+    clearDisciplineSignature('disciplineWitnessSignature', 'disciplineWitnessSigStatus');
     if (safeGet('saveDisciplineBtn')) safeGet('saveDisciplineBtn').textContent = 'Save Discipline';
     safeGet('cancelDisciplineEditBtn')?.classList.add('hidden');
     safeGet('disciplineEditStatus')?.classList.add('hidden');
+}
+
+function getDisciplineSignature(canvasId) {
+    const canvas = document.getElementById(canvasId);
+    return canvas?.dataset.signature || '';
+}
+
+function clearDisciplineSignature(canvasId, statusId) {
+    if (typeof clearSig === 'function') {
+        clearSig(canvasId, statusId);
+        return;
+    }
+
+    const canvas = document.getElementById(canvasId);
+    const status = document.getElementById(statusId);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.dataset.signature = '';
+
+    if (status) {
+        status.textContent = 'Not signed';
+        status.style.color = '#667085';
+    }
+}
+
+function loadDisciplineSignature(canvasId, statusId, signatureData) {
+    const canvas = document.getElementById(canvasId);
+    const status = document.getElementById(statusId);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    canvas.dataset.signature = signatureData || '';
+
+    if (!signatureData) {
+        if (status) {
+            status.textContent = 'Not signed';
+            status.style.color = '#667085';
+        }
+        return;
+    }
+
+    const img = new Image();
+    img.onload = () => {
+        const rect = canvas.getBoundingClientRect();
+        ctx.drawImage(img, 0, 0, rect.width || canvas.width, rect.height || canvas.height);
+    };
+    img.src = signatureData;
+
+    if (status) {
+        status.textContent = 'Signed';
+        status.style.color = 'green';
+    }
+}
+
+function renderDisciplineSignatures(row) {
+    const signatures = [
+        { label: 'Employee Signature', value: row.employee_signature },
+        { label: 'Manager Signature', value: row.manager_signature },
+        { label: 'Witness Signature', value: row.witness_signature }
+    ];
+
+    if (!signatures.some(item => item.value)) return '';
+
+    return `
+      <div style="margin-top:14px; padding-top:12px; border-top:1px solid #e5e7eb;">
+        <strong>Signatures:</strong>
+        <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-top:10px;">
+          ${signatures.map(item => `
+            <div style="border:1px solid #e5e7eb; border-radius:10px; padding:8px; background:#fff; min-height:84px;">
+              ${item.value ? `<img src="${esc(item.value)}" alt="${esc(item.label)}" style="width:100%; height:56px; object-fit:contain; display:block;">` : `<div style="height:56px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px;">Not signed</div>`}
+              <div style="font-size:11px; color:#667085; margin-top:4px; text-align:center;">${esc(item.label)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
 }
 
 async function deleteDisciplineRecord(recordId) {
@@ -106,13 +191,17 @@ async function loadEmployeeDiscipline(employeeId) {
     }
 
     target.innerHTML = data.map(row => `
-        <div class="history-item">
-          <div class="history-top">
-            <div>
-              <div class="history-title">${esc(row.issue_type || 'Discipline')}</div>
-              <div class="history-date">${esc(row.incident_date || '')}</div>
+        <div class="discipline-record-card" style="padding:16px; margin-bottom:14px; border:1px solid #e5e7eb; border-radius:16px; background:#ffffff; box-shadow:0 8px 20px rgba(15,23,42,0.04); overflow:visible; min-height:auto; height:auto;">
+          <div style="display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:12px;">
+            <div style="min-width:0; flex:1;">
+              <div style="font-size:15px; line-height:1.3; font-weight:900; color:#111827; margin:0 0 4px; white-space:normal; overflow:visible; text-overflow:clip;">
+                ${esc(row.issue_type || 'Discipline')}
+              </div>
+              <div style="font-size:12px; line-height:1.4; color:#667085; white-space:normal; overflow:visible;">
+                ${esc(row.incident_date || '')}
+              </div>
             </div>
-            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:flex-end; max-width:58%;">
               <button class="button soft" type="button" data-edit-discipline-id="${esc(row.id)}">Edit</button>
               <button class="button danger" type="button" data-delete-discipline-id="${esc(row.id)}">Delete</button>
               <span class="badge badge-soft">${esc(row.report_status || 'Open')}</span>
@@ -120,14 +209,38 @@ async function loadEmployeeDiscipline(employeeId) {
               ${row.refused_to_sign === true ? '<span class="badge badge-inactive">Refused to Sign</span>' : ''}
             </div>
           </div>
-          <div class="history-body">
-            <strong>Issue Type:</strong> ${esc(row.issue_type || '')}<br>
-            ${row.discipline_level ? `<strong>Level:</strong> ${esc(row.discipline_level)}<br>` : ''}
-            <strong>Status:</strong> ${esc(row.report_status || 'Open')}<br>
-            <strong>Refused to Sign:</strong> ${row.refused_to_sign === true ? 'Yes' : 'No'}<br><br>
-            <strong>Description:</strong><br>${nl2br(row.description || '')}
-            <br><br>
-            <strong>Action Taken:</strong><br>${nl2br(row.action_taken || '')}
+
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-bottom:12px; font-size:13px; color:#334155; line-height:1.45;">
+            <div style="padding:10px; border:1px solid #f1f5f9; border-radius:12px; background:#f8fafc;">
+              <div style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">Issue Type</div>
+              <div style="font-weight:700; color:#111827; white-space:normal; overflow:visible;">${esc(row.issue_type || 'Not specified')}</div>
+            </div>
+            <div style="padding:10px; border:1px solid #f1f5f9; border-radius:12px; background:#f8fafc;">
+              <div style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">Status</div>
+              <div style="font-weight:700; color:#111827; white-space:normal; overflow:visible;">${esc(row.report_status || 'Open')}</div>
+            </div>
+            ${row.discipline_level ? `
+              <div style="padding:10px; border:1px solid #f1f5f9; border-radius:12px; background:#f8fafc;">
+                <div style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">Level</div>
+                <div style="font-weight:700; color:#111827; white-space:normal; overflow:visible;">${esc(row.discipline_level)}</div>
+              </div>
+            ` : ''}
+            <div style="padding:10px; border:1px solid #f1f5f9; border-radius:12px; background:#f8fafc;">
+              <div style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">Refused to Sign</div>
+              <div style="font-weight:700; color:#111827; white-space:normal; overflow:visible;">${row.refused_to_sign === true ? 'Yes' : 'No'}</div>
+            </div>
+          </div>
+
+          <div style="font-size:13px; line-height:1.55; color:#334155; white-space:normal; overflow:visible; word-break:break-word;">
+            <div style="margin-bottom:12px;">
+              <div style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px;">Description</div>
+              <div style="white-space:normal; overflow:visible;">${nl2br(row.description || '')}</div>
+            </div>
+            <div>
+              <div style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px;">Action Taken</div>
+              <div style="white-space:normal; overflow:visible;">${nl2br(row.action_taken || '')}</div>
+            </div>
+            ${renderDisciplineSignatures(row)}
           </div>
         </div>
       `).join('');
@@ -235,11 +348,22 @@ async function saveDisciplineReport() {
     const action_taken = safeGet('disciplineAction')?.value.trim() || '';
     const report_status = safeGet('disciplineStatus')?.value || 'Open';
     const refused_to_sign = safeGet('disciplineRefusedToSign')?.checked || false;
+    const employee_signature = document.getElementById('disciplineEmployeeSignature')?.dataset.signature || '';
+
+    const manager_signature = document.getElementById('disciplineManagerSignature')?.dataset.signature || '';
+
+    const witness_signature = document.getElementById('disciplineWitnessSignature')?.dataset.signature || '';
 
     if (!incident_date || !description) {
         showToast('Enter an incident date and description.', 'error');
         return;
     }
+
+    const isUpdatingDiscipline = !!currentDisciplineReportId;
+    const signatureFields = [];
+    if (employee_signature) signatureFields.push('employee_signature');
+    if (manager_signature) signatureFields.push('manager_signature');
+    if (witness_signature) signatureFields.push('witness_signature');
 
 
     let error;
@@ -255,6 +379,9 @@ async function saveDisciplineReport() {
                 action_taken,
                 report_status,
                 refused_to_sign,
+                employee_signature,
+                manager_signature,
+                witness_signature,
             })
             .eq('id', currentDisciplineReportId)
             .eq('employee_id', employeeId);
@@ -272,6 +399,9 @@ async function saveDisciplineReport() {
                 action_taken,
                 report_status,
                 refused_to_sign,
+                employee_signature,
+                manager_signature,
+                witness_signature,
             }]);
 
         error = result.error;
@@ -283,10 +413,53 @@ async function saveDisciplineReport() {
         return;
     }
 
-    showToast(currentDisciplineReportId ? 'Discipline report updated.' : 'Discipline report saved.');
-    if (typeof window.recordAuditEvent === 'function') {
+    showToast(isUpdatingDiscipline ? 'Discipline report updated.' : 'Discipline report saved.');
+
+    if (typeof window.writeEmployeeAuditLogToSupabase === 'function') {
+        const publicEmployeeId = typeof window.getEmployeePublicId === 'function'
+            ? window.getEmployeePublicId(currentEmployee, currentEmployee?.displayName || currentEmployee?.name || '')
+            : (currentEmployee?.employee_id || currentEmployee?.employeeId || employeeId);
+
+        await window.writeEmployeeAuditLogToSupabase({
+            employee_id: publicEmployeeId || employeeId,
+            name: `${currentEmployee?.first_name || currentEmployee?.firstName || ''} ${currentEmployee?.last_name || currentEmployee?.lastName || ''}`.trim() || currentEmployee?.displayName || currentEmployee?.name || '',
+            action_type: isUpdatingDiscipline ? 'discipline_updated' : 'discipline_created',
+            timestamp: new Date().toISOString(),
+            changed_by: window.currentUser?.email || window.currentUser?.name || 'System',
+            fields_changed: ['discipline_report'],
+            metadata: {
+                type: 'discipline',
+                summary: isUpdatingDiscipline ? 'Discipline report updated' : 'Discipline report created',
+                issue_type,
+                discipline_level,
+                report_status,
+                refused_to_sign,
+                discipline_report_id: currentDisciplineReportId || null
+            }
+        });
+
+        if (signatureFields.length) {
+            await window.writeEmployeeAuditLogToSupabase({
+                employee_id: publicEmployeeId || employeeId,
+                name: `${currentEmployee?.first_name || currentEmployee?.firstName || ''} ${currentEmployee?.last_name || currentEmployee?.lastName || ''}`.trim() || currentEmployee?.displayName || currentEmployee?.name || '',
+                action_type: 'signature_captured',
+                timestamp: new Date().toISOString(),
+                changed_by: window.currentUser?.email || window.currentUser?.name || 'System',
+                fields_changed: signatureFields,
+                metadata: {
+                    type: 'signature',
+                    summary: 'Discipline signatures captured',
+                    discipline_report_id: currentDisciplineReportId || null
+                }
+            });
+        }
+
+        if (document.getElementById('employeeAuditLogViewer') && typeof window.renderEmployeeAuditLogViewer === 'function') {
+            await window.renderEmployeeAuditLogViewer(currentEmployee);
+        }
+    } else if (typeof window.recordAuditEvent === 'function') {
         window.recordAuditEvent(
-            currentDisciplineReportId ? 'Updated Discipline Report' : 'Created Discipline Report',
+            isUpdatingDiscipline ? 'Updated Discipline Report' : 'Created Discipline Report',
             currentEmployee,
             [issue_type, discipline_level, report_status, refused_to_sign ? 'Refused to Sign' : 'Signed/Not Marked'].filter(Boolean).join(' • ')
         );
@@ -305,6 +478,10 @@ async function saveDisciplineReport() {
 // =========================
 // GLOBAL EXPORTS
 // =========================
+window.getDisciplineSignature = getDisciplineSignature;
+window.clearDisciplineSignature = clearDisciplineSignature;
+window.loadDisciplineSignature = loadDisciplineSignature;
+window.renderDisciplineSignatures = renderDisciplineSignatures;
 window.startDisciplineEdit = startDisciplineEdit;
 window.cancelDisciplineEdit = cancelDisciplineEdit;
 window.deleteDisciplineRecord = deleteDisciplineRecord;

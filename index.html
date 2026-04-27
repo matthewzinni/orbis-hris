@@ -12,6 +12,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+
+
   <style>
     :root {
       --navy: #102a43;
@@ -716,40 +718,164 @@
     .history-list {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 12px;
     }
 
     .history-item {
       border: 1px solid var(--line);
       border-radius: 18px;
-      padding: 14px;
+      padding: 16px !important;
+      margin-bottom: 12px;
       background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
       box-shadow: 0 6px 16px rgba(15, 23, 42, 0.045);
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+      line-height: 1.45 !important;
+      box-sizing: border-box;
     }
 
     .history-top {
       display: flex;
       justify-content: space-between;
-      gap: 10px;
+      gap: 12px;
       align-items: flex-start;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+      line-height: 1.35 !important;
     }
 
     .history-title {
+      display: block !important;
       font-weight: 800;
       color: var(--navy);
       font-size: 0.95rem;
+      line-height: 1.35 !important;
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+      white-space: normal !important;
+      text-overflow: clip !important;
+      padding-top: 2px;
+      margin-bottom: 3px;
     }
 
     .history-date {
+      display: block !important;
       color: var(--muted);
       font-size: 0.82rem;
       margin-top: 3px;
+      line-height: 1.35 !important;
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+      white-space: normal !important;
     }
 
     .history-body {
       font-size: 0.92rem;
-      line-height: 1.45;
+      line-height: 1.5 !important;
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+      white-space: normal !important;
+      word-break: break-word !important;
+      padding-top: 4px;
+    }
+
+
+    #historyFeed .history-item,
+    #notesHistory .history-item,
+    #disciplineHistory .history-item,
+    #incidentsHistory .history-item,
+    #meetingsHistory .history-item,
+    #reviewsHistory .history-item,
+    #stayInterviewHistory .history-item {
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+    }
+
+    /* Dedicated Employee History feed fix: prevents left/top text clipping */
+    #historyFeed {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 14px !important;
+      padding: 6px 4px 10px 4px !important;
+      overflow: visible !important;
+    }
+
+    #historyFeed .history-item {
+      display: block !important;
+      position: relative !important;
+      width: 100% !important;
+      height: auto !important;
+      min-height: 72px !important;
+      padding: 18px 20px 18px 24px !important;
+      margin: 0 0 12px 0 !important;
+      overflow: visible !important;
+      transform: none !important;
+      text-indent: 0 !important;
+      border: 1px solid var(--line) !important;
+      border-radius: 18px !important;
+      background: #ffffff !important;
+      box-sizing: border-box !important;
+    }
+
+    #historyFeed .history-item * {
+      transform: none !important;
+      text-indent: 0 !important;
+      overflow: visible !important;
+      white-space: normal !important;
+      clip-path: none !important;
+    }
+
+    #historyFeed .history-top {
+      display: block !important;
+      padding: 0 !important;
+      margin: 0 0 8px 0 !important;
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+    }
+
+    #historyFeed .history-title {
+      display: block !important;
+      padding: 0 !important;
+      margin: 0 0 4px 0 !important;
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+      line-height: 1.35 !important;
+      font-size: 15px !important;
+      font-weight: 900 !important;
+      color: var(--navy) !important;
+    }
+
+    #historyFeed .history-date {
+      display: block !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+      line-height: 1.35 !important;
+      font-size: 12px !important;
+      color: var(--muted) !important;
+    }
+
+    #historyFeed .history-body {
+      display: block !important;
+      padding: 2px 0 0 0 !important;
+      margin: 0 !important;
+      height: auto !important;
+      min-height: auto !important;
+      overflow: visible !important;
+      line-height: 1.5 !important;
+      font-size: 13px !important;
+      color: #334155 !important;
     }
 
     .card,
@@ -1416,16 +1542,60 @@
                     <div
                       style="margin-top:14px; display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
                       <div>
-                        <div style="border-bottom:1px solid #cbd5e1; height:36px;"></div>
-                        <div style="font-size:12px; color:#667085; margin-top:4px;">Employee Signature</div>
+                        <canvas id="disciplineEmployeeSignature"
+                          style="border:1px solid #cbd5e1; border-radius:10px; width:100%; height:120px;"></canvas>
+
+                        <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                          <span id="disciplineEmployeeSigStatus" style="font-size:12px; color:#667085;">
+                            Not signed
+                          </span>
+                          <button class="button soft" type="button"
+                            onclick="clearSig('disciplineEmployeeSignature','disciplineEmployeeSigStatus')">
+                            Clear
+                          </button>
+                        </div>
+
+                        <div style="font-size:12px; color:#667085; margin-top:4px;">
+                          Employee Signature
+                        </div>
                       </div>
+
                       <div>
-                        <div style="border-bottom:1px solid #cbd5e1; height:36px;"></div>
-                        <div style="font-size:12px; color:#667085; margin-top:4px;">Manager Signature</div>
+                        <canvas id="disciplineManagerSignature"
+                          style="border:1px solid #cbd5e1; border-radius:10px; width:100%; height:120px;"></canvas>
+
+                        <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                          <span id="disciplineManagerSigStatus" style="font-size:12px; color:#667085;">
+                            Not signed
+                          </span>
+                          <button class="button soft" type="button"
+                            onclick="clearSig('disciplineManagerSignature','disciplineManagerSigStatus')">
+                            Clear
+                          </button>
+                        </div>
+
+                        <div style="font-size:12px; color:#667085; margin-top:4px;">
+                          Manager Signature
+                        </div>
                       </div>
+
                       <div>
-                        <div style="border-bottom:1px solid #cbd5e1; height:36px;"></div>
-                        <div style="font-size:12px; color:#667085; margin-top:4px;">Witness Signature</div>
+                        <canvas id="disciplineWitnessSignature"
+                          style="border:1px solid #cbd5e1; border-radius:10px; width:100%; height:120px;"></canvas>
+
+                        <div style="display:flex; justify-content:space-between; margin-top:6px;">
+                          <span id="disciplineWitnessSigStatus" style="font-size:12px; color:#667085;">
+                            Not signed
+                          </span>
+                          <button class="button soft" type="button"
+                            onclick="clearSig('disciplineWitnessSignature','disciplineWitnessSigStatus')">
+                            Clear
+                          </button>
+                        </div>
+
+                        <div style="font-size:12px; color:#667085; margin-top:4px;">
+                          Witness Signature
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2226,6 +2396,157 @@
 
   <!-- 5. Core App -->
   <script src="js/app.js"></script>
+
+  <script>
+
+    function initSig(canvasId, statusId) {
+
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      if (canvas.dataset.sigInitialized === "true") return;
+      canvas.dataset.sigInitialized = "true";
+      const ctx = canvas.getContext('2d');
+
+      let drawing = false;
+
+      const rect = () => canvas.getBoundingClientRect();
+
+      function getPos(e) {
+
+        const r = rect();
+
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
+
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
+
+        return { x, y };
+
+      }
+
+      canvas.addEventListener('mousedown', e => {
+
+        drawing = true;
+
+        const p = getPos(e);
+
+        ctx.beginPath();
+
+        ctx.moveTo(p.x, p.y);
+
+      });
+
+      canvas.addEventListener('mousemove', e => {
+
+        if (!drawing) return;
+
+        const p = getPos(e);
+
+        ctx.lineTo(p.x, p.y);
+
+        ctx.stroke();
+
+      });
+
+      window.addEventListener('mouseup', () => {
+
+        if (drawing) {
+
+          drawing = false;
+
+          canvas.dataset.signature = canvas.toDataURL();
+
+          document.getElementById(statusId).textContent = "Signed";
+
+          document.getElementById(statusId).style.color = "green";
+
+        }
+
+      });
+
+      canvas.addEventListener('touchstart', e => {
+
+        drawing = true;
+
+        const p = getPos(e);
+
+        ctx.beginPath();
+
+        ctx.moveTo(p.x, p.y);
+
+      });
+
+      canvas.addEventListener('touchmove', e => {
+
+        if (!drawing) return;
+
+        e.preventDefault();
+
+        const p = getPos(e);
+
+        ctx.lineTo(p.x, p.y);
+
+        ctx.stroke();
+
+      });
+
+      canvas.addEventListener('touchend', () => {
+
+        drawing = false;
+
+        canvas.dataset.signature = canvas.toDataURL();
+
+        document.getElementById(statusId).textContent = "Signed";
+
+        document.getElementById(statusId).style.color = "green";
+
+      });
+
+    }
+
+    function clearSig(canvasId, statusId) {
+
+      const canvas = document.getElementById(canvasId);
+
+      const ctx = canvas.getContext('2d');
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      canvas.dataset.signature = "";
+
+      document.getElementById(statusId).textContent = "Not signed";
+
+      document.getElementById(statusId).style.color = "#667085";
+
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+
+      initSig("disciplineEmployeeSignature", "disciplineEmployeeSigStatus");
+
+      initSig("disciplineManagerSignature", "disciplineManagerSigStatus");
+
+      initSig("disciplineWitnessSignature", "disciplineWitnessSigStatus");
+
+    });
+
+    // Re-init signature pads only when the Discipline tab is opened.
+
+    document.addEventListener("click", (e) => {
+      const tabBtn = e.target.closest(".tab-btn");
+
+      if (!tabBtn) return;
+      if (tabBtn.dataset.tab !== "discipline") return;
+
+      setTimeout(() => {
+        initSig("disciplineEmployeeSignature", "disciplineEmployeeSigStatus");
+        initSig("disciplineManagerSignature", "disciplineManagerSigStatus");
+        initSig("disciplineWitnessSignature", "disciplineWitnessSigStatus");
+      }, 200);
+    });
+
+  </script>
+
+
 
 </body>
 

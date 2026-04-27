@@ -464,35 +464,147 @@ function renderAuditLogsHtml(logs) {
     if (!logs?.length) {
         return `
             <div class="audit-log-empty" style="padding:16px; border:1px solid #e5e7eb; border-radius:12px; background:#f9fafb; color:#6b7280; font-size:13px;">
-                No audit history found for this employee yet.
+                No timeline activity found for this employee yet.
             </div>
         `;
     }
 
-    return logs.map(log => {
-        const changedAt = formatAuditTimestamp(log.changed_at || log.timestamp);
-        const changedBy = log.changed_by || log.metadata?.changed_by || 'Current user';
-        const actionType = formatAuditFieldName(log.action_type || log.metadata?.action_type || 'employee_update');
+    const getActionBadge = (actionType) => {
+        const normalized = String(actionType || '').toLowerCase();
+
+        if (normalized.includes('create')) {
+            return { label: 'CREATE', bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
+        }
+        if (normalized.includes('delete')) {
+            return { label: 'DELETE', bg: '#fef2f2', color: '#b91c1c', border: '#fecaca' };
+        }
+        if (normalized.includes('flag')) {
+            return { label: 'FLAG', bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
+        }
+        if (normalized.includes('signature') || normalized.includes('sign')) {
+            return { label: 'SIGN', bg: '#eef2ff', color: '#4338ca', border: '#c7d2fe' };
+        }
+
+        return { label: 'UPDATE', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' };
+    };
+
+    const getTimelineGroup = (log) => {
+        const rawDate = log.changed_at || log.timestamp;
+        const date = new Date(rawDate);
+        if (Number.isNaN(date.getTime())) return 'Earlier';
+
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+
+        const sameDay = (a, b) => {
+            return a.getFullYear() === b.getFullYear()
+                && a.getMonth() === b.getMonth()
+                && a.getDate() === b.getDate();
+        };
+
+        if (sameDay(date, today)) return 'Today';
+        if (sameDay(date, yesterday)) return 'Yesterday';
+        return 'Earlier';
+    };
+
+    const renderFieldChangeList = (log) => {
         const fieldsChanged = log.fields_changed || log.metadata?.fields_changed || [];
-        const fieldText = Array.isArray(fieldsChanged) && fieldsChanged.length
-            ? fieldsChanged.map(formatAuditFieldName).join(', ')
-            : 'Employee record updated';
+        const before = log.metadata?.before || log.before || {};
+        const after = log.metadata?.after || log.after || {};
+
+        if (!Array.isArray(fieldsChanged) || !fieldsChanged.length) {
+            return `<div style="color:#475569; font-size:13px;">Employee record updated.</div>`;
+        }
 
         return `
-            <div class="audit-log-card" style="padding:14px 16px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; margin-bottom:10px;">
-                <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
-                    <div>
-                        <div style="font-weight:700; color:#111827; font-size:14px;">${esc(actionType)}</div>
-                        <div style="color:#6b7280; font-size:12px; margin-top:2px;">${esc(changedAt)} • ${esc(changedBy)}</div>
+            <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
+                ${fieldsChanged.map(field => {
+                    const beforeValue = before?.[field];
+                    const afterValue = after?.[field];
+                    const hasBeforeAfter = beforeValue !== undefined || afterValue !== undefined;
+
+                    if (hasBeforeAfter) {
+                        return `
+                            <div style="font-size:13px; color:#334155; line-height:1.35;">
+                                <strong>${esc(formatAuditFieldName(field))}:</strong>
+                                <span style="color:#64748b;">${esc(beforeValue || 'Blank')}</span>
+                                <span style="color:#94a3b8; padding:0 4px;">→</span>
+                                <span style="color:#0f172a; font-weight:700;">${esc(afterValue || 'Blank')}</span>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div style="font-size:13px; color:#334155; line-height:1.35;">
+                            <strong>${esc(formatAuditFieldName(field))}</strong> changed
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    };
+
+    const renderTimelineItem = (log) => {
+        const changedAt = formatAuditTimestamp(log.changed_at || log.timestamp);
+        const changedBy = log.changed_by
+            || log.metadata?.changed_by
+            || window.currentUser?.name
+            || window.currentUser?.email
+            || 'System';
+        const actionType = log.action_type || log.metadata?.action_type || 'employee_update';
+        const actionTitle = formatAuditFieldName(actionType);
+        const badge = getActionBadge(actionType);
+
+        return `
+            <div class="audit-timeline-item" style="position:relative; margin-bottom:14px;">
+                <div style="position:absolute; left:-18px; top:16px; width:12px; height:12px; border-radius:999px; background:${badge.color}; border:3px solid #ffffff; box-shadow:0 0 0 2px ${badge.border};"></div>
+
+                <div class="audit-log-card" style="padding:14px 16px; border:1px solid #e5e7eb; border-radius:14px; background:#fff; box-shadow:0 6px 16px rgba(15,23,42,0.05);">
+                    <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+                        <div>
+                            <div style="font-weight:800; color:#111827; font-size:14px;">${esc(actionTitle)}</div>
+                            <div style="color:#64748b; font-size:12px; margin-top:3px;">${esc(changedAt)} • ${esc(changedBy)}</div>
+                        </div>
+                        <span style="font-size:11px; font-weight:800; color:${badge.color}; background:${badge.bg}; border:1px solid ${badge.border}; padding:4px 8px; border-radius:999px; white-space:nowrap;">${badge.label}</span>
                     </div>
-                    <span style="font-size:11px; font-weight:700; color:#2563eb; background:#eff6ff; padding:4px 8px; border-radius:999px; white-space:nowrap;">AUDIT</span>
-                </div>
-                <div style="margin-top:10px; color:#374151; font-size:13px; line-height:1.4;">
-                    <strong>Changed:</strong> ${esc(fieldText)}
+
+                    <div style="margin-top:10px; padding-top:10px; border-top:1px solid #f1f5f9;">
+                        ${renderFieldChangeList(log)}
+                    </div>
                 </div>
             </div>
         `;
-    }).join('');
+    };
+
+    const groups = logs.reduce((acc, log) => {
+        const group = getTimelineGroup(log);
+        if (!acc[group]) acc[group] = [];
+        acc[group].push(log);
+        return acc;
+    }, { Today: [], Yesterday: [], Earlier: [] });
+
+    const renderGroup = (title, items) => {
+        if (!items.length) return '';
+
+        return `
+            <div class="audit-timeline-group" style="position:relative;">
+                <div style="font-size:11px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; color:#64748b; margin:6px 0 10px;">
+                    ${esc(title)}
+                </div>
+                ${items.map(renderTimelineItem).join('')}
+            </div>
+        `;
+    };
+
+    return `
+        <div class="audit-timeline" style="position:relative; padding-left:20px;">
+            <div style="position:absolute; left:7px; top:8px; bottom:8px; width:2px; background:#dbeafe;"></div>
+            ${renderGroup('Today', groups.Today)}
+            ${renderGroup('Yesterday', groups.Yesterday)}
+            ${renderGroup('Earlier', groups.Earlier)}
+        </div>
+    `;
 }
 
 function getHistoryPanelElement() {
@@ -514,8 +626,8 @@ function getHistoryPanelElement() {
     viewer.style.marginTop = '16px';
     viewer.innerHTML = `
         <div style="padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:#fff;">
-            <div style="font-weight:800; color:#111827; margin-bottom:8px;">Audit History</div>
-            <div style="color:#6b7280; font-size:13px;">Loading audit history...</div>
+            <div style="font-weight:800; color:#111827; margin-bottom:8px;">Employee Timeline</div>
+            <div style="color:#6b7280; font-size:13px;">Loading employee timeline...</div>
         </div>
     `;
 
@@ -540,12 +652,12 @@ async function renderEmployeeAuditLogViewer(employee = window.currentEmployee) {
         <div style="padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:#fff;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
                 <div>
-                    <div style="font-weight:800; color:#111827;">Audit History</div>
+                    <div style="font-weight:800; color:#111827;">Employee Timeline</div>
                     <div style="color:#6b7280; font-size:12px;">Employee ID: ${esc(employeeId)}</div>
                 </div>
                 <button type="button" class="mini-btn" onclick="renderEmployeeAuditLogViewer()">Refresh</button>
             </div>
-            <div style="color:#6b7280; font-size:13px;">Loading audit history...</div>
+            <div style="color:#6b7280; font-size:13px;">Loading employee timeline...</div>
         </div>
     `;
 
@@ -555,8 +667,8 @@ async function renderEmployeeAuditLogViewer(employee = window.currentEmployee) {
         <div style="padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:#fff;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
                 <div>
-                    <div style="font-weight:800; color:#111827;">Audit History</div>
-                    <div style="color:#6b7280; font-size:12px;">Employee ID: ${esc(employeeId)} • ${logs.length} record${logs.length === 1 ? '' : 's'}</div>
+                    <div style="font-weight:800; color:#111827;">Employee Timeline</div>
+                    <div style="color:#6b7280; font-size:12px;">Employee ID: ${esc(employeeId)} • ${logs.length} timeline event${logs.length === 1 ? '' : 's'}</div>
                 </div>
                 <button type="button" class="mini-btn" onclick="renderEmployeeAuditLogViewer()">Refresh</button>
             </div>
