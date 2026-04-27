@@ -154,9 +154,12 @@ function populateEmployeeAdminFallback(employee) {
 
     const applyValue = (el, value) => {
         if (!el) return;
+        const previousSuppress = window.__suppressAuditDirty;
+        window.__suppressAuditDirty = true;
         el.value = value ?? '';
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
+        window.__suppressAuditDirty = previousSuppress;
     };
 
     const setBySelector = (selector, value) => {
@@ -277,6 +280,8 @@ function populateEmployeeAdminByVisibleOrder(employee) {
 
     const setValue = (field, value) => {
         if (!field) return;
+        const previousSuppress = window.__suppressAuditDirty;
+        window.__suppressAuditDirty = true;
         const nextValue = value ?? '';
 
         if (field.tagName === 'SELECT') {
@@ -291,6 +296,7 @@ function populateEmployeeAdminByVisibleOrder(employee) {
 
         field.dispatchEvent(new Event('input', { bubbles: true }));
         field.dispatchEvent(new Event('change', { bubbles: true }));
+        window.__suppressAuditDirty = previousSuppress;
     };
 
     const adminButton = Array.from(document.querySelectorAll('button, .tab, [data-tab]'))
@@ -565,6 +571,7 @@ function writeEmployeeAuditLogLocal(auditEntry) {
     localStorage.setItem('orbis_audit_log', JSON.stringify(existingLogs.slice(0, 100)));
 }
 
+
 function getEmployeeAdminFormSnapshot() {
     const readByLabel = (labelText) => {
         const label = Array.from(document.querySelectorAll('label, div, span')).find(el => {
@@ -596,11 +603,185 @@ function getEmployeeAdminFormSnapshot() {
         tenure_bracket: readByLabel('TENURE BRACKET')
     };
 }
+function getEmployeeAdminFieldByLabel(labelText) {
+    const label = Array.from(document.querySelectorAll('label, div, span')).find(el => {
+        const text = (el.textContent || '').trim().toLowerCase();
+        return text === labelText.toLowerCase();
+    });
+
+    if (!label) return null;
+
+    const wrapper = label.parentElement;
+    return wrapper?.querySelector('input, select, textarea') || null;
+}
+
+function setEmployeeAdminAuditBaseline(snapshot = getEmployeeAdminFormSnapshot()) {
+    const fieldLabels = {
+        employee_id: 'EMPLOYEE ID',
+        status: 'STATUS',
+        first_name: 'FIRST NAME',
+        last_name: 'LAST NAME',
+        department: 'DEPARTMENT',
+        position: 'POSITION',
+        supervisor: 'SUPERVISOR',
+        pay_type: 'PAY TYPE',
+        standard_hours: 'STANDARD HOURS',
+        benefits_status: 'BENEFITS STATUS',
+        hire_date: 'HIRE DATE',
+        next_review_date: 'NEXT REVIEW DATE',
+        anniversary_date: 'ANNIVERSARY DATE',
+        tenure_bracket: 'TENURE BRACKET'
+    };
+
+    Object.entries(fieldLabels).forEach(([key, labelText]) => {
+        const field = getEmployeeAdminFieldByLabel(labelText);
+        if (field) field.dataset.auditOriginal = snapshot?.[key] ?? '';
+    });
+    window.__employeeOriginalAuditSnapshot = snapshot;
+    window.__employeeDirtyFields = new Set();
+}
+
+function getEmployeeAdminAuditBaseline() {
+    const readOriginalByLabel = (key, labelText) => {
+        const field = getEmployeeAdminFieldByLabel(labelText);
+        if (!field) return window.__employeeOriginalAuditSnapshot?.[key] ?? '';
+        return field.dataset.auditOriginal ?? window.__employeeOriginalAuditSnapshot?.[key] ?? '';
+    };
+
+    return {
+        employee_id: readOriginalByLabel('employee_id', 'EMPLOYEE ID'),
+        status: readOriginalByLabel('status', 'STATUS'),
+        first_name: readOriginalByLabel('first_name', 'FIRST NAME'),
+        last_name: readOriginalByLabel('last_name', 'LAST NAME'),
+        department: readOriginalByLabel('department', 'DEPARTMENT'),
+        position: readOriginalByLabel('position', 'POSITION'),
+        supervisor: readOriginalByLabel('supervisor', 'SUPERVISOR'),
+        pay_type: readOriginalByLabel('pay_type', 'PAY TYPE'),
+        standard_hours: readOriginalByLabel('standard_hours', 'STANDARD HOURS'),
+        benefits_status: readOriginalByLabel('benefits_status', 'BENEFITS STATUS'),
+        hire_date: readOriginalByLabel('hire_date', 'HIRE DATE'),
+        next_review_date: readOriginalByLabel('next_review_date', 'NEXT REVIEW DATE'),
+        anniversary_date: readOriginalByLabel('anniversary_date', 'ANNIVERSARY DATE'),
+        tenure_bracket: readOriginalByLabel('tenure_bracket', 'TENURE BRACKET')
+    };
+}
+
+function getEmployeeAdminFieldKey(field) {
+    if (!field) return '';
+
+    const labelText = field.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase()
+        || field.previousElementSibling?.textContent?.trim().toLowerCase()
+        || field.placeholder?.trim().toLowerCase()
+        || '';
+
+    const map = {
+        'employee id': 'employee_id',
+        'status': 'status',
+        'first name': 'first_name',
+        'last name': 'last_name',
+        'department': 'department',
+        'position': 'position',
+        'supervisor': 'supervisor',
+        'pay type': 'pay_type',
+        'standard hours': 'standard_hours',
+        'benefits status': 'benefits_status',
+        'hire date': 'hire_date',
+        'next review date': 'next_review_date',
+        'anniversary date': 'anniversary_date',
+        'tenure bracket': 'tenure_bracket'
+    };
+
+    return map[labelText] || '';
+}
+
+function bindEmployeeAdminDirtyTracking() {
+    if (window.__employeeAdminDirtyBind) return;
+    window.__employeeAdminDirtyBind = true;
+    window.__employeeDirtyFields = window.__employeeDirtyFields || new Set();
+
+    document.addEventListener('focusin', (e) => {
+        const field = e.target.closest('input, select, textarea');
+        if (!field) return;
+
+        const key = getEmployeeAdminFieldKey(field);
+        if (!key || key === 'employee_id') return;
+
+        if (field.dataset.auditOriginal === undefined) {
+            field.dataset.auditOriginal = field.value ?? '';
+        }
+    });
+
+    document.addEventListener('input', (e) => {
+        if (window.__suppressAuditDirty) return;
+
+        const field = e.target.closest('input, select, textarea');
+        if (!field) return;
+
+        const key = getEmployeeAdminFieldKey(field);
+        if (!key || key === 'employee_id') return;
+
+        const original = String(field.dataset.auditOriginal ?? '').trim();
+        const current = String(field.value ?? '').trim();
+
+        if (original !== current) {
+            window.__employeeDirtyFields.add(key);
+        } else {
+            window.__employeeDirtyFields.delete(key);
+        }
+    });
+
+    document.addEventListener('change', (e) => {
+        if (window.__suppressAuditDirty) return;
+
+        const field = e.target.closest('input, select, textarea');
+        if (!field) return;
+
+        const key = getEmployeeAdminFieldKey(field);
+        if (!key || key === 'employee_id') return;
+
+        const original = String(field.dataset.auditOriginal ?? '').trim();
+        const current = String(field.value ?? '').trim();
+
+        if (original !== current) {
+            window.__employeeDirtyFields.add(key);
+        } else {
+            window.__employeeDirtyFields.delete(key);
+        }
+    });
+}
+
+
+function getMeaningfulEmployeeAuditChanges(before, after) {
+    const trackedFields = [
+        'status',
+        'first_name',
+        'last_name',
+        'department',
+        'position',
+        'supervisor',
+        'pay_type',
+        'standard_hours',
+        'benefits_status',
+        'hire_date',
+        'next_review_date',
+        'anniversary_date',
+        'tenure_bracket'
+    ];
+
+    return trackedFields.filter(key => {
+        const beforeValue = String(before?.[key] ?? '').trim();
+        const afterValue = String(after?.[key] ?? '').trim();
+
+        if (beforeValue === afterValue) return false;
+        return true;
+    });
+}
 
 function bindEmployeeUpdateToast() {
     if (window.__employeeUpdateToastBind) return;
     window.__employeeUpdateToastBind = true;
     console.log('[Orbis Audit] Employee update audit listener bound.');
+    bindEmployeeAdminDirtyTracking();
 
     document.addEventListener('click', (e) => {
         const clickedButton = e.target.closest('button');
@@ -616,7 +797,7 @@ function bindEmployeeUpdateToast() {
         console.log('[Orbis Audit] Update Employee click detected. Preparing audit log.');
 
         window.__employeeUpdateToastPending = true;
-        window.__employeeBeforeUpdate = normalizeEmployeeForRoster(window.currentEmployee || {});
+        window.__employeeBeforeUpdate = getEmployeeAdminAuditBaseline();
 
         setTimeout(async () => {
             if (!window.__employeeUpdateToastPending) return;
@@ -625,25 +806,9 @@ function bindEmployeeUpdateToast() {
             const before = window.__employeeBeforeUpdate || {};
             const after = getEmployeeAdminFormSnapshot();
 
-            const trackedFields = [
-                'status',
-                'first_name',
-                'last_name',
-                'department',
-                'position',
-                'supervisor',
-                'pay_type',
-                'standard_hours',
-                'benefits_status',
-                'hire_date',
-                'next_review_date',
-                'anniversary_date',
-                'tenure_bracket'
-            ];
-
-            const changes = trackedFields.filter(key => {
-                return String(before[key] ?? '') !== String(after[key] ?? '');
-            });
+            const dirtyChanges = Array.from(window.__employeeDirtyFields || []);
+            const snapshotChanges = getMeaningfulEmployeeAuditChanges(before, after);
+            const changes = dirtyChanges.length ? dirtyChanges : snapshotChanges;
 
             const auditEntry = {
                 id: `audit-${Date.now()}`,
@@ -674,6 +839,8 @@ function bindEmployeeUpdateToast() {
             if (typeof showToast === 'function') {
                 showToast(`Employee updated (${changes.length} change${changes.length === 1 ? '' : 's'})`, 'success');
             }
+            setEmployeeAdminAuditBaseline(after);
+            window.__employeeDirtyFields = new Set();
 
             if (typeof loadEmployees === 'function') {
                 loadEmployees();
@@ -918,6 +1085,10 @@ function openDrawerByEmployeeId(employeeId) {
                     visibleEmployeeIdField.dispatchEvent(new Event('change', { bubbles: true }));
                     lockEmployeeIdField(visibleEmployeeIdField);
                 }
+
+                if (delay === 1500 && typeof setEmployeeAdminAuditBaseline === 'function') {
+                    setEmployeeAdminAuditBaseline(getEmployeeAdminFormSnapshot());
+                }
             }, delay);
         });
 
@@ -1011,6 +1182,9 @@ if (!window.__employeeAdminBind) {
                     visibleEmployeeIdField.dispatchEvent(new Event('change', { bubbles: true }));
                     lockEmployeeIdField(visibleEmployeeIdField);
                 }
+                if (typeof setEmployeeAdminAuditBaseline === 'function') {
+                    setEmployeeAdminAuditBaseline(getEmployeeAdminFormSnapshot());
+                }
             }, 50);
         }
 
@@ -1040,6 +1214,12 @@ window.bindRosterEvents = bindRosterEvents;
 window.lockEmployeeIdField = lockEmployeeIdField;
 window.bindEmployeeUpdateToast = bindEmployeeUpdateToast;
 window.getEmployeeAdminFormSnapshot = getEmployeeAdminFormSnapshot;
+window.getEmployeeAdminFieldByLabel = getEmployeeAdminFieldByLabel;
+window.setEmployeeAdminAuditBaseline = setEmployeeAdminAuditBaseline;
+window.getEmployeeAdminAuditBaseline = getEmployeeAdminAuditBaseline;
+window.getEmployeeAdminFieldKey = getEmployeeAdminFieldKey;
+window.bindEmployeeAdminDirtyTracking = bindEmployeeAdminDirtyTracking;
+window.getMeaningfulEmployeeAuditChanges = getMeaningfulEmployeeAuditChanges;
 window.getAuditLog = () => JSON.parse(localStorage.getItem('orbis_audit_log') || '[]');
 window.writeEmployeeAuditLogToSupabase = writeEmployeeAuditLogToSupabase;
 window.writeEmployeeAuditLogLocal = writeEmployeeAuditLogLocal;
