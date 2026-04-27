@@ -49,6 +49,77 @@ function candidateToast(message, type = 'success') {
     }
 }
 
+function ensureLegacyCandidateMoveButton() {
+    const convertButton = Array.from(document.querySelectorAll('button'))
+        .find(button => (button.textContent || '').trim().toLowerCase() === 'convert to employee');
+
+    if (!convertButton) return;
+
+    const actionsContainer = convertButton.parentElement;
+    if (!actionsContainer) return;
+
+    if (document.getElementById('legacyCandidateNextStageBtn')) return;
+
+    const moveButton = document.createElement('button');
+    moveButton.id = 'legacyCandidateNextStageBtn';
+    moveButton.type = 'button';
+    moveButton.className = convertButton.className || 'button soft';
+    moveButton.textContent = 'Move to Next Stage';
+
+    moveButton.addEventListener('click', async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        console.log('Legacy Move to Next Stage button clicked');
+        await moveCandidateToNextStage();
+    });
+
+    actionsContainer.insertBefore(moveButton, convertButton);
+}
+
+async function resolveCurrentCandidateIdFromDrawer(db) {
+    const hiddenId = document.getElementById('candidateDetailId')?.value;
+    if (hiddenId) return hiddenId;
+
+    const firstName = document.getElementById('candidateDetailFirstName')?.value?.trim() || '';
+    const lastName = document.getElementById('candidateDetailLastName')?.value?.trim() || '';
+    const stage = document.getElementById('candidateDetailStage')?.value?.trim() || '';
+    const email = document.getElementById('candidateDetailEmail')?.value?.trim() || '';
+    const phone = document.getElementById('candidateDetailPhone')?.value?.trim() || '';
+
+    let query = db.from('candidates').select('*');
+
+    if (email) {
+        query = query.eq('email', email);
+    } else if (phone) {
+        query = query.eq('phone', phone);
+    } else {
+        // Match by name only (stage can change and break lookup)
+        query = query.eq('first_name', firstName).eq('last_name', lastName);
+    }
+
+    const { data, error } = await query.limit(1).single();
+
+    if (error) {
+        console.error('Could not resolve candidate from drawer:', error);
+        return '';
+    }
+
+    if (data?.id) {
+        let hiddenInput = document.getElementById('candidateDetailId');
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.id = 'candidateDetailId';
+            const drawer = document.getElementById('candidateDetailsDrawer') || document.body;
+            drawer.appendChild(hiddenInput);
+        }
+        hiddenInput.value = data.id;
+        return data.id;
+    }
+
+    return '';
+}
+
 function getOrbisSupabaseClient() {
     if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof supabaseClient.from === 'function') {
         return supabaseClient;
@@ -494,7 +565,10 @@ function ensureCandidateModal() {
         await saveCandidateDetails();
     });
 
-    drawer.querySelector('#candidateNextStageBtn')?.addEventListener('click', async () => {
+    drawer.querySelector('#candidateNextStageBtn')?.addEventListener('click', async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        console.log('Move to Next Stage button clicked');
         await moveCandidateToNextStage();
     });
 
@@ -654,6 +728,7 @@ async function openCandidateDetails(candidateId) {
     drawer.classList.add('open');
     drawer.style.display = 'block';
     switchCandidateDrawerTab('profile');
+    setTimeout(ensureLegacyCandidateMoveButton, 100);
 }
 
 function switchCandidateDrawerTab(tabName) {
@@ -825,6 +900,17 @@ function closeCandidateDetails() {
         drawer.classList.add('hidden');
         drawer.classList.remove('open');
         drawer.style.display = 'none';
+        drawer.style.pointerEvents = 'none';
+    }
+}
+
+function removeCandidateDrawerAfterHire() {
+    const drawer = document.getElementById('candidateDetailsDrawer');
+    if (drawer) {
+        drawer.classList.add('hidden');
+        drawer.classList.remove('open');
+        drawer.style.display = 'none';
+        drawer.style.pointerEvents = 'none';
     }
 }
 
@@ -859,6 +945,7 @@ async function saveCandidateDetails() {
     candidateToast('Candidate updated.', 'success');
     await refreshCandidatesFromMainApp();
     await openCandidateDetails(candidateId);
+    setTimeout(ensureLegacyCandidateMoveButton, 100);
 }
 
 async function saveCandidateStageFromDrawer(newStage) {
@@ -873,32 +960,56 @@ async function saveCandidateStageFromDrawer(newStage) {
 }
 
 async function moveCandidateToNextStage() {
-    const candidateId = document.getElementById('candidateDetailId')?.value;
-    if (!candidateId) return;
+    const db = getOrbisSupabaseClient();
+    if (!db) {
+        candidateToast('Supabase connection not found.', 'error');
+        return;
+    }
+
+    const candidateId = await resolveCurrentCandidateIdFromDrawer(db);
+    if (!candidateId) {
+        candidateToast('No candidate is selected.', 'error');
+        console.warn('Move to Next Stage could not resolve candidate ID from drawer fields.');
+        return;
+    }
 
     const stageInput = document.getElementById('candidateDetailStage');
-    const currentStage = stageInput?.value || 'Applied';
-    const stages = ['Applied', 'Screening', 'Interviewing', 'Offer', 'Hired'];
-    const currentIndex = stages.findIndex(stage => stage.toLowerCase() === String(currentStage).toLowerCase());
+    const currentStage = String(stageInput?.value || 'Applied').trim();
+    const normalizedStage = currentStage.toLowerCase().replace(/\s+/g, '');
+
+    console.log('Moving candidate to next stage:', { candidateId, currentStage, normalizedStage });
+
+    if (normalizedStage === 'offer' || normalizedStage === 'hired') {
+        console.log('Candidate is in Offer/Hired stage. Starting hire conversion:', candidateId);
+        await convertCandidateToEmployee(candidateId);
+        return;
+    }
+
+    const stages = ['Applied', 'Screening', 'Interviewing', 'Offer'];
+    const currentIndex = stages.findIndex(stage => stage.toLowerCase().replace(/\s+/g, '') === normalizedStage);
     const nextStage = currentIndex >= 0 && currentIndex < stages.length - 1
         ? stages[currentIndex + 1]
         : 'Applied';
 
-    if (nextStage === 'Hired') {
-        await convertCurrentCandidateToEmployee();
-        return;
-    }
-
     if (stageInput) stageInput.value = nextStage;
+
     await updateCandidateStage(candidateId, nextStage);
     await openCandidateDetails(candidateId);
+    candidateToast(`Candidate moved to ${nextStage}.`, 'success');
 }
 
 async function convertCurrentCandidateToEmployee() {
-    const candidateId = document.getElementById('candidateDetailId')?.value;
+    const db = getOrbisSupabaseClient();
+    if (!db) {
+        candidateToast('Supabase connection not found.', 'error');
+        return;
+    }
+
+    const candidateId = await resolveCurrentCandidateIdFromDrawer(db);
 
     if (!candidateId) {
         candidateToast('No candidate is selected to hire.', 'error');
+        console.warn('Convert to Employee could not resolve candidate ID from drawer fields.');
         return;
     }
 
@@ -1004,22 +1115,34 @@ async function convertCandidateToEmployee(candidateId) {
     }
 
     const nextEmployeeId = await getNextEmployeeId(db);
-    const firstName = candidate.first_name || '';
-    const lastName = candidate.last_name || '';
-    const fullName = `${firstName} ${lastName}`.trim() || candidate.name || candidate.candidate_name || 'New Employee';
+    const candidateFullName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim()
+        || candidate.name
+        || candidate.candidate_name
+        || '';
+    const nameParts = candidateFullName.trim().split(/\s+/).filter(Boolean);
+    const firstName = candidate.first_name || nameParts[0] || '';
+    const lastName = candidate.last_name || nameParts.slice(1).join(' ') || '';
+    const fullName = `${firstName} ${lastName}`.trim() || candidateFullName || 'New Employee';
+    const today = new Date().toISOString().slice(0, 10);
 
     const employeeRecord = {
         employee_id: nextEmployeeId,
         first_name: firstName,
         last_name: lastName,
         name: fullName,
-        position: candidate.position || candidate.position_applied_for || candidate.role || '',
         department: candidate.department || '',
+        position: candidate.position || candidate.position_applied_for || candidate.role || '',
         status: 'Active',
-        hire_date: new Date().toISOString().slice(0, 10),
-        email: candidate.email || '',
-        phone: candidate.phone || ''
+        pay_type: candidate.pay_type || '',
+        standard_hours: candidate.standard_hours || 40,
+        hire_date: today,
+        personal_email: candidate.email || '',
+        work_email: candidate.work_email || '',
+        phone: candidate.phone || '',
+        benefits_status: candidate.benefits_status || 'Not Eligible'
     };
+
+    console.log('Creating employee from candidate:', employeeRecord);
 
     let { error: insertError } = await db
         .from('employees')
@@ -1032,10 +1155,11 @@ async function convertCandidateToEmployee(candidateId) {
             employee_id: nextEmployeeId,
             first_name: firstName,
             last_name: lastName,
+            name: fullName,
             position: candidate.position || candidate.position_applied_for || candidate.role || '',
             department: candidate.department || '',
             status: 'Active',
-            hire_date: new Date().toISOString().slice(0, 10)
+            hire_date: today
         };
 
         const fallbackInsert = await db
@@ -1064,11 +1188,32 @@ async function convertCandidateToEmployee(candidateId) {
 
     candidateToast(`Candidate hired and added to Employee Roster as ${nextEmployeeId}.`, 'success');
     closeCandidateDetails();
+    removeCandidateDrawerAfterHire();
     await refreshCandidatesFromMainApp();
 
     if (typeof loadEmployees === 'function') {
         await loadEmployees();
     }
+
+    if (typeof window.loadDashboardData === 'function') {
+        await window.loadDashboardData();
+    }
+
+    setTimeout(() => {
+        removeCandidateDrawerAfterHire();
+
+        const createdEmployee = (window.EMPLOYEES || []).find(employee => {
+            return String(employee.employee_id || employee.employeeId || employee.empNo || employee.id || '') === String(nextEmployeeId);
+        });
+
+        if (createdEmployee && typeof window.openEmployeeDrawer === 'function') {
+            window.openEmployeeDrawer(createdEmployee);
+        } else if (createdEmployee && typeof window.openEmployeeProfile === 'function') {
+            window.openEmployeeProfile(createdEmployee);
+        } else {
+            console.log('Created employee record. Refresh roster if it is not visible yet:', nextEmployeeId);
+        }
+    }, 500);
 }
 
 async function deleteCandidate(candidateId) {
@@ -1098,4 +1243,39 @@ async function deleteCandidate(candidateId) {
 
     candidateToast('Candidate deleted.', 'success');
     await refreshCandidatesFromMainApp();
+}
+// Fallback delegated handler for candidate drawer action buttons.
+document.addEventListener('click', async event => {
+    const nextStageButton = event.target.closest('#candidateNextStageBtn');
+    if (nextStageButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        await moveCandidateToNextStage();
+        return;
+    }
+
+    const hireButton = event.target.closest('#candidateHireBtn, #candidateHireFromOfferBtn');
+    if (hireButton) {
+        event.preventDefault();
+        event.stopPropagation();
+        await convertCurrentCandidateToEmployee();
+    }
+});
+
+// Keep the Move to Next Stage button available in legacy candidate drawers too.
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(ensureLegacyCandidateMoveButton, 500);
+});
+
+document.addEventListener('click', () => {
+    setTimeout(ensureLegacyCandidateMoveButton, 150);
+});
+
+const legacyCandidateMoveButtonObserver = new MutationObserver(() => {
+    clearTimeout(window.__legacyCandidateMoveButtonTimer);
+    window.__legacyCandidateMoveButtonTimer = setTimeout(ensureLegacyCandidateMoveButton, 150);
+});
+
+if (document.body) {
+    legacyCandidateMoveButtonObserver.observe(document.body, { childList: true, subtree: true });
 }

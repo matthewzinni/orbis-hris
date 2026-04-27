@@ -3400,11 +3400,20 @@ function buildKpiHoverDetails() {
     const riskEmployees = activeEmployees
         .filter(e => {
             const tenureMonths = Number(e.tenureMonths || 0);
-            const overdue = e.nextReview && e.nextReview instanceof Date && !isNaN(e.nextReview) && e.nextReview <= new Date();
-            return tenureMonths <= 6 || overdue;
+            const isFirstThreeMonths = tenureMonths > 0 && tenureMonths <= 3;
+            const employeeKey = String(e.dbId || e.id || '');
+            const riskMeta = currentAtRiskRosterMap?.[employeeKey] || null;
+            const isAtRisk = !!riskMeta && (
+                riskMeta.lowReview === true ||
+                Number(riskMeta.openIncidentCount || 0) > 0 ||
+                String(riskMeta.manualReason || '').trim() !== ''
+            );
+
+            return isFirstThreeMonths && isAtRisk;
         })
-        .map(e => `${`${e.first || ''} ${e.last || ''}`.trim()}${e.tenureMonths != null ? ` • ${e.tenureMonths} mo` : ''}`);
-    setCardTitle('cardTurnoverRisk', riskEmployees, 'No employees currently contributing to turnover risk');
+        .map(e => `${`${e.first || ''} ${e.last || ''}`.trim()}${e.tenureMonths != null ? ` • ${e.tenureMonths} mo` : ''}`)
+        .filter(Boolean);
+    setCardTitle('cardTurnoverRisk', riskEmployees, 'No at-risk employees in their first 3 months');
 
     const atRiskNames = Array.from(document.querySelectorAll('#riskEmployees .history-title'))
         .map(el => el.textContent.trim())
