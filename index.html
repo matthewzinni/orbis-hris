@@ -543,6 +543,13 @@
       line-height: 1.25;
     }
 
+    .candidate-actions-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
     .two-col {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -1066,12 +1073,9 @@
         </div>
 
         <div class="toolbar-right">
-          <button class="button primary" id="addEmployeeBtn" type="button" onclick="openNewEmployeeForm()">＋ Add
-            Employee</button>
-          <button class="button soft" id="viewCandidatesBtn" type="button"
-            onclick="openCandidatesView()">Candidates</button>
-          <button class="button soft" id="addCandidateBtn" type="button" onclick="openNewCandidateForm()">＋ Add
-            Candidate</button>
+          <button class="button primary" id="addEmployeeBtn" type="button" onclick="openNewEmployeeForm()">＋ Add Employee</button>
+          <button class="button soft" id="viewCandidatesBtn" type="button" onclick="openCandidatesView()">Candidate Pipeline</button>
+          <button class="button soft" id="addCandidateBtn" type="button" onclick="openNewCandidateForm()">＋ Add Candidate</button>
           <button class="button soft" id="refreshBtn" type="button" onclick="loadAllDashboardData()">Refresh</button>
           <button class="button soft" id="clearFiltersBtn" type="button" onclick="clearFilters()">Clear Filters</button>
           <button class="button danger" id="logoutBtn" type="button" onclick="signOut()">Log Out</button>
@@ -1366,7 +1370,7 @@
                     placeholder="Interview notes, comments, observations..."></textarea>
                 </div>
 
-                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
+                <div class="candidate-actions-row">
                   <button class="button primary" id="saveCandidateBtn" type="button"
                     onclick="saveCandidateRecord()">Save Candidate</button>
                   <button class="button soft" type="button" onclick="openNewCandidateForm()">New Candidate</button>
@@ -2363,22 +2367,22 @@
        Keep this order so shared functions exist before modules use them.
   ====================================================== -->
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  
   <!-- 1. Utilities -->
   <script src="js/utils/helpers.js"></script>
 
   <!-- 2. Services -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/services/supabaseClient.js"></script>
 
-  <!-- 2.5 Core Modules -->
+  <!-- 3. Core Foundation -->
   <script src="js/core/auth.js"></script>
+  <script src="js/core/permissions.js"></script>
+  <script src="js/core/state.js"></script>
 
-  <script src="js/core/employeeForm.js"></script>
-
-  <script src="js/core/employees.js"></script> <!-- 👈 ADD THIS LINE -->
-
-  <script src="js/core/employeeRoster.js"></script>
-
-  <!-- 3. Feature Modules -->
+  <!-- 4. Feature Modules -->
+  <script src="js/modules/employees.js"></script>
   <script src="js/modules/notes.js"></script>
   <script src="js/modules/meetings.js"></script>
   <script src="js/modules/discipline.js"></script>
@@ -2388,13 +2392,15 @@
   <script src="js/modules/candidates.js"></script>
   <script src="js/modules/onboarding.js"></script>
 
-  <!-- 4. UI Layer -->
+  <!-- 5. UI Layer -->
+  <script src="js/ui/employeeForm.js"></script>
+  <script src="js/ui/employeeRoster.js"></script>
   <script src="js/ui/badges.js"></script>
   <script src="js/ui/kpis.js"></script>
   <script src="js/ui/history.js"></script>
   <script src="js/ui/drawer.js"></script>
 
-  <!-- 5. Core App -->
+  <!-- 6. App Bootstrap -->
   <script src="js/app.js"></script>
 
   <script>

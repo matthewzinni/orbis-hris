@@ -520,12 +520,12 @@ function renderAuditLogsHtml(logs) {
         return `
             <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
                 ${fieldsChanged.map(field => {
-                    const beforeValue = before?.[field];
-                    const afterValue = after?.[field];
-                    const hasBeforeAfter = beforeValue !== undefined || afterValue !== undefined;
+            const beforeValue = before?.[field];
+            const afterValue = after?.[field];
+            const hasBeforeAfter = beforeValue !== undefined || afterValue !== undefined;
 
-                    if (hasBeforeAfter) {
-                        return `
+            if (hasBeforeAfter) {
+                return `
                             <div style="font-size:13px; color:#334155; line-height:1.35;">
                                 <strong>${esc(formatAuditFieldName(field))}:</strong>
                                 <span style="color:#64748b;">${esc(beforeValue || 'Blank')}</span>
@@ -533,14 +533,14 @@ function renderAuditLogsHtml(logs) {
                                 <span style="color:#0f172a; font-weight:700;">${esc(afterValue || 'Blank')}</span>
                             </div>
                         `;
-                    }
+            }
 
-                    return `
+            return `
                         <div style="font-size:13px; color:#334155; line-height:1.35;">
                             <strong>${esc(formatAuditFieldName(field))}</strong> changed
                         </div>
                     `;
-                }).join('')}
+        }).join('')}
             </div>
         `;
     };
@@ -1122,7 +1122,21 @@ function renderEmployeeRoster() {
                 <td>
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
                         <button type="button" class="link-button" onclick="event.stopPropagation(); openDrawerByEmployeeId('${drawerId}')">
+                            
                             ${esc(employee.displayName)}
+                            ${(
+                (typeof currentAtRiskRosterMap !== 'undefined' && currentAtRiskRosterMap?.[String(employee.dbId || employee.id || employee.employee_id || '')]) ||
+                window.currentAtRiskRosterMap?.[String(employee.dbId || employee.id || employee.employee_id || '')]
+            )
+                ? '<span class="badge badge-danger" style="margin-left:6px; font-size:10px; padding:3px 7px; border-radius:999px; background:#fee2e2; color:#991b1b; font-weight:800;">At-Risk</span>'
+                : ''}
+                            ${(
+                (typeof currentImpactPlayerRosterMap !== 'undefined' && currentImpactPlayerRosterMap?.[String(employee.dbId || employee.id || employee.employee_id || '')]) ||
+                window.currentImpactPlayerRosterMap?.[String(employee.dbId || employee.id || employee.employee_id || '')]
+            )
+                ? '<span class="badge badge-success" style="margin-left:6px; font-size:10px; padding:3px 7px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:800;">Impact</span>'
+                : ''}
+                            
                         </button>
                         <div class="row-actions" style="display:flex; gap:6px; opacity:0; transition:opacity 0.15s ease;">
                             <button type="button" class="mini-btn" onclick="event.stopPropagation(); openDrawerByEmployeeId('${drawerId}')">Edit</button>
@@ -1307,6 +1321,25 @@ if (!window.__employeeAdminBind) {
         }
     });
 }
+
+// 🔥 Unified roster refresh (used by ALL creation flows)
+window.refreshEmployeeRoster = async function () {
+    try {
+        if (typeof window.loadEmployees === 'function') {
+            await window.loadEmployees();
+        } else if (window.OrbisServices?.employees?.getAll) {
+            const result = await window.OrbisServices.employees.getAll();
+            window.EMPLOYEES = result?.data || [];
+            if (typeof window.renderEmployeeRoster === 'function') {
+                window.renderEmployeeRoster();
+            }
+        } else if (typeof window.renderEmployeeRoster === 'function') {
+            window.renderEmployeeRoster();
+        }
+    } catch (err) {
+        console.error('Roster refresh failed:', err);
+    }
+};
 
 // =========================
 // EXPORTS

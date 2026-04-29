@@ -1,155 +1,162 @@
-
-
 // =========================
-// ONBOARDING MODULE
+// ORBIS - Onboarding Module
+// Creates default onboarding tasks for newly hired employees.
 // =========================
 
-let currentOnboardingId = null;
+async function createDefaultOnboardingTasks(employeeId) {
+    let resolvedEmployeeId = employeeId || currentEmployee?.dbId || currentEmployee?.id || selectedEmployee?.dbId || selectedEmployee?.id;
 
-function getResolvedOnboardingEmployeeId(employeeId = null) {
-    return currentEmployee?.dbId || currentEmployee?.id || employeeId;
-}
-
-// =========================
-// LOAD
-// =========================
-async function loadEmployeeOnboarding(employeeId) {
-    const actualEmployeeId = getResolvedOnboardingEmployeeId(employeeId);
-    if (!actualEmployeeId) return;
-
-    const target = safeGet('onboardingHistory');
-    if (!target) return;
-
-    const { data, error } = await supabaseClient
-        .from('employee_onboarding')
-        .select('*')
-        .eq('employee_id', actualEmployeeId)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error(error);
-        target.innerHTML = '<div class="empty">Error loading onboarding records.</div>';
+    if (!resolvedEmployeeId) {
+        console.warn('Default onboarding tasks not created because no employee ID was found.');
         return;
     }
 
-    if (!data || data.length === 0) {
-        target.innerHTML = '<div class="empty">No onboarding records.</div>';
-        return;
+
+    let employeeRecord = null;
+    let employeeLookupError = null;
+
+    try {
+        if (!window.OrbisServices?.employees?.getAll) {
+            throw new Error('OrbisServices.employees.getAll is not available. Employee lookup must go through the service layer.');
+        }
+
+        const employeeResult = await OrbisServices.employees.getAll();
+        employeeLookupError = employeeResult?.error || null;
+        employeeRecord = (employeeResult?.data || []).find(employee =>
+            String(employee.id || '') === String(resolvedEmployeeId) ||
+            String(employee.employee_id || '') === String(resolvedEmployeeId)
+        ) || null;
+    } catch (err) {
+        employeeLookupError = err;
     }
 
-    target.innerHTML = data.map(record => `
-        <div class="card" style="margin-bottom:10px;">
-            <strong>${record.step_name || 'Onboarding Step'}</strong><br>
-            Status: ${record.status || 'Pending'}<br>
-            Notes: ${record.notes || '—'}
-            <div style="margin-top:6px;">
-                <button onclick="startOnboardingEdit(${JSON.stringify(record).replace(/"/g, '&quot;')})">Edit</button>
-                <button onclick="deleteOnboardingRecord('${record.id}')">Delete</button>
-            </div>
-        </div>
-    `).join('');
+    if (employeeLookupError) {
+        console.warn('Could not load employee hire date for onboarding due dates:', employeeLookupError);
+    }
+
+    const hireDate = employeeRecord?.hire_date || new Date().toISOString().slice(0, 10);
+
+    function addDaysToHireDate(daysToAdd) {
+        const date = new Date(`${hireDate}T00:00:00`);
+        date.setDate(date.getDate() + daysToAdd);
+        return date.toISOString().slice(0, 10);
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    function getStatusForDueDate(daysToAdd) {
+        const dueDate = addDaysToHireDate(daysToAdd);
+
+        if (dueDate === today) return 'Due Today';
+        if (dueDate < today) return 'Overdue';
+
+        return 'Pending';
+    }
+
+    const defaultTasks = [
+        {
+            employee_id: resolvedEmployeeId,
+            task_name: 'Complete HR paperwork',
+            section: 'HR Setup',
+            task_type: 'paperwork',
+            due_date: addDaysToHireDate(0),
+            status: getStatusForDueDate(0)
+        },
+        {
+            employee_id: resolvedEmployeeId,
+            task_name: 'Attend orientation',
+            section: 'Orientation',
+            task_type: 'orientation',
+            due_date: addDaysToHireDate(0),
+            status: getStatusForDueDate(0)
+        },
+        {
+            employee_id: resolvedEmployeeId,
+            task_name: 'Setup workstation',
+            section: 'HR Setup',
+            task_type: 'setup',
+            due_date: addDaysToHireDate(1),
+            status: getStatusForDueDate(1)
+        },
+        {
+            employee_id: resolvedEmployeeId,
+            task_name: '3-Day Check-In',
+            section: 'Check-Ins',
+            task_type: 'checkin',
+            due_date: addDaysToHireDate(3),
+            status: getStatusForDueDate(3)
+        },
+        {
+            employee_id: resolvedEmployeeId,
+            task_name: '30-Day Check-In',
+            section: 'Check-Ins',
+            task_type: 'checkin',
+            due_date: addDaysToHireDate(30),
+            status: getStatusForDueDate(30)
+        },
+        {
+            employee_id: resolvedEmployeeId,
+            task_name: '60-Day Check-In',
+            section: 'Check-Ins',
+            task_type: 'checkin',
+            due_date: addDaysToHireDate(60),
+            status: getStatusForDueDate(60)
+        },
+        {
+            employee_id: resolvedEmployeeId,
+            task_name: '90-Day Check-In',
+            section: 'Check-Ins',
+            task_type: 'checkin',
+            due_date: addDaysToHireDate(90),
+            status: getStatusForDueDate(90)
+        }
+    ];
+
+    const { data: existingTasks, error: fetchError } = await supabaseClient
+
+        .from('onboarding_tasks')
+
+        .select('id, employee_id, task_name')
+
+        .eq('employee_id', resolvedEmployeeId);
+
+    if (fetchError) {
+
+        console.error('Error fetching existing onboarding tasks:', fetchError);
+
+        return;
+
+    }
+
+    // Step 2: attach IDs where matches exist
+
+    const tasksWithIds = defaultTasks.map(task => {
+        const match = existingTasks?.find(t =>
+            String(t.employee_id) === String(task.employee_id) &&
+            t.task_name === task.task_name
+
+        );
+
+        return match
+
+            ? { ...task, id: match.id }
+
+            : { ...task }; // let DB handle insert without forcing id
+
+    });
+
+    const { error: upsertError } = await supabaseClient
+        .from('onboarding_tasks')
+        .upsert(tasksWithIds, {
+            onConflict: 'employee_id,task_name',
+            ignoreDuplicates: true
+        });
+
+    if (upsertError) {
+
+        console.error('Error creating default onboarding tasks:', upsertError);
+
+    }
 }
 
-// =========================
-// EDIT
-// =========================
-function startOnboardingEdit(record) {
-    currentOnboardingId = record.id;
-
-    if (safeGet('onboardingStep')) safeGet('onboardingStep').value = record.step_name || '';
-    if (safeGet('onboardingStatus')) safeGet('onboardingStatus').value = record.status || 'Pending';
-    if (safeGet('onboardingNotes')) safeGet('onboardingNotes').value = record.notes || '';
-
-    if (safeGet('saveOnboardingBtn')) safeGet('saveOnboardingBtn').textContent = 'Update Onboarding';
-}
-
-function cancelOnboardingEdit() {
-    currentOnboardingId = null;
-
-    if (safeGet('onboardingStep')) safeGet('onboardingStep').value = '';
-    if (safeGet('onboardingStatus')) safeGet('onboardingStatus').value = 'Pending';
-    if (safeGet('onboardingNotes')) safeGet('onboardingNotes').value = '';
-
-    if (safeGet('saveOnboardingBtn')) safeGet('saveOnboardingBtn').textContent = 'Save Onboarding';
-}
-
-// =========================
-// SAVE
-// =========================
-async function saveOnboardingRecord() {
-    const employeeId = getResolvedOnboardingEmployeeId();
-    if (!employeeId) {
-        showToast('No employee selected.', 'error');
-        return;
-    }
-
-    const payload = {
-        employee_id: employeeId,
-        step_name: safeGet('onboardingStep')?.value || '',
-        status: safeGet('onboardingStatus')?.value || 'Pending',
-        notes: safeGet('onboardingNotes')?.value || ''
-    };
-
-    let error;
-
-    if (currentOnboardingId) {
-        const result = await supabaseClient
-            .from('employee_onboarding')
-            .update(payload)
-            .eq('id', currentOnboardingId);
-        error = result.error;
-    } else {
-        const result = await supabaseClient
-            .from('employee_onboarding')
-            .insert([payload]);
-        error = result.error;
-    }
-
-    if (error) {
-        console.error(error);
-        showToast('Error saving onboarding.', 'error');
-        return;
-    }
-
-    showToast(currentOnboardingId ? 'Onboarding updated.' : 'Onboarding saved.');
-
-    cancelOnboardingEdit();
-    await loadEmployeeOnboarding(employeeId);
-    switchTab('onboarding');
-}
-
-// =========================
-// DELETE
-// =========================
-async function deleteOnboardingRecord(id) {
-    const employeeId = getResolvedOnboardingEmployeeId();
-    if (!employeeId) {
-        showToast('No employee selected.', 'error');
-        return;
-    }
-
-    if (!confirm('Delete this onboarding record?')) return;
-
-    const { error } = await supabaseClient
-        .from('employee_onboarding')
-        .delete()
-        .eq('id', id);
-
-    if (error) {
-        console.error(error);
-        showToast('Error deleting onboarding.', 'error');
-        return;
-    }
-
-    showToast('Onboarding record deleted.');
-    await loadEmployeeOnboarding(employeeId);
-}
-
-// =========================
-// EXPORTS
-// =========================
-window.loadEmployeeOnboarding = loadEmployeeOnboarding;
-window.startOnboardingEdit = startOnboardingEdit;
-window.cancelOnboardingEdit = cancelOnboardingEdit;
-window.saveOnboardingRecord = saveOnboardingRecord;
-window.deleteOnboardingRecord = deleteOnboardingRecord;
+window.createDefaultOnboardingTasks = createDefaultOnboardingTasks;

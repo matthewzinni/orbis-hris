@@ -60,24 +60,31 @@ function normalizeEmployeeFromDatabase(row) {
 
 async function loadEmployeesData() {
 
-    const { data, error } = await OrbisServices.employees.getAll();
+    const db = getOrbisSupabaseClient();
 
-    if (error) {
-
-        console.error(error);
-
-        setText('empCount', 'Error loading employees');
-
-        showToast('Could not load employees from Supabase.', 'error');
-
+    if (!db) {
+        console.error('No Supabase client');
         return [];
-
     }
 
-    EMPLOYEES = (data || []).map(normalizeEmployeeFromDatabase).filter(Boolean);
+    const { data, error } = await db
+        .from('employees')
+        .select('*');
+
+    if (error) {
+        console.error('Error loading employees:', error);
+        setText('empCount', 'Error loading employees');
+        showToast('Could not load employees from Supabase.', 'error');
+        return [];
+    }
+
+    console.log('🔥 Fresh employees from DB:', data);
+
+    EMPLOYEES = (data || [])
+        .map(normalizeEmployeeFromDatabase)
+        .filter(Boolean);
 
     return EMPLOYEES;
-
 }
 
 async function loadEmployeesAndRefreshUi() {

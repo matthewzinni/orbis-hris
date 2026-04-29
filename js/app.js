@@ -46,6 +46,7 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    loadEmployees();
 });
 
 let EMPLOYEES = [];
@@ -232,44 +233,79 @@ function resetDrawerForms() {
 }
 
 function normalizeEmployee(employee) {
+
     if (!employee) return null;
 
-    const displayName = employee.displayName || employee.name || '';
-    const nameParts = String(displayName).trim().split(/\s+/).filter(Boolean);
-    const fallbackFirstName = nameParts[0] || '';
-    const fallbackLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    const first = employee.first || employee.first_name || '';
+
+    const last = employee.last || employee.last_name || '';
+
+    const dept = employee.dept || employee.department || '';
+
+    const status = String(employee.status || 'ACTIVE').toUpperCase();
+
+    const hireDateRaw = employee.hire_date || employee.hireDate || '';
+
+    const nextReviewRaw = employee.next_review_date || employee.nextReviewDate || '';
+
+    const hireDate = hireDateRaw ? new Date(`${hireDateRaw}T00:00:00`) : null;
+
+    const nextReview = nextReviewRaw ? new Date(`${nextReviewRaw}T00:00:00`) : null;
 
     return {
+
         ...employee,
 
-        dbId: employee.dbId || employee.id || '',
-        id: employee.id || employee.dbId || '',
+        id: employee.id || employee.employee_id || '',
 
-        employee_id: employee.employee_id || employee.employeeId || employee.displayId || employee.id || employee.dbId || '',
+        dbId: employee.id || '',
 
-        first_name: employee.first_name || employee.firstName || employee.first || fallbackFirstName || '',
-        last_name: employee.last_name || employee.lastName || employee.last || fallbackLastName || '',
+        employee_id: employee.employee_id || employee.id || '',
 
-        department: employee.department || employee.dept || employee.displayDepartment || '',
-        position: employee.position || employee.title || employee.displayPosition || '',
-        supervisor: employee.supervisor || employee.displaySupervisor || '',
+        first,
 
-        status: employee.status || employee.displayStatus || 'ACTIVE',
+        last,
+
+        first_name: first,
+
+        last_name: last,
+
+        displayName: `${first} ${last}`.trim(),
+
+        dept,
+
+        department: dept,
+
+        position: employee.position || '',
+
+        supervisor: employee.supervisor || '',
+
+        status,
+
+        displayStatus: status,
+
+        payType: employee.payType || employee.pay_type || '',
 
         pay_type: employee.pay_type || employee.payType || '',
-        standard_hours: employee.standard_hours || employee.standardHours || '',
-        benefits_status: employee.benefits_status || employee.benefitsStatus || '',
 
-        hire_date: employee.hire_date || employee.hireDate || employee.displayHireDate || '',
-        next_review_date: employee.next_review_date || employee.nextReviewDate || '',
-        anniversary_date: employee.anniversary_date || employee.anniversaryDate || '',
-        tenure_bracket: employee.tenure_bracket || employee.tenureBracket || '',
+        hireDate,
 
-        work_email: employee.work_email || employee.workEmail || '',
-        personal_email: employee.personal_email || employee.personalEmail || '',
-        phone: employee.phone || '',
-        notes: employee.notes || ''
+        hire_date: hireDateRaw,
+
+        nextReview,
+
+        next_review_date: nextReviewRaw,
+
+        tenureMonths: Number(employee.tenureMonths || employee.tenure_months || 0),
+
+        tenure_months: Number(employee.tenure_months || employee.tenureMonths || 0),
+
+        benefitsStatus: employee.benefitsStatus || employee.benefits_status || '',
+
+        benefits_status: employee.benefits_status || employee.benefitsStatus || ''
+
     };
+
 }
 
 function populateEmployeeAdminForm(employee) {
@@ -606,16 +642,39 @@ async function loadAllDashboardData() {
 
 async function loadEmployees() {
 
-    if (typeof loadEmployeesAndRefreshUi === 'function') {
+    const { data, error } = await supabaseClient
+        .from('employees')
+        .select('*');
 
-        return await loadEmployeesAndRefreshUi();
-
+    if (error) {
+        console.error(error);
+        showToast('Could not load employees.', 'error');
+        return [];
     }
 
-    showToast('Employees data module is not loaded.', 'error');
+    EMPLOYEES = (Array.isArray(data) ? data : [])
+        .map(employee => typeof normalizeEmployee === 'function' ? normalizeEmployee(employee) : employee)
+        .filter(Boolean);
 
-    return [];
+    window.EMPLOYEES = EMPLOYEES;
 
+    if (typeof renderEmployeeRoster === 'function') {
+        renderEmployeeRoster();
+    }
+
+    if (typeof renderKpiEmployeeMetrics === 'function') {
+        renderKpiEmployeeMetrics();
+    }
+
+    if (typeof populateDepartmentFilter === 'function') {
+        populateDepartmentFilter();
+    }
+
+    if (typeof renderDepartmentSummary === 'function') {
+        renderDepartmentSummary();
+    }
+
+    return EMPLOYEES;
 }
 
 // =========================
@@ -738,6 +797,11 @@ function renderCandidates() {
 }
 
 async function updateCandidateStage(candidateId, stage) {
+    // If a candidate is moved to Hired, convert them into a real employee record instead of only hiding them from the candidate pipeline.
+    if (String(stage || '').trim().toLowerCase() === 'hired') {
+        await convertCandidateToEmployee(candidateId);
+        return;
+    }
     const { error } = await supabaseClient
         .from('candidates')
         .update({ stage })
@@ -756,13 +820,189 @@ async function updateCandidateStage(candidateId, stage) {
 
 function generateEmployeeId() {
     const maxExisting = EMPLOYEES.reduce((max, employee) => {
-        const match = String(employee.id || '').match(/(\d+)$/);
+        const match = String(employee.employee_id || employee.displayId || employee.id || '').match(/(\d+)$/);
         const numeric = match ? Number(match[1]) : 0;
         return Math.max(max, numeric);
     }, 0);
 
     return `BTW${maxExisting + 1}`;
 }
+
+async function generateAvailableEmployeeId() {
+    const usedNumbers = new Set();
+
+    const collectNumber = (value) => {
+        const match = String(value || '').match(/(\d+)$/);
+        if (match) usedNumbers.add(Number(match[1]));
+    };
+
+    EMPLOYEES.forEach(employee => {
+        collectNumber(employee.employee_id || employee.displayId || employee.id);
+    });
+
+    try {
+        const [employeeRes, onboardingRes] = await Promise.all([
+            supabaseClient
+                .from('employees')
+                .select('id'),
+            supabaseClient
+                .from('onboarding_tasks')
+                .select('employee_id')
+        ]);
+
+        if (!employeeRes.error) {
+            (employeeRes.data || []).forEach(row => {
+                collectNumber(row.id);
+            });
+        }
+
+        if (!onboardingRes.error) {
+            (onboardingRes.data || []).forEach(row => {
+                collectNumber(row.employee_id);
+            });
+        }
+    } catch (err) {
+        console.warn('Could not check existing employee/onboarding IDs. Falling back to local employee list.', err);
+    }
+
+    let nextNumber = usedNumbers.size ? Math.max(...usedNumbers) + 1 : 1;
+
+    while (usedNumbers.has(nextNumber)) {
+        nextNumber += 1;
+    }
+
+    return `BTW${nextNumber}`;
+}
+
+async function createDefaultOnboardingTasks(employeeId) {
+    if (!employeeId) return;
+
+    const defaultTasks = [
+        'Complete I-9',
+        'Complete W-4',
+        'Sign Employee Handbook',
+        'Safety Training',
+        'Set Up System Access'
+    ];
+
+    const { data: existingTasks, error: existingError } = await supabaseClient
+        .from('onboarding_tasks')
+        .select('task_name')
+        .eq('employee_id', employeeId);
+
+    if (existingError) {
+        console.warn('Could not check existing onboarding tasks:', existingError);
+    }
+
+    const existingTaskNames = new Set((existingTasks || []).map(task => String(task.task_name || '').trim()));
+
+    const payload = defaultTasks
+        .filter(taskName => !existingTaskNames.has(taskName))
+        .map(taskName => ({
+            employee_id: employeeId,
+            task_name: taskName,
+            status: 'Pending'
+        }));
+
+    if (!payload.length) return;
+
+    const { error } = await supabaseClient
+        .from('onboarding_tasks')
+        .insert(payload);
+
+    if (error) {
+        console.error('Onboarding tasks failed to create:', error);
+        showToast('Employee created, but onboarding tasks failed to create.', 'error');
+        return;
+    }
+
+    console.log('✅ Default onboarding tasks created:', employeeId);
+}
+
+async function loadOnboardingTasks(employeeId) {
+    if (!employeeId) return;
+
+    let { data, error } = await supabaseClient
+        .from('onboarding_tasks')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .order('task_name', { ascending: true });
+
+    if (error) {
+        console.error('Could not load onboarding tasks:', error);
+        return;
+    }
+
+    // If this employee has no onboarding rows yet, create the default packet now and reload it.
+    // This covers candidates converted while database triggers are disabled.
+    if (!data || data.length === 0) {
+        await createDefaultOnboardingTasks(employeeId);
+
+        const retry = await supabaseClient
+            .from('onboarding_tasks')
+            .select('*')
+            .eq('employee_id', employeeId)
+            .order('task_name', { ascending: true });
+
+        if (retry.error) {
+            console.error('Could not reload onboarding tasks:', retry.error);
+            return;
+        }
+
+        data = retry.data || [];
+    }
+
+    const tasks = data || [];
+
+    const container = document.getElementById('onboardingChecklist');
+    const summary = document.getElementById('onboardingSummary');
+    const bar = document.getElementById('onboardingProgressBar');
+
+    if (!container) return;
+
+    if (!tasks.length) {
+        container.innerHTML = '<div class="empty">No onboarding tasks.</div>';
+        if (summary) summary.textContent = '0 of 0 complete';
+        if (bar) bar.style.width = '0%';
+        return;
+    }
+
+    const completed = tasks.filter(task => String(task.status || '').toLowerCase() === 'completed').length;
+    const percent = Math.round((completed / tasks.length) * 100);
+
+    container.innerHTML = tasks.map(task => `
+        <div class="onboarding-task" style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #e5e7eb;">
+            <input type="checkbox"
+                ${String(task.status || '').toLowerCase() === 'completed' ? 'checked' : ''}
+                onchange="toggleOnboardingTask('${task.id}', this.checked)">
+            <span>${esc(task.task_name || 'Onboarding task')}</span>
+        </div>
+    `).join('');
+
+    if (summary) summary.textContent = `${completed} of ${tasks.length} complete`;
+    if (bar) bar.style.width = `${percent}%`;
+}
+
+async function toggleOnboardingTask(taskId, isComplete) {
+    if (!taskId) return;
+
+    const { error } = await supabaseClient
+        .from('onboarding_tasks')
+        .update({ status: isComplete ? 'Completed' : 'Pending' })
+        .eq('id', taskId);
+
+    if (error) {
+        console.error('Could not update onboarding task:', error);
+        showToast('Could not update onboarding task.', 'error');
+        return;
+    }
+
+    const employeeId = currentEmployee?.employee_id || currentEmployee?.id || currentEmployee?.dbId || '';
+    await loadOnboardingTasks(employeeId);
+}
+
+window.loadOnboardingTasks = loadOnboardingTasks;
+window.toggleOnboardingTask = toggleOnboardingTask;
 
 async function convertCandidateToEmployee(candidateId) {
     const candidate = CANDIDATES.find(item => String(item.id) === String(candidateId));
@@ -771,7 +1011,31 @@ async function convertCandidateToEmployee(candidateId) {
         return;
     }
 
-    const newEmployeeId = generateEmployeeId();
+    if (String(candidate.stage || '').trim().toLowerCase() === 'hired') {
+        showToast('Candidate is already marked as hired.', 'info');
+        return;
+    }
+
+    if (candidate.__isConvertingToEmployee === true) {
+        showToast('Candidate conversion is already in progress.', 'info');
+        return;
+    }
+
+    candidate.__isConvertingToEmployee = true;
+
+    const conversionButtons = Array.from(document.querySelectorAll('button'))
+        .filter(button => {
+            const text = String(button.textContent || '').trim().toLowerCase();
+            return text === 'hire' || text === 'move to next stage' || text === 'convert to employee';
+        });
+
+    conversionButtons.forEach(button => {
+        button.disabled = true;
+        button.dataset.originalText = button.dataset.originalText || button.textContent;
+        button.textContent = 'Converting...';
+    });
+
+    let newEmployeeId = await generateAvailableEmployeeId();
 
     const payload = {
         id: newEmployeeId,
@@ -785,16 +1049,73 @@ async function convertCandidateToEmployee(candidateId) {
         standard_hours: 40,
         benefits_status: null,
         hire_date: todayInputValue(),
-        next_review_date: null,
-        anniversary_date: null,
+        next_review_date: (() => {
+            // New hires get their first annual review one year from hire date.
+            const hireDate = todayInputValue();
+            const date = new Date(`${hireDate}T00:00:00`);
+            date.setFullYear(date.getFullYear() + 1);
+            return date.toISOString().slice(0, 10);
+        })(),
+        anniversary_date: (() => {
+            const hireDate = new Date(`${todayInputValue()}T00:00:00`);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const anniversary = new Date(today.getFullYear(), hireDate.getMonth(), hireDate.getDate());
+            if (anniversary < today) anniversary.setFullYear(anniversary.getFullYear() + 1);
+            return anniversary.toISOString().slice(0, 10);
+        })(),
         tenure_bracket: '0-6 months'
     };
 
-    const { error } = await createEmployee(payload);
+    let data = null;
+    let error = null;
+
+    const result = await supabaseClient
+        .from('employees')
+        .insert([{ ...payload, id: newEmployeeId }])
+        .select();
+
+    data = result.data;
+    error = result.error;
+
     if (error) {
         console.error(error);
-        showToast('Could not convert candidate to employee.', 'error');
+        showToast(error.message || 'Could not convert candidate to employee.', 'error');
+
+        candidate.__isConvertingToEmployee = false;
+        conversionButtons.forEach(button => {
+            button.disabled = false;
+            button.textContent = button.dataset.originalText || button.textContent;
+        });
+
         return;
+    }
+
+    // 🔥 FIX: update GLOBAL state and force UI refresh
+    if (!Array.isArray(window.EMPLOYEES)) {
+        window.EMPLOYEES = [];
+    }
+
+    if (data && data[0]) {
+        const normalizedNewEmployee = typeof normalizeEmployee === 'function'
+            ? normalizeEmployee(data[0])
+            : data[0];
+
+        const exists = window.EMPLOYEES.some(e =>
+            String(e.id || '') === String(normalizedNewEmployee.id || '') ||
+            String(e.employee_id || '') === String(normalizedNewEmployee.employee_id || '')
+        );
+
+        if (!exists) {
+            window.EMPLOYEES.unshift(normalizedNewEmployee);
+        }
+
+        EMPLOYEES = window.EMPLOYEES;
+    }
+
+    // 🔥 FORCE roster to re-render immediately
+    if (typeof renderEmployeeRoster === 'function') {
+        renderEmployeeRoster();
     }
 
     const { error: candidateError } = await supabaseClient
@@ -806,6 +1127,8 @@ async function convertCandidateToEmployee(candidateId) {
         console.error(candidateError);
         showToast('Employee created, but candidate stage did not update.', 'error');
     } else {
+        console.log('✅ Candidate converted:', newEmployeeId);
+        await createDefaultOnboardingTasks(newEmployeeId);
         showToast('Candidate converted to employee.');
     }
 
@@ -815,12 +1138,21 @@ async function convertCandidateToEmployee(candidateId) {
     await loadRecentActivity();
     await loadReviewDashboard();
 
-    const refreshedEmployee = EMPLOYEES.find(e => String(e.id) === String(newEmployeeId));
+    const refreshedEmployee = EMPLOYEES.find(e => String(e.employee_id || e.id) === String(newEmployeeId));
     if (refreshedEmployee && typeof openDrawer === 'function') {
         closeCandidateDrawer();
         openDrawer(refreshedEmployee);
         switchTab('onboarding');
+        const onboardingEmployeeId = refreshedEmployee.employee_id || refreshedEmployee.id || refreshedEmployee.dbId;
+        await createDefaultOnboardingTasks(onboardingEmployeeId);
+        await loadOnboardingTasks(onboardingEmployeeId);
     }
+
+    candidate.__isConvertingToEmployee = false;
+    conversionButtons.forEach(button => {
+        button.disabled = false;
+        button.textContent = button.dataset.originalText || button.textContent;
+    });
 }
 
 function switchCandidateTab(tabName) {
@@ -1131,6 +1463,7 @@ function renderKpiEmployeeMetrics() {
     const turnoverRiskEmployees = reviewEligibleActive.filter(e => {
         const tenureMonths = Number(e.tenureMonths) || 0;
         const isFirstThreeMonths = tenureMonths > 0 && tenureMonths <= 3;
+        const isEarlyTenure = tenureMonths <= 6;
         const employeeKey = String(e.dbId || e.id || '');
         const riskMeta = currentAtRiskRosterMap?.[employeeKey] || null;
         const isAtRisk = !!riskMeta && (
@@ -1139,7 +1472,7 @@ function renderKpiEmployeeMetrics() {
             String(riskMeta.manualReason || '').trim() !== ''
         );
 
-        return isFirstThreeMonths && isAtRisk;
+        return (isFirstThreeMonths || isEarlyTenure) && isAtRisk;
     });
 
     const turnoverRiskContributors = turnoverRiskEmployees.length;
@@ -2154,17 +2487,38 @@ async function markEmployeeAtRisk() {
     }
 
     showToast('Employee marked at-risk.');
-    updateEmployeeRowBadges(currentEmployee.id);
     recordAuditEvent('Marked At-Risk', currentEmployee, reason);
-
 
     setManualAtRiskUi(true, reason);
 
+    const riskMeta = {
+        manualReason: reason,
+        lowReview: false,
+        reviewScore: null,
+        openIncidentCount: 0,
+        flaggedDate: todayInputValue(),
+        flaggedBy: 'Matthew Zinni'
+    };
+
+    const riskKeys = [
+        currentEmployee.dbId,
+        currentEmployee.id,
+        currentEmployee.employee_id,
+        currentEmployee.displayId
+    ].filter(Boolean).map(String);
+
+    window.currentAtRiskRosterMap = window.currentAtRiskRosterMap || currentAtRiskRosterMap || {};
+
+    riskKeys.forEach(key => {
+        currentAtRiskRosterMap[key] = riskMeta;
+        window.currentAtRiskRosterMap[key] = riskMeta;
+    });
+
     if (typeof loadEmployeeNotes === 'function') await loadEmployeeNotes(currentEmployee.id);
-
     if (typeof loadSummaryMetrics === 'function') await loadSummaryMetrics();
-
     if (typeof loadRiskEmployees === 'function') await loadRiskEmployees();
+    if (typeof renderRoster === 'function') renderRoster();
+    updateEmployeeRowBadges(currentEmployee.id);
 
 }
 
@@ -2210,16 +2564,29 @@ async function clearAtRiskStatus() {
     }
 
     showToast('At-risk flag cleared.');
-    updateEmployeeRowBadges(currentEmployee.id);
     recordAuditEvent('Cleared At-Risk', currentEmployee, noteText);
 
     setManualAtRiskUi(false, '');
 
+    const riskKeys = [
+        currentEmployee.dbId,
+        currentEmployee.id,
+        currentEmployee.employee_id,
+        currentEmployee.displayId
+    ].filter(Boolean).map(String);
+
+    window.currentAtRiskRosterMap = window.currentAtRiskRosterMap || currentAtRiskRosterMap || {};
+
+    riskKeys.forEach(key => {
+        delete currentAtRiskRosterMap[key];
+        delete window.currentAtRiskRosterMap[key];
+    });
+
     if (typeof loadEmployeeNotes === 'function') await loadEmployeeNotes(currentEmployee.id);
-
     if (typeof loadSummaryMetrics === 'function') await loadSummaryMetrics();
-
     if (typeof loadRiskEmployees === 'function') await loadRiskEmployees();
+    if (typeof renderRoster === 'function') renderRoster();
+    updateEmployeeRowBadges(currentEmployee.id);
 
 }
 
@@ -2294,12 +2661,36 @@ async function markImpactPlayer() {
     }
 
     showToast('Employee marked as an Impact Player.');
-    updateEmployeeRowBadges(currentEmployee.id);
     recordAuditEvent('Marked Impact Player', currentEmployee, reason);
 
     setManualImpactPlayerUi(true, reason);
+
+    const impactMeta = {
+        manualReason: reason,
+        flaggedDate: todayInputValue(),
+        flaggedBy: 'Matthew Zinni',
+        highReview: false,
+        reviewScore: null
+    };
+
+    const impactKeys = [
+        currentEmployee.dbId,
+        currentEmployee.id,
+        currentEmployee.employee_id,
+        currentEmployee.displayId
+    ].filter(Boolean).map(String);
+
+    window.currentImpactPlayerRosterMap = window.currentImpactPlayerRosterMap || currentImpactPlayerRosterMap || {};
+
+    impactKeys.forEach(key => {
+        currentImpactPlayerRosterMap[key] = impactMeta;
+        window.currentImpactPlayerRosterMap[key] = impactMeta;
+    });
+
     if (typeof loadEmployeeNotes === 'function') await loadEmployeeNotes(currentEmployee.id);
     if (typeof loadSummaryMetrics === 'function') await loadSummaryMetrics();
+    if (typeof renderRoster === 'function') renderRoster();
+    updateEmployeeRowBadges(currentEmployee.id);
 }
 
 async function clearImpactPlayerStatus() {
@@ -2328,8 +2719,25 @@ async function clearImpactPlayerStatus() {
 
     showToast('Impact Player flag cleared.');
     setManualImpactPlayerUi(false, '');
+
+    const impactKeys = [
+        currentEmployee.dbId,
+        currentEmployee.id,
+        currentEmployee.employee_id,
+        currentEmployee.displayId
+    ].filter(Boolean).map(String);
+
+    window.currentImpactPlayerRosterMap = window.currentImpactPlayerRosterMap || currentImpactPlayerRosterMap || {};
+
+    impactKeys.forEach(key => {
+        delete currentImpactPlayerRosterMap[key];
+        delete window.currentImpactPlayerRosterMap[key];
+    });
+
     if (typeof loadEmployeeNotes === 'function') await loadEmployeeNotes(currentEmployee.id);
     if (typeof loadSummaryMetrics === 'function') await loadSummaryMetrics();
+    if (typeof renderRoster === 'function') renderRoster();
+    updateEmployeeRowBadges(currentEmployee.id);
 }
 
 function startNewEmployee() {
@@ -2841,10 +3249,44 @@ async function loadEmployeeOnboarding(employeeId) {
             return;
         }
 
-        const rows = (data || []).sort((a, b) => {
+        const rawRows = (data || []).sort((a, b) => {
             const sectionCompare = String(a.section || '').localeCompare(String(b.section || ''));
             if (sectionCompare !== 0) return sectionCompare;
-            return String(a.task_name || '').localeCompare(String(b.task_name || ''));
+            const taskCompare = String(a.task_name || '').localeCompare(String(b.task_name || ''));
+            if (taskCompare !== 0) return taskCompare;
+            return String(a.due_date || '').localeCompare(String(b.due_date || ''));
+        });
+
+        const seenOnboardingTasks = new Set();
+        const rows = [];
+
+        rawRows.forEach(row => {
+            const taskKey = [
+                String(row.task_name || '').trim().toLowerCase(),
+                String(row.task_type || '').trim().toLowerCase(),
+                String(row.section || '').trim().toLowerCase(),
+            ].join('|');
+
+            if (seenOnboardingTasks.has(taskKey)) return;
+
+            seenOnboardingTasks.add(taskKey);
+            rows.push(row);
+        });
+
+        const today = new Date().toISOString().slice(0, 10);
+
+        rows.sort((a, b) => {
+            const aDone = String(a.status || '').toLowerCase() === 'completed';
+            const bDone = String(b.status || '').toLowerCase() === 'completed';
+            const aOverdue = !aDone && (String(a.status || '').toLowerCase() === 'overdue' || (a.due_date && String(a.due_date) < today));
+            const bOverdue = !bDone && (String(b.status || '').toLowerCase() === 'overdue' || (b.due_date && String(b.due_date) < today));
+
+            if (aOverdue && !bOverdue) return -1;
+            if (!aOverdue && bOverdue) return 1;
+
+            const aDue = String(a.due_date || '9999-12-31');
+            const bDue = String(b.due_date || '9999-12-31');
+            return aDue.localeCompare(bDue);
         });
 
         if (!rows.length) {
@@ -2873,20 +3315,29 @@ async function loadEmployeeOnboarding(employeeId) {
                 <div style="font-weight:800; font-size:13px; letter-spacing:0.02em; text-transform:uppercase; color:var(--muted); margin-bottom:8px;">${esc(section)}</div>
                 ${items.map(row => {
             const done = row.status === 'Completed';
+            // today is now declared above, so don't redeclare
+            const overdue = !done && (
+                String(row.status || '').toLowerCase() === 'overdue' ||
+                (row.due_date && String(row.due_date) < today)
+            );
+            const dueToday = !done && String(row.status || '').toLowerCase() === 'due today';
             const metaText = done
                 ? `Completed${row.completed_at ? ` • ${new Date(row.completed_at).toLocaleDateString()}` : ''}`
                 : row.due_date
-                    ? `Due ${row.due_date}`
+                    ? `${overdue ? 'Overdue' : dueToday ? 'Due Today' : 'Due'} ${row.due_date}`
                     : 'Pending';
+            const accentColor = done ? '#10b981' : overdue ? '#dc2626' : dueToday ? '#f59e0b' : '#3b82f6';
+            const cardBackground = overdue ? 'background:#fff5f5;' : '';
+            const badgeClass = done ? 'badge-active' : overdue ? 'badge-inactive' : dueToday ? 'badge-leave' : 'badge-soft';
 
             return `
-                        <div class="history-item" style="margin-bottom:10px; border-left:4px solid ${done ? '#10b981' : '#3b82f6'};">
+                        <div class="history-item" style="margin-bottom:10px; border-left:4px solid ${accentColor}; ${cardBackground}">
                             <div class="history-top">
                                 <div>
                                     <div class="history-title">${esc(row.task_name || 'Onboarding Task')}</div>
                                     <div class="history-date">${esc(metaText)} • ${esc(row.task_type || 'task')}</div>
                                 </div>
-                                <span class="badge ${done ? 'badge-active' : 'badge-soft'}">
+                                <span class="badge ${badgeClass}">
                                     ${esc(row.status || 'Pending')}
                                 </span>
                             </div>
@@ -2930,53 +3381,60 @@ async function markOnboardingComplete(id) {
 }
 
 async function convertCandidate(candidate) {
-
     const newId = generateEmployeeId();
+    const hireDate = new Date().toISOString().split('T')[0];
 
-    const { error } = await supabaseClient
+    const nextReviewDate = (() => {
+        const date = new Date(`${hireDate}T00:00:00`);
+        date.setFullYear(date.getFullYear() + 1);
+        return date.toISOString().slice(0, 10);
+    })();
 
-        .from('employees')
+    const anniversaryDate = (() => {
+        const date = new Date(`${hireDate}T00:00:00`);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const anniversary = new Date(today.getFullYear(), date.getMonth(), date.getDate());
+        if (anniversary < today) anniversary.setFullYear(anniversary.getFullYear() + 1);
+        return anniversary.toISOString().slice(0, 10);
+    })();
 
-        .insert([{
+    const payload = {
+        id: newId,
+        first_name: candidate.first_name || '',
+        last_name: candidate.last_name || '',
+        department: candidate.department || '',
+        position: candidate.position || '',
+        status: 'ACTIVE',
+        hire_date: hireDate,
+        next_review_date: nextReviewDate,
+        anniversary_date: anniversaryDate,
+        tenure_bracket: '0-6 months'
+    };
 
-            id: newId,
+    const result = typeof createEmployee === 'function'
+        ? await createEmployee(payload)
+        : await OrbisServices.employees.create(payload);
 
-            first_name: candidate.first_name,
-
-            last_name: candidate.last_name,
-
-            department: candidate.department,
-
-            position: candidate.position,
-
-            status: 'ACTIVE',
-
-            hire_date: new Date().toISOString().split('T')[0]
-
-        }]);
-
-    if (error) {
-
-        console.error(error);
-
+    if (result.error) {
+        console.error(result.error);
         showToast('Conversion failed', 'error');
-
         return;
-
     }
 
-    await supabaseClient
-
+    const { error: candidateUpdateError } = await supabaseClient
         .from('candidates')
-
         .update({ status: 'Hired' })
-
         .eq('id', candidate.id);
 
+    if (candidateUpdateError) {
+        console.error(candidateUpdateError);
+        showToast('Employee created, but candidate status was not updated.', 'error');
+        return;
+    }
+
     showToast('Converted to employee');
-
     await loadEmployees();
-
 }
 
 async function deleteEmergencyContact() {
@@ -3409,7 +3867,7 @@ function buildKpiHoverDetails() {
                 String(riskMeta.manualReason || '').trim() !== ''
             );
 
-            return isFirstThreeMonths && isAtRisk;
+            return tenureMonths <= 6 && isAtRisk;
         })
         .map(e => `${`${e.first || ''} ${e.last || ''}`.trim()}${e.tenureMonths != null ? ` • ${e.tenureMonths} mo` : ''}`)
         .filter(Boolean);

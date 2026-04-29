@@ -1,5 +1,3 @@
-
-
 // =========================
 // EMPLOYEE HISTORY / ACTIVITY FEED
 // =========================
@@ -16,12 +14,28 @@ async function loadEmployeeHistory(employeeId) {
 
     target.innerHTML = '<div class="empty">Loading history...</div>';
 
+    const safeGetByEmployee = async (serviceName) => {
+        try {
+            const service = window.OrbisServices?.[serviceName];
+
+            if (!service || typeof service.getByEmployee !== 'function') {
+                console.info(`History service missing, skipped: ${serviceName}`);
+                return { data: [] };
+            }
+
+            return await service.getByEmployee(actualEmployeeId);
+        } catch (err) {
+            console.warn(`History service failed: ${serviceName}`, err);
+            return { data: [] };
+        }
+    };
+
     const sources = await Promise.all([
-        OrbisServices.notes.getByEmployee(actualEmployeeId),
-        OrbisServices.meetings.getByEmployee(actualEmployeeId),
-        OrbisServices.discipline.getByEmployee(actualEmployeeId),
-        OrbisServices.incidents.getByEmployee(actualEmployeeId),
-        OrbisServices.reviews.getByEmployee(actualEmployeeId)
+        safeGetByEmployee('notes'),
+        safeGetByEmployee('meetings'),
+        safeGetByEmployee('discipline'),
+        safeGetByEmployee('incidents'),
+        safeGetByEmployee('reviews')
     ]);
 
     const [notes, meetings, discipline, incidents, reviews] = sources.map(s => s?.data || []);

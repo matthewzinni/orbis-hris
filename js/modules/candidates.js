@@ -80,11 +80,23 @@ async function resolveCurrentCandidateIdFromDrawer(db) {
     const hiddenId = document.getElementById('candidateDetailId')?.value;
     if (hiddenId) return hiddenId;
 
-    const firstName = document.getElementById('candidateDetailFirstName')?.value?.trim() || '';
-    const lastName = document.getElementById('candidateDetailLastName')?.value?.trim() || '';
-    const stage = document.getElementById('candidateDetailStage')?.value?.trim() || '';
-    const email = document.getElementById('candidateDetailEmail')?.value?.trim() || '';
-    const phone = document.getElementById('candidateDetailPhone')?.value?.trim() || '';
+    const firstName = document.getElementById('candidateDetailFirstName')?.value?.trim()
+        || document.getElementById('candidateFirstNameInput')?.value?.trim()
+        || '';
+    const lastName = document.getElementById('candidateDetailLastName')?.value?.trim()
+        || document.getElementById('candidateLastNameInput')?.value?.trim()
+        || '';
+    const stage = document.getElementById('candidateDetailStage')?.value?.trim()
+        || document.getElementById('candidateStageInput')?.value?.trim()
+        || '';
+    const email = document.getElementById('candidateDetailEmail')?.value?.trim()
+        || document.getElementById('candidateEmailInput')?.value?.trim()
+        || '';
+    const phone = document.getElementById('candidateDetailPhone')?.value?.trim()
+        || document.getElementById('candidatePhoneInput')?.value?.trim()
+        || '';
+
+    console.log('Resolving candidate from drawer fields:', { firstName, lastName, stage, email, phone });
 
     let query = db.from('candidates').select('*');
 
@@ -92,12 +104,17 @@ async function resolveCurrentCandidateIdFromDrawer(db) {
         query = query.eq('email', email);
     } else if (phone) {
         query = query.eq('phone', phone);
-    } else {
+    } else if (firstName || lastName) {
         // Match by name only (stage can change and break lookup)
-        query = query.eq('first_name', firstName).eq('last_name', lastName);
+        query = query
+            .ilike('first_name', firstName || '%')
+            .ilike('last_name', lastName || '%');
+    } else {
+        console.warn('No candidate lookup fields found in drawer.');
+        return '';
     }
 
-    const { data, error } = await query.limit(1).single();
+    const { data, error } = await query.limit(1).maybeSingle();
 
     if (error) {
         console.error('Could not resolve candidate from drawer:', error);
@@ -569,7 +586,9 @@ function ensureCandidateModal() {
         event.preventDefault();
         event.stopPropagation();
         console.log('Move to Next Stage button clicked');
-        await moveCandidateToNextStage();
+        const candidateId = drawer.querySelector('#candidateDetailId')?.value;
+
+        await moveCandidateToNextStage(candidateId);
     });
 
     drawer.querySelector('#candidateInviteBtn')?.addEventListener('click', () => {
@@ -624,9 +643,6 @@ function ensureCandidateModal() {
 
     });
 
-    drawer.querySelector('#candidateHireFromOfferBtn')?.addEventListener('click', async () => {
-        await convertCurrentCandidateToEmployee();
-    });
 
     drawer.querySelector('#candidateSaveDocumentBtn')?.addEventListener('click', async () => {
         await saveCandidateDocument();
@@ -727,6 +743,7 @@ async function openCandidateDetails(candidateId) {
     drawer.classList.remove('hidden');
     drawer.classList.add('open');
     drawer.style.display = 'block';
+    drawer.style.pointerEvents = 'auto';
     switchCandidateDrawerTab('profile');
     setTimeout(ensureLegacyCandidateMoveButton, 100);
 }
@@ -959,14 +976,26 @@ async function saveCandidateStageFromDrawer(newStage) {
     await openCandidateDetails(candidateId);
 }
 
-async function moveCandidateToNextStage() {
+async function moveCandidateToNextStage(passedId = null) {
     const db = getOrbisSupabaseClient();
     if (!db) {
         candidateToast('Supabase connection not found.', 'error');
         return;
     }
 
-    const candidateId = await resolveCurrentCandidateIdFromDrawer(db);
+    let candidateId = passedId;
+
+    if (!candidateId) {
+
+        candidateId = document.getElementById('candidateDetailId')?.value;
+
+    }
+
+    if (!candidateId) {
+
+        candidateId = await resolveCurrentCandidateIdFromDrawer(db);
+
+    }
     if (!candidateId) {
         candidateToast('No candidate is selected.', 'error');
         console.warn('Move to Next Stage could not resolve candidate ID from drawer fields.');
@@ -977,25 +1006,33 @@ async function moveCandidateToNextStage() {
     const currentStage = String(stageInput?.value || 'Applied').trim();
     const normalizedStage = currentStage.toLowerCase().replace(/\s+/g, '');
 
+    // Normalization fix for Interviewing/Interview
+    const normalizedMap = {
+        interviewing: 'interview'
+    };
+
+    const safeStage = normalizedMap[normalizedStage] || normalizedStage;
+
     console.log('Moving candidate to next stage:', { candidateId, currentStage, normalizedStage });
 
-    if (normalizedStage === 'offer' || normalizedStage === 'hired') {
-        console.log('Candidate is in Offer/Hired stage. Starting hire conversion:', candidateId);
-        await convertCandidateToEmployee(candidateId);
-        return;
-    }
+    const stages = ['Applied', 'Screening', 'Interview', 'Offer'];
+    const currentIndex = stages.findIndex(stage => stage.toLowerCase().replace(/\s+/g, '') === safeStage);
 
-    const stages = ['Applied', 'Screening', 'Interviewing', 'Offer'];
-    const currentIndex = stages.findIndex(stage => stage.toLowerCase().replace(/\s+/g, '') === normalizedStage);
-    const nextStage = currentIndex >= 0 && currentIndex < stages.length - 1
-        ? stages[currentIndex + 1]
-        : 'Applied';
+    let nextStage;
+
+    if (currentIndex === -1) {
+        nextStage = 'Applied';
+    } else if (currentIndex === stages.length - 1) {
+        nextStage = 'Hired';
+    } else {
+        nextStage = stages[currentIndex + 1];
+    }
 
     if (stageInput) stageInput.value = nextStage;
 
     await updateCandidateStage(candidateId, nextStage);
+
     await openCandidateDetails(candidateId);
-    candidateToast(`Candidate moved to ${nextStage}.`, 'success');
 }
 
 async function convertCurrentCandidateToEmployee() {
@@ -1067,13 +1104,18 @@ async function updateCandidateStage(candidateId, newStage) {
     await refreshCandidatesFromMainApp();
 }
 
-async function getNextEmployeeId(db) {
-    const { data, error } = await db
-        .from('employees')
-        .select('employee_id');
+async function getNextEmployeeId() {
+    let data = [];
 
-    if (error) {
-        console.warn('Could not read existing employee IDs. Falling back to timestamp ID.', error);
+    try {
+        if (window.OrbisServices?.employees?.getAll) {
+            const result = await OrbisServices.employees.getAll();
+            data = result?.data || [];
+        } else {
+            console.warn('OrbisServices.employees.getAll not found, falling back to empty dataset');
+        }
+    } catch (err) {
+        console.warn('Could not read existing employee IDs. Falling back to timestamp ID.', err);
         return `BTW${String(Date.now()).slice(-4)}`;
     }
 
@@ -1087,133 +1129,223 @@ async function getNextEmployeeId(db) {
 }
 
 async function convertCandidateToEmployee(candidateId) {
-    if (!candidateId) return;
-
-    const db = getOrbisSupabaseClient();
-
-    if (!db) {
-        console.error('Supabase client not found for candidates module.');
-        candidateToast('Supabase connection not found.', 'error');
+    // 🔒 Prevent double execution (fixes duplicate onboarding + hire bug)
+    if (window.__isHiringCandidate === true) {
+        console.warn('BLOCKED: duplicate hire execution');
         return;
     }
 
-    const confirmed = confirm('Hire this candidate, create an employee record, and remove them from the candidate pipeline?');
-    if (!confirmed) {
-        return;
-    }
+    window.__isHiringCandidate = true;
 
-    const { data: candidate, error: fetchError } = await db
-        .from('candidates')
-        .select('*')
-        .eq('id', candidateId)
-        .single();
+    setTimeout(() => {
+        window.__isHiringCandidate = false;
+    }, 3000);
 
-    if (fetchError || !candidate) {
-        console.error('Error finding candidate:', fetchError);
-        candidateToast(`Candidate could not be found: ${fetchError?.message || 'Unknown error'}`, 'error');
-        return;
-    }
+    try {
+        if (!candidateId) return;
 
-    const nextEmployeeId = await getNextEmployeeId(db);
-    const candidateFullName = `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim()
-        || candidate.name
-        || candidate.candidate_name
-        || '';
-    const nameParts = candidateFullName.trim().split(/\s+/).filter(Boolean);
-    const firstName = candidate.first_name || nameParts[0] || '';
-    const lastName = candidate.last_name || nameParts.slice(1).join(' ') || '';
-    const fullName = `${firstName} ${lastName}`.trim() || candidateFullName || 'New Employee';
-    const today = new Date().toISOString().slice(0, 10);
+        const db = getOrbisSupabaseClient();
 
-    const employeeRecord = {
-        employee_id: nextEmployeeId,
-        first_name: firstName,
-        last_name: lastName,
-        name: fullName,
-        department: candidate.department || '',
-        position: candidate.position || candidate.position_applied_for || candidate.role || '',
-        status: 'Active',
-        pay_type: candidate.pay_type || '',
-        standard_hours: candidate.standard_hours || 40,
-        hire_date: today,
-        personal_email: candidate.email || '',
-        work_email: candidate.work_email || '',
-        phone: candidate.phone || '',
-        benefits_status: candidate.benefits_status || 'Not Eligible'
-    };
+        if (!db) {
+            console.error('Supabase client not found for candidates module.');
+            candidateToast('Supabase connection not found.', 'error');
+            return;
+        }
 
-    console.log('Creating employee from candidate:', employeeRecord);
+        const confirmed = confirm('Hire this candidate, create an employee record, and remove them from the candidate pipeline?');
+        if (!confirmed) {
+            return;
+        }
 
-    let { error: insertError } = await db
-        .from('employees')
-        .insert([employeeRecord]);
+        const { data: candidate, error: fetchError } = await db
+            .from('candidates')
+            .select('*')
+            .eq('id', candidateId)
+            .single();
 
-    if (insertError) {
-        console.warn('Full employee insert failed, trying core fields only:', insertError);
+        if (fetchError || !candidate) {
+            console.error('Error finding candidate:', fetchError);
+            candidateToast(`Candidate could not be found: ${fetchError?.message || 'Unknown error'}`, 'error');
+            return;
+        }
 
-        const coreEmployeeRecord = {
+        const nextEmployeeId = await getNextEmployeeId();
+
+        const drawerCandidateId = document.getElementById('candidateDetailId')?.value || '';
+        const drawerMatchesCandidate = String(drawerCandidateId) === String(candidateId);
+
+        const drawerFirstName = drawerMatchesCandidate ? (document.getElementById('candidateDetailFirstName')?.value || '').trim() : '';
+        const drawerLastName = drawerMatchesCandidate ? (document.getElementById('candidateDetailLastName')?.value || '').trim() : '';
+        const drawerPosition = drawerMatchesCandidate ? (document.getElementById('candidateDetailPosition')?.value || '').trim() : '';
+        const drawerEmail = drawerMatchesCandidate ? (document.getElementById('candidateDetailEmail')?.value || '').trim() : '';
+        const drawerPhone = drawerMatchesCandidate ? (document.getElementById('candidateDetailPhone')?.value || '').trim() : '';
+
+        const candidateFullName = `${drawerFirstName || candidate.first_name || ''} ${drawerLastName || candidate.last_name || ''}`.trim()
+            || candidate.name
+            || candidate.candidate_name
+            || '';
+        const nameParts = candidateFullName.trim().split(/\s+/).filter(Boolean);
+        const firstName = drawerFirstName || candidate.first_name || nameParts[0] || '';
+        const lastName = drawerLastName || candidate.last_name || nameParts.slice(1).join(' ') || '';
+        const fullName = `${firstName} ${lastName}`.trim() || candidateFullName || 'New Employee';
+        const position = drawerPosition || candidate.position || candidate.position_applied_for || candidate.role || '';
+        const today = new Date().toISOString().slice(0, 10);
+
+        const employeeRecord = {
             employee_id: nextEmployeeId,
             first_name: firstName,
             last_name: lastName,
             name: fullName,
-            position: candidate.position || candidate.position_applied_for || candidate.role || '',
             department: candidate.department || '',
+            position,
             status: 'Active',
-            hire_date: today
+            pay_type: candidate.pay_type || '',
+            standard_hours: candidate.standard_hours || 40,
+            hire_date: today,
+            personal_email: drawerEmail || candidate.email || '',
+            work_email: candidate.work_email || '',
+            phone: drawerPhone || candidate.phone || '',
+            benefits_status: candidate.benefits_status || 'Not Eligible'
         };
 
-        const fallbackInsert = await db
-            .from('employees')
-            .insert([coreEmployeeRecord]);
+        console.log('Creating employee from candidate:', employeeRecord);
 
-        insertError = fallbackInsert.error;
-    }
+        // 🔥 CREATE employee USING THE SAME PATH AS MANUAL EMPLOYEE SAVE
+        let newEmployee = null;
+        let insertError = null;
 
-    if (insertError) {
-        console.error('Error converting candidate to employee:', insertError);
-        candidateToast(`Candidate could not be converted: ${insertError.message || 'Unknown error'}`, 'error');
-        return;
-    }
+        try {
+            if (window.OrbisServices?.employees?.create) {
+                const result = await window.OrbisServices.employees.create(employeeRecord);
+                newEmployee = Array.isArray(result?.data) ? result.data[0] : result?.data;
+                insertError = result?.error || null;
+                // 🔥 Ensure employee is immediately reflected in global state
+                if (newEmployee) {
+                    if (!Array.isArray(window.EMPLOYEES)) {
+                        window.EMPLOYEES = [];
+                    }
 
-    const { error: deleteError } = await db
-        .from('candidates')
-        .delete()
-        .eq('id', candidateId);
+                    const exists = window.EMPLOYEES.some(e =>
+                        String(e.employee_id || '') === String(newEmployee.employee_id || employeeRecord.employee_id)
+                    );
 
-    if (deleteError) {
-        console.error('Candidate converted, but could not be removed from pipeline:', deleteError);
-        candidateToast('Employee created, but candidate remains in pipeline.', 'warning');
-        return;
-    }
-
-    candidateToast(`Candidate hired and added to Employee Roster as ${nextEmployeeId}.`, 'success');
-    closeCandidateDetails();
-    removeCandidateDrawerAfterHire();
-    await refreshCandidatesFromMainApp();
-
-    if (typeof loadEmployees === 'function') {
-        await loadEmployees();
-    }
-
-    if (typeof window.loadDashboardData === 'function') {
-        await window.loadDashboardData();
-    }
-
-    setTimeout(() => {
-        removeCandidateDrawerAfterHire();
-
-        const createdEmployee = (window.EMPLOYEES || []).find(employee => {
-            return String(employee.employee_id || employee.employeeId || employee.empNo || employee.id || '') === String(nextEmployeeId);
-        });
-
-        if (createdEmployee && typeof window.openEmployeeDrawer === 'function') {
-            window.openEmployeeDrawer(createdEmployee);
-        } else if (createdEmployee && typeof window.openEmployeeProfile === 'function') {
-            window.openEmployeeProfile(createdEmployee);
-        } else {
-            console.log('Created employee record. Refresh roster if it is not visible yet:', nextEmployeeId);
+                    if (!exists) {
+                        window.EMPLOYEES.unshift(newEmployee);
+                    }
+                }
+            } else {
+                throw new Error('OrbisServices.employees.create not available');
+            }
+        } catch (err) {
+            insertError = err;
         }
-    }, 500);
+
+
+
+        if (insertError) {
+            const isDuplicateEmployee =
+                insertError.code === '23505' ||
+                String(insertError.message || '').toLowerCase().includes('duplicate key') ||
+                String(insertError.message || '').toLowerCase().includes('conflict') ||
+                String(insertError.details || '').toLowerCase().includes('already exists');
+
+            if (!isDuplicateEmployee) {
+                console.error('Error converting candidate to employee:', insertError);
+                candidateToast(`Candidate could not be converted: ${insertError.message || 'Unknown error'}`, 'error');
+                return;
+            }
+
+            console.warn('Employee appears to already exist. Continuing hire cleanup instead of failing:', insertError);
+        }
+
+        let onboardingEmployeeId = nextEmployeeId;
+
+        if (!newEmployee?.id && window.OrbisServices?.employees?.getAll) {
+            try {
+                const employeeResult = await OrbisServices.employees.getAll();
+                const existingEmployee = (employeeResult?.data || []).find(employee =>
+                    String(employee.employee_id || '') === String(nextEmployeeId) ||
+                    (
+                        String(employee.first_name || '').trim().toLowerCase() === String(firstName || '').trim().toLowerCase() &&
+                        String(employee.last_name || '').trim().toLowerCase() === String(lastName || '').trim().toLowerCase()
+                    )
+                );
+
+                if (existingEmployee?.employee_id || existingEmployee?.id) {
+                    onboardingEmployeeId = existingEmployee.employee_id || existingEmployee.id || nextEmployeeId;
+                }
+            } catch (lookupError) {
+                console.warn('Could not resolve employee DB ID for onboarding:', lookupError);
+            }
+        }
+
+        if (typeof createDefaultOnboardingTasks === 'function') {
+            try {
+                // Check if onboarding tasks already exist (prevents duplicate constraint errors)
+                const { data: existingTasks, error: existingError } = await db
+                    .from('onboarding_tasks')
+                    .select('id')
+                    .eq('employee_id', onboardingEmployeeId)
+                    .limit(1);
+
+                if (existingError) {
+                    console.warn('Could not check existing onboarding tasks:', existingError);
+                }
+
+                if (!existingTasks || existingTasks.length === 0) {
+                    await createDefaultOnboardingTasks(onboardingEmployeeId);
+                } else {
+                    console.log('Onboarding tasks already exist. Skipping creation.');
+                }
+
+            } catch (onboardingError) {
+                const isDuplicate =
+                    onboardingError?.code === '23505' ||
+                    String(onboardingError?.message || '').toLowerCase().includes('duplicate');
+
+                if (!isDuplicate) {
+                    console.warn('Employee was created, but onboarding task creation failed:', onboardingError);
+                } else {
+                    console.log('Duplicate onboarding tasks prevented. Continuing.');
+                }
+            }
+        } else {
+            console.warn('createDefaultOnboardingTasks is not available. Onboarding tasks were not auto-created.');
+        }
+
+        const { error: deleteError } = await db
+            .from('candidates')
+            .delete()
+            .eq('id', candidateId);
+
+        if (deleteError) {
+            console.error('Candidate converted, but could not be removed from pipeline:', deleteError);
+            candidateToast('Employee created, but candidate remains in pipeline.', 'warning');
+            return;
+        }
+
+        candidateToast(`${fullName} was hired and removed from the candidate pipeline.`, 'success');
+        closeCandidateDetails();
+        removeCandidateDrawerAfterHire();
+        await refreshCandidatesFromMainApp();
+
+        // 🔥 Ensure roster updates exactly like manual Save Employee
+        if (typeof window.refreshEmployeeRoster === 'function') {
+            await window.refreshEmployeeRoster();
+        }
+
+        if (typeof window.loadDashboardData === 'function') {
+            await window.loadDashboardData();
+        }
+
+        if (typeof window.loadOnboardingTasks === 'function') {
+            await window.loadOnboardingTasks(onboardingEmployeeId);
+        }
+
+    } finally {
+        window.__isHiringCandidate = false;
+    }
+
 }
 
 async function deleteCandidate(candidateId) {
@@ -1243,39 +1375,4 @@ async function deleteCandidate(candidateId) {
 
     candidateToast('Candidate deleted.', 'success');
     await refreshCandidatesFromMainApp();
-}
-// Fallback delegated handler for candidate drawer action buttons.
-document.addEventListener('click', async event => {
-    const nextStageButton = event.target.closest('#candidateNextStageBtn');
-    if (nextStageButton) {
-        event.preventDefault();
-        event.stopPropagation();
-        await moveCandidateToNextStage();
-        return;
-    }
-
-    const hireButton = event.target.closest('#candidateHireBtn, #candidateHireFromOfferBtn');
-    if (hireButton) {
-        event.preventDefault();
-        event.stopPropagation();
-        await convertCurrentCandidateToEmployee();
-    }
-});
-
-// Keep the Move to Next Stage button available in legacy candidate drawers too.
-document.addEventListener('DOMContentLoaded', () => {
-    setTimeout(ensureLegacyCandidateMoveButton, 500);
-});
-
-document.addEventListener('click', () => {
-    setTimeout(ensureLegacyCandidateMoveButton, 150);
-});
-
-const legacyCandidateMoveButtonObserver = new MutationObserver(() => {
-    clearTimeout(window.__legacyCandidateMoveButtonTimer);
-    window.__legacyCandidateMoveButtonTimer = setTimeout(ensureLegacyCandidateMoveButton, 150);
-});
-
-if (document.body) {
-    legacyCandidateMoveButtonObserver.observe(document.body, { childList: true, subtree: true });
 }
