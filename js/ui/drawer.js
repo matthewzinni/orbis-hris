@@ -1,9 +1,40 @@
+function cleanDrawerEmployeeNameValue(value) {
+    return String(value || '')
+        .replace(/\bAt[-\s]*Risk\b/gi, '')
+        .replace(/\bImpact\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function cleanVisibleDrawerNameInputs() {
+    const possibleFirstNameIds = ['empFirstName', 'firstName', 'employeeFirstName', 'firstNameInput'];
+    const possibleLastNameIds = ['empLastName', 'lastName', 'employeeLastName', 'lastNameInput'];
+
+    [...possibleFirstNameIds, ...possibleLastNameIds].forEach(id => {
+        const field = typeof safeGet === 'function' ? safeGet(id) : document.getElementById(id);
+        if (!field || typeof field.value !== 'string') return;
+
+        const cleanedValue = cleanDrawerEmployeeNameValue(field.value);
+        if (field.value !== cleanedValue) {
+            field.value = cleanedValue;
+        }
+    });
+}
+
 function getResolvedDrawerEmployeeId(employee = null) {
     return employee?.dbId || employee?.id || currentEmployee?.dbId || currentEmployee?.id || null;
 }
 
 function openDrawer(employee) {
     if (!employee) return;
+
+    employee = {
+        ...employee,
+        first: cleanDrawerEmployeeNameValue(employee.first || employee.first_name || ''),
+        last: cleanDrawerEmployeeNameValue(employee.last || employee.last_name || ''),
+        first_name: cleanDrawerEmployeeNameValue(employee.first_name || employee.first || ''),
+        last_name: cleanDrawerEmployeeNameValue(employee.last_name || employee.last || '')
+    };
 
     if (typeof resetDrawerForms === 'function') {
         resetDrawerForms();
@@ -26,14 +57,15 @@ function openDrawer(employee) {
 
     if (typeof populateEmployeeForm === 'function') {
         populateEmployeeForm(employee);
+        cleanVisibleDrawerNameInputs();
+        setTimeout(cleanVisibleDrawerNameInputs, 50);
+        setTimeout(cleanVisibleDrawerNameInputs, 250);
     }
 
     if (typeof ensureDeleteEmployeeButton === 'function') {
         ensureDeleteEmployeeButton();
     }
 
-    // Safety: make sure the Terminate Employee button exists in the employee action row.
-    // Some older drawer paths create Archive but return before Terminate is appended.
     if (typeof safeGet === 'function' && typeof runTerminateEmployee === 'function') {
         const saveBtn = safeGet('saveEmployeeBtn');
         const newBtn = safeGet('newEmployeeBtn');
@@ -125,6 +157,7 @@ function openDrawer(employee) {
     if (markImpactPlayerBtn && typeof markImpactPlayer === 'function') markImpactPlayerBtn.onclick = markImpactPlayer;
     if (clearImpactPlayerBtn && typeof clearImpactPlayerStatus === 'function') clearImpactPlayerBtn.onclick = clearImpactPlayerStatus;
 
+    cleanVisibleDrawerNameInputs();
 }
 
 function closeDrawer() {

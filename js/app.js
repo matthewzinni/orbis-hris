@@ -72,7 +72,11 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    loadEmployees();
+    if (typeof loadAllDashboardData === 'function') {
+        loadAllDashboardData();
+    } else {
+        loadEmployees();
+    }
 });
 let EMPLOYEES = [];
 let CANDIDATES = [];
@@ -242,15 +246,15 @@ async function runTerminateEmployee() {
     let query = supabaseClient
         .from('employees')
         .update({
-        // Terminated employees stay in the roster with TERMINATED status so their file is retained,
-        // they do not count toward active headcount, and termination fields remain available for turnover reporting.
-        status: 'TERMINATED',
-        termination_date: new Date().toISOString().slice(0, 10),
-        termination_reason: 'Not specified',
-        notes: currentEmployee.notes
-            ? `${currentEmployee.notes}\n\nTerminated employee file retained for turnover history.`
-            : 'Terminated employee file retained for turnover history.'
-    });
+            // Terminated employees stay in the roster with TERMINATED status so their file is retained,
+            // they do not count toward active headcount, and termination fields remain available for turnover reporting.
+            status: 'TERMINATED',
+            termination_date: new Date().toISOString().slice(0, 10),
+            termination_reason: 'Not specified',
+            notes: currentEmployee.notes
+                ? `${currentEmployee.notes}\n\nTerminated employee file retained for turnover history.`
+                : 'Terminated employee file retained for turnover history.'
+        });
     query = query.eq('id', targetId);
     const { error } = await query;
     if (error) {
@@ -295,6 +299,19 @@ async function updateEmployeeById(employeeId, payload) {
     delete cleanPayload.first;
     delete cleanPayload.last;
     delete cleanPayload.dept;
+
+    if (Object.prototype.hasOwnProperty.call(cleanPayload, 'first_name')) {
+
+        cleanPayload.first_name = cleanEmployeeNameValue(cleanPayload.first_name);
+
+    }
+
+    if (Object.prototype.hasOwnProperty.call(cleanPayload, 'last_name')) {
+
+        cleanPayload.last_name = cleanEmployeeNameValue(cleanPayload.last_name);
+
+    }
+
     const { data, error } = await db
         .from('employees')
         .update(cleanPayload)
@@ -438,11 +455,66 @@ function resetDrawerForms() {
     safeGet('cancelReviewEditBtn')?.classList.add('hidden');
     safeGet('reviewEditStatus')?.classList.add('hidden');
 }
+
+function cleanEmployeeNameValue(value) {
+
+    return String(value || '')
+
+        .replace(/\bAt[-\s]*Risk\b/gi, '')
+
+        .replace(/\bImpact\b/gi, '')
+
+        .replace(/\s+/g, ' ')
+
+        .trim();
+
+}
+
+function sanitizeVisibleEmployeeNameFields() {
+
+    const ids = [
+
+        'empFirstName',
+
+        'firstName',
+
+        'employeeFirstName',
+
+        'empLastName',
+
+        'lastName',
+
+        'employeeLastName'
+
+    ];
+
+    ids.forEach(id => {
+
+        const field = safeGet(id);
+
+        if (!field || typeof field.value !== 'string') return;
+
+        const cleaned = cleanEmployeeNameValue(field.value);
+
+        if (field.value !== cleaned) {
+
+            field.value = cleaned;
+
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+
+        }
+
+    });
+
+}
+
 function normalizeEmployee(employee) {
     if (!employee)
         return null;
-    const first = employee.first || employee.first_name || '';
-    const last = employee.last || employee.last_name || '';
+    const first = cleanEmployeeNameValue(employee.first || employee.first_name || '');
+    const last = cleanEmployeeNameValue(employee.last || employee.last_name || '');
     const dept = employee.dept || employee.department || '';
     const status = String(employee.status || 'ACTIVE').toUpperCase();
     const hireDateRaw = employee.hire_date || employee.hireDate || '';
@@ -490,8 +562,8 @@ function populateEmployeeAdminForm(employee) {
     const values = {
         employeeId: employee.employee_id || employee.id || employee.dbId || '',
         status: employee.status || 'Active',
-        firstName: employee.first_name || nameParts[0] || '',
-        lastName: employee.last_name || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''),
+        firstName: cleanEmployeeNameValue(employee.first_name || nameParts[0] || ''),
+        lastName: cleanEmployeeNameValue(employee.last_name || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '')),
         department: employee.department || drawerSubParts[1] || '',
         position: employee.position || drawerSubParts[0] || '',
         supervisor: employee.supervisor || '',
@@ -808,10 +880,10 @@ function buildEmployeeChangeLog(oldEmployee, newEmployee) {
     };
     return fields
         .map(([label, key]) => {
-        const oldValue = formatValue(oldData?.[key]);
-        const newValue = formatValue(newData?.[key]);
-        return oldValue !== newValue ? `${label}: ${oldValue} → ${newValue}` : '';
-    })
+            const oldValue = formatValue(oldData?.[key]);
+            const newValue = formatValue(newData?.[key]);
+            return oldValue !== newValue ? `${label}: ${oldValue} → ${newValue}` : '';
+        })
         .filter(Boolean)
         .join(' | ');
 }
@@ -1026,6 +1098,12 @@ async function loadAllDashboardData() {
             loadSummaryMetrics(),
             loadRecentActivity()
         ]);
+
+        if (typeof loadReviewDashboard === 'function') await loadReviewDashboard();
+        if (typeof loadExecutiveInsight === 'function') await loadExecutiveInsight();
+        if (typeof loadRiskEmployees === 'function') await loadRiskEmployees();
+        if (typeof loadImpactPlayers === 'function') await loadImpactPlayers();
+
         setText('lastRefresh', new Date().toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit'
@@ -1300,10 +1378,10 @@ async function createDefaultOnboardingTasks(employeeId) {
     const payload = defaultTasks
         .filter(taskName => !existingTaskNames.has(taskName))
         .map(taskName => ({
-        employee_id: employeeId,
-        task_name: taskName,
-        status: 'Pending'
-    }));
+            employee_id: employeeId,
+            task_name: taskName,
+            status: 'Pending'
+        }));
     if (!payload.length)
         return;
     const { error } = await supabaseClient
@@ -1406,9 +1484,9 @@ async function convertCandidateToEmployee(candidateId) {
     candidate.__isConvertingToEmployee = true;
     const conversionButtons = Array.from(document.querySelectorAll('button'))
         .filter(button => {
-        const text = String(button.textContent || '').trim().toLowerCase();
-        return text === 'hire' || text === 'move to next stage' || text === 'convert to employee';
-    });
+            const text = String(button.textContent || '').trim().toLowerCase();
+            return text === 'hire' || text === 'move to next stage' || text === 'convert to employee';
+        });
     conversionButtons.forEach(button => {
         button.disabled = true;
         button.dataset.originalText = button.dataset.originalText || button.textContent;
@@ -1733,7 +1811,7 @@ function populateDepartmentFilter() {
     const depts = [...new Set(EMPLOYEES.map(e => e.dept).filter(Boolean))].sort(compareText);
     deptSelect.innerHTML =
         '<option value="">All Departments</option>' +
-            depts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+        depts.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
     deptSelect.value = currentValue;
 }
 function openCandidatesView() {
@@ -1902,19 +1980,19 @@ async function loadSummaryMetrics() {
             if (disciplineCard) {
                 const openDisciplineNames = openDisciplineCases
                     .map(row => {
-                    const employee = row?.employees || null;
-                    const first = String(employee?.first_name || '').trim();
-                    const last = String(employee?.last_name || '').trim();
-                    const fullName = `${first} ${last}`.trim();
-                    const issueType = String(row?.issue_type || '').trim();
-                    if (fullName && issueType)
-                        return `${fullName} (${issueType})`;
-                    if (fullName)
-                        return fullName;
-                    if (issueType)
-                        return issueType;
-                    return 'Unnamed discipline case';
-                })
+                        const employee = row?.employees || null;
+                        const first = String(employee?.first_name || '').trim();
+                        const last = String(employee?.last_name || '').trim();
+                        const fullName = `${first} ${last}`.trim();
+                        const issueType = String(row?.issue_type || '').trim();
+                        if (fullName && issueType)
+                            return `${fullName} (${issueType})`;
+                        if (fullName)
+                            return fullName;
+                        if (issueType)
+                            return issueType;
+                        return 'Unnamed discipline case';
+                    })
                     .filter(Boolean);
                 const disciplineTooltip = openDisciplineNames.length
                     ? openDisciplineNames.join('\n')
@@ -1979,6 +2057,7 @@ async function loadSummaryMetrics() {
         }
         if (!manualRiskRes.error) {
             const latestManualRiskByEmployee = {};
+
             Object.keys(currentAtRiskRosterMap).forEach(key => {
                 const existing = currentAtRiskRosterMap[key];
                 currentAtRiskRosterMap[key] = {
@@ -1988,36 +2067,52 @@ async function loadSummaryMetrics() {
                     openIncidentCount: 0
                 };
             });
+
             (manualRiskRes.data || []).forEach(row => {
                 const employeeId = String(row.employee_id || '');
-                if (!employeeId)
-                    return;
+                if (!employeeId) return;
+
+                // Because the query is ordered newest first, the first row per employee is the current manual status.
                 if (!latestManualRiskByEmployee[employeeId]) {
                     latestManualRiskByEmployee[employeeId] = row;
                 }
             });
+
             Object.entries(latestManualRiskByEmployee).forEach(([employeeId, row]) => {
-                if (String(row.note_type || '') === 'At-Risk Flag') {
+                const latestType = String(row.note_type || '').trim();
+
+                if (latestType === 'At-Risk Flag') {
                     manualRiskEmployeeIds.add(employeeId);
-                }
-            });
-            Object.entries(latestManualRiskByEmployee).forEach(([employeeId, row]) => {
-                if (!currentAtRiskRosterMap[employeeId]) {
+
                     currentAtRiskRosterMap[employeeId] = {
-                        manualReason: '',
-                        lowReview: false,
-                        reviewScore: null,
-                        openIncidentCount: 0,
-                        flaggedDate: '',
-                        flaggedBy: ''
+                        ...(currentAtRiskRosterMap[employeeId] || {}),
+                        manualReason: String(row.note_text || '').trim(),
+                        lowReview: currentAtRiskRosterMap[employeeId]?.lowReview === true,
+                        reviewScore: currentAtRiskRosterMap[employeeId]?.reviewScore ?? null,
+                        openIncidentCount: Number(currentAtRiskRosterMap[employeeId]?.openIncidentCount || 0),
+                        flaggedDate: String(row.note_date || '').trim(),
+                        flaggedBy: 'Matthew Zinni'
                     };
-                }
-                if (String(row.note_type || '') === 'At-Risk Flag') {
-                    currentAtRiskRosterMap[employeeId].manualReason = String(row.note_text || '').trim();
-                    currentAtRiskRosterMap[employeeId].flaggedDate = String(row.note_date || '').trim();
-                    currentAtRiskRosterMap[employeeId].flaggedBy = 'Matthew Zinni';
+                } else if (latestType === 'At-Risk Cleared') {
+                    // A cleared note means the manual At-Risk flag is inactive, even if older flag notes still exist.
+                    if (currentAtRiskRosterMap[employeeId]) {
+                        currentAtRiskRosterMap[employeeId].manualReason = '';
+                        currentAtRiskRosterMap[employeeId].flaggedDate = '';
+                        currentAtRiskRosterMap[employeeId].flaggedBy = '';
+                    }
+
+                    const meta = currentAtRiskRosterMap[employeeId];
+                    const stillHasReviewOrIncidentRisk = !!meta && (
+                        meta.lowReview === true ||
+                        Number(meta.openIncidentCount || 0) > 0
+                    );
+
+                    if (!stillHasReviewOrIncidentRisk) {
+                        delete currentAtRiskRosterMap[employeeId];
+                    }
                 }
             });
+
             Object.entries(latestReviewByEmployee).forEach(([employeeId, item]) => {
                 if (item.avgScore !== null && item.avgScore <= 3) {
                     if (!currentAtRiskRosterMap[employeeId]) {
@@ -2034,6 +2129,7 @@ async function loadSummaryMetrics() {
                     currentAtRiskRosterMap[employeeId].reviewScore = item.avgScore;
                 }
             });
+
             incidentRiskEmployeeIds.forEach(employeeId => {
                 if (!currentAtRiskRosterMap[employeeId]) {
                     currentAtRiskRosterMap[employeeId] = {
@@ -2048,7 +2144,9 @@ async function loadSummaryMetrics() {
                 currentAtRiskRosterMap[employeeId].openIncidentCount =
                     (currentAtRiskRosterMap[employeeId].openIncidentCount || 0) + 1;
             });
-            // Refresh roster so new manual At-Risk badge appears
+
+            window.currentAtRiskRosterMap = currentAtRiskRosterMap;
+
             if (Array.isArray(EMPLOYEES) && EMPLOYEES.length) {
                 renderRoster();
             }
@@ -2286,42 +2384,42 @@ async function loadReviewDashboard() {
         `;
         const reviewRows = activeEmployees
             .map(employee => {
-            let statusLabel = 'No Date';
-            let statusClass = 'badge badge-soft';
-            if (employee.nextReview && employee.nextReview instanceof Date && !isNaN(employee.nextReview)) {
-                const reviewDate = new Date(employee.nextReview);
-                reviewDate.setHours(0, 0, 0, 0);
-                if (reviewDate <= today) {
-                    statusLabel = 'Overdue';
-                    statusClass = 'badge badge-inactive';
+                let statusLabel = 'No Date';
+                let statusClass = 'badge badge-soft';
+                if (employee.nextReview && employee.nextReview instanceof Date && !isNaN(employee.nextReview)) {
+                    const reviewDate = new Date(employee.nextReview);
+                    reviewDate.setHours(0, 0, 0, 0);
+                    if (reviewDate <= today) {
+                        statusLabel = 'Overdue';
+                        statusClass = 'badge badge-inactive';
+                    }
+                    else if (reviewDate <= next30) {
+                        statusLabel = 'Due Soon';
+                        statusClass = 'badge badge-leave';
+                    }
+                    else {
+                        statusLabel = 'Scheduled';
+                        statusClass = 'badge badge-active';
+                    }
                 }
-                else if (reviewDate <= next30) {
-                    statusLabel = 'Due Soon';
-                    statusClass = 'badge badge-leave';
-                }
-                else {
-                    statusLabel = 'Scheduled';
-                    statusClass = 'badge badge-active';
-                }
-            }
-            const performance = latestReviewPerformanceByEmployee[employee.id] || {
-                avgScore: null,
-                label: 'No Review',
-                badgeClass: 'badge badge-soft'
-            };
-            return {
-                employee,
-                lastReview: lastReviewByEmployee[employee.id] || '',
-                performance,
-                statusLabel,
-                statusClass
-            };
-        })
+                const performance = latestReviewPerformanceByEmployee[employee.id] || {
+                    avgScore: null,
+                    label: 'No Review',
+                    badgeClass: 'badge badge-soft'
+                };
+                return {
+                    employee,
+                    lastReview: lastReviewByEmployee[employee.id] || '',
+                    performance,
+                    statusLabel,
+                    statusClass
+                };
+            })
             .sort((a, b) => {
-            const aTime = a.employee.nextReview instanceof Date && !isNaN(a.employee.nextReview) ? a.employee.nextReview.getTime() : Number.MAX_SAFE_INTEGER;
-            const bTime = b.employee.nextReview instanceof Date && !isNaN(b.employee.nextReview) ? b.employee.nextReview.getTime() : Number.MAX_SAFE_INTEGER;
-            return aTime - bTime;
-        })
+                const aTime = a.employee.nextReview instanceof Date && !isNaN(a.employee.nextReview) ? a.employee.nextReview.getTime() : Number.MAX_SAFE_INTEGER;
+                const bTime = b.employee.nextReview instanceof Date && !isNaN(b.employee.nextReview) ? b.employee.nextReview.getTime() : Number.MAX_SAFE_INTEGER;
+                return aTime - bTime;
+            })
             .slice(0, 12);
         if (!reviewRows.length) {
             bodyTarget.innerHTML = '<tr><td colspan="6" class="empty">No review data available</td></tr>';
@@ -2504,31 +2602,31 @@ async function loadRiskEmployees() {
         });
         const atRiskEmployees = activeEmployees
             .map(employee => {
-            const reasons = [];
-            let riskScore = 0;
-            const employeeKey = String(employee.dbId || employee.id || '');
-            const latestReview = latestReviewByEmployee[employeeKey] || null;
-            const openIncidentCount = openIncidentCountsByEmployee[employeeKey] || 0;
-            const manualRisk = manualRiskByEmployee[employeeKey] || null;
-            if (latestReview && latestReview.avgScore !== null && latestReview.avgScore <= 3) {
-                reasons.push(`low review score (${latestReview.avgScore.toFixed(1)})`);
-                riskScore += latestReview.avgScore <= 2.5 ? 2 : 1;
-            }
-            if (openIncidentCount > 0) {
-                reasons.push(`${openIncidentCount} open incident report${openIncidentCount === 1 ? '' : 's'}`);
-                riskScore += openIncidentCount;
-            }
-            if (manualRisk && String(manualRisk.note_type || '') === 'At-Risk Flag') {
-                reasons.push(`manual concern: ${manualRisk.note_text || 'manager concern noted'}`);
-                riskScore += 2;
-            }
-            return {
-                employee,
-                reasons,
-                riskScore,
-                openIncidentCount
-            };
-        })
+                const reasons = [];
+                let riskScore = 0;
+                const employeeKey = String(employee.dbId || employee.id || '');
+                const latestReview = latestReviewByEmployee[employeeKey] || null;
+                const openIncidentCount = openIncidentCountsByEmployee[employeeKey] || 0;
+                const manualRisk = manualRiskByEmployee[employeeKey] || null;
+                if (latestReview && latestReview.avgScore !== null && latestReview.avgScore <= 3) {
+                    reasons.push(`low review score (${latestReview.avgScore.toFixed(1)})`);
+                    riskScore += latestReview.avgScore <= 2.5 ? 2 : 1;
+                }
+                if (openIncidentCount > 0) {
+                    reasons.push(`${openIncidentCount} open incident report${openIncidentCount === 1 ? '' : 's'}`);
+                    riskScore += openIncidentCount;
+                }
+                if (manualRisk && String(manualRisk.note_type || '') === 'At-Risk Flag') {
+                    reasons.push(`manual concern: ${manualRisk.note_text || 'manager concern noted'}`);
+                    riskScore += 2;
+                }
+                return {
+                    employee,
+                    reasons,
+                    riskScore,
+                    openIncidentCount
+                };
+            })
             .filter(item => item.riskScore > 0 && item.reasons.length > 0)
             .sort((a, b) => b.riskScore - a.riskScore || compareText(`${a.employee.last} ${a.employee.first}`, `${b.employee.last} ${b.employee.first}`))
             .slice(0, 6);
@@ -2723,8 +2821,10 @@ async function clearAtRiskStatus() {
         showToast('Open an employee first.', 'error');
         return;
     }
-    const employeeDbId = currentEmployee.dbId || currentEmployee.id;
+
+    const employeeDbId = String(currentEmployee.dbId || currentEmployee.id);
     const noteText = String(safeGet('atRiskReasonInput')?.value || '').trim() || 'Manual at-risk flag cleared';
+
     const { error } = await supabaseClient
         .from('employee_notes')
         .insert([{
@@ -2733,33 +2833,53 @@ async function clearAtRiskStatus() {
             note_type: 'At-Risk Cleared',
             note_text: noteText
         }]);
+
     if (error) {
         console.error(error);
         showToast('Could not clear at-risk flag.', 'error');
         return;
     }
+
     showToast('At-risk flag cleared.');
     recordAuditEvent('Cleared At-Risk', currentEmployee, noteText);
     setManualAtRiskUi(false, '');
+
     const riskKeys = [
         currentEmployee.dbId,
         currentEmployee.id,
         currentEmployee.employee_id,
-        currentEmployee.displayId
+        currentEmployee.displayId,
+        employeeDbId
     ].filter(Boolean).map(String);
+
     window.currentAtRiskRosterMap = window.currentAtRiskRosterMap || currentAtRiskRosterMap || {};
+
     riskKeys.forEach(key => {
         delete currentAtRiskRosterMap[key];
         delete window.currentAtRiskRosterMap[key];
     });
-    if (typeof loadEmployeeNotes === 'function')
+
+    if (typeof loadEmployeeNotes === 'function') {
         await loadEmployeeNotes(currentEmployee.id);
-    if (typeof loadSummaryMetrics === 'function')
+    }
+
+    if (typeof loadSummaryMetrics === 'function') {
         await loadSummaryMetrics();
-    if (typeof loadRiskEmployees === 'function')
+    }
+
+    riskKeys.forEach(key => {
+        delete currentAtRiskRosterMap[key];
+        delete window.currentAtRiskRosterMap[key];
+    });
+
+    if (typeof loadRiskEmployees === 'function') {
         await loadRiskEmployees();
-    if (typeof renderRoster === 'function')
+    }
+
+    if (typeof renderRoster === 'function') {
         renderRoster();
+    }
+
     updateEmployeeRowBadges(currentEmployee.id);
 }
 function setManualImpactPlayerUi(flagged, reason = '') {
@@ -3186,12 +3306,12 @@ async function saveEmergencyContact() {
         const result = await supabaseClient
             .from('emergency_contacts')
             .update({
-            contact_name,
-            relationship,
-            phone,
-            alternate_phone,
-            notes,
-        })
+                contact_name,
+                relationship,
+                phone,
+                alternate_phone,
+                notes,
+            })
             .eq('id', currentEmergencyContactId)
             .eq('employee_id', resolvedEmployeeId);
         error = result.error;
@@ -3442,9 +3562,9 @@ async function markOnboardingComplete(id) {
     const { error } = await supabaseClient
         .from('onboarding_tasks')
         .update({
-        status: 'Completed',
-        completed_at: new Date().toISOString()
-    })
+            status: 'Completed',
+            completed_at: new Date().toISOString()
+        })
         .eq('id', id);
     if (error) {
         console.error(error);
@@ -3774,12 +3894,12 @@ async function loadImpactPlayers() {
             : [];
         const impactPlayers = Object.entries(currentImpactPlayerRosterMap || {})
             .map(([employeeKey, impactMeta]) => {
-            const emp = employeeList.find(e => String(e.dbId) === String(employeeKey) ||
-                String(e.id) === String(employeeKey));
-            if (!emp || !impactMeta)
-                return null;
-            return { emp, impactMeta };
-        })
+                const emp = employeeList.find(e => String(e.dbId) === String(employeeKey) ||
+                    String(e.id) === String(employeeKey));
+                if (!emp || !impactMeta)
+                    return null;
+                return { emp, impactMeta };
+            })
             .filter(Boolean)
             .sort((a, b) => compareText(`${a.emp.first || ''} ${a.emp.last || ''}`.trim(), `${b.emp.first || ''} ${b.emp.last || ''}`.trim()))
             .slice(0, 6);
@@ -3860,34 +3980,34 @@ function buildKpiHoverDetails() {
     const deptCounts = [...new Set(activeEmployees.map(e => e.dept).filter(Boolean))]
         .sort()
         .map(dept => {
-        const count = activeEmployees.filter(e => e.dept === dept).length;
-        return `${dept}: ${count}`;
-    });
+            const count = activeEmployees.filter(e => e.dept === dept).length;
+            return `${dept}: ${count}`;
+        });
     setCardTitle('cardDepartments', deptCounts, 'No departments available');
     const riskEmployees = activeEmployees
         .filter(e => {
-        const tenureMonths = Number(e.tenureMonths || 0);
-        const isFirstThreeMonths = tenureMonths > 0 && tenureMonths <= 3;
-        const employeeKey = String(e.dbId || e.id || '');
-        const riskMeta = currentAtRiskRosterMap?.[employeeKey] || null;
-        const isAtRisk = !!riskMeta && (riskMeta.lowReview === true ||
-            Number(riskMeta.openIncidentCount || 0) > 0 ||
-            String(riskMeta.manualReason || '').trim() !== '');
-        return tenureMonths <= 6 && isAtRisk;
-    })
+            const tenureMonths = Number(e.tenureMonths || 0);
+            const isFirstThreeMonths = tenureMonths > 0 && tenureMonths <= 3;
+            const employeeKey = String(e.dbId || e.id || '');
+            const riskMeta = currentAtRiskRosterMap?.[employeeKey] || null;
+            const isAtRisk = !!riskMeta && (riskMeta.lowReview === true ||
+                Number(riskMeta.openIncidentCount || 0) > 0 ||
+                String(riskMeta.manualReason || '').trim() !== '');
+            return tenureMonths <= 6 && isAtRisk;
+        })
         .map(e => `${`${e.first || ''} ${e.last || ''}`.trim()}${e.tenureMonths != null ? ` • ${e.tenureMonths} mo` : ''}`)
         .filter(Boolean);
     setCardTitle('cardTurnoverRisk', riskEmployees, 'No at-risk employees in their first 3 months');
     const atRiskNames = activeEmployees
         .filter(employee => {
-        const keys = [
-            employee.dbId,
-            employee.id,
-            employee.employee_id,
-            employee.displayId
-        ].filter(Boolean).map(String);
-        return keys.some(key => currentAtRiskRosterMap?.[key] || window.currentAtRiskRosterMap?.[key]);
-    })
+            const keys = [
+                employee.dbId,
+                employee.id,
+                employee.employee_id,
+                employee.displayId
+            ].filter(Boolean).map(String);
+            return keys.some(key => currentAtRiskRosterMap?.[key] || window.currentAtRiskRosterMap?.[key]);
+        })
         .map(employee => `${employee.first || ''} ${employee.last || ''}`.trim())
         .filter(Boolean)
         .sort(compareText);
@@ -4059,4 +4179,4 @@ async function saveReviewRecord() {
         await loadEmployeeReviews(employeeId);
     }
 }
-export {};
+
