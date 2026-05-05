@@ -22,7 +22,7 @@ function cleanVisibleDrawerNameInputs() {
 }
 
 function getResolvedDrawerEmployeeId(employee = null) {
-    return employee?.dbId || employee?.id || currentEmployee?.dbId || currentEmployee?.id || null;
+    return employee?.dbId || employee?.id || window.currentEmployee?.dbId || window.currentEmployee?.id || null;
 }
 
 function openDrawer(employee) {
@@ -40,8 +40,11 @@ function openDrawer(employee) {
         resetDrawerForms();
     }
 
-    currentEmployee = employee;
-    isCreatingEmployee = false;
+    window.currentEmployee = employee;
+    if (typeof window.setCurrentEmployeeForOrbis === 'function') {
+        window.setCurrentEmployeeForOrbis(employee);
+    }
+    window.isCreatingEmployee = false;
 
     const employeeId = getResolvedDrawerEmployeeId(employee);
     if (!employeeId) return;
@@ -167,7 +170,10 @@ function closeDrawer() {
     backdrop?.classList.remove('open');
     drawer?.classList.remove('open');
 
-    currentEmployee = null;
+    window.currentEmployee = null;
+    if (typeof window.setCurrentEmployeeForOrbis === 'function') {
+        window.setCurrentEmployeeForOrbis(null);
+    }
 
     if (typeof resetDrawerForms === 'function') {
         resetDrawerForms();

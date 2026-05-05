@@ -1,3 +1,17 @@
+function getCurrentAtRiskRosterMap() {
+    return window.currentAtRiskRosterMap || {};
+}
+function getKpiEmployees() {
+    if (Array.isArray(window.ALL_EMPLOYEES)) return window.ALL_EMPLOYEES;
+    if (Array.isArray(window.EMPLOYEES)) return window.EMPLOYEES;
+    return [];
+}
+
+function compareKpiText(a, b) {
+    if (typeof window.compareText === 'function') return window.compareText(a, b);
+    if (typeof compareText === 'function') return compareText(a, b);
+    return String(a || '').localeCompare(String(b || ''));
+}
 function renderKpiEmployeeMetrics() {
     // ... other code ...
 
@@ -5,7 +19,7 @@ function renderKpiEmployeeMetrics() {
         const tenureMonths = Number(e.tenureMonths) || 0;
         const isFirstThreeMonths = tenureMonths > 0 && tenureMonths <= 3;
         const employeeKey = String(e.dbId || e.id || '');
-        const riskMeta = currentAtRiskRosterMap?.[employeeKey] || null;
+        const riskMeta = getCurrentAtRiskRosterMap()?.[employeeKey] || null;
         const isAtRisk = !!riskMeta && (
             riskMeta.lowReview === true ||
             Number(riskMeta.openIncidentCount || 0) > 0 ||
@@ -183,13 +197,13 @@ setTimeout(refreshTurnoverKpisFromSupabase, 1500);
 function buildKpiHoverDetails() {
     // ... other code ...
 
-    const turnoverRiskEmployees = ((Array.isArray(window.ALL_EMPLOYEES) ? window.ALL_EMPLOYEES : (window.EMPLOYEES || EMPLOYEES || []))).filter(e => {
+    const turnoverRiskEmployees = getKpiEmployees().filter(e => {
         const isActive = String(e.status || e.displayStatus || e.employee_status || '').trim().toUpperCase() === 'ACTIVE';
         const isContract = String(e.payType || '').toLowerCase().includes('contract');
         const tenureMonths = Number(e.tenureMonths) || 0;
         const isFirstThreeMonths = tenureMonths > 0 && tenureMonths <= 3;
         const employeeKey = String(e.dbId || e.id || '');
-        const riskMeta = currentAtRiskRosterMap?.[employeeKey] || null;
+        const riskMeta = getCurrentAtRiskRosterMap()?.[employeeKey] || null;
         const isAtRisk = !!riskMeta && (
             riskMeta.lowReview === true ||
             Number(riskMeta.openIncidentCount || 0) > 0 ||
@@ -201,11 +215,11 @@ function buildKpiHoverDetails() {
 
     // ... other code ...
 
-    const terminatedNames = ((Array.isArray(window.ALL_EMPLOYEES) ? window.ALL_EMPLOYEES : (window.EMPLOYEES || EMPLOYEES || [])))
+    const terminatedNames = getKpiEmployees()
         .filter(e => String(e.status || e.displayStatus || e.employee_status || '').trim().toUpperCase() === 'TERMINATED')
         .map(e => `${e.first || e.first_name || ''} ${e.last || e.last_name || ''}`.trim() || e.displayName || e.name)
         .filter(Boolean)
-        .sort(compareText);
+        .sort(compareKpiText);
 
     const turnoverCard = document.getElementById('cardTurnover') || document.getElementById('kTurnover')?.closest('.kpi-card, .card, [class*="kpi"]');
     if (turnoverCard) {
@@ -218,10 +232,10 @@ function buildKpiHoverDetails() {
 
     const turnoverRiskCard = document.getElementById('cardTurnoverRisk') || document.getElementById('kTurnoverRisk')?.closest('.kpi-card, .card, [class*="kpi"]');
     if (turnoverRiskCard) {
-        const turnoverRiskNames = ((Array.isArray(window.ALL_EMPLOYEES) ? window.ALL_EMPLOYEES : (window.EMPLOYEES || EMPLOYEES || [])))
+        const turnoverRiskNames = getKpiEmployees()
             .map(e => `${e.first || e.first_name || ''} ${e.last || e.last_name || ''}`.trim() || e.displayName || e.name)
             .filter(Boolean)
-            .sort(compareText);
+            .sort(compareKpiText);
 
         turnoverRiskCard.title = turnoverRiskNames.length
             ? `Turnover Risk: ${turnoverRiskNames.join(', ')}`
@@ -230,7 +244,7 @@ function buildKpiHoverDetails() {
         turnoverRiskCard.setAttribute('aria-label', turnoverRiskCard.title);
     }
 
-    const newHireTerminatedNames = ((Array.isArray(window.ALL_EMPLOYEES) ? window.ALL_EMPLOYEES : (window.EMPLOYEES || EMPLOYEES || [])))
+    const newHireTerminatedNames = getKpiEmployees()
         .filter(e => {
             const status = String(e.status || e.displayStatus || e.employee_status || '').trim().toUpperCase();
             const tenureMonths = Number(e.tenureMonths || e.tenure_months || 0);
@@ -238,7 +252,7 @@ function buildKpiHoverDetails() {
         })
         .map(e => `${e.first || e.first_name || ''} ${e.last || e.last_name || ''}`.trim() || e.displayName || e.name)
         .filter(Boolean)
-        .sort(compareText);
+        .sort(compareKpiText);
 
     const newHireTurnoverCard = document.getElementById('cardNewHireTurnover') || document.getElementById('kNewHireTurnover')?.closest('.kpi-card, .card, [class*="kpi"]');
     if (newHireTurnoverCard) {
@@ -250,4 +264,7 @@ function buildKpiHoverDetails() {
     }
 
     // ... other code ...
+
+    // Ensure this is present exactly once at the end:
+    window.buildKpiHoverDetails = buildKpiHoverDetails;
 }

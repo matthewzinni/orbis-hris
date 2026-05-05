@@ -61,14 +61,18 @@ window.addEventListener('DOMContentLoaded', () => {
     safeGet('globalSearch')?.addEventListener('input', renderRoster);
     safeGet('deptFilter')?.addEventListener('change', renderRoster);
     safeGet('statusFilter')?.addEventListener('change', renderRoster);
-    if (typeof bindDrawerEvents === 'function') {
-        bindDrawerEvents();
+    if (typeof window.bindDrawerEvents === 'function') {
+
+        window.bindDrawerEvents();
+
     }
     const backdrop = safeGet('drawerBackdrop');
     if (backdrop) {
         backdrop.addEventListener('click', () => {
-            if (typeof closeDrawer === 'function') {
-                closeDrawer();
+            if (typeof window.closeDrawer === 'function') {
+
+                window.closeDrawer();
+
             }
         });
     }
@@ -84,6 +88,21 @@ let currentCandidate = null;
 let isCreatingCandidate = false;
 let currentFilteredEmployees = [];
 let currentEmployee = null;
+window.currentEmployee = window.currentEmployee || null;
+
+window.setCurrentEmployeeForOrbis = function (employee) {
+
+    currentEmployee = employee || null;
+
+    window.currentEmployee = currentEmployee;
+
+};
+
+function getCurrentEmployeeForOrbis() {
+
+    return currentEmployee || window.currentEmployee || null;
+
+}
 let currentDisciplineReportId = null;
 let currentNoteId = null;
 let currentMeetingId = null;
@@ -102,6 +121,12 @@ let currentManualAtRiskState = { flagged: false, reason: '' };
 let currentAtRiskRosterMap = {};
 let currentManualImpactPlayerState = { flagged: false, reason: '' };
 let currentImpactPlayerRosterMap = {};
+
+window.currentAtRiskRosterMap = currentAtRiskRosterMap;
+
+window.currentImpactPlayerRosterMap = currentImpactPlayerRosterMap;
+
+
 // Shared helper, formatting, toast, and print functions now live in:
 // js/utils/helpers.js
 // =========================
@@ -227,8 +252,10 @@ async function runDeleteEmployee() {
     await loadEmployees();
     await loadSummaryMetrics();
     await loadReviewDashboard();
-    if (typeof closeDrawer === 'function') {
-        closeDrawer();
+    if (typeof window.closeDrawer === 'function') {
+
+        window.closeDrawer();
+
     }
 }
 async function runTerminateEmployee() {
@@ -267,8 +294,10 @@ async function runTerminateEmployee() {
     await loadEmployees();
     await loadSummaryMetrics();
     await loadReviewDashboard();
-    if (typeof closeDrawer === 'function') {
-        closeDrawer();
+    if (typeof window.closeDrawer === 'function') {
+
+        window.closeDrawer();
+
     }
 }
 window.runTerminateEmployee = runTerminateEmployee;
@@ -1579,9 +1608,9 @@ async function convertCandidateToEmployee(candidateId) {
     await loadRecentActivity();
     await loadReviewDashboard();
     const refreshedEmployee = EMPLOYEES.find(e => String(e.employee_id || e.id) === String(newEmployeeId));
-    if (refreshedEmployee && typeof openDrawer === 'function') {
+    if (refreshedEmployee && typeof window.openDrawer === 'function') {
         closeCandidateDrawer();
-        openDrawer(refreshedEmployee);
+        window.openDrawer(refreshedEmployee);
         switchTab('onboarding');
         const onboardingEmployeeId = refreshedEmployee.employee_id || refreshedEmployee.id || refreshedEmployee.dbId;
         await createDefaultOnboardingTasks(onboardingEmployeeId);
@@ -1885,7 +1914,7 @@ function renderKpiEmployeeMetrics() {
         const isFirstThreeMonths = tenureMonths > 0 && tenureMonths <= 3;
         const isEarlyTenure = tenureMonths <= 6;
         const employeeKey = String(e.dbId || e.id || '');
-        const riskMeta = currentAtRiskRosterMap?.[employeeKey] || null;
+        const riskMeta = window.currentAtRiskRosterMap?.[employeeKey] || null;
         const isAtRisk = !!riskMeta && (riskMeta.lowReview === true ||
             Number(riskMeta.openIncidentCount || 0) > 0 ||
             String(riskMeta.manualReason || '').trim() !== '');
@@ -2444,8 +2473,8 @@ async function loadReviewDashboard() {
                 event.stopPropagation();
                 const employee = EMPLOYEES.find(e => String(e.id) === String(el.dataset.reviewEmployeeId) ||
                     String(e.dbId) === String(el.dataset.reviewEmployeeId));
-                if (employee && typeof openDrawer === 'function') {
-                    openDrawer(employee);
+                if (employee && typeof window.openDrawer === 'function') {
+                    window.openDrawer(employee);
                 }
             });
         });
@@ -2650,8 +2679,8 @@ async function loadRiskEmployees() {
             card.addEventListener('click', () => {
                 const employee = EMPLOYEES.find(e => String(e.id) === String(card.dataset.riskEmployeeId) ||
                     String(e.dbId) === String(card.dataset.riskEmployeeId));
-                if (employee && typeof openDrawer === 'function') {
-                    openDrawer(employee);
+                if (employee && typeof window.openDrawer === 'function') {
+                    window.openDrawer(employee);
                 }
             });
         });
@@ -2761,9 +2790,14 @@ async function loadEmployeeManualAtRisk(employeeId) {
     setManualAtRiskUi(true, latest.note_text || '');
 }
 async function markEmployeeAtRisk() {
+    currentEmployee = getCurrentEmployeeForOrbis();
+
     if (!currentEmployee) {
+
         showToast('Open an employee first.', 'error');
+
         return;
+
     }
     const reason = String(safeGet('atRiskReasonInput')?.value || '').trim();
     if (!reason) {
@@ -2817,9 +2851,14 @@ async function markEmployeeAtRisk() {
     updateEmployeeRowBadges(currentEmployee.id);
 }
 async function clearAtRiskStatus() {
+    currentEmployee = getCurrentEmployeeForOrbis();
+
     if (!currentEmployee) {
+
         showToast('Open an employee first.', 'error');
+
         return;
+
     }
 
     const employeeDbId = String(currentEmployee.dbId || currentEmployee.id);
@@ -2917,9 +2956,14 @@ async function loadEmployeeManualImpactPlayer(employeeId) {
     setManualImpactPlayerUi(true, latest.note_text || '');
 }
 async function markImpactPlayer() {
+    currentEmployee = getCurrentEmployeeForOrbis();
+
     if (!currentEmployee) {
+
         showToast('Open an employee first.', 'error');
+
         return;
+
     }
     const reason = String(safeGet('impactPlayerReasonInput')?.value || '').trim();
     if (!reason) {
@@ -2970,9 +3014,14 @@ async function markImpactPlayer() {
     updateEmployeeRowBadges(currentEmployee.id);
 }
 async function clearImpactPlayerStatus() {
+    currentEmployee = getCurrentEmployeeForOrbis();
+
     if (!currentEmployee) {
+
         showToast('Open an employee first.', 'error');
+
         return;
+
     }
     const employeeDbId = currentEmployee.dbId || currentEmployee.id;
     const noteText = String(safeGet('impactPlayerReasonInput')?.value || '').trim() || 'Manual Impact Player flag cleared';
@@ -3989,7 +4038,7 @@ function buildKpiHoverDetails() {
             const tenureMonths = Number(e.tenureMonths || 0);
             const isFirstThreeMonths = tenureMonths > 0 && tenureMonths <= 3;
             const employeeKey = String(e.dbId || e.id || '');
-            const riskMeta = currentAtRiskRosterMap?.[employeeKey] || null;
+            const riskMeta = window.currentAtRiskRosterMap?.[employeeKey] || null;
             const isAtRisk = !!riskMeta && (riskMeta.lowReview === true ||
                 Number(riskMeta.openIncidentCount || 0) > 0 ||
                 String(riskMeta.manualReason || '').trim() !== '');
@@ -4165,11 +4214,11 @@ async function saveReviewRecord() {
     if (typeof loadImpactPlayers === 'function') {
         await loadImpactPlayers();
     }
-    if (currentEmployee && typeof openDrawer === 'function') {
+    if (currentEmployee && typeof window.openDrawer === 'function') {
         const refreshedEmployee = EMPLOYEES.find(e => String(e.dbId) === String(currentEmployee.dbId) ||
             String(e.id) === String(currentEmployee.id));
         if (refreshedEmployee) {
-            openDrawer(refreshedEmployee);
+            window.openDrawer(refreshedEmployee);
             switchTab('reviews');
         }
     }

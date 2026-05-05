@@ -1,3 +1,5 @@
+window.currentEmergencyContactId = window.currentEmergencyContactId || null;
+
 async function ecFetchByEmployee(employeeId) {
     if (!employeeId) return { data: [], error: null };
     if (typeof getEmergencyContact === 'function') {
@@ -49,7 +51,7 @@ function getResolvedEmergencyEmployeeId(employeeId) {
 }
 
 function resetEmergencyContactForm() {
-    currentEmergencyContactId = null;
+    window.currentEmergencyContactId = null;
     if (safeGet('ecName')) safeGet('ecName').value = '';
     if (safeGet('ecRelationship')) safeGet('ecRelationship').value = '';
     if (safeGet('ecPhone')) safeGet('ecPhone').value = '';
@@ -95,7 +97,7 @@ async function loadEmergencyContacts(employeeId) {
         return;
     }
 
-    if (!currentEmergencyContactId || !rows.some(row => String(row.id) === String(currentEmergencyContactId))) {
+    if (!window.currentEmergencyContactId || !rows.some(row => String(row.id) === String(currentEmergencyContactId))) {
         resetEmergencyContactForm();
     }
 
@@ -105,7 +107,7 @@ async function loadEmergencyContacts(employeeId) {
           <button class="btn btn-secondary" id="addEmergencyContactBtn" type="button">+ Add New</button>
         </div>
         ${rows.map((row, index) => `
-          <div class="history-item" data-ec-id="${esc(row.id)}" style="cursor:pointer; ${String(currentEmergencyContactId) === String(row.id) ? 'border:1px solid var(--blue, #2e75b6);' : ''}">
+          <div class="history-item" data-ec-id="${esc(row.id)}" style="cursor:pointer; ${String(window.currentEmergencyContactId) === String(row.id) ? 'border:1px solid var(--blue, #2e75b6);' : ''}">
             <div class="history-top">
               <div>
                 <div class="history-title">${esc(row.contact_name || 'Emergency Contact')}</div>
@@ -131,7 +133,7 @@ async function loadEmergencyContacts(employeeId) {
         card.addEventListener('click', () => {
             const row = rows.find(item => String(item.id) === String(card.dataset.ecId));
             if (!row) return;
-            currentEmergencyContactId = row.id;
+            window.currentEmergencyContactId = row.id;
             safeGet('deleteECBtn')?.classList.remove('hidden');
             if (safeGet('ecName')) safeGet('ecName').value = row.contact_name || '';
             if (safeGet('ecRelationship')) safeGet('ecRelationship').value = row.relationship || '';
@@ -167,8 +169,8 @@ async function saveEmergencyContact() {
 
     let error;
 
-    if (currentEmergencyContactId) {
-        const result = await ecUpdate(currentEmergencyContactId, {
+    if (window.currentEmergencyContactId) {
+        const result = await ecUpdate(window.currentEmergencyContactId, {
             employee_id: employeeId,
             contact_name,
             relationship,
@@ -195,14 +197,14 @@ async function saveEmergencyContact() {
         return;
     }
 
-    const wasUpdating = Boolean(currentEmergencyContactId);
+    const wasUpdating = Boolean(window.currentEmergencyContactId);
     showToast(wasUpdating ? 'Emergency contact updated.' : 'Emergency contact saved.');
     resetEmergencyContactForm();
     await loadEmergencyContacts(employeeId);
 }
 
 async function deleteEmergencyContact() {
-    if (!currentEmergencyContactId) {
+    if (!window.currentEmergencyContactId) {
         showToast('No emergency contact to delete.', 'error');
         return;
     }
