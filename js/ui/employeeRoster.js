@@ -11,6 +11,14 @@ if (typeof window.rosterViewMode === 'undefined') {
     window.rosterViewMode = 'active';
 }
 
+function cleanRosterEmployeeNameValue(value) {
+    return String(value || '')
+        .replace(/\bAt[-\s]*Risk\b/gi, '')
+        .replace(/\bImpact\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
 
 function formatRosterStatus(status) {
     const value = String(status || '').trim();
@@ -32,8 +40,8 @@ function statusBadge(status) {
 function normalizeEmployeeForRoster(employee) {
     if (!employee) return null;
 
-    const firstName = employee.first_name || employee.firstName || employee.first || '';
-    const lastName = employee.last_name || employee.lastName || employee.last || '';
+    const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || '');
+    const lastName = cleanRosterEmployeeNameValue(employee.last_name || employee.lastName || employee.last || '');
     const department = employee.department || employee.dept || employee.displayDepartment || '';
     const position = employee.position || employee.title || employee.displayPosition || '';
     const supervisor = employee.supervisor || employee.displaySupervisor || '';
@@ -217,10 +225,10 @@ function populateEmployeeAdminFallback(employee) {
         return label === 'employee id' || input.placeholder?.trim().toLowerCase() === 'employee id';
     });
     lockEmployeeIdField(visibleEmployeeIdField);
-    setByPlaceholder('First name', valueFrom('first_name', 'firstName', 'first') || fallbackFirstName);
-    setByLabelText('FIRST NAME', valueFrom('first_name', 'firstName', 'first') || fallbackFirstName);
-    setByPlaceholder('Last name', valueFrom('last_name', 'lastName', 'last') || fallbackLastName);
-    setByLabelText('LAST NAME', valueFrom('last_name', 'lastName', 'last') || fallbackLastName);
+    setByPlaceholder('First name', cleanRosterEmployeeNameValue(valueFrom('first_name', 'firstName', 'first') || fallbackFirstName));
+    setByLabelText('FIRST NAME', cleanRosterEmployeeNameValue(valueFrom('first_name', 'firstName', 'first') || fallbackFirstName));
+    setByPlaceholder('Last name', cleanRosterEmployeeNameValue(valueFrom('last_name', 'lastName', 'last') || fallbackLastName));
+    setByLabelText('LAST NAME', cleanRosterEmployeeNameValue(valueFrom('last_name', 'lastName', 'last') || fallbackLastName));
     setByPlaceholder('Department', valueFrom('department', 'dept', 'displayDepartment') || drawerSubParts[1] || '');
     setByLabelText('DEPARTMENT', valueFrom('department', 'dept', 'displayDepartment') || drawerSubParts[1] || '');
     setByPlaceholder('Position', valueFrom('position', 'title', 'displayPosition') || drawerSubParts[0] || '');
@@ -265,8 +273,8 @@ function populateEmployeeAdminByVisibleOrder(employee) {
 
     const nameText = employee.displayName || employee.name || drawerTitleName || '';
     const nameParts = String(nameText).trim().split(/\s+/).filter(Boolean);
-    const firstName = employee.first_name || employee.firstName || employee.first || nameParts[0] || '';
-    const lastName = employee.last_name || employee.lastName || employee.last || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '');
+    const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || nameParts[0] || '');
+    const lastName = cleanRosterEmployeeNameValue(employee.last_name || employee.lastName || employee.last || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''));
 
     const employeeIdValue = getEmployeePublicId(employee, drawerTitleName);
     const statusValue = formatRosterStatus(employee.status || employee.displayStatus || 'Active');
@@ -717,8 +725,8 @@ function getEmployeeAdminFormSnapshot() {
     return {
         employee_id: readByLabel('EMPLOYEE ID') || window.currentEmployee?.employee_id || window.currentEmployee?.employeeId || '',
         status: readByLabel('STATUS'),
-        first_name: readByLabel('FIRST NAME'),
-        last_name: readByLabel('LAST NAME'),
+        first_name: cleanRosterEmployeeNameValue(readByLabel('FIRST NAME')),
+        last_name: cleanRosterEmployeeNameValue(readByLabel('LAST NAME')),
         department: readByLabel('DEPARTMENT'),
         position: readByLabel('POSITION'),
         supervisor: readByLabel('SUPERVISOR'),
@@ -779,8 +787,8 @@ function getEmployeeAdminAuditBaseline() {
     return {
         employee_id: readOriginalByLabel('employee_id', 'EMPLOYEE ID'),
         status: readOriginalByLabel('status', 'STATUS'),
-        first_name: readOriginalByLabel('first_name', 'FIRST NAME'),
-        last_name: readOriginalByLabel('last_name', 'LAST NAME'),
+        first_name: cleanRosterEmployeeNameValue(readOriginalByLabel('first_name', 'FIRST NAME')),
+        last_name: cleanRosterEmployeeNameValue(readOriginalByLabel('last_name', 'LAST NAME')),
         department: readOriginalByLabel('department', 'DEPARTMENT'),
         position: readOriginalByLabel('position', 'POSITION'),
         supervisor: readOriginalByLabel('supervisor', 'SUPERVISOR'),
@@ -820,6 +828,22 @@ function getEmployeeAdminFieldKey(field) {
     };
 
     return map[labelText] || '';
+}
+
+function cleanEmployeeAdminVisibleNameFields() {
+    ['FIRST NAME', 'LAST NAME'].forEach(labelText => {
+        const field = getEmployeeAdminFieldByLabel(labelText);
+        if (!field || typeof field.value !== 'string') return;
+        const cleaned = cleanRosterEmployeeNameValue(field.value);
+        if (field.value !== cleaned) {
+            const previousSuppress = window.__suppressAuditDirty;
+            window.__suppressAuditDirty = true;
+            field.value = cleaned;
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+            field.dispatchEvent(new Event('change', { bubbles: true }));
+            window.__suppressAuditDirty = previousSuppress;
+        }
+    });
 }
 
 function bindEmployeeAdminDirtyTracking() {
@@ -1002,7 +1026,7 @@ function getEmployeeSnapshotFromRosterRow(employeeId) {
     if (!row) return {};
 
     const cells = Array.from(row.querySelectorAll('td'));
-    const nameText = cells[1]?.querySelector('.link-button')?.textContent?.trim() || cells[1]?.textContent?.trim() || '';
+    const nameText = cleanRosterEmployeeNameValue(cells[1]?.querySelector('.link-button')?.textContent?.trim() || cells[1]?.textContent?.trim() || '');
     const nameParts = nameText.split(/\s+/).filter(Boolean);
     const firstName = nameParts[0] || '';
     const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
@@ -1229,10 +1253,12 @@ function openDrawerByEmployeeId(employeeId) {
 
         populateEmployeeAdminFallback(drawerEmployee);
         populateEmployeeAdminByVisibleOrder(drawerEmployee);
+        cleanEmployeeAdminVisibleNameFields();
         [50, 150, 300, 600, 1000, 1500].forEach(delay => {
             setTimeout(() => {
                 populateEmployeeAdminFallback(drawerEmployee);
                 populateEmployeeAdminByVisibleOrder(drawerEmployee);
+                cleanEmployeeAdminVisibleNameFields();
                 const visibleEmployeeIdField = Array.from(document.querySelectorAll('input')).find(input => {
                     const label = input.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase() || '';
                     return label === 'employee id' || input.placeholder?.trim().toLowerCase() === 'employee id';
@@ -1347,18 +1373,9 @@ function bindRosterEvents() {
         searchInput.removeAttribute('readonly');
         searchInput.style.pointerEvents = 'auto';
         searchInput.style.userSelect = 'text';
-
-        searchInput.onclick = event => {
-            event.stopPropagation();
-        };
-
-        searchInput.onmousedown = event => {
-            event.stopPropagation();
-        };
-
-        searchInput.onkeydown = event => {
-            event.stopPropagation();
-        };
+        searchInput.tabIndex = 0;
+        searchInput.style.zIndex = '10';
+        searchInput.style.position = 'relative';
 
         searchInput.oninput = () => {
             clearTimeout(rosterSearchTimer);
@@ -1406,6 +1423,7 @@ if (!window.__employeeAdminBind) {
                 if (typeof populateEmployeeAdminByVisibleOrder === 'function') {
                     populateEmployeeAdminByVisibleOrder(window.currentEmployee);
                 }
+                cleanEmployeeAdminVisibleNameFields();
                 const currentEmployeeId = window.currentEmployee?.employee_id || window.currentEmployee?.employeeId || window.currentEmployee?.displayId || '';
                 const visibleEmployeeIdField = Array.from(document.querySelectorAll('input')).find(input => {
                     const label = input.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase() || '';
@@ -1454,6 +1472,7 @@ window.refreshEmployeeRoster = async function () {
 // EXPORTS
 // =========================
 
+window.cleanRosterEmployeeNameValue = cleanRosterEmployeeNameValue;
 window.formatRosterStatus = formatRosterStatus;
 window.statusBadge = statusBadge;
 window.normalizeEmployeeForRoster = normalizeEmployeeForRoster;
@@ -1475,6 +1494,7 @@ window.setEmployeeAdminAuditBaseline = setEmployeeAdminAuditBaseline;
 window.getEmployeeAdminAuditBaseline = getEmployeeAdminAuditBaseline;
 window.getEmployeeAdminFieldKey = getEmployeeAdminFieldKey;
 window.bindEmployeeAdminDirtyTracking = bindEmployeeAdminDirtyTracking;
+window.cleanEmployeeAdminVisibleNameFields = cleanEmployeeAdminVisibleNameFields;
 window.getMeaningfulEmployeeAuditChanges = getMeaningfulEmployeeAuditChanges;
 window.getAuditLog = () => JSON.parse(localStorage.getItem('orbis_audit_log') || '[]');
 window.writeEmployeeAuditLogToSupabase = writeEmployeeAuditLogToSupabase;

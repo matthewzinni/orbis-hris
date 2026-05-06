@@ -1,4 +1,10 @@
-
+function cleanEmployeeFormNameValue(value) {
+    return String(value || '')
+        .replace(/\bAt[-\s]*Risk\b/gi, '')
+        .replace(/\bImpact\b/gi, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
 
 // =========================
 // EMPLOYEE FORM MODULE
@@ -6,8 +12,8 @@
 
 function getEmployeeFormData() {
     return {
-        first_name: safeGet('firstName')?.value?.trim() || '',
-        last_name: safeGet('lastName')?.value?.trim() || '',
+        first_name: cleanEmployeeFormNameValue(safeGet('firstName')?.value?.trim() || ''),
+        last_name: cleanEmployeeFormNameValue(safeGet('lastName')?.value?.trim() || ''),
         email: safeGet('email')?.value?.trim().toLowerCase() || '',
         phone: safeGet('phone')?.value?.trim() || '',
         department: safeGet('department')?.value || '',
@@ -20,8 +26,8 @@ function getEmployeeFormData() {
 function populateEmployeeForm(employee) {
     if (!employee) return;
 
-    if (safeGet('firstName')) safeGet('firstName').value = employee.first_name || employee.first || '';
-    if (safeGet('lastName')) safeGet('lastName').value = employee.last_name || employee.last || '';
+    if (safeGet('firstName')) safeGet('firstName').value = cleanEmployeeFormNameValue(employee.first_name || employee.first || '');
+    if (safeGet('lastName')) safeGet('lastName').value = cleanEmployeeFormNameValue(employee.last_name || employee.last || '');
     if (safeGet('email')) safeGet('email').value = employee.email || '';
     if (safeGet('phone')) safeGet('phone').value = employee.phone || '';
     if (safeGet('department')) safeGet('department').value = employee.department || employee.dept || '';
@@ -85,6 +91,7 @@ async function saveEmployeeForm() {
 // EXPORTS
 // =========================
 
+window.cleanEmployeeFormNameValue = cleanEmployeeFormNameValue;
 window.getEmployeeFormData = getEmployeeFormData;
 window.populateEmployeeForm = populateEmployeeForm;
 window.resetEmployeeForm = resetEmployeeForm;

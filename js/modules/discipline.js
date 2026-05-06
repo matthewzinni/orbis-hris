@@ -16,6 +16,7 @@ async function disciplineFetchByEmployee(employeeId) {
         .order('incident_date', { ascending: false });
 }
 
+
 async function disciplineDeleteById(recordId) {
     if (typeof deleteDisciplineById === 'function') {
         return await deleteDisciplineById(recordId);
@@ -27,6 +28,78 @@ async function disciplineDeleteById(recordId) {
         .from('discipline_reports')
         .delete()
         .eq('id', recordId);
+}
+
+function disciplineLevelShouldAutoFlagAtRisk(level) {
+    const normalized = String(level || '').toLowerCase();
+    return normalized.includes('written warning') ||
+        normalized.includes('final warning') ||
+        normalized.startsWith('level 3') ||
+        normalized.startsWith('level 4');
+}
+
+async function autoFlagAtRiskFromDiscipline(employeeId, disciplineData = {}) {
+    if (!employeeId) return;
+    if (!disciplineLevelShouldAutoFlagAtRisk(disciplineData.discipline_level)) return;
+
+    try {
+        const { data: latestRiskNotes, error: latestRiskError } = await supabaseClient
+            .from('employee_notes')
+            .select('id, note_type, note_text, note_date, created_at')
+            .eq('employee_id', employeeId)
+            .in('note_type', ['At-Risk Flag', 'At-Risk Cleared'])
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (latestRiskError) {
+            console.warn('Could not check latest at-risk status before auto-flagging.', latestRiskError);
+        }
+
+        const latestRiskNote = latestRiskNotes?.[0] || null;
+        if (latestRiskNote?.note_type === 'At-Risk Flag') {
+            return;
+        }
+
+        const levelText = String(disciplineData.discipline_level || '').trim();
+        const issueText = String(disciplineData.issue_type || '').trim();
+        const noteText = [
+            `Automatically flagged due to ${levelText || 'discipline action'}.`,
+            issueText ? `Issue type: ${issueText}.` : '',
+            'This flag was generated because written warnings and final warnings require HR follow-up.'
+        ].filter(Boolean).join(' ');
+
+        const { error: insertError } = await supabaseClient
+            .from('employee_notes')
+            .insert([{
+                employee_id: employeeId,
+                note_date: disciplineData.incident_date || todayInputValue(),
+                note_type: 'At-Risk Flag',
+                note_text: noteText
+            }]);
+
+        if (insertError) {
+            console.error(insertError);
+            showToast('Discipline saved, but At-Risk auto-flag could not be created.', 'error');
+            return;
+        }
+
+        if (window.currentAtRiskRosterMap) {
+            window.currentAtRiskRosterMap[String(employeeId)] = {
+                ...(window.currentAtRiskRosterMap[String(employeeId)] || {}),
+                manualReason: noteText,
+                flaggedDate: disciplineData.incident_date || todayInputValue(),
+                flaggedBy: window.currentUser?.email || window.currentUser?.name || 'System',
+                lowReview: window.currentAtRiskRosterMap[String(employeeId)]?.lowReview === true,
+                reviewScore: window.currentAtRiskRosterMap[String(employeeId)]?.reviewScore ?? null,
+                openIncidentCount: Number(window.currentAtRiskRosterMap[String(employeeId)]?.openIncidentCount || 0)
+            };
+        }
+
+        showToast('Employee automatically flagged as At-Risk due to discipline level.');
+    } catch (err) {
+        console.error(err);
+        showToast('Discipline saved, but At-Risk auto-flag failed.', 'error');
+    }
 }
 
 function startDisciplineEdit(record) {
@@ -188,6 +261,18 @@ async function loadEmployeeDiscipline(employeeId) {
         target.innerHTML = '<div class="empty">No discipline records for this employee</div>';
         if (typeof buildKpiHoverDetails === 'function') buildKpiHoverDetails();
         return;
+    }
+
+    const atRiskEligibleRecord = data.find(row => disciplineLevelShouldAutoFlagAtRisk(row.discipline_level));
+    if (atRiskEligibleRecord) {
+        await autoFlagAtRiskFromDiscipline(employeeId, {
+            incident_date: atRiskEligibleRecord.incident_date,
+            issue_type: atRiskEligibleRecord.issue_type,
+            discipline_level: atRiskEligibleRecord.discipline_level,
+            description: atRiskEligibleRecord.description,
+            action_taken: atRiskEligibleRecord.action_taken,
+            report_status: atRiskEligibleRecord.report_status
+        });
     }
 
     target.innerHTML = data.map(row => `
@@ -360,6 +445,13 @@ async function saveDisciplineReport() {
     }
 
     const isUpdatingDiscipline = !!currentDisciplineReportId;
+    console.log('[Discipline Save]', {
+        mode: isUpdatingDiscipline ? 'update' : 'create',
+        currentDisciplineReportId,
+        employeeId,
+        discipline_level,
+        issue_type
+    });
     const signatureFields = [];
     if (employee_signature) signatureFields.push('employee_signature');
     if (manager_signature) signatureFields.push('manager_signature');
@@ -413,7 +505,16 @@ async function saveDisciplineReport() {
         return;
     }
 
+
     showToast(isUpdatingDiscipline ? 'Discipline report updated.' : 'Discipline report saved.');
+    await autoFlagAtRiskFromDiscipline(employeeId, {
+        incident_date,
+        issue_type,
+        discipline_level,
+        description,
+        action_taken,
+        report_status
+    });
 
     if (typeof window.writeEmployeeAuditLogToSupabase === 'function') {
         const publicEmployeeId = typeof window.getEmployeePublicId === 'function'
@@ -464,8 +565,9 @@ async function saveDisciplineReport() {
             [issue_type, discipline_level, report_status, refused_to_sign ? 'Refused to Sign' : 'Signed/Not Marked'].filter(Boolean).join(' • ')
         );
     }
+    currentDisciplineReportId = null;
     cancelDisciplineEdit();
-    await loadEmployeeDiscipline(currentEmployee.id);
+    await loadEmployeeDiscipline(currentEmployee?.dbId || currentEmployee?.id);
     await loadSummaryMetrics();
     await loadRecentActivity();
     if (typeof loadReviewDashboard === 'function') await loadReviewDashboard();
@@ -478,6 +580,8 @@ async function saveDisciplineReport() {
 // =========================
 // GLOBAL EXPORTS
 // =========================
+window.disciplineLevelShouldAutoFlagAtRisk = disciplineLevelShouldAutoFlagAtRisk;
+window.autoFlagAtRiskFromDiscipline = autoFlagAtRiskFromDiscipline;
 window.getDisciplineSignature = getDisciplineSignature;
 window.clearDisciplineSignature = clearDisciplineSignature;
 window.loadDisciplineSignature = loadDisciplineSignature;

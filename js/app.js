@@ -1922,7 +1922,7 @@ function renderKpiEmployeeMetrics() {
     });
     const turnoverRiskContributors = turnoverRiskEmployees.length;
     const turnoverRisk = reviewEligibleActive.length
-        ? Math.min(100, (turnoverRiskContributors / reviewEligibleActive.length) * 100)
+        ? Math.round(Math.min(100, (turnoverRiskContributors / reviewEligibleActive.length) * 100) * 10) / 10
         : 0;
     setText('kActiveHC', active.length);
     setText('kDepartments', departments.length);
@@ -1930,8 +1930,8 @@ function renderKpiEmployeeMetrics() {
         window.updateTurnoverRiskKpi(turnoverRisk, `${turnoverRiskContributors} at-risk employee${turnoverRiskContributors === 1 ? '' : 's'} in first 3 months`);
     }
     else {
-        setText('kTurnoverRisk', turnoverRisk);
-        setText('kTurnoverRiskSub', `${turnoverRiskContributors} at-risk employee${turnoverRiskContributors === 1 ? '' : 's'} in first 3 months`);
+        setText('kTurnoverRisk', `${Number(turnoverRisk || 0).toFixed(1)}%`);
+        setText('kTurnoverRiskSub', `${turnoverRiskContributors} at-risk employee${turnoverRiskContributors === 1 ? '' : 's'} identified`);
     }
     const turnoverRiskCard = safeGet('kTurnoverRisk')?.closest('.kpi-card');
     if (turnoverRiskCard) {
@@ -1983,7 +1983,7 @@ async function loadSummaryMetrics() {
         const [disciplineRes, reviewsRes, incidentsRes, manualRiskRes, impactPlayerRes] = await Promise.all([
             supabaseClient
                 .from('discipline_reports')
-                .select('id, employee_id, issue_type, report_status, employees(first_name, last_name)'),
+                .select('id, employee_id, issue_type, report_status, discipline_level, incident_date, employees(first_name, last_name)'),
             supabaseClient
                 .from('employee_reviews')
                 .select('employee_id, attendance_score, performance_score, teamwork_score, attitude_score, reliability_score, created_at, review_date'),
@@ -2001,8 +2001,36 @@ async function loadSummaryMetrics() {
                 .in('note_type', ['Impact Player Flag', 'Impact Player Cleared'])
                 .order('created_at', { ascending: false })
         ]);
+
+        const reviewRiskEmployeeIds = new Set();
+        const incidentRiskEmployeeIds = new Set();
+        const manualRiskEmployeeIds = new Set();
+        const disciplineRiskEmployeeIds = new Set();
         if (!disciplineRes.error) {
             const openDisciplineCases = (disciplineRes.data || []).filter(row => String(row.report_status || '').trim().toLowerCase() !== 'closed');
+            openDisciplineCases.forEach(row => {
+
+                const employeeId = String(row.employee_id || '');
+
+                const level = String(row.discipline_level || '').trim().toLowerCase();
+
+                const isAtRiskLevel =
+
+                    level.includes('written warning') ||
+
+                    level.includes('final warning') ||
+
+                    level.startsWith('level 3') ||
+
+                    level.startsWith('level 4');
+
+                if (employeeId && isAtRiskLevel) {
+
+                    disciplineRiskEmployeeIds.add(employeeId);
+
+                }
+
+            });
             const openCount = openDisciplineCases.length;
             setText('kOpenDiscipline', openCount);
             const disciplineCard = document.getElementById('cardOpenDiscipline');
@@ -2039,9 +2067,6 @@ async function loadSummaryMetrics() {
                 disciplineCard.removeAttribute('title');
             }
         }
-        const reviewRiskEmployeeIds = new Set();
-        const incidentRiskEmployeeIds = new Set();
-        const manualRiskEmployeeIds = new Set();
         const latestReviewByEmployee = {};
         const impactPlayerEmployeeIds = new Set();
         if (!reviewsRes.error) {
@@ -2245,12 +2270,21 @@ async function loadSummaryMetrics() {
         const combinedRiskEmployeeIds = new Set([
             ...reviewRiskEmployeeIds,
             ...incidentRiskEmployeeIds,
-            ...manualRiskEmployeeIds
+            ...manualRiskEmployeeIds,
+            ...disciplineRiskEmployeeIds
         ]);
-        const atRiskEmployees = combinedRiskEmployeeIds.size;
+        const atRiskEmployees = Object.keys(currentAtRiskRosterMap || {}).filter(key => {
+            const meta = currentAtRiskRosterMap[key];
+            return meta && (
+                meta.lowReview === true ||
+                Number(meta.openIncidentCount || 0) > 0 ||
+                String(meta.manualReason || '').trim() !== '' ||
+                meta.disciplineRisk === true
+            );
+        }).length;
         const impactPlayers = Object.values(currentImpactPlayerRosterMap || {}).filter(meta => meta && (meta.highReview === true ||
             (meta.manualReason && meta.manualReason.trim() !== ''))).length;
-        const hasAnyData = !reviewsRes.error || !incidentsRes.error;
+        const hasAnyData = !reviewsRes.error || !incidentsRes.error || !disciplineRes.error;
         if (hasAnyData) {
             if (typeof window.updateAtRiskKpi === 'function') {
                 window.updateAtRiskKpi(atRiskEmployees);
