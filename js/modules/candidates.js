@@ -1,7 +1,9 @@
 // =====================================================
 // ORBIS - Candidate Pipeline Module
 // Handles candidate loading, stage updates, deletion, and conversion.
-// =====================================================window.orbisModuleLoadCandidates = loadCandidates;
+// =====================================================
+
+window.orbisModuleLoadCandidates = loadCandidates;
 window.convertCandidateToEmployee = convertCandidateToEmployee;
 window.updateCandidateStage = updateCandidateStage;
 window.deleteCandidate = deleteCandidate;
@@ -17,7 +19,9 @@ window.switchCandidateDrawerTab = switchCandidateDrawerTab;
 window.saveCandidateNotes = saveCandidateNotes;
 window.saveCandidateInterview = saveCandidateInterview;
 window.saveCandidateOffer = saveCandidateOffer;
-window.saveCandidateDocument = saveCandidateDocument; function getCandidatesTableBody() {
+window.saveCandidateDocument = saveCandidateDocument;
+
+function getCandidatesTableBody() {
     return (
         document.getElementById('candidatesTableBody') ||
         document.getElementById('candidateTableBody') ||
@@ -31,30 +35,49 @@ window.saveCandidateDocument = saveCandidateDocument; function getCandidatesTabl
             (tbody.parentElement?.textContent || '').includes('NAME')
         )
     );
-} function candidateDisplay(value) {
+}
+
+function candidateDisplay(value) {
     return value || '—';
-} function candidateToast(message, type = 'success') {
+}
+
+function candidateToast(message, type = 'success') {
     if (typeof showToast === 'function') {
         showToast(message, type);
     } else {
         console.log(`${type.toUpperCase()}: ${message}`);
     }
-} function ensureLegacyCandidateMoveButton() {
+}
+
+function ensureLegacyCandidateMoveButton() {
     const convertButton = Array.from(document.querySelectorAll('button'))
-        .find(button => (button.textContent || '').trim().toLowerCase() === 'convert to employee'); if (!convertButton) return; const actionsContainer = convertButton.parentElement;
-    if (!actionsContainer) return; if (document.getElementById('legacyCandidateNextStageBtn')) return; const moveButton = document.createElement('button');
+        .find(button => (button.textContent || '').trim().toLowerCase() === 'convert to employee');
+    if (!convertButton)
+        return;
+    const actionsContainer = convertButton.parentElement;
+    if (!actionsContainer)
+        return;
+    if (document.getElementById('legacyCandidateNextStageBtn'))
+        return;
+    const moveButton = document.createElement('button');
     moveButton.id = 'legacyCandidateNextStageBtn';
     moveButton.type = 'button';
     moveButton.className = convertButton.className || 'button soft';
-    moveButton.textContent = 'Move to Next Stage'; moveButton.addEventListener('click', async event => {
+    moveButton.textContent = 'Move to Next Stage';
+    moveButton.addEventListener('click', async event => {
         event.preventDefault();
         event.stopPropagation();
         console.log('Legacy Move to Next Stage button clicked');
         await moveCandidateToNextStage();
-    }); actionsContainer.insertBefore(moveButton, convertButton);
-} async function resolveCurrentCandidateIdFromDrawer(db) {
+    });
+    actionsContainer.insertBefore(moveButton, convertButton);
+}
+
+async function resolveCurrentCandidateIdFromDrawer(db) {
     const hiddenId = document.getElementById('candidateDetailId')?.value;
-    if (hiddenId) return hiddenId; const firstName = document.getElementById('candidateDetailFirstName')?.value?.trim()
+    if (hiddenId)
+        return hiddenId;
+    const firstName = document.getElementById('candidateDetailFirstName')?.value?.trim()
         || document.getElementById('candidateFirstNameInput')?.value?.trim()
         || '';
     const lastName = document.getElementById('candidateDetailLastName')?.value?.trim()
@@ -68,22 +91,28 @@ window.saveCandidateDocument = saveCandidateDocument; function getCandidatesTabl
         || '';
     const phone = document.getElementById('candidateDetailPhone')?.value?.trim()
         || document.getElementById('candidatePhoneInput')?.value?.trim()
-        || ''; console.log('Resolving candidate from drawer fields:', { firstName, lastName, stage, email, phone }); let query = db.from('candidates').select('*'); if (email) {
-            query = query.eq('email', email);
-        } else if (phone) {
-            query = query.eq('phone', phone);
-        } else if (firstName || lastName) {
-            // Match by name only (stage can change and break lookup)
-            query = query
-                .ilike('first_name', firstName || '%')
-                .ilike('last_name', lastName || '%');
-        } else {
+        || '';
+    console.log('Resolving candidate from drawer fields:', { firstName, lastName, stage, email, phone });
+    let query = db.from('candidates').select('*');
+    if (email) {
+        query = query.eq('email', email);
+    } else if (phone) {
+        query = query.eq('phone', phone);
+    } else if (firstName || lastName) {
+        // Match by name only (stage can change and break lookup)
+        query = query
+            .ilike('first_name', firstName || '%')
+            .ilike('last_name', lastName || '%');
+    } else {
         console.warn('No candidate lookup fields found in drawer.');
         return '';
-    } const { data, error } = await query.limit(1).maybeSingle(); if (error) {
+    }
+    const { data, error } = await query.limit(1).maybeSingle();
+    if (error) {
         console.error('Could not resolve candidate from drawer:', error);
         return '';
-    } if (data?.id) {
+    }
+    if (data?.id) {
         let hiddenInput = document.getElementById('candidateDetailId');
         if (!hiddenInput) {
             hiddenInput = document.createElement('input');
@@ -94,56 +123,81 @@ window.saveCandidateDocument = saveCandidateDocument; function getCandidatesTabl
         }
         hiddenInput.value = data.id;
         return data.id;
-    } return '';
-} function getOrbisSupabaseClient() {
+    }
+    return '';
+}
+
+function getOrbisSupabaseClient() {
     if (typeof supabaseClient !== 'undefined' && supabaseClient && typeof supabaseClient.from === 'function') {
         return supabaseClient;
-    } if (window.supabaseClient && typeof window.supabaseClient.from === 'function') {
+    }
+    if (window.supabaseClient && typeof window.supabaseClient.from === 'function') {
         return window.supabaseClient;
-    } if (window.db && typeof window.db.from === 'function') {
+    }
+    if (window.db && typeof window.db.from === 'function') {
         return window.db;
-    } if (window.orbisDb && typeof window.orbisDb.from === 'function') {
+    }
+    if (window.orbisDb && typeof window.orbisDb.from === 'function') {
         return window.orbisDb;
-    } return null;
-}// Helper function to refresh candidates list from main app
+    }
+    return null;
+}
+
+// Helper function to refresh candidates list from main app
 async function refreshCandidatesFromMainApp() {
     if (typeof window.loadCandidates === 'function') {
         await window.loadCandidates();
         return;
-    } if (typeof window.renderCandidates === 'function') {
+    }
+    if (typeof window.renderCandidates === 'function') {
         window.renderCandidates();
     }
-} async function loadCandidates() {
-    const tbody = getCandidatesTableBody(); if (!tbody) {
+}
+
+async function loadCandidates() {
+    const tbody = getCandidatesTableBody();
+    if (!tbody) {
         console.warn('Candidate table body not found. Check the Candidate Pipeline table ID.');
         const allBodies = [...document.querySelectorAll('tbody')];
         console.log('Available table bodies:', allBodies.map((body, index) => ({ index, text: body.innerText.slice(0, 120) })));
         return;
-    } tbody.innerHTML = '<tr><td colspan="5">Loading candidates...</td></tr>'; const db = getOrbisSupabaseClient(); if (!db) {
+    }
+    tbody.innerHTML = '<tr><td colspan="5">Loading candidates...</td></tr>';
+    const db = getOrbisSupabaseClient();
+    if (!db) {
         console.error('Supabase client not found for candidates module.');
         tbody.innerHTML = '<tr><td colspan="5">Supabase connection not found.</td></tr>';
         return;
-    } const { data, error } = await db
+    }
+    const { data, error } = await db
         .from('candidates')
-        .select('*'); if (error) {
-            console.error('Error loading candidates:', error);
-            tbody.innerHTML = '<tr><td colspan="5">Unable to load candidates.</td></tr>';
-            return;
-        } const visibleCandidates = (data || []).filter(candidate => (candidate.stage || '').toLowerCase() !== 'hired'); if (visibleCandidates.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5">No active candidates found.</td></tr>';
-            return;
-        } tbody.innerHTML = visibleCandidates.map(candidate => {
-            const id = candidate.id;
-            const name = candidate.name || candidate.candidate_name || `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim();
-            const position = candidate.position || candidate.position_applied_for || candidate.role;
-            const stage = candidate.stage || candidate.status || 'Applied';
-            const source = candidate.source || candidate.referral_source;
-            const appliedDate = candidate.applied_date || candidate.created_at || candidate.inserted_at || ''; let interviewAlert = ''; if (candidate.interview_date && candidate.interview_time) {
-                const interviewDateTime = new Date(`${candidate.interview_date}T${candidate.interview_time}`);
-                const now = new Date(); if (interviewDateTime > now) {
-                    interviewAlert = `<div class="candidate-interview-alert">Upcoming Interview: ${interviewDateTime.toLocaleString()}</div>`;
-                }
-            } return `
+        .select('*');
+    if (error) {
+        console.error('Error loading candidates:', error);
+        tbody.innerHTML = '<tr><td colspan="5">Unable to load candidates.</td></tr>';
+        return;
+    }
+    const visibleCandidates = (data || []).filter(candidate => (candidate.stage || '').toLowerCase() !== 'hired');
+    if (visibleCandidates.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5">No active candidates found.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = visibleCandidates.map(candidate => {
+        const id = candidate.id;
+        const name = candidate.name || candidate.candidate_name || `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim();
+        const position = candidate.position || candidate.position_applied_for || candidate.role;
+        const stage = candidate.stage || candidate.status || 'Applied';
+        const source = candidate.source || candidate.referral_source;
+        const appliedDate = candidate.applied_date || candidate.created_at || candidate.inserted_at || '';
+        let interviewAlert = '';
+        if (candidate.interview_date && candidate.interview_time) {
+            const interviewDateTime = new Date(`${candidate.interview_date}T${candidate.interview_time}`);
+            const now = new Date();
+            if (interviewDateTime > now) {
+                interviewAlert = `<div class="candidate-interview-alert">Upcoming Interview: ${interviewDateTime.toLocaleString()}</div>`;
+            }
+        }
+        return `
       <tr class="candidate-row" onclick="openCandidateDetails('${id}')" style="cursor:pointer;">
         <td>
           <button type="button" class="link-button" onclick="event.stopPropagation(); openCandidateDetails('${id}')">${candidateDisplay(name)}</button>
@@ -155,7 +209,7 @@ async function refreshCandidatesFromMainApp() {
         <td>${appliedDate ? new Date(appliedDate).toLocaleDateString() : '—'}</td>
       </tr>
     `;
-        }).join('');
+    }).join('');
 }
 function ensureCandidateModal() {
     let drawer = document.getElementById('candidateDetailsDrawer');

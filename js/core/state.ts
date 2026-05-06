@@ -1,3 +1,9 @@
+// =========================
+// GLOBAL APP STATE
+// Temporary shared state during migration
+// from legacy browser scripts to modules.
+// =========================
+
 export type RosterRiskMeta = {
     manualReason?: string;
     lowReview?: boolean;
@@ -6,17 +12,32 @@ export type RosterRiskMeta = {
     flaggedDate?: string;
     flaggedBy?: string;
     [key: string]: any;
-}; export type OrbisAppState = {
+};
+
+export type OrbisAppState = {
     atRiskMap: Record<string, RosterRiskMeta>;
     impactPlayerMap: Record<string, RosterRiskMeta>;
     currentEmergencyContactId: string | null;
-}; export const OrbisState: OrbisAppState = {
+};
+
+export const OrbisState: OrbisAppState = {
     atRiskMap: {},
     impactPlayerMap: {},
     currentEmergencyContactId: null
-};// Temporary global bridge while Orbis is moving from classic scripts to Vite modules.
-// Existing JS modules can still read window.OrbisState until they are converted to imports.
+};
+
+// =========================
+// TEMP GLOBAL BRIDGE
+// Allows legacy JS files to continue
+// reading shared state during migration.
+// =========================
 (window as any).OrbisState = (window as any).OrbisState || OrbisState;
-(window as any).OrbisState.atRiskMap = (window as any).OrbisState.atRiskMap || OrbisState.atRiskMap;
-(window as any).OrbisState.impactPlayerMap = (window as any).OrbisState.impactPlayerMap || OrbisState.impactPlayerMap;
-(window as any).OrbisState.currentEmergencyContactId = (window as any).OrbisState.currentEmergencyContactId || null;
+
+(window as any).OrbisState.atRiskMap =
+    (window as any).OrbisState.atRiskMap || OrbisState.atRiskMap;
+
+(window as any).OrbisState.impactPlayerMap =
+    (window as any).OrbisState.impactPlayerMap || OrbisState.impactPlayerMap;
+
+(window as any).OrbisState.currentEmergencyContactId =
+    (window as any).OrbisState.currentEmergencyContactId || null;

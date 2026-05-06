@@ -1,26 +1,38 @@
 // =========================
 // EMPLOYEE ROSTER MODULE
-// =========================let rosterSearchTimer = null;
+// =========================
+let rosterSearchTimer = null;
 if (typeof currentSort === 'undefined') {
     window.currentSort = { column: 'name', direction: 'asc' };
-} if (typeof window.rosterViewMode === 'undefined') {
+}
+if (typeof window.rosterViewMode === 'undefined') {
     window.rosterViewMode = 'active';
-} function cleanRosterEmployeeNameValue(value) {
+}
+
+function cleanRosterEmployeeNameValue(value) {
     return String(value || '')
         .replace(/\bAt[-\s]*Risk\b/gi, '')
         .replace(/\bImpact\b/gi, '')
         .replace(/\s+/g, ' ')
         .trim();
-} function formatRosterStatus(status) {
+}
+
+function formatRosterStatus(status) {
     const value = String(status || '').trim();
     if (!value) return 'Active';
     return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
-} function statusBadge(status) {
-    const normalized = String(status || '').trim().toUpperCase(); if (normalized === 'ACTIVE') return 'badge badge-active';
+}
+
+function statusBadge(status) {
+    const normalized = String(status || '').trim().toUpperCase();
+    if (normalized === 'ACTIVE') return 'badge badge-active';
     if (normalized === 'INACTIVE') return 'badge badge-inactive';
     if (normalized === 'TERMINATED') return 'badge badge-terminated';
-    if (normalized === 'LEAVE') return 'badge badge-leave'; return 'badge badge-inactive';
-} function normalizeEmployeeForRoster(employee) {
+    if (normalized === 'LEAVE') return 'badge badge-leave';
+    return 'badge badge-inactive';
+}
+
+function normalizeEmployeeForRoster(employee) {
     if (!employee) return null; const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || '');
     const lastName = cleanRosterEmployeeNameValue(employee.last_name || employee.lastName || employee.last || '');
     const department = employee.department || employee.dept || employee.displayDepartment || '';
@@ -34,7 +46,8 @@ if (typeof currentSort === 'undefined') {
     const benefitsStatus = employee.benefits_status || employee.benefitsStatus || '';
     const nextReviewDate = employee.next_review_date || employee.nextReviewDate || '';
     const anniversaryDate = employee.anniversary_date || employee.anniversaryDate || '';
-    const tenureBracket = employee.tenure_bracket || employee.tenureBracket || ''; return {
+    const tenureBracket = employee.tenure_bracket || employee.tenureBracket || '';
+    return {
         ...employee,
         first_name: firstName,
         last_name: lastName,
@@ -69,7 +82,9 @@ if (typeof currentSort === 'undefined') {
         tenure_bracket: tenureBracket,
         tenureBracket
     };
-} function getEmployeePublicId(employee, fallbackName = '') {
+}
+
+function getEmployeePublicId(employee, fallbackName = '') {
     const directId = employee?.employee_id
         || employee?.employeeId
         || employee?.employee_number
@@ -81,19 +96,26 @@ if (typeof currentSort === 'undefined') {
         || employee?.btw_id
         || employee?.btwId
         || employee?.displayId
-        || ''; if (String(directId).trim()) return String(directId).trim(); const targetName = String(
-            fallbackName
-            || employee?.displayName
-            || employee?.name
-            || `${employee?.first_name || employee?.firstName || employee?.first || ''} ${employee?.last_name || employee?.lastName || employee?.last || ''}`
-        ).trim().toLowerCase(); if (!targetName) return ''; const matchedRow = Array.from(document.querySelectorAll('tr.employee-row')).find(row => {
-            const rowName = row.querySelector('.link-button')?.textContent?.trim().toLowerCase() || '';
-            return rowName === targetName;
-        }); const rowId = matchedRow?.querySelector('td')?.textContent?.trim() || '';
-    if (rowId) return rowId; const matchedEmployee = (EMPLOYEES || []).find(item => {
+        || '';
+    if (String(directId).trim()) return String(directId).trim();
+    const targetName = String(
+        fallbackName
+        || employee?.displayName
+        || employee?.name
+        || `${employee?.first_name || employee?.firstName || employee?.first || ''} ${employee?.last_name || employee?.lastName || employee?.last || ''}`
+    ).trim().toLowerCase();
+    if (!targetName) return '';
+    const matchedRow = Array.from(document.querySelectorAll('tr.employee-row')).find(row => {
+        const rowName = row.querySelector('.link-button')?.textContent?.trim().toLowerCase() || '';
+        return rowName === targetName;
+    });
+    const rowId = matchedRow?.querySelector('td')?.textContent?.trim() || '';
+    if (rowId) return rowId;
+    const matchedEmployee = (EMPLOYEES || []).find(item => {
         const itemName = `${item.first_name || item.firstName || item.first || ''} ${item.last_name || item.lastName || item.last || ''}`.trim().toLowerCase();
         return itemName === targetName;
-    }); return String(
+    });
+    return String(
         matchedEmployee?.employee_id
         || matchedEmployee?.employeeId
         || matchedEmployee?.employee_number
@@ -107,7 +129,9 @@ if (typeof currentSort === 'undefined') {
         || matchedEmployee?.displayId
         || ''
     ).trim();
-} function populateEmployeeAdminFallback(employee) {
+}
+
+function populateEmployeeAdminFallback(employee) {
     if (!employee) return; const valueFrom = (...keys) => {
         for (const key of keys) {
             if (employee[key] !== undefined && employee[key] !== null && employee[key] !== '') {
@@ -115,19 +139,23 @@ if (typeof currentSort === 'undefined') {
             }
         }
         return '';
-    }; const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
+    };
+    const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
     const drawerSubParts = String(document.getElementById('drawerSub')?.textContent || '')
         .split('•')
-        .map(part => part.trim()); const nameParts = String(
-            valueFrom('displayName', 'name', 'full_name', 'fullName') || drawerTitleName
-        ).trim().split(/\s+/).filter(Boolean);
+        .map(part => part.trim());
+    const nameParts = String(
+        valueFrom('displayName', 'name', 'full_name', 'fullName') || drawerTitleName
+    ).trim().split(/\s+/).filter(Boolean);
     const employeePublicId = getEmployeePublicId(employee, drawerTitleName);
     const fallbackFirstName = nameParts[0] || '';
-    const fallbackLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''; const isVisibleField = (el) => {
+    const fallbackLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    const isVisibleField = (el) => {
         if (!el) return false;
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
-    }; const applyValue = (el, value) => {
+    };
+    const applyValue = (el, value) => {
         if (!el) return;
         const previousSuppress = window.__suppressAuditDirty;
         window.__suppressAuditDirty = true;
@@ -135,25 +163,33 @@ if (typeof currentSort === 'undefined') {
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
         window.__suppressAuditDirty = previousSuppress;
-    }; const setBySelector = (selector, value) => {
+    };
+    const setBySelector = (selector, value) => {
         const fields = Array.from(document.querySelectorAll(selector));
         const el = fields.find(isVisibleField) || fields[0];
         applyValue(el, value);
-    }; const setByPlaceholder = (placeholder, value) => {
+    };
+    const setByPlaceholder = (placeholder, value) => {
         setBySelector(`input[placeholder="${placeholder}"], select[placeholder="${placeholder}"], textarea[placeholder="${placeholder}"]`, value);
-    }; const setByLabelText = (labelText, value) => {
+    };
+    const setByLabelText = (labelText, value) => {
         const labels = Array.from(document.querySelectorAll('label'));
         const label = labels.find(item => item.textContent.trim().toLowerCase() === labelText.toLowerCase());
-        if (!label) return; let field = null;
+        if (!label) return;
+        let field = null;
         if (label.htmlFor) {
             field = document.getElementById(label.htmlFor);
-        } if (!field) {
+        }
+        if (!field) {
             const wrapper = label.closest('div') || label.parentElement;
             field = wrapper?.querySelector('input, select, textarea') || null;
-        } if (!field) {
+        }
+        if (!field) {
             field = label.nextElementSibling?.matches?.('input, select, textarea') ? label.nextElementSibling : null;
-        } applyValue(field, value);
-    }; setByPlaceholder('Employee ID', employeePublicId);
+        }
+        applyValue(field, value);
+    };
+    setByPlaceholder('Employee ID', employeePublicId);
     setByLabelText('EMPLOYEE ID', employeePublicId);
     const visibleEmployeeIdField = Array.from(document.querySelectorAll('input')).find(input => {
         const label = input.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase() || '';
@@ -175,20 +211,26 @@ if (typeof currentSort === 'undefined') {
     setByPlaceholder('40', valueFrom('standard_hours', 'standardHours'));
     setByLabelText('STANDARD HOURS', valueFrom('standard_hours', 'standardHours'));
     setByPlaceholder('Benefits status', valueFrom('benefits_status', 'benefitsStatus'));
-    setByLabelText('BENEFITS STATUS', valueFrom('benefits_status', 'benefitsStatus')); const hireDateValue = valueFrom('hire_date', 'hireDate');
+    setByLabelText('BENEFITS STATUS', valueFrom('benefits_status', 'benefitsStatus'));
+    const hireDateValue = valueFrom('hire_date', 'hireDate');
     const nextReviewValue = valueFrom('next_review_date', 'nextReviewDate');
     const dateInputs = Array.from(document.querySelectorAll('input[type="date"]'));
     if (dateInputs[0]) dateInputs[0].value = hireDateValue || '';
-    if (dateInputs[1]) dateInputs[1].value = nextReviewValue || ''; const statusValue = formatRosterStatus(valueFrom('status', 'displayStatus') || 'Active');
+    if (dateInputs[1]) dateInputs[1].value = nextReviewValue || '';
+    const statusValue = formatRosterStatus(valueFrom('status', 'displayStatus') || 'Active');
     const statusSelect = Array.from(document.querySelectorAll('select')).find(select => {
         return Array.from(select.options || []).some(option => option.textContent.trim().toLowerCase() === 'active' || option.textContent.trim().toLowerCase() === 'inactive');
-    }); if (statusSelect) {
+    });
+    if (statusSelect) {
         const matchingOption = Array.from(statusSelect.options || []).find(option => {
             return option.value.toLowerCase() === statusValue.toLowerCase() || option.textContent.trim().toLowerCase() === statusValue.toLowerCase();
-        }); statusSelect.value = matchingOption ? matchingOption.value : statusValue;
+        });
+        statusSelect.value = matchingOption ? matchingOption.value : statusValue;
         statusSelect.dispatchEvent(new Event('change', { bubbles: true }));
     }
-} function populateEmployeeAdminByVisibleOrder(employee) {
+}
+
+function populateEmployeeAdminByVisibleOrder(employee) {
     if (!employee) return; const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
     const drawerSubParts = String(document.getElementById('drawerSub')?.textContent || '')
         .split('•')
@@ -268,94 +310,115 @@ if (typeof currentSort === 'undefined') {
         lockEmployeeIdField(adminFields[0]);
     }
     if (adminFields[1]) setValue(adminFields[1], valuesByLabel['status']);
-} function lockEmployeeIdField(field) {
-    if (!field) return; field.readOnly = true;
+}
+
+function lockEmployeeIdField(field) {
+    if (!field) return;
+    field.readOnly = true;
     field.setAttribute('readonly', 'readonly');
     field.setAttribute('aria-readonly', 'true');
     field.classList.add('locked-field');
     field.title = 'Employee ID is locked and cannot be edited.';
-}// === AUDIT LOG HELPERS ===async function writeEmployeeAuditLogToSupabase(auditEntry) {
-if (!auditEntry) return { error: new Error('Missing audit entry') }; const payload = {
-    employee_id: auditEntry.employee_id || '',
-    employee_name: auditEntry.name || '',
-    action_type: auditEntry.action_type || 'employee_update',
-    fields_changed: auditEntry.fields_changed || [],
-    changed_at: auditEntry.timestamp || new Date().toISOString(),
-    changed_by: auditEntry.changed_by || 'Current user',
-    metadata: auditEntry
-}; try {
-    if (window.supabaseClient?.from) {
-        return await window.supabaseClient
-            .from('employee_audit_logs')
-            .insert([payload]);
-    } if (window.supabase?.from) {
-        return await window.supabase
-            .from('employee_audit_logs')
-            .insert([payload]);
-    } if (typeof supabaseClient !== 'undefined' && supabaseClient?.from) {
-        return await supabaseClient
-            .from('employee_audit_logs')
-            .insert([payload]);
-    } return { error: new Error('Supabase client not available') };
-} catch (error) {
-    console.error('Audit log Supabase insert failed:', error);
-    return { error };
 }
-// === Employee Audit Log Viewer & Fetchers ===} function bindEmployeeUpdateToast() {
-if (window.__employeeUpdateToastBind) return;
-window.__employeeUpdateToastBind = true;
-console.log('[Orbis Audit] Employee update audit listener bound.');
-bindEmployeeAdminDirtyTracking(); document.addEventListener('click', (e) => {
-    const clickedButton = e.target.closest('button');
-    const saveButton = e.target.closest('#saveEmployeeBtn') || clickedButton;
-    const buttonText = (saveButton?.textContent || '').trim().toLowerCase();
-    const isUpdateButton = !!saveButton && (saveButton.id === 'saveEmployeeBtn' || buttonText.includes('update employee')); if (!isUpdateButton) return; const isExistingEmployee = !!window.currentEmployee && !window.isCreatingEmployee;
-    if (!isExistingEmployee) return; console.log('[Orbis Audit] Update Employee click detected. Preparing audit log.'); window.__employeeUpdateToastPending = true;
-    window.__employeeBeforeUpdate = getEmployeeAdminAuditBaseline(); setTimeout(async () => {
-        if (!window.__employeeUpdateToastPending) return;
-        window.__employeeUpdateToastPending = false; const before = window.__employeeBeforeUpdate || {};
-        const after = getEmployeeAdminFormSnapshot(); const dirtyChanges = Array.from(window.__employeeDirtyFields || []);
-        const snapshotChanges = getMeaningfulEmployeeAuditChanges(before, after);
-        const changes = dirtyChanges.length ? dirtyChanges : snapshotChanges; const auditEntry = {
-            id: `audit-${Date.now()}`,
-            employee_id: after.employee_id || before.employee_id || before.employeeId || '',
-            name: `${after.first_name || before.first_name || ''} ${after.last_name || before.last_name || ''}`.trim(),
-            timestamp: new Date().toISOString(),
-            action_type: 'employee_update',
-            changed_by: window.currentUser?.email || window.currentUser?.name || 'Current user',
-            fields_changed: changes,
-            before,
-            after
-        }; console.log('[Orbis Audit] Audit entry created:', auditEntry); const { error } = await writeEmployeeAuditLogToSupabase(auditEntry); if (error) {
-            writeEmployeeAuditLogLocal(auditEntry);
-            console.warn('[Orbis Audit] Supabase insert failed. Saved locally instead:', error);
-        } else {
-            console.log('[Orbis Audit] Audit log saved to Supabase.');
-            if (document.getElementById('employeeAuditLogViewer')) {
-                renderEmployeeAuditLogViewer(window.currentEmployee);
+
+// === AUDIT LOG HELPERS ===
+async function writeEmployeeAuditLogToSupabase(auditEntry) {
+    if (!auditEntry) return { error: new Error('Missing audit entry') };
+    const payload = {
+        employee_id: auditEntry.employee_id || '',
+        employee_name: auditEntry.name || '',
+        action_type: auditEntry.action_type || 'employee_update',
+        fields_changed: auditEntry.fields_changed || [],
+        changed_at: auditEntry.timestamp || new Date().toISOString(),
+        changed_by: auditEntry.changed_by || 'Current user',
+        metadata: auditEntry
+    };
+    try {
+        if (window.supabaseClient?.from) {
+            return await window.supabaseClient
+                .from('employee_audit_logs')
+                .insert([payload]);
+        }
+        if (window.supabase?.from) {
+            return await window.supabase
+                .from('employee_audit_logs')
+                .insert([payload]);
+        }
+        if (typeof supabaseClient !== 'undefined' && supabaseClient?.from) {
+            return await supabaseClient
+                .from('employee_audit_logs')
+                .insert([payload]);
+        }
+        return { error: new Error('Supabase client not available') };
+    } catch (error) {
+        console.error('Audit log Supabase insert failed:', error);
+        return { error };
+    }
+}
+
+// === Employee Audit Log Viewer & Fetchers ===
+function bindEmployeeUpdateToast() {
+    if (window.__employeeUpdateToastBind) return;
+    window.__employeeUpdateToastBind = true;
+    console.log('[Orbis Audit] Employee update audit listener bound.');
+    bindEmployeeAdminDirtyTracking();
+    document.addEventListener('click', (e) => {
+        const clickedButton = e.target.closest('button');
+        const saveButton = e.target.closest('#saveEmployeeBtn') || clickedButton;
+        const buttonText = (saveButton?.textContent || '').trim().toLowerCase();
+        const isUpdateButton = !!saveButton && (saveButton.id === 'saveEmployeeBtn' || buttonText.includes('update employee')); if (!isUpdateButton) return; const isExistingEmployee = !!window.currentEmployee && !window.isCreatingEmployee;
+        if (!isExistingEmployee) return; console.log('[Orbis Audit] Update Employee click detected. Preparing audit log.'); window.__employeeUpdateToastPending = true;
+        window.__employeeBeforeUpdate = getEmployeeAdminAuditBaseline(); setTimeout(async () => {
+            if (!window.__employeeUpdateToastPending) return;
+            window.__employeeUpdateToastPending = false; const before = window.__employeeBeforeUpdate || {};
+            const after = getEmployeeAdminFormSnapshot(); const dirtyChanges = Array.from(window.__employeeDirtyFields || []);
+            const snapshotChanges = getMeaningfulEmployeeAuditChanges(before, after);
+            const changes = dirtyChanges.length ? dirtyChanges : snapshotChanges; const auditEntry = {
+                id: `audit-${Date.now()}`,
+                employee_id: after.employee_id || before.employee_id || before.employeeId || '',
+                name: `${after.first_name || before.first_name || ''} ${after.last_name || before.last_name || ''}`.trim(),
+                timestamp: new Date().toISOString(),
+                action_type: 'employee_update',
+                changed_by: window.currentUser?.email || window.currentUser?.name || 'Current user',
+                fields_changed: changes,
+                before,
+                after
+            }; console.log('[Orbis Audit] Audit entry created:', auditEntry); const { error } = await writeEmployeeAuditLogToSupabase(auditEntry); if (error) {
+                writeEmployeeAuditLogLocal(auditEntry);
+                console.warn('[Orbis Audit] Supabase insert failed. Saved locally instead:', error);
+            } else {
+                console.log('[Orbis Audit] Audit log saved to Supabase.');
+                if (document.getElementById('employeeAuditLogViewer')) {
+                    renderEmployeeAuditLogViewer(window.currentEmployee);
+                }
+            } if (typeof showToast === 'function') {
+                showToast(`Employee updated (${changes.length} change${changes.length === 1 ? '' : 's'})`, 'success');
             }
-        } if (typeof showToast === 'function') {
-            showToast(`Employee updated (${changes.length} change${changes.length === 1 ? '' : 's'})`, 'success');
+            setEmployeeAdminAuditBaseline(after);
+            window.__employeeDirtyFields = new Set(); if (typeof loadEmployees === 'function') {
+                loadEmployees();
+            } else if (typeof renderEmployeeRoster === 'function') {
+                renderEmployeeRoster();
+            }
+        }, 750);
+    });
+    window.addEventListener('error', () => {
+        if (!window.__employeeUpdateToastPending) return;
+        window.__employeeUpdateToastPending = false;
+        if (typeof showToast === 'function') {
+            showToast('Employee update failed. Please check the form and try again.', 'error');
         }
-        setEmployeeAdminAuditBaseline(after);
-        window.__employeeDirtyFields = new Set(); if (typeof loadEmployees === 'function') {
-            loadEmployees();
-        } else if (typeof renderEmployeeRoster === 'function') {
-            renderEmployeeRoster();
+    });
+    window.addEventListener('unhandledrejection', () => {
+        if (!window.__employeeUpdateToastPending) return;
+        window.__employeeUpdateToastPending = false;
+        if (typeof showToast === 'function') {
+            showToast('Employee update failed. Please check the form and try again.', 'error');
         }
-    }, 750);
-}); window.addEventListener('error', () => {
-    if (!window.__employeeUpdateToastPending) return;
-    window.__employeeUpdateToastPending = false; if (typeof showToast === 'function') {
-        showToast('Employee update failed. Please check the form and try again.', 'error');
-    }
-}); window.addEventListener('unhandledrejection', () => {
-    if (!window.__employeeUpdateToastPending) return;
-    window.__employeeUpdateToastPending = false; if (typeof showToast === 'function') {
-        showToast('Employee update failed. Please check the form and try again.', 'error');
-    }
-});
-} function getEmployeeSnapshotFromRosterRow(employeeId) {
+    });
+}
+
+function getEmployeeSnapshotFromRosterRow(employeeId) {
     const row = document.querySelector(`tr.employee-row[data-id="${employeeId}"]`);
     if (!row) return {}; const cells = Array.from(row.querySelectorAll('td'));
     const nameText = cleanRosterEmployeeNameValue(cells[1]?.querySelector('.link-button')?.textContent?.trim() || cells[1]?.textContent?.trim() || '');
@@ -383,7 +446,9 @@ bindEmployeeAdminDirtyTracking(); document.addEventListener('click', (e) => {
         status: cells[6]?.textContent?.trim() || '',
         displayStatus: cells[6]?.textContent?.trim() || ''
     };
-} function getFilteredRosterEmployees() {
+}
+
+function getFilteredRosterEmployees() {
     const searchTerm = safeGet('globalSearch')?.value?.toLowerCase().trim() || '';
     const departmentFilter = String(safeGet('deptFilter')?.value || '').trim();
     const explicitStatusFilter = String(safeGet('statusFilter')?.value || '').trim().toUpperCase();
@@ -446,7 +511,9 @@ bindEmployeeAdminDirtyTracking(); document.addEventListener('click', (e) => {
             }            const result = compareText(valA, valB);
             return currentSort?.direction === 'desc' ? -result : result;
         });
-} function renderEmployeeRoster() {
+}
+
+function renderEmployeeRoster() {
     const tbody = safeGet('empBody') || safeGet('employeeTableBody') || safeGet('rosterBody');
     if (!tbody) return; const employees = getFilteredRosterEmployees();
     currentFilteredEmployees = employees;
@@ -510,7 +577,9 @@ bindEmployeeAdminDirtyTracking(); document.addEventListener('click', (e) => {
     if (typeof bindAtRiskKpiHover === 'function') {
         bindAtRiskKpiHover();
     }
-} function openDrawerByEmployeeId(employeeId) {
+}
+
+function openDrawerByEmployeeId(employeeId) {
     const employee = (EMPLOYEES || []).find(item =>
         String(item.dbId || item.id || item.employee_id) === String(employeeId)
     ); if (!employee) {
@@ -562,7 +631,9 @@ bindEmployeeAdminDirtyTracking(); document.addEventListener('click', (e) => {
             safeGet('saveEmployeeBtn').textContent = 'Update Employee';
         }
     }
-} async function deleteEmployeeQuick(employeeId) {
+}
+
+async function deleteEmployeeQuick(employeeId) {
     if (!employeeId) {
         showToast('No employee selected.', 'error');
         return;
@@ -576,7 +647,9 @@ bindEmployeeAdminDirtyTracking(); document.addEventListener('click', (e) => {
     } else {
         renderEmployeeRoster();
     }
-} function ensureRosterViewTabs() {
+}
+
+function ensureRosterViewTabs() {
     const statusFilter = safeGet('statusFilter');
     const rosterControls = statusFilter?.closest('.filters, .toolbar, .controls, .card, div') || statusFilter?.parentElement; if (!rosterControls || safeGet('rosterViewTabs')) return; const tabs = document.createElement('div');
     tabs.id = 'rosterViewTabs';
@@ -604,7 +677,9 @@ bindEmployeeAdminDirtyTracking(); document.addEventListener('click', (e) => {
     const formerTab = makeTab('former', 'Former Employees'); tabs.appendChild(activeTab);
     tabs.appendChild(formerTab); rosterControls.appendChild(tabs); const defaultTab = window.rosterViewMode === 'former' ? formerTab : activeTab;
     defaultTab.click();
-} function bindRosterEvents() {
+}
+
+function bindRosterEvents() {
     bindEmployeeUpdateToast();
     ensureRosterViewTabs();
     const searchInput = safeGet('globalSearch');
@@ -641,7 +716,9 @@ bindEmployeeAdminDirtyTracking(); document.addEventListener('click', (e) => {
             ensureRosterViewTabs();
         };
     }
-}// Ensure Employee Admin tab repopulates after UI switches/reset
+}
+
+// Ensure Employee Admin tab repopulates after UI switches/reset
 if (!window.__employeeAdminBind) {
     window.__employeeAdminBind = true;
     document.addEventListener('click', (e) => {
@@ -679,7 +756,9 @@ if (!window.__employeeAdminBind) {
             }, 100);
         }
     });
-}// 🔥 Unified roster refresh (used by ALL creation flows)
+}
+
+// 🔥 Unified roster refresh (used by ALL creation flows)
 window.refreshEmployeeRoster = async function () {
     try {
         if (typeof window.loadEmployees === 'function') {
@@ -696,9 +775,12 @@ window.refreshEmployeeRoster = async function () {
     } catch (err) {
         console.error('Roster refresh failed:', err);
     }
-};// =========================
+};
+
+// =========================
 // EXPORTS
-// =========================window.cleanRosterEmployeeNameValue = cleanRosterEmployeeNameValue;
+// =========================
+window.cleanRosterEmployeeNameValue = cleanRosterEmployeeNameValue;
 window.formatRosterStatus = formatRosterStatus;
 window.statusBadge = statusBadge;
 window.normalizeEmployeeForRoster = normalizeEmployeeForRoster;
@@ -727,7 +809,8 @@ window.writeEmployeeAuditLogToSupabase = writeEmployeeAuditLogToSupabase;
 window.writeEmployeeAuditLogLocal = writeEmployeeAuditLogLocal;
 window.fetchEmployeeAuditLogs = fetchEmployeeAuditLogs;
 window.getLocalAuditLogsForEmployee = getLocalAuditLogsForEmployee;
-window.renderEmployeeAuditLogViewer = renderEmployeeAuditLogViewer; setTimeout(() => {
+window.renderEmployeeAuditLogViewer = renderEmployeeAuditLogViewer;
+setTimeout(() => {
     const searchInput = safeGet('globalSearch');
     if (searchInput) {
         searchInput.disabled = false;
@@ -737,7 +820,9 @@ window.renderEmployeeAuditLogViewer = renderEmployeeAuditLogViewer; setTimeout((
         searchInput.style.pointerEvents = 'auto';
         searchInput.style.userSelect = 'text';
     }
-}, 250); function getAtRiskKpiHoverNames() {
+}, 250);
+
+function getAtRiskKpiHoverNames() {
     const riskMap = window.currentAtRiskRosterMap || (typeof currentAtRiskRosterMap !== 'undefined' ? currentAtRiskRosterMap : {}) || {};
     const employees = Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : (Array.isArray(EMPLOYEES) ? EMPLOYEES : []);
     const names = []; const addNameValue = (value) => {
@@ -777,10 +862,17 @@ window.renderEmployeeAuditLogViewer = renderEmployeeAuditLogViewer; setTimeout((
             return [`${riskCount} employee flagged`];
         }
     } return names;
-} function bindAtRiskKpiHover() {
-    const riskElement = document.getElementById('kRisk'); if (!riskElement) return; const riskCard =
+}
+
+function bindAtRiskKpiHover() {
+    const riskElement = document.getElementById('kRisk');
+    if (!riskElement) return;
+    const riskCard =
         riskElement.closest('.kpi-card, .card, [class*="kpi"]') ||
-        riskElement.parentElement; if (!riskCard) return; riskCard.style.position = riskCard.style.position || 'relative'; let tooltip = document.getElementById('atRiskKpiTooltip');
+        riskElement.parentElement;
+    if (!riskCard) return;
+    riskCard.style.position = riskCard.style.position || 'relative';
+    let tooltip = document.getElementById('atRiskKpiTooltip');
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'atRiskKpiTooltip';
@@ -799,33 +891,47 @@ window.renderEmployeeAuditLogViewer = renderEmployeeAuditLogViewer; setTimeout((
         tooltip.style.display = 'none';
         tooltip.style.pointerEvents = 'none';
         riskCard.appendChild(tooltip);
-    } const getRiskCount = () => {
+    }
+    const getRiskCount = () => {
         const directCount = Number(String(riskElement.textContent || '').trim());
-        if (!Number.isNaN(directCount)) return directCount; const cardText = String(riskCard.textContent || '');
+        if (!Number.isNaN(directCount)) return directCount;
+        const cardText = String(riskCard.textContent || '');
         const match = cardText.match(/AT-RISK EMPLOYEES\s*(\d+)/i) || cardText.match(/\b(\d+)\b/);
         return match ? Number(match[1]) : 0;
-    }; const updateHoverText = () => {
+    };
+    const updateHoverText = () => {
         const names = getAtRiskKpiHoverNames();
-        const riskCount = getRiskCount(); let text;
+        const riskCount = getRiskCount();
+        let text;
         if (names.length) {
             text = `At-Risk Employees: ${names.join(', ')}`;
         } else if (riskCount > 0) {
             text = `At-Risk Employees: ${riskCount} employee${riskCount === 1 ? '' : 's'} flagged`;
         } else {
             text = 'No employees currently flagged at-risk.';
-        } riskElement.title = text;
+        }
+        riskElement.title = text;
         riskCard.title = text;
         riskCard.setAttribute('data-tooltip', text);
         riskCard.setAttribute('aria-label', text);
         tooltip.textContent = text;
-    }; const showTooltip = () => {
+    };
+    const showTooltip = () => {
         updateHoverText();
         tooltip.style.display = 'block';
-    }; const hideTooltip = () => {
+    };
+    const hideTooltip = () => {
         tooltip.style.display = 'none';
-    }; riskCard.onmouseenter = showTooltip;
+    };
+    riskCard.onmouseenter = showTooltip;
     riskCard.onfocusin = showTooltip;
     riskCard.onmouseleave = hideTooltip;
-    riskCard.onfocusout = hideTooltip; updateHoverText();
-} window.bindAtRiskKpiHover = bindAtRiskKpiHover; setTimeout(bindAtRiskKpiHover, 300); setTimeout(bindAtRiskKpiHover, 1000);// Initialize audit/update listener immediately in case bindRosterEvents is not called.
+    riskCard.onfocusout = hideTooltip;
+    updateHoverText();
+}
+
+window.bindAtRiskKpiHover = bindAtRiskKpiHover;
+setTimeout(bindAtRiskKpiHover, 300);
+setTimeout(bindAtRiskKpiHover, 1000);
+// Initialize audit/update listener immediately in case bindRosterEvents is not called.
 bindEmployeeUpdateToast();

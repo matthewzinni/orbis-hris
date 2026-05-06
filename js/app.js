@@ -1,34 +1,3 @@
-{
-    "compilerOptions";
-    {
-        "target";
-        "ES2017",
-            "lib";
-        ["DOM", "ES2017"],
-            "strict";
-        false,
-            "noImplicitAny";
-        false,
-            "strictNullChecks";
-        false,
-            "esModuleInterop";
-        true,
-            "skipLibCheck";
-        true,
-            "allowJs";
-        false,
-            "noEmitOnError";
-        false,
-            "noEmit";
-        true,
-            "ignoreDeprecations";
-        "6.0";
-    }
-    "include";
-    ["js/**/*.ts"],
-        "exclude";
-    ["node_modules"];
-}
 window.addEventListener('DOMContentLoaded', () => {
     const currentDateEl = safeGet('currentDate');
     if (currentDateEl) {
@@ -80,7 +49,16 @@ let currentCandidate = null;
 let isCreatingCandidate = false;
 let currentFilteredEmployees = [];
 let currentEmployee = null;
-window.currentEmployee = window.currentEmployee || null; window.setCurrentEmployeeForOrbis = function (employee) { currentEmployee = employee || null; window.currentEmployee = currentEmployee; }; function getCurrentEmployeeForOrbis() { return currentEmployee || window.currentEmployee || null; }
+window.currentEmployee = window.currentEmployee || null;
+
+window.setCurrentEmployeeForOrbis = function (employee) {
+    currentEmployee = employee || null;
+    window.currentEmployee = currentEmployee;
+};
+
+function getCurrentEmployeeForOrbis() {
+    return currentEmployee || window.currentEmployee || null;
+}
 let currentDisciplineReportId = null;
 let currentNoteId = null;
 let currentMeetingId = null;
@@ -98,7 +76,12 @@ let currentUserAccess = null;
 let currentManualAtRiskState = { flagged: false, reason: '' };
 let currentAtRiskRosterMap = {};
 let currentManualImpactPlayerState = { flagged: false, reason: '' };
-let currentImpactPlayerRosterMap = {}; window.currentAtRiskRosterMap = currentAtRiskRosterMap; window.currentImpactPlayerRosterMap = currentImpactPlayerRosterMap;// Shared helper, formatting, toast, and print functions now live in:
+let currentImpactPlayerRosterMap = {};
+
+window.currentAtRiskRosterMap = currentAtRiskRosterMap;
+window.currentImpactPlayerRosterMap = currentImpactPlayerRosterMap;
+
+// Shared helper, formatting, toast, and print functions now live in:
 // js/utils/helpers.js
 // =========================
 // UI / NAVIGATION

@@ -1,1 +1,9 @@
-export interface AuditEntry { id?: string; employee_id: string; changed_by?: string; changed_at?: string; fields_changed?: string[]; before?: Record<string, any>; after?: Record<string, any>; }
+export interface AuditEntry {
+    id?: string;
+    employee_id: string;
+    changed_by?: string;
+    changed_at?: string;
+    fields_changed?: string[];
+    before?: Record<string, any>;
+    after?: Record<string, any>;
+}
