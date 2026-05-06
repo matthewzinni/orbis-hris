@@ -1,46 +1,27 @@
 // =========================
 // EMPLOYEE ROSTER MODULE
-// =========================
-
-let rosterSearchTimer = null;
+// =========================let rosterSearchTimer = null;
 if (typeof currentSort === 'undefined') {
     window.currentSort = { column: 'name', direction: 'asc' };
-}
-
-if (typeof window.rosterViewMode === 'undefined') {
+} if (typeof window.rosterViewMode === 'undefined') {
     window.rosterViewMode = 'active';
-}
-
-function cleanRosterEmployeeNameValue(value) {
+} function cleanRosterEmployeeNameValue(value) {
     return String(value || '')
         .replace(/\bAt[-\s]*Risk\b/gi, '')
         .replace(/\bImpact\b/gi, '')
         .replace(/\s+/g, ' ')
         .trim();
-}
-
-
-function formatRosterStatus(status) {
+} function formatRosterStatus(status) {
     const value = String(status || '').trim();
     if (!value) return 'Active';
     return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
-}
-
-function statusBadge(status) {
-    const normalized = String(status || '').trim().toUpperCase();
-
-    if (normalized === 'ACTIVE') return 'badge badge-active';
+} function statusBadge(status) {
+    const normalized = String(status || '').trim().toUpperCase(); if (normalized === 'ACTIVE') return 'badge badge-active';
     if (normalized === 'INACTIVE') return 'badge badge-inactive';
     if (normalized === 'TERMINATED') return 'badge badge-terminated';
-    if (normalized === 'LEAVE') return 'badge badge-leave';
-
-    return 'badge badge-inactive';
-}
-
-function normalizeEmployeeForRoster(employee) {
-    if (!employee) return null;
-
-    const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || '');
+    if (normalized === 'LEAVE') return 'badge badge-leave'; return 'badge badge-inactive';
+} function normalizeEmployeeForRoster(employee) {
+    if (!employee) return null; const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || '');
     const lastName = cleanRosterEmployeeNameValue(employee.last_name || employee.lastName || employee.last || '');
     const department = employee.department || employee.dept || employee.displayDepartment || '';
     const position = employee.position || employee.title || employee.displayPosition || '';
@@ -53,9 +34,7 @@ function normalizeEmployeeForRoster(employee) {
     const benefitsStatus = employee.benefits_status || employee.benefitsStatus || '';
     const nextReviewDate = employee.next_review_date || employee.nextReviewDate || '';
     const anniversaryDate = employee.anniversary_date || employee.anniversaryDate || '';
-    const tenureBracket = employee.tenure_bracket || employee.tenureBracket || '';
-
-    return {
+    const tenureBracket = employee.tenure_bracket || employee.tenureBracket || ''; return {
         ...employee,
         first_name: firstName,
         last_name: lastName,
@@ -90,9 +69,7 @@ function normalizeEmployeeForRoster(employee) {
         tenure_bracket: tenureBracket,
         tenureBracket
     };
-}
-
-function getEmployeePublicId(employee, fallbackName = '') {
+} function getEmployeePublicId(employee, fallbackName = '') {
     const directId = employee?.employee_id
         || employee?.employeeId
         || employee?.employee_number
@@ -104,33 +81,19 @@ function getEmployeePublicId(employee, fallbackName = '') {
         || employee?.btw_id
         || employee?.btwId
         || employee?.displayId
-        || '';
-
-    if (String(directId).trim()) return String(directId).trim();
-
-    const targetName = String(
-        fallbackName
-        || employee?.displayName
-        || employee?.name
-        || `${employee?.first_name || employee?.firstName || employee?.first || ''} ${employee?.last_name || employee?.lastName || employee?.last || ''}`
-    ).trim().toLowerCase();
-
-    if (!targetName) return '';
-
-    const matchedRow = Array.from(document.querySelectorAll('tr.employee-row')).find(row => {
-        const rowName = row.querySelector('.link-button')?.textContent?.trim().toLowerCase() || '';
-        return rowName === targetName;
-    });
-
-    const rowId = matchedRow?.querySelector('td')?.textContent?.trim() || '';
-    if (rowId) return rowId;
-
-    const matchedEmployee = (EMPLOYEES || []).find(item => {
+        || ''; if (String(directId).trim()) return String(directId).trim(); const targetName = String(
+            fallbackName
+            || employee?.displayName
+            || employee?.name
+            || `${employee?.first_name || employee?.firstName || employee?.first || ''} ${employee?.last_name || employee?.lastName || employee?.last || ''}`
+        ).trim().toLowerCase(); if (!targetName) return ''; const matchedRow = Array.from(document.querySelectorAll('tr.employee-row')).find(row => {
+            const rowName = row.querySelector('.link-button')?.textContent?.trim().toLowerCase() || '';
+            return rowName === targetName;
+        }); const rowId = matchedRow?.querySelector('td')?.textContent?.trim() || '';
+    if (rowId) return rowId; const matchedEmployee = (EMPLOYEES || []).find(item => {
         const itemName = `${item.first_name || item.firstName || item.first || ''} ${item.last_name || item.lastName || item.last || ''}`.trim().toLowerCase();
         return itemName === targetName;
-    });
-
-    return String(
+    }); return String(
         matchedEmployee?.employee_id
         || matchedEmployee?.employeeId
         || matchedEmployee?.employee_number
@@ -144,39 +107,27 @@ function getEmployeePublicId(employee, fallbackName = '') {
         || matchedEmployee?.displayId
         || ''
     ).trim();
-}
-
-function populateEmployeeAdminFallback(employee) {
-    if (!employee) return;
-
-    const valueFrom = (...keys) => {
+} function populateEmployeeAdminFallback(employee) {
+    if (!employee) return; const valueFrom = (...keys) => {
         for (const key of keys) {
             if (employee[key] !== undefined && employee[key] !== null && employee[key] !== '') {
                 return employee[key];
             }
         }
         return '';
-    };
-
-    const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
+    }; const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
     const drawerSubParts = String(document.getElementById('drawerSub')?.textContent || '')
         .split('•')
-        .map(part => part.trim());
-
-    const nameParts = String(
-        valueFrom('displayName', 'name', 'full_name', 'fullName') || drawerTitleName
-    ).trim().split(/\s+/).filter(Boolean);
+        .map(part => part.trim()); const nameParts = String(
+            valueFrom('displayName', 'name', 'full_name', 'fullName') || drawerTitleName
+        ).trim().split(/\s+/).filter(Boolean);
     const employeePublicId = getEmployeePublicId(employee, drawerTitleName);
     const fallbackFirstName = nameParts[0] || '';
-    const fallbackLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
-    const isVisibleField = (el) => {
+    const fallbackLastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''; const isVisibleField = (el) => {
         if (!el) return false;
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
-    };
-
-    const applyValue = (el, value) => {
+    }; const applyValue = (el, value) => {
         if (!el) return;
         const previousSuppress = window.__suppressAuditDirty;
         window.__suppressAuditDirty = true;
@@ -184,41 +135,25 @@ function populateEmployeeAdminFallback(employee) {
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
         window.__suppressAuditDirty = previousSuppress;
-    };
-
-    const setBySelector = (selector, value) => {
+    }; const setBySelector = (selector, value) => {
         const fields = Array.from(document.querySelectorAll(selector));
         const el = fields.find(isVisibleField) || fields[0];
         applyValue(el, value);
-    };
-
-    const setByPlaceholder = (placeholder, value) => {
+    }; const setByPlaceholder = (placeholder, value) => {
         setBySelector(`input[placeholder="${placeholder}"], select[placeholder="${placeholder}"], textarea[placeholder="${placeholder}"]`, value);
-    };
-
-    const setByLabelText = (labelText, value) => {
+    }; const setByLabelText = (labelText, value) => {
         const labels = Array.from(document.querySelectorAll('label'));
         const label = labels.find(item => item.textContent.trim().toLowerCase() === labelText.toLowerCase());
-        if (!label) return;
-
-        let field = null;
+        if (!label) return; let field = null;
         if (label.htmlFor) {
             field = document.getElementById(label.htmlFor);
-        }
-
-        if (!field) {
+        } if (!field) {
             const wrapper = label.closest('div') || label.parentElement;
             field = wrapper?.querySelector('input, select, textarea') || null;
-        }
-
-        if (!field) {
+        } if (!field) {
             field = label.nextElementSibling?.matches?.('input, select, textarea') ? label.nextElementSibling : null;
-        }
-
-        applyValue(field, value);
-    };
-
-    setByPlaceholder('Employee ID', employeePublicId);
+        } applyValue(field, value);
+    }; setByPlaceholder('Employee ID', employeePublicId);
     setByLabelText('EMPLOYEE ID', employeePublicId);
     const visibleEmployeeIdField = Array.from(document.querySelectorAll('input')).find(input => {
         const label = input.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase() || '';
@@ -240,46 +175,28 @@ function populateEmployeeAdminFallback(employee) {
     setByPlaceholder('40', valueFrom('standard_hours', 'standardHours'));
     setByLabelText('STANDARD HOURS', valueFrom('standard_hours', 'standardHours'));
     setByPlaceholder('Benefits status', valueFrom('benefits_status', 'benefitsStatus'));
-    setByLabelText('BENEFITS STATUS', valueFrom('benefits_status', 'benefitsStatus'));
-
-    const hireDateValue = valueFrom('hire_date', 'hireDate');
+    setByLabelText('BENEFITS STATUS', valueFrom('benefits_status', 'benefitsStatus')); const hireDateValue = valueFrom('hire_date', 'hireDate');
     const nextReviewValue = valueFrom('next_review_date', 'nextReviewDate');
     const dateInputs = Array.from(document.querySelectorAll('input[type="date"]'));
     if (dateInputs[0]) dateInputs[0].value = hireDateValue || '';
-    if (dateInputs[1]) dateInputs[1].value = nextReviewValue || '';
-
-    const statusValue = formatRosterStatus(valueFrom('status', 'displayStatus') || 'Active');
+    if (dateInputs[1]) dateInputs[1].value = nextReviewValue || ''; const statusValue = formatRosterStatus(valueFrom('status', 'displayStatus') || 'Active');
     const statusSelect = Array.from(document.querySelectorAll('select')).find(select => {
         return Array.from(select.options || []).some(option => option.textContent.trim().toLowerCase() === 'active' || option.textContent.trim().toLowerCase() === 'inactive');
-    });
-
-    if (statusSelect) {
+    }); if (statusSelect) {
         const matchingOption = Array.from(statusSelect.options || []).find(option => {
             return option.value.toLowerCase() === statusValue.toLowerCase() || option.textContent.trim().toLowerCase() === statusValue.toLowerCase();
-        });
-
-        statusSelect.value = matchingOption ? matchingOption.value : statusValue;
+        }); statusSelect.value = matchingOption ? matchingOption.value : statusValue;
         statusSelect.dispatchEvent(new Event('change', { bubbles: true }));
     }
-}
-
-function populateEmployeeAdminByVisibleOrder(employee) {
-    if (!employee) return;
-
-    const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
+} function populateEmployeeAdminByVisibleOrder(employee) {
+    if (!employee) return; const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
     const drawerSubParts = String(document.getElementById('drawerSub')?.textContent || '')
         .split('•')
-        .map(part => part.trim());
-
-    const nameText = employee.displayName || employee.name || drawerTitleName || '';
+        .map(part => part.trim()); const nameText = employee.displayName || employee.name || drawerTitleName || '';
     const nameParts = String(nameText).trim().split(/\s+/).filter(Boolean);
     const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || nameParts[0] || '');
-    const lastName = cleanRosterEmployeeNameValue(employee.last_name || employee.lastName || employee.last || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''));
-
-    const employeeIdValue = getEmployeePublicId(employee, drawerTitleName);
-    const statusValue = formatRosterStatus(employee.status || employee.displayStatus || 'Active');
-
-    const valuesByLabel = {
+    const lastName = cleanRosterEmployeeNameValue(employee.last_name || employee.lastName || employee.last || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '')); const employeeIdValue = getEmployeePublicId(employee, drawerTitleName);
+    const statusValue = formatRosterStatus(employee.status || employee.displayStatus || 'Active'); const valuesByLabel = {
         'employee id': employeeIdValue,
         'status': statusValue,
         'first name': firstName,
@@ -294,21 +211,15 @@ function populateEmployeeAdminByVisibleOrder(employee) {
         'next review date': employee.next_review_date || employee.nextReviewDate || '',
         'anniversary date': employee.anniversary_date || employee.anniversaryDate || '',
         'tenure bracket': employee.tenure_bracket || employee.tenureBracket || ''
-    };
-
-    const isVisible = (el) => {
+    }; const isVisible = (el) => {
         if (!el) return false;
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
-    };
-
-    const setValue = (field, value) => {
+    }; const setValue = (field, value) => {
         if (!field) return;
         const previousSuppress = window.__suppressAuditDirty;
         window.__suppressAuditDirty = true;
-        const nextValue = value ?? '';
-
-        if (field.tagName === 'SELECT') {
+        const nextValue = value ?? ''; if (field.tagName === 'SELECT') {
             const match = Array.from(field.options || []).find(option => {
                 return String(option.value).toLowerCase() === String(nextValue).toLowerCase()
                     || String(option.textContent).trim().toLowerCase() === String(nextValue).toLowerCase();
@@ -316,25 +227,15 @@ function populateEmployeeAdminByVisibleOrder(employee) {
             field.value = match ? match.value : nextValue;
         } else {
             field.value = nextValue;
-        }
-
-        field.dispatchEvent(new Event('input', { bubbles: true }));
+        } field.dispatchEvent(new Event('input', { bubbles: true }));
         field.dispatchEvent(new Event('change', { bubbles: true }));
         window.__suppressAuditDirty = previousSuppress;
-    };
-
-    const adminButton = Array.from(document.querySelectorAll('button, .tab, [data-tab]'))
-        .find(item => (item.textContent || '').trim().toLowerCase().includes('employee admin'));
-
-    const drawer = adminButton?.closest('#employeeDrawer, .drawer, .drawer-panel, aside, section, div') || document;
-    const fields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible);
-
-    const labels = Array.from(drawer.querySelectorAll('*')).filter(el => {
+    }; const adminButton = Array.from(document.querySelectorAll('button, .tab, [data-tab]'))
+        .find(item => (item.textContent || '').trim().toLowerCase().includes('employee admin')); const drawer = adminButton?.closest('#employeeDrawer, .drawer, .drawer-panel, aside, section, div') || document;
+    const fields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible); const labels = Array.from(drawer.querySelectorAll('*')).filter(el => {
         const text = (el.textContent || '').trim().toLowerCase();
         return Object.keys(valuesByLabel).includes(text) && !['input', 'select', 'textarea', 'button'].includes(el.tagName.toLowerCase());
-    });
-
-    labels.forEach(label => {
+    }); labels.forEach(label => {
         const labelText = (label.textContent || '').trim().toLowerCase();
         const value = valuesByLabel[labelText];
         const wrapper = label.parentElement;
@@ -342,21 +243,13 @@ function populateEmployeeAdminByVisibleOrder(employee) {
         if (field && ['INPUT', 'SELECT', 'TEXTAREA'].includes(field.tagName)) {
             setValue(field, value);
         }
-    });
-
-    const fieldByLabel = (labelText) => {
+    }); const fieldByLabel = (labelText) => {
         const label = Array.from(drawer.querySelectorAll('*')).find(el => {
             const text = (el.textContent || '').trim().toLowerCase();
             return text === labelText.toLowerCase() && !['input', 'select', 'textarea', 'button'].includes(el.tagName.toLowerCase());
-        });
-
-        if (!label) return null;
-
-        const wrapper = label.parentElement;
+        }); if (!label) return null; const wrapper = label.parentElement;
         return wrapper?.querySelector('input, select, textarea') || null;
-    };
-
-    setValue(fieldByLabel('EMPLOYEE ID'), valuesByLabel['employee id']);
+    }; setValue(fieldByLabel('EMPLOYEE ID'), valuesByLabel['employee id']);
     setValue(fieldByLabel('STATUS'), valuesByLabel['status']);
     setValue(fieldByLabel('FIRST NAME'), valuesByLabel['first name']);
     setValue(fieldByLabel('LAST NAME'), valuesByLabel['last name']);
@@ -369,134 +262,87 @@ function populateEmployeeAdminByVisibleOrder(employee) {
     setValue(fieldByLabel('HIRE DATE'), valuesByLabel['hire date']);
     setValue(fieldByLabel('NEXT REVIEW DATE'), valuesByLabel['next review date']);
     setValue(fieldByLabel('ANNIVERSARY DATE'), valuesByLabel['anniversary date']);
-    setValue(fieldByLabel('TENURE BRACKET'), valuesByLabel['tenure bracket']);
-
-    const adminFields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible);
+    setValue(fieldByLabel('TENURE BRACKET'), valuesByLabel['tenure bracket']); const adminFields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible);
     if (adminFields[0] && valuesByLabel['employee id']) {
         setValue(adminFields[0], valuesByLabel['employee id']);
         lockEmployeeIdField(adminFields[0]);
     }
     if (adminFields[1]) setValue(adminFields[1], valuesByLabel['status']);
-}
-
-
-function lockEmployeeIdField(field) {
-    if (!field) return;
-
-    field.readOnly = true;
+} function lockEmployeeIdField(field) {
+    if (!field) return; field.readOnly = true;
     field.setAttribute('readonly', 'readonly');
     field.setAttribute('aria-readonly', 'true');
     field.classList.add('locked-field');
     field.title = 'Employee ID is locked and cannot be edited.';
+}// === AUDIT LOG HELPERS ===async function writeEmployeeAuditLogToSupabase(auditEntry) {
+if (!auditEntry) return { error: new Error('Missing audit entry') }; const payload = {
+    employee_id: auditEntry.employee_id || '',
+    employee_name: auditEntry.name || '',
+    action_type: auditEntry.action_type || 'employee_update',
+    fields_changed: auditEntry.fields_changed || [],
+    changed_at: auditEntry.timestamp || new Date().toISOString(),
+    changed_by: auditEntry.changed_by || 'Current user',
+    metadata: auditEntry
+}; try {
+    if (window.supabaseClient?.from) {
+        return await window.supabaseClient
+            .from('employee_audit_logs')
+            .insert([payload]);
+    } if (window.supabase?.from) {
+        return await window.supabase
+            .from('employee_audit_logs')
+            .insert([payload]);
+    } if (typeof supabaseClient !== 'undefined' && supabaseClient?.from) {
+        return await supabaseClient
+            .from('employee_audit_logs')
+            .insert([payload]);
+    } return { error: new Error('Supabase client not available') };
+} catch (error) {
+    console.error('Audit log Supabase insert failed:', error);
+    return { error };
 }
-
-// === AUDIT LOG HELPERS ===
-
-async function writeEmployeeAuditLogToSupabase(auditEntry) {
-    if (!auditEntry) return { error: new Error('Missing audit entry') };
-
-    const payload = {
-        employee_id: auditEntry.employee_id || '',
-        employee_name: auditEntry.name || '',
-        action_type: auditEntry.action_type || 'employee_update',
-        fields_changed: auditEntry.fields_changed || [],
-        changed_at: auditEntry.timestamp || new Date().toISOString(),
-        changed_by: auditEntry.changed_by || 'Current user',
-        metadata: auditEntry
-    };
-
-    try {
-        if (window.supabaseClient?.from) {
-            return await window.supabaseClient
-                .from('employee_audit_logs')
-                .insert([payload]);
-        }
-
-        if (window.supabase?.from) {
-            return await window.supabase
-                .from('employee_audit_logs')
-                .insert([payload]);
-        }
-
-        if (typeof supabaseClient !== 'undefined' && supabaseClient?.from) {
-            return await supabaseClient
-                .from('employee_audit_logs')
-                .insert([payload]);
-        }
-
-        return { error: new Error('Supabase client not available') };
-    } catch (error) {
-        console.error('Audit log Supabase insert failed:', error);
-        return { error };
-    }
-}
-
-// === Employee Audit Log Viewer & Fetchers ===
+}// === Employee Audit Log Viewer & Fetchers ===
 async function fetchEmployeeAuditLogs(employeeId) {
-    if (!employeeId) return [];
-
-    try {
-        let client = null;
-
-        if (window.supabaseClient?.from) client = window.supabaseClient;
+    if (!employeeId) return []; try {
+        let client = null; if (window.supabaseClient?.from) client = window.supabaseClient;
         else if (window.supabase?.from) client = window.supabase;
-        else if (typeof supabaseClient !== 'undefined' && supabaseClient?.from) client = supabaseClient;
-
-        if (!client) {
+        else if (typeof supabaseClient !== 'undefined' && supabaseClient?.from) client = supabaseClient; if (!client) {
             console.warn('[Orbis Audit] Supabase client not available. Showing local audit logs only.');
             return getLocalAuditLogsForEmployee(employeeId);
-        }
-
-        const { data, error } = await client
+        } const { data, error } = await client
             .from('employee_audit_logs')
             .select('*')
             .eq('employee_id', employeeId)
             .order('changed_at', { ascending: false })
-            .limit(25);
-
-        if (error) {
-            console.warn('[Orbis Audit] Could not fetch Supabase audit logs. Showing local audit logs instead:', error);
-            return getLocalAuditLogsForEmployee(employeeId);
-        }
-
-        return data || [];
+            .limit(25); if (error) {
+                console.warn('[Orbis Audit] Could not fetch Supabase audit logs. Showing local audit logs instead:', error);
+                return getLocalAuditLogsForEmployee(employeeId);
+            } return data || [];
     } catch (error) {
         console.error('[Orbis Audit] Audit log fetch failed:', error);
         return getLocalAuditLogsForEmployee(employeeId);
     }
-}
-
-function getLocalAuditLogsForEmployee(employeeId) {
+} function getLocalAuditLogsForEmployee(employeeId) {
     const logs = JSON.parse(localStorage.getItem('orbis_audit_log') || '[]');
     return logs.filter(log => String(log.employee_id || '') === String(employeeId));
-}
-
-function formatAuditTimestamp(value) {
+} function formatAuditTimestamp(value) {
     if (!value) return 'Unknown time';
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return value;
     return date.toLocaleString();
-}
-
-function formatAuditFieldName(field) {
+} function formatAuditFieldName(field) {
     return String(field || '')
         .replace(/_/g, ' ')
         .replace(/\b\w/g, char => char.toUpperCase());
-}
-
-function renderAuditLogsHtml(logs) {
+} function renderAuditLogsHtml(logs) {
     if (!logs?.length) {
         return `
             <div class="audit-log-empty" style="padding:16px; border:1px solid #e5e7eb; border-radius:12px; background:#f9fafb; color:#6b7280; font-size:13px;">
                 No timeline activity found for this employee yet.
             </div>
         `;
-    }
-
-    const getActionBadge = (actionType) => {
-        const normalized = String(actionType || '').toLowerCase();
-
-        if (normalized.includes('create')) {
+    } const getActionBadge = (actionType) => {
+        const normalized = String(actionType || '').toLowerCase(); if (normalized.includes('create')) {
             return { label: 'CREATE', bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
         }
         if (normalized.includes('delete')) {
@@ -507,48 +353,30 @@ function renderAuditLogsHtml(logs) {
         }
         if (normalized.includes('signature') || normalized.includes('sign')) {
             return { label: 'SIGN', bg: '#eef2ff', color: '#4338ca', border: '#c7d2fe' };
-        }
-
-        return { label: 'UPDATE', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' };
-    };
-
-    const getTimelineGroup = (log) => {
+        } return { label: 'UPDATE', bg: '#eff6ff', color: '#2563eb', border: '#bfdbfe' };
+    }; const getTimelineGroup = (log) => {
         const rawDate = log.changed_at || log.timestamp;
         const date = new Date(rawDate);
-        if (Number.isNaN(date.getTime())) return 'Earlier';
-
-        const today = new Date();
+        if (Number.isNaN(date.getTime())) return 'Earlier'; const today = new Date();
         const yesterday = new Date();
-        yesterday.setDate(today.getDate() - 1);
-
-        const sameDay = (a, b) => {
+        yesterday.setDate(today.getDate() - 1); const sameDay = (a, b) => {
             return a.getFullYear() === b.getFullYear()
                 && a.getMonth() === b.getMonth()
                 && a.getDate() === b.getDate();
-        };
-
-        if (sameDay(date, today)) return 'Today';
+        }; if (sameDay(date, today)) return 'Today';
         if (sameDay(date, yesterday)) return 'Yesterday';
         return 'Earlier';
-    };
-
-    const renderFieldChangeList = (log) => {
+    }; const renderFieldChangeList = (log) => {
         const fieldsChanged = log.fields_changed || log.metadata?.fields_changed || [];
         const before = log.metadata?.before || log.before || {};
-        const after = log.metadata?.after || log.after || {};
-
-        if (!Array.isArray(fieldsChanged) || !fieldsChanged.length) {
+        const after = log.metadata?.after || log.after || {}; if (!Array.isArray(fieldsChanged) || !fieldsChanged.length) {
             return `<div style="color:#475569; font-size:13px;">Employee record updated.</div>`;
-        }
-
-        return `
+        } return `
             <div style="display:flex; flex-direction:column; gap:6px; margin-top:8px;">
                 ${fieldsChanged.map(field => {
             const beforeValue = before?.[field];
             const afterValue = after?.[field];
-            const hasBeforeAfter = beforeValue !== undefined || afterValue !== undefined;
-
-            if (hasBeforeAfter) {
+            const hasBeforeAfter = beforeValue !== undefined || afterValue !== undefined; if (hasBeforeAfter) {
                 return `
                             <div style="font-size:13px; color:#334155; line-height:1.35;">
                                 <strong>${esc(formatAuditFieldName(field))}:</strong>
@@ -557,9 +385,7 @@ function renderAuditLogsHtml(logs) {
                                 <span style="color:#0f172a; font-weight:700;">${esc(afterValue || 'Blank')}</span>
                             </div>
                         `;
-            }
-
-            return `
+            } return `
                         <div style="font-size:13px; color:#334155; line-height:1.35;">
                             <strong>${esc(formatAuditFieldName(field))}</strong> changed
                         </div>
@@ -567,9 +393,7 @@ function renderAuditLogsHtml(logs) {
         }).join('')}
             </div>
         `;
-    };
-
-    const renderTimelineItem = (log) => {
+    }; const renderTimelineItem = (log) => {
         const changedAt = formatAuditTimestamp(log.changed_at || log.timestamp);
         const changedBy = log.changed_by
             || log.metadata?.changed_by
@@ -578,40 +402,28 @@ function renderAuditLogsHtml(logs) {
             || 'System';
         const actionType = log.action_type || log.metadata?.action_type || 'employee_update';
         const actionTitle = formatAuditFieldName(actionType);
-        const badge = getActionBadge(actionType);
-
-        return `
+        const badge = getActionBadge(actionType); return `
             <div class="audit-timeline-item" style="position:relative; margin-bottom:14px;">
-                <div style="position:absolute; left:-18px; top:16px; width:12px; height:12px; border-radius:999px; background:${badge.color}; border:3px solid #ffffff; box-shadow:0 0 0 2px ${badge.border};"></div>
-
-                <div class="audit-log-card" style="padding:14px 16px; border:1px solid #e5e7eb; border-radius:14px; background:#fff; box-shadow:0 6px 16px rgba(15,23,42,0.05);">
+                <div style="position:absolute; left:-18px; top:16px; width:12px; height:12px; border-radius:999px; background:${badge.color}; border:3px solid #ffffff; box-shadow:0 0 0 2px ${badge.border};"></div>                <div class="audit-log-card" style="padding:14px 16px; border:1px solid #e5e7eb; border-radius:14px; background:#fff; box-shadow:0 6px 16px rgba(15,23,42,0.05);">
                     <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
                         <div>
                             <div style="font-weight:800; color:#111827; font-size:14px;">${esc(actionTitle)}</div>
                             <div style="color:#64748b; font-size:12px; margin-top:3px;">${esc(changedAt)} • ${esc(changedBy)}</div>
                         </div>
                         <span style="font-size:11px; font-weight:800; color:${badge.color}; background:${badge.bg}; border:1px solid ${badge.border}; padding:4px 8px; border-radius:999px; white-space:nowrap;">${badge.label}</span>
-                    </div>
-
-                    <div style="margin-top:10px; padding-top:10px; border-top:1px solid #f1f5f9;">
+                    </div>                    <div style="margin-top:10px; padding-top:10px; border-top:1px solid #f1f5f9;">
                         ${renderFieldChangeList(log)}
                     </div>
                 </div>
             </div>
         `;
-    };
-
-    const groups = logs.reduce((acc, log) => {
+    }; const groups = logs.reduce((acc, log) => {
         const group = getTimelineGroup(log);
         if (!acc[group]) acc[group] = [];
         acc[group].push(log);
         return acc;
-    }, { Today: [], Yesterday: [], Earlier: [] });
-
-    const renderGroup = (title, items) => {
-        if (!items.length) return '';
-
-        return `
+    }, { Today: [], Yesterday: [], Earlier: [] }); const renderGroup = (title, items) => {
+        if (!items.length) return ''; return `
             <div class="audit-timeline-group" style="position:relative;">
                 <div style="font-size:11px; font-weight:900; letter-spacing:0.08em; text-transform:uppercase; color:#64748b; margin:6px 0 10px;">
                     ${esc(title)}
@@ -619,9 +431,7 @@ function renderAuditLogsHtml(logs) {
                 ${items.map(renderTimelineItem).join('')}
             </div>
         `;
-    };
-
-    return `
+    }; return `
         <div class="audit-timeline" style="position:relative; padding-left:20px;">
             <div style="position:absolute; left:7px; top:8px; bottom:8px; width:2px; background:#dbeafe;"></div>
             ${renderGroup('Today', groups.Today)}
@@ -629,13 +439,9 @@ function renderAuditLogsHtml(logs) {
             ${renderGroup('Earlier', groups.Earlier)}
         </div>
     `;
-}
-
-function getHistoryPanelElement() {
+} function getHistoryPanelElement() {
     const existing = document.getElementById('employeeAuditLogViewer');
-    if (existing) return existing;
-
-    const historyPanel = document.getElementById('historyPanel')
+    if (existing) return existing; const historyPanel = document.getElementById('historyPanel')
         || document.getElementById('tab-history')
         || document.getElementById('historyTab')
         || document.querySelector('[data-panel="history"]')
@@ -643,9 +449,7 @@ function getHistoryPanelElement() {
         || document.querySelector('.tab-panel.active')
         || document.querySelector('.drawer-content')
         || document.querySelector('#employeeDrawer')
-        || document.body;
-
-    const viewer = document.createElement('div');
+        || document.body; const viewer = document.createElement('div');
     viewer.id = 'employeeAuditLogViewer';
     viewer.style.marginTop = '16px';
     viewer.innerHTML = `
@@ -653,26 +457,18 @@ function getHistoryPanelElement() {
             <div style="font-weight:800; color:#111827; margin-bottom:8px;">Employee Timeline</div>
             <div style="color:#6b7280; font-size:13px;">Loading employee timeline...</div>
         </div>
-    `;
-
-    historyPanel.appendChild(viewer);
+    `; historyPanel.appendChild(viewer);
     return viewer;
-}
-
-async function renderEmployeeAuditLogViewer(employee = window.currentEmployee) {
+} async function renderEmployeeAuditLogViewer(employee = window.currentEmployee) {
     const employeeId = getEmployeePublicId(employee || {}, document.getElementById('drawerTitle')?.textContent || '');
-    const viewer = getHistoryPanelElement();
-
-    if (!employeeId) {
+    const viewer = getHistoryPanelElement(); if (!employeeId) {
         viewer.innerHTML = `
             <div style="padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:#fff; color:#6b7280; font-size:13px;">
                 Audit History could not load because this employee does not have an Employee ID.
             </div>
         `;
         return;
-    }
-
-    viewer.innerHTML = `
+    } viewer.innerHTML = `
         <div style="padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:#fff;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
                 <div>
@@ -683,11 +479,7 @@ async function renderEmployeeAuditLogViewer(employee = window.currentEmployee) {
             </div>
             <div style="color:#6b7280; font-size:13px;">Loading employee timeline...</div>
         </div>
-    `;
-
-    const logs = await fetchEmployeeAuditLogs(employeeId);
-
-    viewer.innerHTML = `
+    `; const logs = await fetchEmployeeAuditLogs(employeeId); viewer.innerHTML = `
         <div style="padding:16px; border:1px solid #e5e7eb; border-radius:14px; background:#fff;">
             <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px;">
                 <div>
@@ -699,30 +491,19 @@ async function renderEmployeeAuditLogViewer(employee = window.currentEmployee) {
             ${renderAuditLogsHtml(logs)}
         </div>
     `;
-}
-
-function writeEmployeeAuditLogLocal(auditEntry) {
+} function writeEmployeeAuditLogLocal(auditEntry) {
     const existingLogs = JSON.parse(localStorage.getItem('orbis_audit_log') || '[]');
     existingLogs.unshift(auditEntry);
     localStorage.setItem('orbis_audit_log', JSON.stringify(existingLogs.slice(0, 100)));
-}
-
-
-function getEmployeeAdminFormSnapshot() {
+} function getEmployeeAdminFormSnapshot() {
     const readByLabel = (labelText) => {
         const label = Array.from(document.querySelectorAll('label, div, span')).find(el => {
             const text = (el.textContent || '').trim().toLowerCase();
             return text === labelText.toLowerCase();
-        });
-
-        if (!label) return '';
-
-        const wrapper = label.parentElement;
+        }); if (!label) return ''; const wrapper = label.parentElement;
         const field = wrapper?.querySelector('input, select, textarea') || null;
         return field?.value ?? '';
-    };
-
-    return {
+    }; return {
         employee_id: readByLabel('EMPLOYEE ID') || window.currentEmployee?.employee_id || window.currentEmployee?.employeeId || '',
         status: readByLabel('STATUS'),
         first_name: cleanRosterEmployeeNameValue(readByLabel('FIRST NAME')),
@@ -743,15 +524,9 @@ function getEmployeeAdminFieldByLabel(labelText) {
     const label = Array.from(document.querySelectorAll('label, div, span')).find(el => {
         const text = (el.textContent || '').trim().toLowerCase();
         return text === labelText.toLowerCase();
-    });
-
-    if (!label) return null;
-
-    const wrapper = label.parentElement;
+    }); if (!label) return null; const wrapper = label.parentElement;
     return wrapper?.querySelector('input, select, textarea') || null;
-}
-
-function setEmployeeAdminAuditBaseline(snapshot = getEmployeeAdminFormSnapshot()) {
+} function setEmployeeAdminAuditBaseline(snapshot = getEmployeeAdminFormSnapshot()) {
     const fieldLabels = {
         employee_id: 'EMPLOYEE ID',
         status: 'STATUS',
@@ -767,24 +542,18 @@ function setEmployeeAdminAuditBaseline(snapshot = getEmployeeAdminFormSnapshot()
         next_review_date: 'NEXT REVIEW DATE',
         anniversary_date: 'ANNIVERSARY DATE',
         tenure_bracket: 'TENURE BRACKET'
-    };
-
-    Object.entries(fieldLabels).forEach(([key, labelText]) => {
+    }; Object.entries(fieldLabels).forEach(([key, labelText]) => {
         const field = getEmployeeAdminFieldByLabel(labelText);
         if (field) field.dataset.auditOriginal = snapshot?.[key] ?? '';
     });
     window.__employeeOriginalAuditSnapshot = snapshot;
     window.__employeeDirtyFields = new Set();
-}
-
-function getEmployeeAdminAuditBaseline() {
+} function getEmployeeAdminAuditBaseline() {
     const readOriginalByLabel = (key, labelText) => {
         const field = getEmployeeAdminFieldByLabel(labelText);
         if (!field) return window.__employeeOriginalAuditSnapshot?.[key] ?? '';
         return field.dataset.auditOriginal ?? window.__employeeOriginalAuditSnapshot?.[key] ?? '';
-    };
-
-    return {
+    }; return {
         employee_id: readOriginalByLabel('employee_id', 'EMPLOYEE ID'),
         status: readOriginalByLabel('status', 'STATUS'),
         first_name: cleanRosterEmployeeNameValue(readOriginalByLabel('first_name', 'FIRST NAME')),
@@ -800,37 +569,27 @@ function getEmployeeAdminAuditBaseline() {
         anniversary_date: readOriginalByLabel('anniversary_date', 'ANNIVERSARY DATE'),
         tenure_bracket: readOriginalByLabel('tenure_bracket', 'TENURE BRACKET')
     };
-}
-
-function getEmployeeAdminFieldKey(field) {
-    if (!field) return '';
-
-    const labelText = field.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase()
+} function getEmployeeAdminFieldKey(field) {
+    if (!field) return ''; const labelText = field.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase()
         || field.previousElementSibling?.textContent?.trim().toLowerCase()
         || field.placeholder?.trim().toLowerCase()
-        || '';
-
-    const map = {
-        'employee id': 'employee_id',
-        'status': 'status',
-        'first name': 'first_name',
-        'last name': 'last_name',
-        'department': 'department',
-        'position': 'position',
-        'supervisor': 'supervisor',
-        'pay type': 'pay_type',
-        'standard hours': 'standard_hours',
-        'benefits status': 'benefits_status',
-        'hire date': 'hire_date',
-        'next review date': 'next_review_date',
-        'anniversary date': 'anniversary_date',
-        'tenure bracket': 'tenure_bracket'
-    };
-
-    return map[labelText] || '';
-}
-
-function cleanEmployeeAdminVisibleNameFields() {
+        || ''; const map = {
+            'employee id': 'employee_id',
+            'status': 'status',
+            'first name': 'first_name',
+            'last name': 'last_name',
+            'department': 'department',
+            'position': 'position',
+            'supervisor': 'supervisor',
+            'pay type': 'pay_type',
+            'standard hours': 'standard_hours',
+            'benefits status': 'benefits_status',
+            'hire date': 'hire_date',
+            'next review date': 'next_review_date',
+            'anniversary date': 'anniversary_date',
+            'tenure bracket': 'tenure_bracket'
+        }; return map[labelText] || '';
+} function cleanEmployeeAdminVisibleNameFields() {
     ['FIRST NAME', 'LAST NAME'].forEach(labelText => {
         const field = getEmployeeAdminFieldByLabel(labelText);
         if (!field || typeof field.value !== 'string') return;
@@ -844,66 +603,35 @@ function cleanEmployeeAdminVisibleNameFields() {
             window.__suppressAuditDirty = previousSuppress;
         }
     });
-}
-
-function bindEmployeeAdminDirtyTracking() {
+} function bindEmployeeAdminDirtyTracking() {
     if (window.__employeeAdminDirtyBind) return;
     window.__employeeAdminDirtyBind = true;
-    window.__employeeDirtyFields = window.__employeeDirtyFields || new Set();
-
-    document.addEventListener('focusin', (e) => {
+    window.__employeeDirtyFields = window.__employeeDirtyFields || new Set(); document.addEventListener('focusin', (e) => {
         const field = e.target.closest('input, select, textarea');
-        if (!field) return;
-
-        const key = getEmployeeAdminFieldKey(field);
-        if (!key || key === 'employee_id') return;
-
-        if (field.dataset.auditOriginal === undefined) {
+        if (!field) return; const key = getEmployeeAdminFieldKey(field);
+        if (!key || key === 'employee_id') return; if (field.dataset.auditOriginal === undefined) {
             field.dataset.auditOriginal = field.value ?? '';
         }
-    });
-
-    document.addEventListener('input', (e) => {
-        if (window.__suppressAuditDirty) return;
-
-        const field = e.target.closest('input, select, textarea');
-        if (!field) return;
-
-        const key = getEmployeeAdminFieldKey(field);
-        if (!key || key === 'employee_id') return;
-
-        const original = String(field.dataset.auditOriginal ?? '').trim();
-        const current = String(field.value ?? '').trim();
-
-        if (original !== current) {
+    }); document.addEventListener('input', (e) => {
+        if (window.__suppressAuditDirty) return; const field = e.target.closest('input, select, textarea');
+        if (!field) return; const key = getEmployeeAdminFieldKey(field);
+        if (!key || key === 'employee_id') return; const original = String(field.dataset.auditOriginal ?? '').trim();
+        const current = String(field.value ?? '').trim(); if (original !== current) {
+            window.__employeeDirtyFields.add(key);
+        } else {
+            window.__employeeDirtyFields.delete(key);
+        }
+    }); document.addEventListener('change', (e) => {
+        if (window.__suppressAuditDirty) return; const field = e.target.closest('input, select, textarea');
+        if (!field) return; const key = getEmployeeAdminFieldKey(field);
+        if (!key || key === 'employee_id') return; const original = String(field.dataset.auditOriginal ?? '').trim();
+        const current = String(field.value ?? '').trim(); if (original !== current) {
             window.__employeeDirtyFields.add(key);
         } else {
             window.__employeeDirtyFields.delete(key);
         }
     });
-
-    document.addEventListener('change', (e) => {
-        if (window.__suppressAuditDirty) return;
-
-        const field = e.target.closest('input, select, textarea');
-        if (!field) return;
-
-        const key = getEmployeeAdminFieldKey(field);
-        if (!key || key === 'employee_id') return;
-
-        const original = String(field.dataset.auditOriginal ?? '').trim();
-        const current = String(field.value ?? '').trim();
-
-        if (original !== current) {
-            window.__employeeDirtyFields.add(key);
-        } else {
-            window.__employeeDirtyFields.delete(key);
-        }
-    });
-}
-
-
-function getMeaningfulEmployeeAuditChanges(before, after) {
+} function getMeaningfulEmployeeAuditChanges(before, after) {
     const trackedFields = [
         'status',
         'first_name',
@@ -918,51 +646,27 @@ function getMeaningfulEmployeeAuditChanges(before, after) {
         'next_review_date',
         'anniversary_date',
         'tenure_bracket'
-    ];
-
-    return trackedFields.filter(key => {
+    ]; return trackedFields.filter(key => {
         const beforeValue = String(before?.[key] ?? '').trim();
-        const afterValue = String(after?.[key] ?? '').trim();
-
-        if (beforeValue === afterValue) return false;
+        const afterValue = String(after?.[key] ?? '').trim(); if (beforeValue === afterValue) return false;
         return true;
     });
-}
-
-function bindEmployeeUpdateToast() {
+} function bindEmployeeUpdateToast() {
     if (window.__employeeUpdateToastBind) return;
     window.__employeeUpdateToastBind = true;
     console.log('[Orbis Audit] Employee update audit listener bound.');
-    bindEmployeeAdminDirtyTracking();
-
-    document.addEventListener('click', (e) => {
+    bindEmployeeAdminDirtyTracking(); document.addEventListener('click', (e) => {
         const clickedButton = e.target.closest('button');
         const saveButton = e.target.closest('#saveEmployeeBtn') || clickedButton;
         const buttonText = (saveButton?.textContent || '').trim().toLowerCase();
-        const isUpdateButton = !!saveButton && (saveButton.id === 'saveEmployeeBtn' || buttonText.includes('update employee'));
-
-        if (!isUpdateButton) return;
-
-        const isExistingEmployee = !!window.currentEmployee && !window.isCreatingEmployee;
-        if (!isExistingEmployee) return;
-
-        console.log('[Orbis Audit] Update Employee click detected. Preparing audit log.');
-
-        window.__employeeUpdateToastPending = true;
-        window.__employeeBeforeUpdate = getEmployeeAdminAuditBaseline();
-
-        setTimeout(async () => {
+        const isUpdateButton = !!saveButton && (saveButton.id === 'saveEmployeeBtn' || buttonText.includes('update employee')); if (!isUpdateButton) return; const isExistingEmployee = !!window.currentEmployee && !window.isCreatingEmployee;
+        if (!isExistingEmployee) return; console.log('[Orbis Audit] Update Employee click detected. Preparing audit log.'); window.__employeeUpdateToastPending = true;
+        window.__employeeBeforeUpdate = getEmployeeAdminAuditBaseline(); setTimeout(async () => {
             if (!window.__employeeUpdateToastPending) return;
-            window.__employeeUpdateToastPending = false;
-
-            const before = window.__employeeBeforeUpdate || {};
-            const after = getEmployeeAdminFormSnapshot();
-
-            const dirtyChanges = Array.from(window.__employeeDirtyFields || []);
+            window.__employeeUpdateToastPending = false; const before = window.__employeeBeforeUpdate || {};
+            const after = getEmployeeAdminFormSnapshot(); const dirtyChanges = Array.from(window.__employeeDirtyFields || []);
             const snapshotChanges = getMeaningfulEmployeeAuditChanges(before, after);
-            const changes = dirtyChanges.length ? dirtyChanges : snapshotChanges;
-
-            const auditEntry = {
+            const changes = dirtyChanges.length ? dirtyChanges : snapshotChanges; const auditEntry = {
                 id: `audit-${Date.now()}`,
                 employee_id: after.employee_id || before.employee_id || before.employeeId || '',
                 name: `${after.first_name || before.first_name || ''} ${after.last_name || before.last_name || ''}`.trim(),
@@ -972,13 +676,7 @@ function bindEmployeeUpdateToast() {
                 fields_changed: changes,
                 before,
                 after
-            };
-
-            console.log('[Orbis Audit] Audit entry created:', auditEntry);
-
-            const { error } = await writeEmployeeAuditLogToSupabase(auditEntry);
-
-            if (error) {
+            }; console.log('[Orbis Audit] Audit entry created:', auditEntry); const { error } = await writeEmployeeAuditLogToSupabase(auditEntry); if (error) {
                 writeEmployeeAuditLogLocal(auditEntry);
                 console.warn('[Orbis Audit] Supabase insert failed. Saved locally instead:', error);
             } else {
@@ -986,52 +684,34 @@ function bindEmployeeUpdateToast() {
                 if (document.getElementById('employeeAuditLogViewer')) {
                     renderEmployeeAuditLogViewer(window.currentEmployee);
                 }
-            }
-
-            if (typeof showToast === 'function') {
+            } if (typeof showToast === 'function') {
                 showToast(`Employee updated (${changes.length} change${changes.length === 1 ? '' : 's'})`, 'success');
             }
             setEmployeeAdminAuditBaseline(after);
-            window.__employeeDirtyFields = new Set();
-
-            if (typeof loadEmployees === 'function') {
+            window.__employeeDirtyFields = new Set(); if (typeof loadEmployees === 'function') {
                 loadEmployees();
             } else if (typeof renderEmployeeRoster === 'function') {
                 renderEmployeeRoster();
             }
         }, 750);
-    });
-
-    window.addEventListener('error', () => {
+    }); window.addEventListener('error', () => {
         if (!window.__employeeUpdateToastPending) return;
-        window.__employeeUpdateToastPending = false;
-
-        if (typeof showToast === 'function') {
+        window.__employeeUpdateToastPending = false; if (typeof showToast === 'function') {
+            showToast('Employee update failed. Please check the form and try again.', 'error');
+        }
+    }); window.addEventListener('unhandledrejection', () => {
+        if (!window.__employeeUpdateToastPending) return;
+        window.__employeeUpdateToastPending = false; if (typeof showToast === 'function') {
             showToast('Employee update failed. Please check the form and try again.', 'error');
         }
     });
-
-    window.addEventListener('unhandledrejection', () => {
-        if (!window.__employeeUpdateToastPending) return;
-        window.__employeeUpdateToastPending = false;
-
-        if (typeof showToast === 'function') {
-            showToast('Employee update failed. Please check the form and try again.', 'error');
-        }
-    });
-}
-
-function getEmployeeSnapshotFromRosterRow(employeeId) {
+} function getEmployeeSnapshotFromRosterRow(employeeId) {
     const row = document.querySelector(`tr.employee-row[data-id="${employeeId}"]`);
-    if (!row) return {};
-
-    const cells = Array.from(row.querySelectorAll('td'));
+    if (!row) return {}; const cells = Array.from(row.querySelectorAll('td'));
     const nameText = cleanRosterEmployeeNameValue(cells[1]?.querySelector('.link-button')?.textContent?.trim() || cells[1]?.textContent?.trim() || '');
     const nameParts = nameText.split(/\s+/).filter(Boolean);
     const firstName = nameParts[0] || '';
-    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-
-    return {
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''; return {
         employee_id: cells[0]?.textContent?.trim() || employeeId || '',
         employeeId: cells[0]?.textContent?.trim() || employeeId || '',
         displayId: cells[0]?.textContent?.trim() || employeeId || '',
@@ -1053,17 +733,11 @@ function getEmployeeSnapshotFromRosterRow(employeeId) {
         status: cells[6]?.textContent?.trim() || '',
         displayStatus: cells[6]?.textContent?.trim() || ''
     };
-}
-
-function getFilteredRosterEmployees() {
+} function getFilteredRosterEmployees() {
     const searchTerm = safeGet('globalSearch')?.value?.toLowerCase().trim() || '';
     const departmentFilter = String(safeGet('deptFilter')?.value || '').trim();
     const explicitStatusFilter = String(safeGet('statusFilter')?.value || '').trim().toUpperCase();
-    const rosterMode = String(window.rosterViewMode || 'active').trim().toLowerCase();
-
-    const employees = Array.isArray(EMPLOYEES) ? EMPLOYEES : [];
-
-    return employees
+    const rosterMode = String(window.rosterViewMode || 'active').trim().toLowerCase(); const employees = Array.isArray(EMPLOYEES) ? EMPLOYEES : []; return employees
         .map(normalizeEmployeeForRoster)
         .filter(Boolean)
         .filter(employee => {
@@ -1074,29 +748,19 @@ function getFilteredRosterEmployees() {
                 employee.displayPosition,
                 employee.displaySupervisor,
                 employee.displayStatus
-            ].join(' ').toLowerCase();
-
-            const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
+            ].join(' ').toLowerCase(); const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
             const matchesDepartment = !departmentFilter || employee.displayDepartment === departmentFilter;
-            const employeeStatus = String(employee.status || employee.displayStatus || '').trim().toUpperCase();
-
-            let matchesStatus = true;
-
-            if (explicitStatusFilter) {
+            const employeeStatus = String(employee.status || employee.displayStatus || '').trim().toUpperCase(); let matchesStatus = true; if (explicitStatusFilter) {
                 matchesStatus = employeeStatus === explicitStatusFilter;
             } else if (rosterMode === 'former') {
                 matchesStatus = employeeStatus === 'INACTIVE' || employeeStatus === 'TERMINATED';
             } else if (rosterMode === 'active') {
                 matchesStatus = employeeStatus === 'ACTIVE';
-            }
-
-            return matchesSearch && matchesDepartment && matchesStatus;
+            } return matchesSearch && matchesDepartment && matchesStatus;
         })
         .sort((a, b) => {
             let valA;
-            let valB;
-
-            switch (currentSort?.column) {
+            let valB; switch (currentSort?.column) {
                 case 'id':
                     valA = a.displayId || '';
                     valB = b.displayId || '';
@@ -1129,25 +793,17 @@ function getFilteredRosterEmployees() {
                 default:
                     valA = a.displayName || '';
                     valB = b.displayName || '';
-            }
-
-            const result = compareText(valA, valB);
+            }            const result = compareText(valA, valB);
             return currentSort?.direction === 'desc' ? -result : result;
         });
-}
-
-function renderEmployeeRoster() {
+} function renderEmployeeRoster() {
     const tbody = safeGet('empBody') || safeGet('employeeTableBody') || safeGet('rosterBody');
-    if (!tbody) return;
-
-    const employees = getFilteredRosterEmployees();
+    if (!tbody) return; const employees = getFilteredRosterEmployees();
     currentFilteredEmployees = employees;
     if (safeGet('empCount')) {
         const total = Array.isArray(EMPLOYEES) ? EMPLOYEES.length : employees.length;
         safeGet('empCount').textContent = `Showing ${employees.length} of ${total} employee${total === 1 ? '' : 's'}`;
-    }
-
-    if (!employees.length) {
+    } if (!employees.length) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" class="empty">
@@ -1161,34 +817,30 @@ function renderEmployeeRoster() {
             </tr>
         `;
         return;
-    }
-
-    tbody.innerHTML = employees.map(employee => {
+    } tbody.innerHTML = employees.map(employee => {
         const drawerId = esc(employee.dbId || employee.id || employee.employee_id || '');
-        const hireDate = employee.displayHireDate ? fmtDate(employee.displayHireDate) : '—';
-
-        return `
+        const hireDate = employee.displayHireDate ? fmtDate(employee.displayHireDate) : '—'; return `
             <tr class="employee-row" data-id="${drawerId}" title="Open ${esc(employee.displayName)}" style="cursor:pointer;" onclick="openDrawerByEmployeeId('${drawerId}')">
                 <td>${esc(employee.displayId)}</td>
                 <td>
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
-                        <button type="button" class="link-button" onclick="event.stopPropagation(); openDrawerByEmployeeId('${drawerId}')">
-                            
-                            ${esc(employee.displayName)}
+                        <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+                            <button type="button" class="link-button" onclick="event.stopPropagation(); openDrawerByEmployeeId('${drawerId}')">
+                                ${esc(employee.displayName)}
+                            </button>
                             ${(
                 (typeof currentAtRiskRosterMap !== 'undefined' && currentAtRiskRosterMap?.[String(employee.dbId || employee.id || employee.employee_id || '')]) ||
                 window.currentAtRiskRosterMap?.[String(employee.dbId || employee.id || employee.employee_id || '')]
             )
-                ? '<span class="badge badge-danger" style="margin-left:6px; font-size:10px; padding:3px 7px; border-radius:999px; background:#fee2e2; color:#991b1b; font-weight:800;">At-Risk</span>'
+                ? '<span class="badge badge-danger" style="font-size:10px; padding:3px 7px; border-radius:999px; background:#fee2e2; color:#991b1b; font-weight:800; white-space:nowrap;">At-Risk</span>'
                 : ''}
                             ${(
                 (typeof currentImpactPlayerRosterMap !== 'undefined' && currentImpactPlayerRosterMap?.[String(employee.dbId || employee.id || employee.employee_id || '')]) ||
                 window.currentImpactPlayerRosterMap?.[String(employee.dbId || employee.id || employee.employee_id || '')]
             )
-                ? '<span class="badge badge-success" style="margin-left:6px; font-size:10px; padding:3px 7px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:800;">Impact</span>'
+                ? '<span class="badge badge-success" style="font-size:10px; padding:3px 7px; border-radius:999px; background:#dcfce7; color:#166534; font-weight:800; white-space:nowrap;">Impact</span>'
                 : ''}
-                            
-                        </button>
+                        </div>
                         <div class="row-actions" style="display:flex; gap:6px; opacity:0; transition:opacity 0.15s ease;">
                             <button type="button" class="mini-btn" onclick="event.stopPropagation(); openDrawerByEmployeeId('${drawerId}')">Edit</button>
                             <button type="button" class="mini-btn danger" onclick="event.stopPropagation(); deleteEmployeeQuick('${drawerId}')">Delete</button>
@@ -1202,24 +854,16 @@ function renderEmployeeRoster() {
                 <td><span class="${statusBadge(employee.displayStatus)}">${esc(employee.displayStatusLabel)}</span></td>
             </tr>
         `;
-    }).join('');
-
-    if (typeof updateEmployeeRowBadges === 'function') {
+    }).join(''); if (typeof updateEmployeeRowBadges === 'function') {
         updateEmployeeRowBadges();
-    }
-
-    // Re-bind At-Risk KPI hover after roster updates
+    }    // Re-bind At-Risk KPI hover after roster updates
     if (typeof bindAtRiskKpiHover === 'function') {
         bindAtRiskKpiHover();
     }
-}
-
-function openDrawerByEmployeeId(employeeId) {
+} function openDrawerByEmployeeId(employeeId) {
     const employee = (EMPLOYEES || []).find(item =>
         String(item.dbId || item.id || item.employee_id) === String(employeeId)
-    );
-
-    if (!employee) {
+    ); if (!employee) {
         showToast('Employee could not be found.', 'error');
         return;
     }
@@ -1236,22 +880,14 @@ function openDrawerByEmployeeId(employeeId) {
         ...employee,
         ...rosterSnapshot
     });
-    const finalEmployeeId = getEmployeePublicId(drawerEmployee, drawerEmployee.displayName);
-
-    drawerEmployee.employee_id = finalEmployeeId;
+    const finalEmployeeId = getEmployeePublicId(drawerEmployee, drawerEmployee.displayName); drawerEmployee.employee_id = finalEmployeeId;
     drawerEmployee.employeeId = finalEmployeeId;
-    drawerEmployee.displayId = finalEmployeeId;
-
-    if (typeof openDrawer === 'function') {
+    drawerEmployee.displayId = finalEmployeeId; if (typeof openDrawer === 'function') {
         isCreatingEmployee = false;
         window.currentEmployee = drawerEmployee;
-        openDrawer(drawerEmployee);
-
-        if (typeof populateEmployeeAdminForm === 'function') {
+        openDrawer(drawerEmployee); if (typeof populateEmployeeAdminForm === 'function') {
             populateEmployeeAdminForm(drawerEmployee);
-        }
-
-        populateEmployeeAdminFallback(drawerEmployee);
+        } populateEmployeeAdminFallback(drawerEmployee);
         populateEmployeeAdminByVisibleOrder(drawerEmployee);
         cleanEmployeeAdminVisibleNameFields();
         [50, 150, 300, 600, 1000, 1500].forEach(delay => {
@@ -1268,105 +904,63 @@ function openDrawerByEmployeeId(employeeId) {
                     visibleEmployeeIdField.dispatchEvent(new Event('input', { bubbles: true }));
                     visibleEmployeeIdField.dispatchEvent(new Event('change', { bubbles: true }));
                     lockEmployeeIdField(visibleEmployeeIdField);
-                }
-
-                if (delay === 1500 && typeof setEmployeeAdminAuditBaseline === 'function') {
+                } if (delay === 1500 && typeof setEmployeeAdminAuditBaseline === 'function') {
                     setEmployeeAdminAuditBaseline(getEmployeeAdminFormSnapshot());
                 }
             }, delay);
-        });
-
-        if (safeGet('saveEmployeeBtn')) {
+        }); if (safeGet('saveEmployeeBtn')) {
             safeGet('saveEmployeeBtn').textContent = 'Update Employee';
         }
     }
-}
-
-async function deleteEmployeeQuick(employeeId) {
+} async function deleteEmployeeQuick(employeeId) {
     if (!employeeId) {
         showToast('No employee selected.', 'error');
         return;
-    }
-
-    const confirmed = confirm('Are you sure you want to delete this employee? This cannot be undone.');
-    if (!confirmed) return;
-
-    const { error } = await OrbisServices.employees.delete(employeeId);
-
-    if (error) {
+    } const confirmed = confirm('Are you sure you want to delete this employee? This cannot be undone.');
+    if (!confirmed) return; const { error } = await OrbisServices.employees.delete(employeeId); if (error) {
         console.error(error);
         showToast(`Could not delete employee: ${error.message || 'Unknown error'}`, 'error');
         return;
-    }
-
-    showToast('Employee deleted.');
-
-    if (typeof loadEmployees === 'function') {
+    } showToast('Employee deleted.'); if (typeof loadEmployees === 'function') {
         await loadEmployees();
     } else {
         renderEmployeeRoster();
     }
-}
-
-function ensureRosterViewTabs() {
+} function ensureRosterViewTabs() {
     const statusFilter = safeGet('statusFilter');
-    const rosterControls = statusFilter?.closest('.filters, .toolbar, .controls, .card, div') || statusFilter?.parentElement;
-
-    if (!rosterControls || safeGet('rosterViewTabs')) return;
-
-    const tabs = document.createElement('div');
+    const rosterControls = statusFilter?.closest('.filters, .toolbar, .controls, .card, div') || statusFilter?.parentElement; if (!rosterControls || safeGet('rosterViewTabs')) return; const tabs = document.createElement('div');
     tabs.id = 'rosterViewTabs';
     tabs.style.display = 'flex';
     tabs.style.gap = '8px';
     tabs.style.alignItems = 'center';
-    tabs.style.margin = '8px 0';
-
-    const makeTab = (mode, label) => {
+    tabs.style.margin = '8px 0'; const makeTab = (mode, label) => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'mini-btn';
         button.dataset.rosterMode = mode;
         button.textContent = label;
         button.onclick = () => {
-            window.rosterViewMode = mode;
-
-            if (statusFilter) {
+            window.rosterViewMode = mode; if (statusFilter) {
                 statusFilter.value = '';
-            }
-
-            Array.from(tabs.querySelectorAll('button')).forEach(btn => {
+            } Array.from(tabs.querySelectorAll('button')).forEach(btn => {
                 const active = btn.dataset.rosterMode === mode;
                 btn.classList.toggle('active', active);
                 btn.style.fontWeight = active ? '800' : '600';
                 btn.style.borderColor = active ? '#111827' : '';
-            });
-
-            renderEmployeeRoster();
+            }); renderEmployeeRoster();
         };
         return button;
-    };
-
-    const activeTab = makeTab('active', 'Active Employees');
-    const formerTab = makeTab('former', 'Former Employees');
-
-    tabs.appendChild(activeTab);
-    tabs.appendChild(formerTab);
-
-    rosterControls.appendChild(tabs);
-
-    const defaultTab = window.rosterViewMode === 'former' ? formerTab : activeTab;
+    }; const activeTab = makeTab('active', 'Active Employees');
+    const formerTab = makeTab('former', 'Former Employees'); tabs.appendChild(activeTab);
+    tabs.appendChild(formerTab); rosterControls.appendChild(tabs); const defaultTab = window.rosterViewMode === 'former' ? formerTab : activeTab;
     defaultTab.click();
-}
-
-function bindRosterEvents() {
+} function bindRosterEvents() {
     bindEmployeeUpdateToast();
     ensureRosterViewTabs();
     const searchInput = safeGet('globalSearch');
     const departmentFilter = safeGet('deptFilter');
     const statusFilter = safeGet('statusFilter');
-    const clearFiltersBtn = safeGet('clearFiltersBtn');
-
-    if (searchInput) {
+    const clearFiltersBtn = safeGet('clearFiltersBtn'); if (searchInput) {
         searchInput.disabled = false;
         searchInput.readOnly = false;
         searchInput.removeAttribute('disabled');
@@ -1375,9 +969,7 @@ function bindRosterEvents() {
         searchInput.style.userSelect = 'text';
         searchInput.tabIndex = 0;
         searchInput.style.zIndex = '10';
-        searchInput.style.position = 'relative';
-
-        searchInput.oninput = () => {
+        searchInput.style.position = 'relative'; searchInput.oninput = () => {
             clearTimeout(rosterSearchTimer);
             rosterSearchTimer = setTimeout(renderEmployeeRoster, 150);
         };
@@ -1388,9 +980,7 @@ function bindRosterEvents() {
             window.rosterViewMode = 'all';
             renderEmployeeRoster();
         };
-    }
-
-    if (clearFiltersBtn) {
+    } if (clearFiltersBtn) {
         clearFiltersBtn.onclick = () => {
             if (searchInput) searchInput.value = '';
             if (departmentFilter) departmentFilter.value = '';
@@ -1401,20 +991,14 @@ function bindRosterEvents() {
             ensureRosterViewTabs();
         };
     }
-}
-
-// Ensure Employee Admin tab repopulates after UI switches/reset
+}// Ensure Employee Admin tab repopulates after UI switches/reset
 if (!window.__employeeAdminBind) {
     window.__employeeAdminBind = true;
     document.addEventListener('click', (e) => {
         const tab = e.target.closest('button, .tab, [data-tab]');
-        if (!tab) return;
-
-        const text = (tab.textContent || '').toLowerCase();
+        if (!tab) return; const text = (tab.textContent || '').toLowerCase();
         const isEmployeeAdmin = text.includes('employee admin') || tab.getAttribute('data-tab') === 'employee-admin';
-        const isHistoryTab = text.includes('history') || tab.getAttribute('data-tab') === 'history';
-
-        if (isEmployeeAdmin && window.currentEmployee && typeof populateEmployeeAdminForm === 'function') {
+        const isHistoryTab = text.includes('history') || tab.getAttribute('data-tab') === 'history'; if (isEmployeeAdmin && window.currentEmployee && typeof populateEmployeeAdminForm === 'function') {
             setTimeout(() => {
                 populateEmployeeAdminForm(window.currentEmployee);
                 if (typeof populateEmployeeAdminFallback === 'function') {
@@ -1439,17 +1023,13 @@ if (!window.__employeeAdminBind) {
                     setEmployeeAdminAuditBaseline(getEmployeeAdminFormSnapshot());
                 }
             }, 50);
-        }
-
-        if (isHistoryTab && window.currentEmployee) {
+        } if (isHistoryTab && window.currentEmployee) {
             setTimeout(() => {
                 renderEmployeeAuditLogViewer(window.currentEmployee);
             }, 100);
         }
     });
-}
-
-// 🔥 Unified roster refresh (used by ALL creation flows)
+}// 🔥 Unified roster refresh (used by ALL creation flows)
 window.refreshEmployeeRoster = async function () {
     try {
         if (typeof window.loadEmployees === 'function') {
@@ -1466,13 +1046,9 @@ window.refreshEmployeeRoster = async function () {
     } catch (err) {
         console.error('Roster refresh failed:', err);
     }
-};
-
-// =========================
+};// =========================
 // EXPORTS
-// =========================
-
-window.cleanRosterEmployeeNameValue = cleanRosterEmployeeNameValue;
+// =========================window.cleanRosterEmployeeNameValue = cleanRosterEmployeeNameValue;
 window.formatRosterStatus = formatRosterStatus;
 window.statusBadge = statusBadge;
 window.normalizeEmployeeForRoster = normalizeEmployeeForRoster;
@@ -1501,9 +1077,7 @@ window.writeEmployeeAuditLogToSupabase = writeEmployeeAuditLogToSupabase;
 window.writeEmployeeAuditLogLocal = writeEmployeeAuditLogLocal;
 window.fetchEmployeeAuditLogs = fetchEmployeeAuditLogs;
 window.getLocalAuditLogsForEmployee = getLocalAuditLogsForEmployee;
-window.renderEmployeeAuditLogViewer = renderEmployeeAuditLogViewer;
-
-setTimeout(() => {
+window.renderEmployeeAuditLogViewer = renderEmployeeAuditLogViewer; setTimeout(() => {
     const searchInput = safeGet('globalSearch');
     if (searchInput) {
         searchInput.disabled = false;
@@ -1513,88 +1087,50 @@ setTimeout(() => {
         searchInput.style.pointerEvents = 'auto';
         searchInput.style.userSelect = 'text';
     }
-}, 250);
-
-function getAtRiskKpiHoverNames() {
+}, 250); function getAtRiskKpiHoverNames() {
     const riskMap = window.currentAtRiskRosterMap || (typeof currentAtRiskRosterMap !== 'undefined' ? currentAtRiskRosterMap : {}) || {};
     const employees = Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : (Array.isArray(EMPLOYEES) ? EMPLOYEES : []);
-    const names = [];
-
-    const addNameValue = (value) => {
-        if (!value) return;
-
-        if (typeof value === 'string') {
+    const names = []; const addNameValue = (value) => {
+        if (!value) return; if (typeof value === 'string') {
             const text = value.trim();
             if (text && text.toLowerCase() !== 'true' && text.toLowerCase() !== 'yes' && !names.includes(text)) {
                 names.push(text);
             }
             return;
-        }
-
-        if (typeof value === 'object') {
+        } if (typeof value === 'object') {
             const first = value.first || value.first_name || value.firstName || '';
             const last = value.last || value.last_name || value.lastName || '';
             const name = `${first} ${last}`.trim() || value.displayName || value.name || value.employee_name || '';
             if (name && !names.includes(name)) names.push(name);
         }
-    };
-
-    Object.values(riskMap || {}).forEach(addNameValue);
-
-    // Fallback: derive from employee data if riskMap is empty
+    }; Object.values(riskMap || {}).forEach(addNameValue);    // Fallback: derive from employee data if riskMap is empty
     if (!names.length && employees.length) {
         employees.forEach(emp => {
             const isAtRisk =
                 emp.at_risk === true ||
                 emp.atRisk === true ||
-                String(emp.status || '').toUpperCase() === 'AT-RISK';
-
-            if (isAtRisk) {
-                const name =
-                    emp.displayName ||
-                    `${emp.first_name || emp.firstName || ''} ${emp.last_name || emp.lastName || ''}`.trim();
-
-                if (name && !names.includes(name)) names.push(name);
-            }
+                String(emp.status || '').toUpperCase() === 'AT-RISK'; if (isAtRisk) {
+                    const name =
+                        emp.displayName ||
+                        `${emp.first_name || emp.firstName || ''} ${emp.last_name || emp.lastName || ''}`.trim(); if (name && !names.includes(name)) names.push(name);
+                }
         });
-    }
-
-    // DOM fallback: if the roster row already shows an At-Risk badge, use that row's employee name.
+    }    // DOM fallback: if the roster row already shows an At-Risk badge, use that row's employee name.
     document.querySelectorAll('tr.employee-row').forEach(row => {
         const hasAtRiskBadge = Array.from(row.querySelectorAll('.badge, span')).some(el =>
             String(el.textContent || '').trim().toLowerCase() === 'at-risk'
-        );
-
-        if (!hasAtRiskBadge) return;
-
-        const rowName = row.querySelector('.link-button')?.textContent?.replace(/At-Risk|Impact/g, '').trim();
+        ); if (!hasAtRiskBadge) return; const rowName = row.querySelector('.link-button')?.textContent?.replace(/At-Risk|Impact/g, '').trim();
         if (rowName && !names.includes(rowName)) names.push(rowName);
-    });
-
-    if (!names.length) {
+    }); if (!names.length) {
         const riskCount = Number(document.getElementById('kRisk')?.textContent?.trim() || '0');
         if (riskCount > 0) {
             return [`${riskCount} employee flagged`];
         }
-    }
-
-    return names;
-}
-
-function bindAtRiskKpiHover() {
-    const riskElement = document.getElementById('kRisk');
-
-    if (!riskElement) return;
-
-    const riskCard =
+    } return names;
+} function bindAtRiskKpiHover() {
+    const riskElement = document.getElementById('kRisk'); if (!riskElement) return; const riskCard =
         riskElement.closest('.kpi-card, .card, [class*="kpi"]') ||
-        riskElement.parentElement;
-
-    if (!riskCard) return;
-
-    riskCard.style.position = riskCard.style.position || 'relative';
-
-    let tooltip = document.getElementById('atRiskKpiTooltip');
+        riskElement.parentElement; if (!riskCard) return; riskCard.style.position = riskCard.style.position || 'relative'; let tooltip = document.getElementById('atRiskKpiTooltip');
     if (!tooltip) {
         tooltip = document.createElement('div');
         tooltip.id = 'atRiskKpiTooltip';
@@ -1613,59 +1149,33 @@ function bindAtRiskKpiHover() {
         tooltip.style.display = 'none';
         tooltip.style.pointerEvents = 'none';
         riskCard.appendChild(tooltip);
-    }
-
-    const getRiskCount = () => {
+    } const getRiskCount = () => {
         const directCount = Number(String(riskElement.textContent || '').trim());
-        if (!Number.isNaN(directCount)) return directCount;
-
-        const cardText = String(riskCard.textContent || '');
+        if (!Number.isNaN(directCount)) return directCount; const cardText = String(riskCard.textContent || '');
         const match = cardText.match(/AT-RISK EMPLOYEES\s*(\d+)/i) || cardText.match(/\b(\d+)\b/);
         return match ? Number(match[1]) : 0;
-    };
-
-    const updateHoverText = () => {
+    }; const updateHoverText = () => {
         const names = getAtRiskKpiHoverNames();
-        const riskCount = getRiskCount();
-
-        let text;
+        const riskCount = getRiskCount(); let text;
         if (names.length) {
             text = `At-Risk Employees: ${names.join(', ')}`;
         } else if (riskCount > 0) {
             text = `At-Risk Employees: ${riskCount} employee${riskCount === 1 ? '' : 's'} flagged`;
         } else {
             text = 'No employees currently flagged at-risk.';
-        }
-
-        riskElement.title = text;
+        } riskElement.title = text;
         riskCard.title = text;
         riskCard.setAttribute('data-tooltip', text);
         riskCard.setAttribute('aria-label', text);
         tooltip.textContent = text;
-    };
-
-    const showTooltip = () => {
+    }; const showTooltip = () => {
         updateHoverText();
         tooltip.style.display = 'block';
-    };
-
-    const hideTooltip = () => {
+    }; const hideTooltip = () => {
         tooltip.style.display = 'none';
-    };
-
-    riskCard.onmouseenter = showTooltip;
+    }; riskCard.onmouseenter = showTooltip;
     riskCard.onfocusin = showTooltip;
     riskCard.onmouseleave = hideTooltip;
-    riskCard.onfocusout = hideTooltip;
-
-    updateHoverText();
-}
-
-window.bindAtRiskKpiHover = bindAtRiskKpiHover;
-
-setTimeout(bindAtRiskKpiHover, 300);
-
-setTimeout(bindAtRiskKpiHover, 1000);
-
-// Initialize audit/update listener immediately in case bindRosterEvents is not called.
+    riskCard.onfocusout = hideTooltip; updateHoverText();
+} window.bindAtRiskKpiHover = bindAtRiskKpiHover; setTimeout(bindAtRiskKpiHover, 300); setTimeout(bindAtRiskKpiHover, 1000);// Initialize audit/update listener immediately in case bindRosterEvents is not called.
 bindEmployeeUpdateToast();

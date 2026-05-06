@@ -7,13 +7,8 @@
   <title>BTW Global Orbis</title>
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="js/css/styles.css">
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
-
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-
-
   <style>
     :root {
       --navy: #102a43;
@@ -520,11 +515,8 @@
     }
 
     .badge-terminated {
-
       background: #fee2e2;
-
       color: #991b1b;
-
       border-color: #fecaca;
     }
 
@@ -801,7 +793,6 @@
       padding-top: 4px;
     }
 
-
     #historyFeed .history-item,
     #notesHistory .history-item,
     #disciplineHistory .history-item,
@@ -1013,7 +1004,6 @@
       .select {
         min-width: 100%;
       }
-
     }
   </style>
 </head>
@@ -1031,24 +1021,20 @@
           <input id="loginEmail" type="email" placeholder="you@company.com" autocomplete="username"
             onkeydown="if(event.key==='Enter') signIn()" />
         </div>
-
         <div class="field">
           <label for="loginPassword">Password</label>
           <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password"
             onkeydown="if(event.key==='Enter') signIn()" />
         </div>
-
         <div style="display:flex; gap:10px; margin-top:18px;">
           <button class="button primary" id="loginBtn" type="button" onclick="signIn()">Sign In</button>
         </div>
-
         <div class="muted" style="margin-top:14px;">
           Access is limited to approved admin-created accounts.
         </div>
       </div>
     </div>
   </div>
-
   <div id="appView" class="hidden">
     <div class="app-header">
       <div class="app-header-inner">
@@ -1056,7 +1042,6 @@
           <h1 class="app-title">BTW Global Orbis</h1>
           <div class="app-subtitle">HR Intelligence & Operations System</div>
         </div>
-
         <div class="header-meta">
           <div id="currentDate"></div>
           <div class="small">Signed in as: <span id="currentUserEmail">—</span></div>
@@ -1064,7 +1049,6 @@
         </div>
       </div>
     </div>
-
     <div class="page">
       <div class="toolbar">
         <div class="toolbar-left">
@@ -1081,7 +1065,6 @@
             <option value="TERMINATED">Terminated</option>
           </select>
         </div>
-
         <div class="toolbar-right">
           <button class="button primary" id="addEmployeeBtn" type="button" onclick="openNewEmployeeForm()">＋ Add
             Employee</button>
@@ -1094,20 +1077,17 @@
           <button class="button danger" id="logoutBtn" type="button" onclick="signOut()">Log Out</button>
         </div>
       </div>
-
       <div class="kpi-grid">
         <div class="kpi-card" id="cardActiveHC" onmouseenter="buildKpiHoverDetails()">
           <div class="kpi-label">Active Headcount</div>
           <div class="kpi-value" id="kActiveHC">—</div>
           <div class="kpi-sub">Live workforce snapshot</div>
         </div>
-
         <div class="kpi-card good" id="cardDepartments" onmouseenter="buildKpiHoverDetails()">
           <div class="kpi-label">Departments</div>
           <div class="kpi-value" id="kDepartments">—</div>
           <div class="kpi-sub">Operational structure coverage</div>
         </div>
-
         <div class="kpi-card alert" id="cardTurnoverRisk" onmouseenter="buildKpiHoverDetails()">
           <div class="kpi-label" style="display:flex; align-items:center; gap:6px;">
             Turnover Risk
@@ -1118,38 +1098,32 @@
           <div class="kpi-value" id="kTurnoverRisk">—</div>
           <div class="kpi-sub" id="kTurnoverRiskSub">Weighted early-tenure retention risk</div>
         </div>
-
         <div class="kpi-card warn" id="cardTurnover" onmouseenter="buildKpiHoverDetails()">
           <div class="kpi-label">Turnover Rate</div>
           <div class="kpi-value" id="kTurnover">0.0%</div>
           <div class="kpi-sub" id="kTurnoverSubtext">Terminated employees retained for turnover tracking</div>
         </div>
-
         <div class="kpi-card warn" id="cardNewHireTurnover" onmouseenter="buildKpiHoverDetails()">
           <div class="kpi-label">New Hire Turnover</div>
           <div class="kpi-value" id="kNewHireTurnover">0.0%</div>
           <div class="kpi-sub" id="kNewHireTurnoverSubtext">First 90 days</div>
         </div>
-
         <div class="kpi-card alert" id="cardAtRiskEmployees" onmouseenter="buildKpiHoverDetails()">
           <div class="kpi-label">At-Risk Employees</div>
           <div class="kpi-value" id="kAtRiskEmployees">—</div>
           <div class="kpi-sub" id="kAtRiskEmployeesSub">No employees currently flagged from latest review scores or HR
             indicators</div>
         </div>
-
         <div class="kpi-card warn" id="cardOnLeave" onmouseenter="buildKpiHoverDetails()">
           <div class="kpi-label">Employees on Leave</div>
           <div class="kpi-value" id="kOnLeave">—</div>
           <div class="kpi-sub">Employees currently in leave status</div>
         </div>
-
         <div class="kpi-card alert" id="cardOpenDiscipline" onmouseenter="buildKpiHoverDetails()">
           <div class="kpi-label">Open Discipline Cases</div>
           <div class="kpi-value" id="kOpenDiscipline">—</div>
           <div class="kpi-sub">Cases requiring HR follow-up</div>
         </div>
-
         <div class="kpi-card warn" id="cardReviewsDue" onmouseenter="buildKpiHoverDetails()">
           <div class="kpi-label" style="display:flex; align-items:center; gap:6px;">
             Reviews Due
@@ -1166,7 +1140,6 @@
           <div class="kpi-sub">High-performing employees based on recent reviews and recognition</div>
         </div>
       </div>
-
       <div class="layout">
         <div class="stack">
           <div class="card" id="candidatesCard">
@@ -1220,7 +1193,6 @@
             </div>
           </div>
         </div>
-
         <div class="stack">
           <div class="card">
             <div class="card-header">Leadership Snapshot</div>
@@ -1238,7 +1210,6 @@
               </div>
             </div>
           </div>
-
           <div class="card">
             <div class="card-header">Review Dashboard</div>
             <div class="card-body">
@@ -1256,7 +1227,6 @@
                   <div class="detail-value">—</div>
                 </div>
               </div>
-
               <div class="mini-table-wrap">
                 <table>
                   <thead>
@@ -1278,7 +1248,6 @@
               </div>
             </div>
           </div>
-
           <div class="card">
             <div class="card-header">Executive Insight</div>
             <div class="card-body">
@@ -1313,11 +1282,9 @@
               </div>
             </div>
           </div>
-
         </div>
       </div>
       <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
-
       <aside class="drawer" id="candidateDrawer">
         <div class="drawer-header">
           <div>
@@ -1326,7 +1293,6 @@
           </div>
           <button class="drawer-close" type="button" onclick="closeCandidateDrawer()">Close</button>
         </div>
-
         <div class="drawer-body">
           <div class="tabs">
             <button class="tab-btn active" data-candidate-tab="profile" type="button"
@@ -1334,7 +1300,6 @@
             <button class="tab-btn" data-candidate-tab="notes" type="button"
               onclick="switchCandidateTab('notes')">Notes</button>
           </div>
-
           <section class="tab-panel active" id="candidate-tab-profile">
             <div class="card">
               <div class="card-header">Candidate Record</div>
@@ -1348,7 +1313,6 @@
                     <label for="candidateLastNameInput">Last Name</label>
                     <input id="candidateLastNameInput" type="text" placeholder="Last name" />
                   </div>
-
                   <div class="field">
                     <label for="candidateEmailInput">Email</label>
                     <input id="candidateEmailInput" type="email" placeholder="Email" />
@@ -1357,7 +1321,6 @@
                     <label for="candidatePhoneInput">Phone</label>
                     <input id="candidatePhoneInput" type="text" placeholder="Phone" />
                   </div>
-
                   <div class="field">
                     <label for="candidatePositionInput">Position</label>
                     <input id="candidatePositionInput" type="text" placeholder="Position" />
@@ -1366,7 +1329,6 @@
                     <label for="candidateDepartmentInput">Department</label>
                     <input id="candidateDepartmentInput" type="text" placeholder="Department" />
                   </div>
-
                   <div class="field">
                     <label for="candidateStageInput">Stage</label>
                     <select id="candidateStageInput">
@@ -1382,19 +1344,16 @@
                     <label for="candidateSourceInput">Source</label>
                     <input id="candidateSourceInput" type="text" placeholder="Indeed, Referral, etc." />
                   </div>
-
                   <div class="field">
                     <label for="candidateAppliedDateInput">Applied Date</label>
                     <input id="candidateAppliedDateInput" type="date" />
                   </div>
                 </div>
-
                 <div class="field">
                   <label for="candidateNotesInput">Candidate Notes</label>
                   <textarea id="candidateNotesInput" rows="6"
                     placeholder="Interview notes, comments, observations..."></textarea>
                 </div>
-
                 <div class="candidate-actions-row">
                   <button class="button primary" id="saveCandidateBtn" type="button"
                     onclick="saveCandidateRecord()">Save Candidate</button>
@@ -1407,7 +1366,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="candidate-tab-notes">
             <div class="card">
               <div class="card-header">Candidate Notes</div>
@@ -1428,7 +1386,6 @@
           </div>
           <button class="drawer-close" id="drawerClose" type="button" onclick="closeDrawer()">Close</button>
         </div>
-
         <div class="drawer-body">
           <div class="tabs">
             <button class="tab-btn active" data-tab="profile" type="button"
@@ -1452,7 +1409,6 @@
             <button class="tab-btn" data-tab="employee" type="button" onclick="switchTab('employee')">Employee
               Admin</button>
           </div>
-
           <section class="tab-panel active" id="tab-profile">
             <div class="card">
               <div class="card-header">Employee Profile</div>
@@ -1461,7 +1417,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="tab-notes">
             <div class="two-col">
               <div class="card">
@@ -1471,7 +1426,6 @@
                     <label for="noteDate">Note Date</label>
                     <input id="noteDate" type="date" />
                   </div>
-
                   <div class="field">
                     <label for="noteType">Note Type</label>
                     <select id="noteType">
@@ -1484,18 +1438,14 @@
                       <option value="Follow-Up">Follow-Up</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label for="noteText">Note</label>
                     <textarea id="noteText" rows="7" placeholder="Enter note details..."></textarea>
-                  </div>
-
-                  <button class="button primary" id="saveNoteBtn" type="button" onclick="saveEmployeeNote()">Save
+                  </div> <button class="button primary" id="saveNoteBtn" type="button" onclick="saveEmployeeNote()">Save
                     Note</button>
                   <button class="button soft" type="button" onclick="printNote()">Print / PDF</button>
                 </div>
               </div>
-
               <div class="card">
                 <div class="card-header">Note History</div>
                 <div class="card-body">
@@ -1506,7 +1456,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="tab-discipline">
             <div class="two-col">
               <div class="card">
@@ -1516,7 +1465,6 @@
                     <label for="disciplineDate">Incident Date</label>
                     <input id="disciplineDate" type="date" />
                   </div>
-
                   <div class="field">
                     <label for="disciplineType">Issue Type</label>
                     <select id="disciplineType">
@@ -1529,7 +1477,6 @@
                       <option value="Other">Other</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label for="disciplineLevel">Level</label>
                     <select id="disciplineLevel">
@@ -1545,12 +1492,10 @@
                     <label for="disciplineDescription">Description</label>
                     <textarea id="disciplineDescription" rows="6" placeholder="Describe the issue..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="disciplineAction">Action Taken</label>
                     <textarea id="disciplineAction" rows="5" placeholder="Document the corrective action..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="disciplineStatus">Status</label>
                     <select id="disciplineStatus">
@@ -1559,7 +1504,6 @@
                       <option value="Closed">Closed</option>
                     </select>
                   </div>
-
                   <div class="detail-card" style="margin-top:16px;">
                     <div
                       style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#667085; margin-bottom:10px;">
@@ -1573,7 +1517,6 @@
                       <div>
                         <canvas id="disciplineEmployeeSignature"
                           style="border:1px solid #cbd5e1; border-radius:10px; width:100%; height:120px;"></canvas>
-
                         <div style="display:flex; justify-content:space-between; margin-top:6px;">
                           <span id="disciplineEmployeeSigStatus" style="font-size:12px; color:#667085;">
                             Not signed
@@ -1583,16 +1526,13 @@
                             Clear
                           </button>
                         </div>
-
                         <div style="font-size:12px; color:#667085; margin-top:4px;">
                           Employee Signature
                         </div>
                       </div>
-
                       <div>
                         <canvas id="disciplineManagerSignature"
                           style="border:1px solid #cbd5e1; border-radius:10px; width:100%; height:120px;"></canvas>
-
                         <div style="display:flex; justify-content:space-between; margin-top:6px;">
                           <span id="disciplineManagerSigStatus" style="font-size:12px; color:#667085;">
                             Not signed
@@ -1602,16 +1542,13 @@
                             Clear
                           </button>
                         </div>
-
                         <div style="font-size:12px; color:#667085; margin-top:4px;">
                           Manager Signature
                         </div>
                       </div>
-
                       <div>
                         <canvas id="disciplineWitnessSignature"
                           style="border:1px solid #cbd5e1; border-radius:10px; width:100%; height:120px;"></canvas>
-
                         <div style="display:flex; justify-content:space-between; margin-top:6px;">
                           <span id="disciplineWitnessSigStatus" style="font-size:12px; color:#667085;">
                             Not signed
@@ -1621,14 +1558,12 @@
                             Clear
                           </button>
                         </div>
-
                         <div style="font-size:12px; color:#667085; margin-top:4px;">
                           Witness Signature
                         </div>
                       </div>
                     </div>
                   </div>
-
                   <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button class="button primary" id="saveDisciplineBtn" type="button"
                       onclick="saveDisciplineReport()">Save Discipline Report</button>
@@ -1641,7 +1576,6 @@
                   </div>
                 </div>
               </div>
-
               <div class="card">
                 <div class="card-header">Discipline History</div>
                 <div class="card-body">
@@ -1652,7 +1586,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="tab-incidents">
             <div class="two-col">
               <div class="card">
@@ -1662,7 +1595,6 @@
                     <label for="incidentDate">Incident Date</label>
                     <input id="incidentDate" type="date" />
                   </div>
-
                   <div class="field">
                     <label for="incidentType">Incident Type</label>
                     <select id="incidentType">
@@ -1676,22 +1608,18 @@
                       <option value="Other">Other</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label for="incidentLocation">Location</label>
                     <input id="incidentLocation" type="text" placeholder="Where did it happen?" />
                   </div>
-
                   <div class="field">
                     <label for="incidentDescription">Description</label>
                     <textarea id="incidentDescription" rows="6" placeholder="Describe what happened..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="incidentFollowUp">Follow-Up / Corrective Action</label>
                     <textarea id="incidentFollowUp" rows="5" placeholder="Document follow-up actions..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="incidentStatus">Status</label>
                     <select id="incidentStatus">
@@ -1700,7 +1628,6 @@
                       <option value="Closed">Closed</option>
                     </select>
                   </div>
-
                   <div class="detail-card" style="margin-top:16px;">
                     <div
                       style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#667085; margin-bottom:10px;">
@@ -1725,27 +1652,16 @@
                       </div>
                     </div>
                   </div>
-
-                  <div style="display:flex; gap:10px; flex-wrap:wrap;">
-
-                    <button class="button primary" id="saveIncidentBtn" type="button"
-                      onclick="saveIncidentReport()">Save
-
-                      Incident Report</button>
-
+                  <div style="display:flex; gap:10px; flex-wrap:wrap;"> <button class="button primary"
+                      id="saveIncidentBtn" type="button" onclick="saveIncidentReport()">Save Incident Report</button>
                     <button class="button soft" type="button" onclick="printIncident()">Print / PDF</button>
                     <button class="button soft hidden" id="cancelIncidentEditBtn" type="button"
                       onclick="cancelIncidentEdit()">Cancel Edit</button>
                   </div>
-
-                  <div class="muted hidden" id="incidentEditStatus" style="margin-top:10px;">
-
-                    Editing existing incident report
-
-                  </div>
+                  <div class="muted hidden" id="incidentEditStatus" style="margin-top:10px;"> Editing existing incident
+                    report </div>
                 </div>
               </div>
-
               <div class="card">
                 <div class="card-header">Incident Report History</div>
                 <div class="card-body">
@@ -1756,7 +1672,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="tab-stay-interviews">
             <div class="two-col">
               <div class="card">
@@ -1766,7 +1681,6 @@
                     <label for="stayInterviewDate">Interview Date</label>
                     <input id="stayInterviewDate" type="date" />
                   </div>
-
                   <div class="field">
                     <label for="stayInterviewType">Interview Type</label>
                     <select id="stayInterviewType">
@@ -1779,69 +1693,48 @@
                       <option value="Other">Other</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label for="stayQ1">What do you look forward to when you come to work each day?</label>
                     <textarea id="stayQ1" rows="3" placeholder="Employee response..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="stayQ2">What is going well in your role right now?</label>
                     <textarea id="stayQ2" rows="3" placeholder="Employee response..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="stayQ3">What frustrations, obstacles, or stress points are you experiencing?</label>
                     <textarea id="stayQ3" rows="3" placeholder="Employee response..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="stayQ4">What would make your job more satisfying or easier?</label>
                     <textarea id="stayQ4" rows="3" placeholder="Employee response..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="stayQ5">Do you feel supported by your supervisor and team? Why or why not?</label>
                     <textarea id="stayQ5" rows="3" placeholder="Employee response..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="stayQ6">What might cause you to consider leaving BTW Global?</label>
                     <textarea id="stayQ6" rows="3" placeholder="Employee response..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="stayQ7">What can we do to help you stay and succeed here?</label>
                     <textarea id="stayQ7" rows="3" placeholder="Employee response..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="stayManagerSummary">HR / Manager Summary</label>
                     <textarea id="stayManagerSummary" rows="4"
                       placeholder="Summarize themes, action items, and follow-up..."></textarea>
                   </div>
-
-                  <div style="display:flex; gap:10px; flex-wrap:wrap;">
-
-                    <button class="button primary" id="saveStayInterviewBtn" type="button"
-                      onclick="saveStayInterview()">Save Stay
-                      Interview</button>
-
-                    <button class="button soft" type="button" onclick="printStayInterview()">Print / PDF</button>
-
-                    <button class="button soft hidden" id="cancelStayInterviewEditBtn" type="button"
-                      onclick="cancelStayInterviewEdit()">Cancel Edit</button>
-
-                  </div>
-
-                  <div class="muted hidden" id="stayInterviewEditStatus" style="margin-top:10px;">
-
-                    Editing existing stay interview
-
-                  </div>
+                  <div style="display:flex; gap:10px; flex-wrap:wrap;"> <button class="button primary"
+                      id="saveStayInterviewBtn" type="button" onclick="saveStayInterview()">Save Stay
+                      Interview</button> <button class="button soft" type="button" onclick="printStayInterview()">Print
+                      / PDF</button> <button class="button soft hidden" id="cancelStayInterviewEditBtn" type="button"
+                      onclick="cancelStayInterviewEdit()">Cancel Edit</button> </div>
+                  <div class="muted hidden" id="stayInterviewEditStatus" style="margin-top:10px;"> Editing existing stay
+                    interview </div>
                 </div>
               </div>
-
               <div class="card">
                 <div class="card-header">Stay Interview History</div>
                 <div class="card-body">
@@ -1852,7 +1745,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="tab-meetings">
             <div class="two-col">
               <div class="card">
@@ -1862,7 +1754,6 @@
                     <label for="meetingDate">Meeting Date</label>
                     <input id="meetingDate" type="date" />
                   </div>
-
                   <div class="field">
                     <label for="meetingType">Meeting Type</label>
                     <select id="meetingType">
@@ -1875,39 +1766,24 @@
                       <option value="Other">Other</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label for="meetingSubject">Subject</label>
                     <input id="meetingSubject" type="text" placeholder="Meeting subject" />
                   </div>
-
                   <div class="field">
                     <label for="meetingNotes">Notes</label>
                     <textarea id="meetingNotes" rows="7" placeholder="Document the meeting discussion..."></textarea>
                   </div>
-
-                  <div style="display:flex; gap:10px; flex-wrap:wrap;">
-
-                    <button class="button primary" id="saveMeetingBtn" type="button" onclick="saveMeetingRecord()">Save
-
-                      Meeting</button>
-
-                    <button class="button soft" type="button" onclick="printMeeting()">Print / PDF</button>
-
-                    <button class="button soft hidden" id="cancelMeetingEditBtn" type="button"
+                  <div style="display:flex; gap:10px; flex-wrap:wrap;"> <button class="button primary"
+                      id="saveMeetingBtn" type="button" onclick="saveMeetingRecord()">Save Meeting</button> <button
+                      class="button soft" type="button" onclick="printMeeting()">Print / PDF</button> <button
+                      class="button soft hidden" id="cancelMeetingEditBtn" type="button"
                       onclick="cancelMeetingEdit()">Cancel
-                      Edit</button>
-
-                  </div>
-
-                  <div class="muted hidden" id="meetingEditStatus" style="margin-top:10px;">
-
-                    Editing existing meeting record
-
-                  </div>
+                      Edit</button> </div>
+                  <div class="muted hidden" id="meetingEditStatus" style="margin-top:10px;"> Editing existing meeting
+                    record </div>
                 </div>
               </div>
-
               <div class="card">
                 <div class="card-header">Meeting History</div>
                 <div class="card-body">
@@ -1927,7 +1803,6 @@
                     <label for="reviewDate">Review Date</label>
                     <input id="reviewDate" type="date" />
                   </div>
-
                   <div class="field">
                     <label for="reviewType">Review Type</label>
                     <select id="reviewType">
@@ -1942,7 +1817,6 @@
                       <option value="Other">Other</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label>Quality of Work</label>
                     <select id="reviewQuality">
@@ -1953,7 +1827,6 @@
                       <option value="Unacceptable">Unacceptable</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label>Attendance & Punctuality</label>
                     <select id="reviewAttendance">
@@ -1964,7 +1837,6 @@
                       <option value="Unacceptable">Unacceptable</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label>Reliability / Dependability</label>
                     <select id="reviewReliability">
@@ -1975,7 +1847,6 @@
                       <option value="Unacceptable">Unacceptable</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label>Communication Skills</label>
                     <select id="reviewCommunication">
@@ -1986,7 +1857,6 @@
                       <option value="Unacceptable">Unacceptable</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label>Judgement & Decision-Making</label>
                     <select id="reviewJudgement">
@@ -1997,7 +1867,6 @@
                       <option value="Unacceptable">Unacceptable</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label>Initiative & Flexibility</label>
                     <select id="reviewInitiative">
@@ -2008,7 +1877,6 @@
                       <option value="Unacceptable">Unacceptable</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label>Cooperation & Teamwork</label>
                     <select id="reviewTeamwork">
@@ -2019,7 +1887,6 @@
                       <option value="Unacceptable">Unacceptable</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label>Knowledge of Position</label>
                     <select id="reviewKnowledge">
@@ -2030,7 +1897,6 @@
                       <option value="Unacceptable">Unacceptable</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label>Training & Development</label>
                     <select id="reviewTraining">
@@ -2041,31 +1907,26 @@
                       <option value="Unacceptable">Unacceptable</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label for="reviewStrengths">What are this employee's strongest contributions?</label>
                     <textarea id="reviewStrengths" rows="4"
                       placeholder="Document strengths, wins, and value to the team..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="reviewImprovements">What specific areas need improvement?</label>
                     <textarea id="reviewImprovements" rows="4"
                       placeholder="Document gaps, coaching needs, and expectations..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="reviewEmployeeComments">Employee Comments / Feedback</label>
                     <textarea id="reviewEmployeeComments" rows="4"
                       placeholder="Document the employee's perspective, concerns, or goals..."></textarea>
                   </div>
-
                   <div class="field">
                     <label for="reviewManagerComments">Manager Action Plan / Next Steps</label>
                     <textarea id="reviewManagerComments" rows="4"
                       placeholder="Document next steps, accountability, support, and follow-up timing..."></textarea>
                   </div>
-
                   <div class="detail-card" style="margin-top:16px;">
                     <div
                       style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#667085; margin-bottom:10px;">
@@ -2090,7 +1951,6 @@
                       </div>
                     </div>
                   </div>
-
                   <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button class="button primary" id="saveReviewBtn" type="button" onclick="saveEmployeeReview()">Save
                       Review</button>
@@ -2103,7 +1963,6 @@
                   </div>
                 </div>
               </div>
-
               <div class="card">
                 <div class="card-header">Review History</div>
                 <div class="card-body">
@@ -2114,7 +1973,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="tab-onboarding">
             <div class="card">
               <div class="card-header">Onboarding Packet</div>
@@ -2129,7 +1987,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="tab-documents">
             <div class="two-col">
               <div class="card">
@@ -2149,17 +2006,13 @@
                       <option value="Other">Other</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label for="docFile">File</label>
                     <input id="docFile" type="file" />
-                  </div>
-
-                  <button class="button primary" id="uploadDocBtn" type="button"
+                  </div> <button class="button primary" id="uploadDocBtn" type="button"
                     onclick="uploadEmployeeDocument()">Upload Document</button>
                 </div>
               </div>
-
               <div class="card">
                 <div class="card-header">Document History</div>
                 <div class="card-body">
@@ -2170,7 +2023,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="tab-emergency">
             <div class="two-col">
               <div class="card">
@@ -2180,34 +2032,28 @@
                     <label for="ecName">Contact Name</label>
                     <input id="ecName" type="text" placeholder="Full name" />
                   </div>
-
                   <div class="field">
                     <label for="ecRelationship">Relationship</label>
                     <input id="ecRelationship" type="text" placeholder="Spouse, parent, sibling..." />
                   </div>
-
                   <div class="field">
                     <label for="ecPhone">Phone</label>
                     <input id="ecPhone" type="text" placeholder="Primary phone" />
                   </div>
-
                   <div class="field">
                     <label for="ecAltPhone">Alternate Phone</label>
                     <input id="ecAltPhone" type="text" placeholder="Alternate phone" />
                   </div>
-
                   <div class="field">
                     <label for="ecNotes">Notes</label>
                     <textarea id="ecNotes" rows="5" placeholder="Any extra notes..."></textarea>
-                  </div>
-
-                  <button class="button primary" id="saveECBtn" type="button" onclick="saveEmergencyContact()">Save
+                  </div> <button class="button primary" id="saveECBtn" type="button"
+                    onclick="saveEmergencyContact()">Save
                     Emergency Contact</button>
                   <button class="button danger hidden" id="deleteECBtn" type="button" onclick="deleteEmergencyContact()"
                     style="margin-left:10px;">Delete Emergency Contact</button>
                 </div>
               </div>
-
               <div class="card">
                 <div class="card-header">Current Emergency Contact</div>
                 <div class="card-body">
@@ -2218,7 +2064,6 @@
               </div>
             </div>
           </section>
-
           <section class="tab-panel" id="tab-history">
             <div class="card">
               <div class="card-header">Employee History</div>
@@ -2246,7 +2091,6 @@
                       <option value="LEAVE">Leave</option>
                     </select>
                   </div>
-
                   <div class="field">
                     <label for="employeeFirstNameInput">First Name</label>
                     <input id="employeeFirstNameInput" type="text" placeholder="First name" />
@@ -2255,7 +2099,6 @@
                     <label for="employeeLastNameInput">Last Name</label>
                     <input id="employeeLastNameInput" type="text" placeholder="Last name" />
                   </div>
-
                   <div class="field">
                     <label for="employeeDepartmentInput">Department</label>
                     <input id="employeeDepartmentInput" type="text" placeholder="Department" />
@@ -2264,7 +2107,6 @@
                     <label for="employeePositionInput">Position</label>
                     <input id="employeePositionInput" type="text" placeholder="Position" />
                   </div>
-
                   <div class="field">
                     <label for="employeeSupervisorInput">Supervisor</label>
                     <input id="employeeSupervisorInput" type="text" placeholder="Supervisor" />
@@ -2273,7 +2115,6 @@
                     <label for="employeePayTypeInput">Pay Type</label>
                     <input id="employeePayTypeInput" type="text" placeholder="Hourly, Salary, etc." />
                   </div>
-
                   <div class="field">
                     <label for="employeeStandardHoursInput">Standard Hours</label>
                     <input id="employeeStandardHoursInput" type="number" min="0" step="0.01" placeholder="40" />
@@ -2282,7 +2123,6 @@
                     <label for="employeeBenefitsStatusInput">Benefits Status</label>
                     <input id="employeeBenefitsStatusInput" type="text" placeholder="Benefits status" />
                   </div>
-
                   <div class="field">
                     <label for="employeeHireDateInput">Hire Date</label>
                     <input id="employeeHireDateInput" type="date" />
@@ -2291,7 +2131,6 @@
                     <label for="employeeNextReviewInput">Next Review Date</label>
                     <input id="employeeNextReviewInput" type="date" />
                   </div>
-
                   <div class="field">
                     <label for="employeeAnniversaryDateInput">Anniversary Date</label>
                     <input id="employeeAnniversaryDateInput" type="date" />
@@ -2301,7 +2140,6 @@
                     <input id="employeeTenureBracketInput" type="text" placeholder="0-6 months, 1-2 years, etc." />
                   </div>
                 </div>
-
                 <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px;">
                   <button class="button primary" id="saveEmployeeBtn" type="button" onclick="saveEmployeeRecord()">Save
                     Employee</button>
@@ -2310,61 +2148,48 @@
                   <button class="button danger" id="deleteEmployeeBtn" type="button"
                     onclick="runDeleteEmployee()">Delete Employee</button>
                 </div>
-
                 <div style="margin-top:20px; border-top:1px solid var(--line); padding-top:16px;">
                   <div style="font-weight:800; margin-bottom:10px; color:var(--navy);">
                     At-Risk Flag
                   </div>
-
                   <div class="field">
                     <label for="atRiskReasonInput">Reason for Flagging</label>
                     <textarea id="atRiskReasonInput" rows="4"
                       placeholder="Example: Employee seems disengaged, withdrawn, or showing behavioral changes..."></textarea>
                   </div>
-
                   <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button id="markAtRiskBtn" class="button warn" type="button">
                       Mark At-Risk
-                    </button>
-
-                    <button id="clearAtRiskBtn" class="button soft" type="button">
+                    </button> <button id="clearAtRiskBtn" class="button soft" type="button">
                       Remove At-Risk
                     </button>
                   </div>
-
                   <div class="muted" style="margin-top:8px;">
                     Use this when something feels off but is not captured in a formal review.
                   </div>
                 </div>
-
                 <div style="margin-top:20px; border-top:1px solid var(--line); padding-top:16px;">
                   <div style="font-weight:800; margin-bottom:10px; color:var(--navy);">
                     Impact Player Flag
                   </div>
-
                   <div class="field">
                     <label for="impactPlayerReasonInput">Reason for Recognition</label>
                     <textarea id="impactPlayerReasonInput" rows="4"
                       placeholder="Example: Consistently goes above and beyond, mentors others, high ownership, strong performance..."></textarea>
                   </div>
-
                   <div style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button id="markImpactPlayerBtn" class="button" type="button"
                       style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;">
                       Mark Impact Player
-                    </button>
-
-                    <button id="clearImpactPlayerBtn" class="button soft" type="button">
+                    </button> <button id="clearImpactPlayerBtn" class="button soft" type="button">
                       Remove Impact Player
                     </button>
                   </div>
-
                   <div class="muted" style="margin-top:8px;">
                     Use this when someone is making a noticeable positive impact that deserves recognition beyond scores
                     alone.
                   </div>
                 </div>
-
                 <div class="muted" style="margin-top:10px;">
                   Authorized users can create, update, and delete employee records from here.
                 </div>
@@ -2373,16 +2198,12 @@
           </section>
         </div>
       </aside>
-
     </div>
   </div>
-
   <div class="toast-wrap" id="toastWrap"></div>
   <div id="printArea" class="hidden">
     <div id="printContent"></div>
-  </div>
-
-  <!-- =====================================================
+  </div> <!-- =====================================================
        ORBIS SCRIPT LOADING ORDER
        1. Utilities/helpers
        2. Services/database clients
@@ -2390,174 +2211,26 @@
        4. UI helpers
        5. Main app bootstrap
        Keep this order so shared functions exist before modules use them.
-  ====================================================== -->
-
-
-
-  <!-- 6. App Bootstrap -->
-
-
-  <script>
-
-    function initSig(canvasId, statusId) {
-
+  ====================================================== --> <!-- 6. App Bootstrap -->
+  <script>    function initSig(canvasId, statusId) {
       const canvas = document.getElementById(canvasId);
       if (!canvas) return;
       if (canvas.dataset.sigInitialized === "true") return;
       canvas.dataset.sigInitialized = "true";
-      const ctx = canvas.getContext('2d');
-
-      let drawing = false;
-
-      const rect = () => canvas.getBoundingClientRect();
-
-      function getPos(e) {
-
-        const r = rect();
-
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left;
-
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top;
-
-        return { x, y };
-
-      }
-
-      canvas.addEventListener('mousedown', e => {
-
-        drawing = true;
-
-        const p = getPos(e);
-
-        ctx.beginPath();
-
-        ctx.moveTo(p.x, p.y);
-
-      });
-
-      canvas.addEventListener('mousemove', e => {
-
-        if (!drawing) return;
-
-        const p = getPos(e);
-
-        ctx.lineTo(p.x, p.y);
-
-        ctx.stroke();
-
-      });
-
-      window.addEventListener('mouseup', () => {
-
-        if (drawing) {
-
-          drawing = false;
-
-          canvas.dataset.signature = canvas.toDataURL();
-
-          document.getElementById(statusId).textContent = "Signed";
-
-          document.getElementById(statusId).style.color = "green";
-
-        }
-
-      });
-
-      canvas.addEventListener('touchstart', e => {
-
-        drawing = true;
-
-        const p = getPos(e);
-
-        ctx.beginPath();
-
-        ctx.moveTo(p.x, p.y);
-
-      });
-
-      canvas.addEventListener('touchmove', e => {
-
-        if (!drawing) return;
-
-        e.preventDefault();
-
-        const p = getPos(e);
-
-        ctx.lineTo(p.x, p.y);
-
-        ctx.stroke();
-
-      });
-
-      canvas.addEventListener('touchend', () => {
-
-        drawing = false;
-
-        canvas.dataset.signature = canvas.toDataURL();
-
-        document.getElementById(statusId).textContent = "Signed";
-
-        document.getElementById(statusId).style.color = "green";
-
-      });
-
-    }
-
-    function clearSig(canvasId, statusId) {
-
-      const canvas = document.getElementById(canvasId);
-
-      const ctx = canvas.getContext('2d');
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      canvas.dataset.signature = "";
-
-      document.getElementById(statusId).textContent = "Not signed";
-
-      document.getElementById(statusId).style.color = "#667085";
-
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-
+      const ctx = canvas.getContext('2d'); let drawing = false; const rect = () => canvas.getBoundingClientRect(); function getPos(e) { const r = rect(); const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left; const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top; return { x, y }; } canvas.addEventListener('mousedown', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }); canvas.addEventListener('mousemove', e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }); window.addEventListener('mouseup', () => { if (drawing) { drawing = false; canvas.dataset.signature = canvas.toDataURL(); document.getElementById(statusId).textContent = "Signed"; document.getElementById(statusId).style.color = "green"; } }); canvas.addEventListener('touchstart', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }); canvas.addEventListener('touchmove', e => { if (!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }); canvas.addEventListener('touchend', () => { drawing = false; canvas.dataset.signature = canvas.toDataURL(); document.getElementById(statusId).textContent = "Signed"; document.getElementById(statusId).style.color = "green"; });
+    } function clearSig(canvasId, statusId) { const canvas = document.getElementById(canvasId); const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.dataset.signature = ""; document.getElementById(statusId).textContent = "Not signed"; document.getElementById(statusId).style.color = "#667085"; } document.addEventListener("DOMContentLoaded", () => { initSig("disciplineEmployeeSignature", "disciplineEmployeeSigStatus"); initSig("disciplineManagerSignature", "disciplineManagerSigStatus"); initSig("disciplineWitnessSignature", "disciplineWitnessSigStatus"); });    // Re-init signature pads only when the Discipline tab is opened.    document.addEventListener("click", (e) => {
+    const tabBtn = e.target.closest(".tab-btn"); if (!tabBtn) return;
+    if (tabBtn.dataset.tab !== "discipline") return; setTimeout(() => {
       initSig("disciplineEmployeeSignature", "disciplineEmployeeSigStatus");
-
       initSig("disciplineManagerSignature", "disciplineManagerSigStatus");
-
       initSig("disciplineWitnessSignature", "disciplineWitnessSigStatus");
-
-    });
-
-    // Re-init signature pads only when the Discipline tab is opened.
-
-    document.addEventListener("click", (e) => {
-      const tabBtn = e.target.closest(".tab-btn");
-
-      if (!tabBtn) return;
-      if (tabBtn.dataset.tab !== "discipline") return;
-
-      setTimeout(() => {
-        initSig("disciplineEmployeeSignature", "disciplineEmployeeSigStatus");
-        initSig("disciplineManagerSignature", "disciplineManagerSigStatus");
-        initSig("disciplineWitnessSignature", "disciplineWitnessSigStatus");
-      }, 200);
-    });
-
-  </script>
-
-  <!-- 1. Utilities -->
-  <script src="js/utils/helpers.js"></script>
-
-  <!-- 2. Services -->
-  <script src="js/services/supabaseClient.js"></script>
-
-  <!-- 3. Core Foundation -->
+    }, 200);
+    });  </script> <!-- 1. Utilities -->
+  <script src="js/utils/helpers.js"></script> <!-- 2. Services -->
+  <script src="js/services/supabaseClient.js"></script> <!-- 3. Core Foundation -->
   <script src="js/core/auth.js"></script>
   <script src="js/core/permissions.js"></script>
-  <script src="js/core/state.js"></script>
-
-  <!-- 4. Feature Modules -->
+  <script src="js/core/state.js"></script> <!-- 4. Feature Modules -->
   <script src="js/modules/employees.js"></script>
   <script src="js/modules/notes.js"></script>
   <script src="js/modules/meetings.js"></script>
@@ -2566,20 +2239,14 @@
   <script src="js/modules/reviews.js"></script>
   <script src="js/modules/emergencycontacts.js"></script>
   <script src="js/modules/candidates.js"></script>
-  <script src="js/modules/onboarding.js"></script>
-
-  <!-- 5. UI Layer -->
+  <script src="js/modules/onboarding.js"></script> <!-- 5. UI Layer -->
   <script src="js/ui/employeeForm.js"></script>
   <script src="js/ui/employeeRoster.js"></script>
   <script src="js/ui/badges.js"></script>
   <script src="js/ui/kpis.js"></script>
   <script src="js/ui/history.js"></script>
-  <script src="js/ui/drawer.js"></script>
-
-  <!-- 6. App Bootstrap -->
+  <script src="js/ui/drawer.js"></script> <!-- 6. App Bootstrap -->
   <script src="js/app.js"></script>
-
-
 </body>
 
 </html>

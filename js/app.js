@@ -61,19 +61,11 @@ window.addEventListener('DOMContentLoaded', () => {
     safeGet('globalSearch')?.addEventListener('input', renderRoster);
     safeGet('deptFilter')?.addEventListener('change', renderRoster);
     safeGet('statusFilter')?.addEventListener('change', renderRoster);
-    if (typeof window.bindDrawerEvents === 'function') {
-
-        window.bindDrawerEvents();
-
-    }
+    if (typeof window.bindDrawerEvents === 'function') { window.bindDrawerEvents(); }
     const backdrop = safeGet('drawerBackdrop');
     if (backdrop) {
         backdrop.addEventListener('click', () => {
-            if (typeof window.closeDrawer === 'function') {
-
-                window.closeDrawer();
-
-            }
+            if (typeof window.closeDrawer === 'function') { window.closeDrawer(); }
         });
     }
     if (typeof loadAllDashboardData === 'function') {
@@ -88,21 +80,7 @@ let currentCandidate = null;
 let isCreatingCandidate = false;
 let currentFilteredEmployees = [];
 let currentEmployee = null;
-window.currentEmployee = window.currentEmployee || null;
-
-window.setCurrentEmployeeForOrbis = function (employee) {
-
-    currentEmployee = employee || null;
-
-    window.currentEmployee = currentEmployee;
-
-};
-
-function getCurrentEmployeeForOrbis() {
-
-    return currentEmployee || window.currentEmployee || null;
-
-}
+window.currentEmployee = window.currentEmployee || null; window.setCurrentEmployeeForOrbis = function (employee) { currentEmployee = employee || null; window.currentEmployee = currentEmployee; }; function getCurrentEmployeeForOrbis() { return currentEmployee || window.currentEmployee || null; }
 let currentDisciplineReportId = null;
 let currentNoteId = null;
 let currentMeetingId = null;
@@ -120,14 +98,7 @@ let currentUserAccess = null;
 let currentManualAtRiskState = { flagged: false, reason: '' };
 let currentAtRiskRosterMap = {};
 let currentManualImpactPlayerState = { flagged: false, reason: '' };
-let currentImpactPlayerRosterMap = {};
-
-window.currentAtRiskRosterMap = currentAtRiskRosterMap;
-
-window.currentImpactPlayerRosterMap = currentImpactPlayerRosterMap;
-
-
-// Shared helper, formatting, toast, and print functions now live in:
+let currentImpactPlayerRosterMap = {}; window.currentAtRiskRosterMap = currentAtRiskRosterMap; window.currentImpactPlayerRosterMap = currentImpactPlayerRosterMap;// Shared helper, formatting, toast, and print functions now live in:
 // js/utils/helpers.js
 // =========================
 // UI / NAVIGATION
@@ -252,11 +223,7 @@ async function runDeleteEmployee() {
     await loadEmployees();
     await loadSummaryMetrics();
     await loadReviewDashboard();
-    if (typeof window.closeDrawer === 'function') {
-
-        window.closeDrawer();
-
-    }
+    if (typeof window.closeDrawer === 'function') { window.closeDrawer(); }
 }
 async function runTerminateEmployee() {
     if (!currentEmployee) {
@@ -294,11 +261,7 @@ async function runTerminateEmployee() {
     await loadEmployees();
     await loadSummaryMetrics();
     await loadReviewDashboard();
-    if (typeof window.closeDrawer === 'function') {
-
-        window.closeDrawer();
-
-    }
+    if (typeof window.closeDrawer === 'function') { window.closeDrawer(); }
 }
 window.runTerminateEmployee = runTerminateEmployee;
 async function updateEmployeeById(employeeId, payload) {
@@ -327,21 +290,7 @@ async function updateEmployeeById(employeeId, payload) {
     delete cleanPayload.benefitsStatus;
     delete cleanPayload.first;
     delete cleanPayload.last;
-    delete cleanPayload.dept;
-
-    if (Object.prototype.hasOwnProperty.call(cleanPayload, 'first_name')) {
-
-        cleanPayload.first_name = cleanEmployeeNameValue(cleanPayload.first_name);
-
-    }
-
-    if (Object.prototype.hasOwnProperty.call(cleanPayload, 'last_name')) {
-
-        cleanPayload.last_name = cleanEmployeeNameValue(cleanPayload.last_name);
-
-    }
-
-    const { data, error } = await db
+    delete cleanPayload.dept; if (Object.prototype.hasOwnProperty.call(cleanPayload, 'first_name')) { cleanPayload.first_name = cleanEmployeeNameValue(cleanPayload.first_name); } if (Object.prototype.hasOwnProperty.call(cleanPayload, 'last_name')) { cleanPayload.last_name = cleanEmployeeNameValue(cleanPayload.last_name); } const { data, error } = await db
         .from('employees')
         .update(cleanPayload)
         .eq('id', targetId)
@@ -483,63 +432,7 @@ function resetDrawerForms() {
     safeGet('meetingEditStatus')?.classList.add('hidden');
     safeGet('cancelReviewEditBtn')?.classList.add('hidden');
     safeGet('reviewEditStatus')?.classList.add('hidden');
-}
-
-function cleanEmployeeNameValue(value) {
-
-    return String(value || '')
-
-        .replace(/\bAt[-\s]*Risk\b/gi, '')
-
-        .replace(/\bImpact\b/gi, '')
-
-        .replace(/\s+/g, ' ')
-
-        .trim();
-
-}
-
-function sanitizeVisibleEmployeeNameFields() {
-
-    const ids = [
-
-        'empFirstName',
-
-        'firstName',
-
-        'employeeFirstName',
-
-        'empLastName',
-
-        'lastName',
-
-        'employeeLastName'
-
-    ];
-
-    ids.forEach(id => {
-
-        const field = safeGet(id);
-
-        if (!field || typeof field.value !== 'string') return;
-
-        const cleaned = cleanEmployeeNameValue(field.value);
-
-        if (field.value !== cleaned) {
-
-            field.value = cleaned;
-
-            field.dispatchEvent(new Event('input', { bubbles: true }));
-
-            field.dispatchEvent(new Event('change', { bubbles: true }));
-
-        }
-
-    });
-
-}
-
-function normalizeEmployee(employee) {
+} function cleanEmployeeNameValue(value) { return String(value || '').replace(/\bAt[-\s]*Risk\b/gi, '').replace(/\bImpact\b/gi, '').replace(/\s+/g, ' ').trim(); } function sanitizeVisibleEmployeeNameFields() { const ids = ['empFirstName', 'firstName', 'employeeFirstName', 'empLastName', 'lastName', 'employeeLastName']; ids.forEach(id => { const field = safeGet(id); if (!field || typeof field.value !== 'string') return; const cleaned = cleanEmployeeNameValue(field.value); if (field.value !== cleaned) { field.value = cleaned; field.dispatchEvent(new Event('input', { bubbles: true })); field.dispatchEvent(new Event('change', { bubbles: true })); } }); } function normalizeEmployee(employee) {
     if (!employee)
         return null;
     const first = cleanEmployeeNameValue(employee.first || employee.first_name || '');
@@ -1126,14 +1019,10 @@ async function loadAllDashboardData() {
             loadCandidates(),
             loadSummaryMetrics(),
             loadRecentActivity()
-        ]);
-
-        if (typeof loadReviewDashboard === 'function') await loadReviewDashboard();
+        ]); if (typeof loadReviewDashboard === 'function') await loadReviewDashboard();
         if (typeof loadExecutiveInsight === 'function') await loadExecutiveInsight();
         if (typeof loadRiskEmployees === 'function') await loadRiskEmployees();
-        if (typeof loadImpactPlayers === 'function') await loadImpactPlayers();
-
-        setText('lastRefresh', new Date().toLocaleTimeString('en-US', {
+        if (typeof loadImpactPlayers === 'function') await loadImpactPlayers(); setText('lastRefresh', new Date().toLocaleTimeString('en-US', {
             hour: 'numeric',
             minute: '2-digit'
         }));
@@ -2000,37 +1889,13 @@ async function loadSummaryMetrics() {
                 .select('employee_id, note_type, note_text, note_date, created_at')
                 .in('note_type', ['Impact Player Flag', 'Impact Player Cleared'])
                 .order('created_at', { ascending: false })
-        ]);
-
-        const reviewRiskEmployeeIds = new Set();
+        ]); const reviewRiskEmployeeIds = new Set();
         const incidentRiskEmployeeIds = new Set();
         const manualRiskEmployeeIds = new Set();
         const disciplineRiskEmployeeIds = new Set();
         if (!disciplineRes.error) {
             const openDisciplineCases = (disciplineRes.data || []).filter(row => String(row.report_status || '').trim().toLowerCase() !== 'closed');
-            openDisciplineCases.forEach(row => {
-
-                const employeeId = String(row.employee_id || '');
-
-                const level = String(row.discipline_level || '').trim().toLowerCase();
-
-                const isAtRiskLevel =
-
-                    level.includes('written warning') ||
-
-                    level.includes('final warning') ||
-
-                    level.startsWith('level 3') ||
-
-                    level.startsWith('level 4');
-
-                if (employeeId && isAtRiskLevel) {
-
-                    disciplineRiskEmployeeIds.add(employeeId);
-
-                }
-
-            });
+            openDisciplineCases.forEach(row => { const employeeId = String(row.employee_id || ''); const level = String(row.discipline_level || '').trim().toLowerCase(); const isAtRiskLevel = level.includes('written warning') || level.includes('final warning') || level.startsWith('level 3') || level.startsWith('level 4'); if (employeeId && isAtRiskLevel) { disciplineRiskEmployeeIds.add(employeeId); } });
             const openCount = openDisciplineCases.length;
             setText('kOpenDiscipline', openCount);
             const disciplineCard = document.getElementById('cardOpenDiscipline');
@@ -2110,9 +1975,7 @@ async function loadSummaryMetrics() {
             console.error(incidentsRes.error);
         }
         if (!manualRiskRes.error) {
-            const latestManualRiskByEmployee = {};
-
-            Object.keys(currentAtRiskRosterMap).forEach(key => {
+            const latestManualRiskByEmployee = {}; Object.keys(currentAtRiskRosterMap).forEach(key => {
                 const existing = currentAtRiskRosterMap[key];
                 currentAtRiskRosterMap[key] = {
                     ...existing,
@@ -2120,25 +1983,15 @@ async function loadSummaryMetrics() {
                     reviewScore: null,
                     openIncidentCount: 0
                 };
-            });
-
-            (manualRiskRes.data || []).forEach(row => {
+            }); (manualRiskRes.data || []).forEach(row => {
                 const employeeId = String(row.employee_id || '');
-                if (!employeeId) return;
-
-                // Because the query is ordered newest first, the first row per employee is the current manual status.
+                if (!employeeId) return;                // Because the query is ordered newest first, the first row per employee is the current manual status.
                 if (!latestManualRiskByEmployee[employeeId]) {
                     latestManualRiskByEmployee[employeeId] = row;
                 }
-            });
-
-            Object.entries(latestManualRiskByEmployee).forEach(([employeeId, row]) => {
-                const latestType = String(row.note_type || '').trim();
-
-                if (latestType === 'At-Risk Flag') {
-                    manualRiskEmployeeIds.add(employeeId);
-
-                    currentAtRiskRosterMap[employeeId] = {
+            }); Object.entries(latestManualRiskByEmployee).forEach(([employeeId, row]) => {
+                const latestType = String(row.note_type || '').trim(); if (latestType === 'At-Risk Flag') {
+                    manualRiskEmployeeIds.add(employeeId); currentAtRiskRosterMap[employeeId] = {
                         ...(currentAtRiskRosterMap[employeeId] || {}),
                         manualReason: String(row.note_text || '').trim(),
                         lowReview: currentAtRiskRosterMap[employeeId]?.lowReview === true,
@@ -2153,21 +2006,15 @@ async function loadSummaryMetrics() {
                         currentAtRiskRosterMap[employeeId].manualReason = '';
                         currentAtRiskRosterMap[employeeId].flaggedDate = '';
                         currentAtRiskRosterMap[employeeId].flaggedBy = '';
-                    }
-
-                    const meta = currentAtRiskRosterMap[employeeId];
+                    } const meta = currentAtRiskRosterMap[employeeId];
                     const stillHasReviewOrIncidentRisk = !!meta && (
                         meta.lowReview === true ||
                         Number(meta.openIncidentCount || 0) > 0
-                    );
-
-                    if (!stillHasReviewOrIncidentRisk) {
+                    ); if (!stillHasReviewOrIncidentRisk) {
                         delete currentAtRiskRosterMap[employeeId];
                     }
                 }
-            });
-
-            Object.entries(latestReviewByEmployee).forEach(([employeeId, item]) => {
+            }); Object.entries(latestReviewByEmployee).forEach(([employeeId, item]) => {
                 if (item.avgScore !== null && item.avgScore <= 3) {
                     if (!currentAtRiskRosterMap[employeeId]) {
                         currentAtRiskRosterMap[employeeId] = {
@@ -2182,9 +2029,7 @@ async function loadSummaryMetrics() {
                     currentAtRiskRosterMap[employeeId].lowReview = true;
                     currentAtRiskRosterMap[employeeId].reviewScore = item.avgScore;
                 }
-            });
-
-            incidentRiskEmployeeIds.forEach(employeeId => {
+            }); incidentRiskEmployeeIds.forEach(employeeId => {
                 if (!currentAtRiskRosterMap[employeeId]) {
                     currentAtRiskRosterMap[employeeId] = {
                         manualReason: '',
@@ -2197,11 +2042,7 @@ async function loadSummaryMetrics() {
                 }
                 currentAtRiskRosterMap[employeeId].openIncidentCount =
                     (currentAtRiskRosterMap[employeeId].openIncidentCount || 0) + 1;
-            });
-
-            window.currentAtRiskRosterMap = currentAtRiskRosterMap;
-
-            if (Array.isArray(EMPLOYEES) && EMPLOYEES.length) {
+            }); window.currentAtRiskRosterMap = currentAtRiskRosterMap; if (Array.isArray(EMPLOYEES) && EMPLOYEES.length) {
                 renderRoster();
             }
         }
@@ -2824,15 +2665,7 @@ async function loadEmployeeManualAtRisk(employeeId) {
     setManualAtRiskUi(true, latest.note_text || '');
 }
 async function markEmployeeAtRisk() {
-    currentEmployee = getCurrentEmployeeForOrbis();
-
-    if (!currentEmployee) {
-
-        showToast('Open an employee first.', 'error');
-
-        return;
-
-    }
+    currentEmployee = getCurrentEmployeeForOrbis(); if (!currentEmployee) { showToast('Open an employee first.', 'error'); return; }
     const reason = String(safeGet('atRiskReasonInput')?.value || '').trim();
     if (!reason) {
         showToast('Enter a reason before marking the employee at-risk.', 'error');
@@ -2885,75 +2718,41 @@ async function markEmployeeAtRisk() {
     updateEmployeeRowBadges(currentEmployee.id);
 }
 async function clearAtRiskStatus() {
-    currentEmployee = getCurrentEmployeeForOrbis();
-
-    if (!currentEmployee) {
-
-        showToast('Open an employee first.', 'error');
-
-        return;
-
-    }
-
-    const employeeDbId = String(currentEmployee.dbId || currentEmployee.id);
-    const noteText = String(safeGet('atRiskReasonInput')?.value || '').trim() || 'Manual at-risk flag cleared';
-
-    const { error } = await supabaseClient
+    currentEmployee = getCurrentEmployeeForOrbis(); if (!currentEmployee) { showToast('Open an employee first.', 'error'); return; } const employeeDbId = String(currentEmployee.dbId || currentEmployee.id);
+    const noteText = String(safeGet('atRiskReasonInput')?.value || '').trim() || 'Manual at-risk flag cleared'; const { error } = await supabaseClient
         .from('employee_notes')
         .insert([{
             employee_id: employeeDbId,
             note_date: todayInputValue(),
             note_type: 'At-Risk Cleared',
             note_text: noteText
-        }]);
-
-    if (error) {
-        console.error(error);
-        showToast('Could not clear at-risk flag.', 'error');
-        return;
-    }
-
-    showToast('At-risk flag cleared.');
+        }]); if (error) {
+            console.error(error);
+            showToast('Could not clear at-risk flag.', 'error');
+            return;
+        } showToast('At-risk flag cleared.');
     recordAuditEvent('Cleared At-Risk', currentEmployee, noteText);
-    setManualAtRiskUi(false, '');
-
-    const riskKeys = [
+    setManualAtRiskUi(false, ''); const riskKeys = [
         currentEmployee.dbId,
         currentEmployee.id,
         currentEmployee.employee_id,
         currentEmployee.displayId,
         employeeDbId
-    ].filter(Boolean).map(String);
-
-    window.currentAtRiskRosterMap = window.currentAtRiskRosterMap || currentAtRiskRosterMap || {};
-
-    riskKeys.forEach(key => {
+    ].filter(Boolean).map(String); window.currentAtRiskRosterMap = window.currentAtRiskRosterMap || currentAtRiskRosterMap || {}; riskKeys.forEach(key => {
         delete currentAtRiskRosterMap[key];
         delete window.currentAtRiskRosterMap[key];
-    });
-
-    if (typeof loadEmployeeNotes === 'function') {
+    }); if (typeof loadEmployeeNotes === 'function') {
         await loadEmployeeNotes(currentEmployee.id);
-    }
-
-    if (typeof loadSummaryMetrics === 'function') {
+    } if (typeof loadSummaryMetrics === 'function') {
         await loadSummaryMetrics();
-    }
-
-    riskKeys.forEach(key => {
+    } riskKeys.forEach(key => {
         delete currentAtRiskRosterMap[key];
         delete window.currentAtRiskRosterMap[key];
-    });
-
-    if (typeof loadRiskEmployees === 'function') {
+    }); if (typeof loadRiskEmployees === 'function') {
         await loadRiskEmployees();
-    }
-
-    if (typeof renderRoster === 'function') {
+    } if (typeof renderRoster === 'function') {
         renderRoster();
-    }
-
-    updateEmployeeRowBadges(currentEmployee.id);
+    } updateEmployeeRowBadges(currentEmployee.id);
 }
 function setManualImpactPlayerUi(flagged, reason = '') {
     currentManualImpactPlayerState = {
@@ -2990,15 +2789,7 @@ async function loadEmployeeManualImpactPlayer(employeeId) {
     setManualImpactPlayerUi(true, latest.note_text || '');
 }
 async function markImpactPlayer() {
-    currentEmployee = getCurrentEmployeeForOrbis();
-
-    if (!currentEmployee) {
-
-        showToast('Open an employee first.', 'error');
-
-        return;
-
-    }
+    currentEmployee = getCurrentEmployeeForOrbis(); if (!currentEmployee) { showToast('Open an employee first.', 'error'); return; }
     const reason = String(safeGet('impactPlayerReasonInput')?.value || '').trim();
     if (!reason) {
         showToast('Enter a reason before marking the employee as an Impact Player.', 'error');
@@ -3048,15 +2839,7 @@ async function markImpactPlayer() {
     updateEmployeeRowBadges(currentEmployee.id);
 }
 async function clearImpactPlayerStatus() {
-    currentEmployee = getCurrentEmployeeForOrbis();
-
-    if (!currentEmployee) {
-
-        showToast('Open an employee first.', 'error');
-
-        return;
-
-    }
+    currentEmployee = getCurrentEmployeeForOrbis(); if (!currentEmployee) { showToast('Open an employee first.', 'error'); return; }
     const employeeDbId = currentEmployee.dbId || currentEmployee.id;
     const noteText = String(safeGet('impactPlayerReasonInput')?.value || '').trim() || 'Manual Impact Player flag cleared';
     const { error } = await supabaseClient
@@ -3784,27 +3567,13 @@ async function loadStayInterviews(employeeId) {
         </div>
         <div class="history-body">
           <strong>What do you look forward to each day?</strong><br>
-          ${nl2br(row.q1 || '—')}<br><br>
-
-          <strong>What is going well right now?</strong><br>
-          ${nl2br(row.q2 || '—')}<br><br>
-
-          <strong>Frustrations, obstacles, or stress points</strong><br>
-          ${nl2br(row.q3 || '—')}<br><br>
-
-          <strong>What would make the job easier or more satisfying?</strong><br>
-          ${nl2br(row.q4 || '—')}<br><br>
-
-          <strong>Support from supervisor and team</strong><br>
-          ${nl2br(row.q5 || '—')}<br><br>
-
-          <strong>What might cause them to leave?</strong><br>
-          ${nl2br(row.q6 || '—')}<br><br>
-
-          <strong>What can we do to help them stay and succeed?</strong><br>
-              ${nl2br(row.q7 || '—')}<br><br>
-
-              <strong>HR / Manager Summary</strong><br>
+          ${nl2br(row.q1 || '—')}<br><br>          <strong>What is going well right now?</strong><br>
+          ${nl2br(row.q2 || '—')}<br><br>          <strong>Frustrations, obstacles, or stress points</strong><br>
+          ${nl2br(row.q3 || '—')}<br><br>          <strong>What would make the job easier or more satisfying?</strong><br>
+          ${nl2br(row.q4 || '—')}<br><br>          <strong>Support from supervisor and team</strong><br>
+          ${nl2br(row.q5 || '—')}<br><br>          <strong>What might cause them to leave?</strong><br>
+          ${nl2br(row.q6 || '—')}<br><br>          <strong>What can we do to help them stay and succeed?</strong><br>
+              ${nl2br(row.q7 || '—')}<br><br>              <strong>HR / Manager Summary</strong><br>
               ${nl2br(row.manager_summary || '—')}
             </div>
             <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
@@ -4262,4 +4031,3 @@ async function saveReviewRecord() {
         await loadEmployeeReviews(employeeId);
     }
 }
-
