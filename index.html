@@ -8,6 +8,10 @@
   <link rel="icon" href="data:,">
   <link rel="stylesheet" href="js/css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js/dist/umd/supabase.min.js"></script>
+  <script>
+    window.SUPABASE_URL = 'https://fxljbnyarfwnqgheywgw.supabase.co';
+    window.SUPABASE_ANON_KEY = 'sb_publishable_IGkemOMHLAk6X1UzqSxH-w_PUq3nSwi';
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -2212,20 +2216,151 @@
        5. Main app bootstrap
        Keep this order so shared functions exist before modules use them.
   ====================================================== --> <!-- 6. App Bootstrap -->
-  <script>    function initSig(canvasId, statusId) {
+  <script>
+
+    function initSig(canvasId, statusId) {
+
       const canvas = document.getElementById(canvasId);
+
+      const status = document.getElementById(statusId);
+
       if (!canvas) return;
-      if (canvas.dataset.sigInitialized === "true") return;
-      canvas.dataset.sigInitialized = "true";
-      const ctx = canvas.getContext('2d'); let drawing = false; const rect = () => canvas.getBoundingClientRect(); function getPos(e) { const r = rect(); const x = (e.touches ? e.touches[0].clientX : e.clientX) - r.left; const y = (e.touches ? e.touches[0].clientY : e.clientY) - r.top; return { x, y }; } canvas.addEventListener('mousedown', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }); canvas.addEventListener('mousemove', e => { if (!drawing) return; const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }); window.addEventListener('mouseup', () => { if (drawing) { drawing = false; canvas.dataset.signature = canvas.toDataURL(); document.getElementById(statusId).textContent = "Signed"; document.getElementById(statusId).style.color = "green"; } }); canvas.addEventListener('touchstart', e => { drawing = true; const p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); }); canvas.addEventListener('touchmove', e => { if (!drawing) return; e.preventDefault(); const p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); }); canvas.addEventListener('touchend', () => { drawing = false; canvas.dataset.signature = canvas.toDataURL(); document.getElementById(statusId).textContent = "Signed"; document.getElementById(statusId).style.color = "green"; });
-    } function clearSig(canvasId, statusId) { const canvas = document.getElementById(canvasId); const ctx = canvas.getContext('2d'); ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.dataset.signature = ""; document.getElementById(statusId).textContent = "Not signed"; document.getElementById(statusId).style.color = "#667085"; } document.addEventListener("DOMContentLoaded", () => { initSig("disciplineEmployeeSignature", "disciplineEmployeeSigStatus"); initSig("disciplineManagerSignature", "disciplineManagerSigStatus"); initSig("disciplineWitnessSignature", "disciplineWitnessSigStatus"); });    // Re-init signature pads only when the Discipline tab is opened.    document.addEventListener("click", (e) => {
-    const tabBtn = e.target.closest(".tab-btn"); if (!tabBtn) return;
-    if (tabBtn.dataset.tab !== "discipline") return; setTimeout(() => {
-      initSig("disciplineEmployeeSignature", "disciplineEmployeeSigStatus");
-      initSig("disciplineManagerSignature", "disciplineManagerSigStatus");
-      initSig("disciplineWitnessSignature", "disciplineWitnessSigStatus");
-    }, 200);
-    });  </script> <!-- 1. Utilities -->
+
+      if (canvas.dataset.sigInitialized === 'true') return;
+
+      canvas.dataset.sigInitialized = 'true';
+
+      const ctx = canvas.getContext('2d');
+
+      let drawing = false;
+
+      function getPos(event) {
+
+        const rect = canvas.getBoundingClientRect();
+
+        const point = event.touches ? event.touches[0] : event;
+
+        return {
+
+          x: point.clientX - rect.left,
+
+          y: point.clientY - rect.top
+
+        };
+
+      }
+
+      function startDrawing(event) {
+
+        drawing = true;
+
+        const pos = getPos(event);
+
+        ctx.beginPath();
+
+        ctx.moveTo(pos.x, pos.y);
+
+      }
+
+      function draw(event) {
+
+        if (!drawing) return;
+
+        if (event.touches) {
+
+          event.preventDefault();
+
+        }
+
+        const pos = getPos(event);
+
+        ctx.lineTo(pos.x, pos.y);
+
+        ctx.stroke();
+
+      }
+
+      function stopDrawing() {
+
+        if (!drawing) return;
+
+        drawing = false;
+
+        canvas.dataset.signature = canvas.toDataURL();
+
+        if (status) {
+
+          status.textContent = 'Signed';
+
+          status.style.color = 'green';
+
+        }
+
+      }
+
+      canvas.addEventListener('mousedown', startDrawing);
+
+      canvas.addEventListener('mousemove', draw);
+
+      window.addEventListener('mouseup', stopDrawing);
+
+      canvas.addEventListener('touchstart', startDrawing);
+
+      canvas.addEventListener('touchmove', draw);
+
+      canvas.addEventListener('touchend', stopDrawing);
+
+    }
+
+    function clearSig(canvasId, statusId) {
+
+      const canvas = document.getElementById(canvasId);
+
+      const status = document.getElementById(statusId);
+
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      canvas.dataset.signature = '';
+
+      if (status) {
+
+        status.textContent = 'Not signed';
+
+        status.style.color = '#667085';
+
+      }
+
+    }
+
+    function initDisciplineSignaturePads() {
+
+      initSig('disciplineEmployeeSignature', 'disciplineEmployeeSigStatus');
+
+      initSig('disciplineManagerSignature', 'disciplineManagerSigStatus');
+
+      initSig('disciplineWitnessSignature', 'disciplineWitnessSigStatus');
+
+    }
+
+    document.addEventListener('DOMContentLoaded', initDisciplineSignaturePads);
+
+    document.addEventListener('click', (event) => {
+
+      const tabBtn = event.target.closest('.tab-btn');
+
+      if (!tabBtn) return;
+
+      if (tabBtn.dataset.tab !== 'discipline') return;
+
+      setTimeout(initDisciplineSignaturePads, 200);
+
+    });
+
+  </script> <!-- 1. Utilities -->
   <script src="js/utils/helpers.js"></script> <!-- 2. Services -->
   <script src="js/services/supabaseClient.js"></script> <!-- 3. Core Foundation -->
   <script src="js/core/auth.js"></script>

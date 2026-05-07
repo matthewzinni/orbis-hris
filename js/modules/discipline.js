@@ -1,4 +1,6 @@
+
 // Local fallback helpers for discipline operations
+
 async function disciplineFetchByEmployee(employeeId) {
     if (typeof getEmployeeDiscipline === 'function') {
         return await getEmployeeDiscipline(employeeId);
@@ -7,12 +9,17 @@ async function disciplineFetchByEmployee(employeeId) {
         return await window.getEmployeeDiscipline(employeeId);
     }
     const targetId = currentEmployee?.dbId || employeeId;
-    if (!targetId) return { data: [], error: null }; return await supabaseClient
+    if (!targetId) {
+        return { data: [], error: null };
+    }
+    return await supabaseClient
         .from('discipline_reports')
         .select('*')
         .eq('employee_id', targetId)
         .order('incident_date', { ascending: false });
-} async function disciplineDeleteById(recordId) {
+}
+
+async function disciplineDeleteById(recordId) {
     if (typeof deleteDisciplineById === 'function') {
         return await deleteDisciplineById(recordId);
     }
@@ -23,59 +30,75 @@ async function disciplineFetchByEmployee(employeeId) {
         .from('discipline_reports')
         .delete()
         .eq('id', recordId);
-} function disciplineLevelShouldAutoFlagAtRisk(level) {
+}
+
+function disciplineLevelShouldAutoFlagAtRisk(level) {
     const normalized = String(level || '').toLowerCase();
-    return normalized.includes('written warning') ||
+    return (
+        normalized.includes('written warning') ||
         normalized.includes('final warning') ||
         normalized.startsWith('level 3') ||
-        normalized.startsWith('level 4');
-} async function autoFlagAtRiskFromDiscipline(employeeId, disciplineData = {}) {
+        normalized.startsWith('level 4')
+    );
+}
+
+async function autoFlagAtRiskFromDiscipline(employeeId, disciplineData = {}) {
     if (!employeeId) return;
-    if (!disciplineLevelShouldAutoFlagAtRisk(disciplineData.discipline_level)) return; try {
+    if (!disciplineLevelShouldAutoFlagAtRisk(disciplineData.discipline_level)) return;
+    try {
         const { data: latestRiskNotes, error: latestRiskError } = await supabaseClient
             .from('employee_notes')
             .select('id, note_type, note_text, note_date, created_at')
             .eq('employee_id', employeeId)
             .in('note_type', ['At-Risk Flag', 'At-Risk Cleared'])
             .order('created_at', { ascending: false })
-            .limit(1); if (latestRiskError) {
-                console.warn('Could not check latest at-risk status before auto-flagging.', latestRiskError);
-            } const latestRiskNote = latestRiskNotes?.[0] || null;
+            .limit(1);
+        if (latestRiskError) {
+            console.warn('Could not check latest at-risk status before auto-flagging.', latestRiskError);
+        }
+        const latestRiskNote = latestRiskNotes?.[0] || null;
         if (latestRiskNote?.note_type === 'At-Risk Flag') {
             return;
-        } const levelText = String(disciplineData.discipline_level || '').trim();
+        }
+        const levelText = String(disciplineData.discipline_level || '').trim();
         const issueText = String(disciplineData.issue_type || '').trim();
         const noteText = [
             `Automatically flagged due to ${levelText || 'discipline action'}.`,
             issueText ? `Issue type: ${issueText}.` : '',
             'This flag was generated because written warnings and final warnings require HR follow-up.'
-        ].filter(Boolean).join(' '); const { error: insertError } = await supabaseClient
+        ].filter(Boolean).join(' ');
+        const { error: insertError } = await supabaseClient
             .from('employee_notes')
             .insert([{
                 employee_id: employeeId,
                 note_date: disciplineData.incident_date || todayInputValue(),
                 note_type: 'At-Risk Flag',
                 note_text: noteText
-            }]); if (insertError) {
-                console.error(insertError);
-                showToast('Discipline saved, but At-Risk auto-flag could not be created.', 'error');
-                return;
-            } if (window.currentAtRiskRosterMap) {
-                window.currentAtRiskRosterMap[String(employeeId)] = {
-                    ...(window.currentAtRiskRosterMap[String(employeeId)] || {}),
-                    manualReason: noteText,
-                    flaggedDate: disciplineData.incident_date || todayInputValue(),
-                    flaggedBy: window.currentUser?.email || window.currentUser?.name || 'System',
-                    lowReview: window.currentAtRiskRosterMap[String(employeeId)]?.lowReview === true,
-                    reviewScore: window.currentAtRiskRosterMap[String(employeeId)]?.reviewScore ?? null,
-                    openIncidentCount: Number(window.currentAtRiskRosterMap[String(employeeId)]?.openIncidentCount || 0)
-                };
-            } showToast('Employee automatically flagged as At-Risk due to discipline level.');
+            }]);
+        if (insertError) {
+            console.error(insertError);
+            showToast('Discipline saved, but At-Risk auto-flag could not be created.', 'error');
+            return;
+        }
+        if (window.currentAtRiskRosterMap) {
+            window.currentAtRiskRosterMap[String(employeeId)] = {
+                ...(window.currentAtRiskRosterMap[String(employeeId)] || {}),
+                manualReason: noteText,
+                flaggedDate: disciplineData.incident_date || todayInputValue(),
+                flaggedBy: window.currentUser?.email || window.currentUser?.name || 'System',
+                lowReview: window.currentAtRiskRosterMap[String(employeeId)]?.lowReview === true,
+                reviewScore: window.currentAtRiskRosterMap[String(employeeId)]?.reviewScore ?? null,
+                openIncidentCount: Number(window.currentAtRiskRosterMap[String(employeeId)]?.openIncidentCount || 0)
+            };
+        }
+        showToast('Employee automatically flagged as At-Risk due to discipline level.');
     } catch (err) {
         console.error(err);
         showToast('Discipline saved, but At-Risk auto-flag failed.', 'error');
     }
-} function startDisciplineEdit(record) {
+}
+
+function startDisciplineEdit(record) {
     resetDrawerForms();
     currentDisciplineReportId = record.id;
     safeGet('disciplineDate').value = record.incident_date || todayInputValue();
@@ -92,7 +115,9 @@ async function disciplineFetchByEmployee(employeeId) {
     safeGet('cancelDisciplineEditBtn')?.classList.remove('hidden');
     safeGet('disciplineEditStatus')?.classList.remove('hidden');
     switchTab('discipline');
-} function cancelDisciplineEdit() {
+}
+
+function cancelDisciplineEdit() {
     currentDisciplineReportId = null;
     if (safeGet('disciplineDate')) safeGet('disciplineDate').value = todayInputValue();
     if (safeGet('disciplineType')) safeGet('disciplineType').value = '';
@@ -107,47 +132,64 @@ async function disciplineFetchByEmployee(employeeId) {
     if (safeGet('saveDisciplineBtn')) safeGet('saveDisciplineBtn').textContent = 'Save Discipline';
     safeGet('cancelDisciplineEditBtn')?.classList.add('hidden');
     safeGet('disciplineEditStatus')?.classList.add('hidden');
-} function getDisciplineSignature(canvasId) {
+}
+
+function getDisciplineSignature(canvasId) {
     const canvas = document.getElementById(canvasId);
     return canvas?.dataset.signature || '';
-} function clearDisciplineSignature(canvasId, statusId) {
+}
+
+function clearDisciplineSignature(canvasId, statusId) {
     if (typeof clearSig === 'function') {
         clearSig(canvasId, statusId);
         return;
-    } const canvas = document.getElementById(canvasId);
+    }
+    const canvas = document.getElementById(canvasId);
     const status = document.getElementById(statusId);
-    if (!canvas) return; const ctx = canvas.getContext('2d');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    canvas.dataset.signature = ''; if (status) {
+    canvas.dataset.signature = '';
+    if (status) {
         status.textContent = 'Not signed';
         status.style.color = '#667085';
     }
-} function loadDisciplineSignature(canvasId, statusId, signatureData) {
+}
+
+function loadDisciplineSignature(canvasId, statusId, signatureData) {
     const canvas = document.getElementById(canvasId);
     const status = document.getElementById(statusId);
-    if (!canvas) return; const ctx = canvas.getContext('2d');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    canvas.dataset.signature = signatureData || ''; if (!signatureData) {
+    canvas.dataset.signature = signatureData || '';
+    if (!signatureData) {
         if (status) {
             status.textContent = 'Not signed';
             status.style.color = '#667085';
         }
         return;
-    } const img = new Image();
+    }
+    const img = new Image();
     img.onload = () => {
         const rect = canvas.getBoundingClientRect();
         ctx.drawImage(img, 0, 0, rect.width || canvas.width, rect.height || canvas.height);
     };
-    img.src = signatureData; if (status) {
+    img.src = signatureData;
+    if (status) {
         status.textContent = 'Signed';
         status.style.color = 'green';
     }
-} function renderDisciplineSignatures(row) {
+}
+
+function renderDisciplineSignatures(row) {
     const signatures = [
         { label: 'Employee Signature', value: row.employee_signature },
         { label: 'Manager Signature', value: row.manager_signature },
         { label: 'Witness Signature', value: row.witness_signature }
-    ]; if (!signatures.some(item => item.value)) return ''; return `
+    ];
+    if (!signatures.some(item => item.value)) return '';
+    return `
       <div style="margin-top:14px; padding-top:12px; border-top:1px solid #e5e7eb;">
         <strong>Signatures:</strong>
         <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-top:10px;">
@@ -160,15 +202,21 @@ async function disciplineFetchByEmployee(employeeId) {
         </div>
       </div>
     `;
-} async function deleteDisciplineRecord(recordId) {
+}
+
+async function deleteDisciplineRecord(recordId) {
     const confirmed = window.confirm('Delete this discipline record?');
-    if (!confirmed) return; const { error } = await disciplineDeleteById(String(recordId)); if (error) {
+    if (!confirmed) return;
+    const { error } = await disciplineDeleteById(String(recordId));
+    if (error) {
         console.error(error);
         showToast('Could not delete discipline record.', 'error');
         return;
-    } if (String(currentDisciplineReportId) === String(recordId)) {
+    }
+    if (String(currentDisciplineReportId) === String(recordId)) {
         cancelDisciplineEdit();
-    } showToast('Discipline record deleted.');
+    }
+    showToast('Discipline record deleted.');
     if (typeof window.recordAuditEvent === 'function') {
         window.recordAuditEvent('Deleted Discipline Report', currentEmployee, `Record ID: ${recordId}`);
     }
@@ -176,19 +224,25 @@ async function disciplineFetchByEmployee(employeeId) {
     await loadSummaryMetrics();
     await loadRecentActivity();
     await loadReviewDashboard();
-} async function loadEmployeeDiscipline(employeeId) {
+}
+
+async function loadEmployeeDiscipline(employeeId) {
     if (!employeeId) return;
     const target = safeGet('disciplineHistory');
-    if (!target) return; const { data, error } = await disciplineFetchByEmployee(employeeId); if (error) {
+    if (!target) return;
+    const { data, error } = await disciplineFetchByEmployee(employeeId);
+    if (error) {
         console.error(error);
         target.innerHTML = '<div class="empty">Could not load discipline records</div>';
         showToast('Could not load discipline records.', 'error');
         return;
-    } if (!data || !data.length) {
+    }
+    if (!data || !data.length) {
         target.innerHTML = '<div class="empty">No discipline records for this employee</div>';
         if (typeof buildKpiHoverDetails === 'function') buildKpiHoverDetails();
         return;
-    } const atRiskEligibleRecord = data.find(row => disciplineLevelShouldAutoFlagAtRisk(row.discipline_level));
+    }
+    const atRiskEligibleRecord = data.find(row => disciplineLevelShouldAutoFlagAtRisk(row.discipline_level));
     if (atRiskEligibleRecord) {
         await autoFlagAtRiskFromDiscipline(employeeId, {
             incident_date: atRiskEligibleRecord.incident_date,
@@ -198,7 +252,8 @@ async function disciplineFetchByEmployee(employeeId) {
             action_taken: atRiskEligibleRecord.action_taken,
             report_status: atRiskEligibleRecord.report_status
         });
-    } target.innerHTML = data.map(row => `
+    }
+    target.innerHTML = data.map(row => `
         <div class="discipline-record-card" style="padding:16px; margin-bottom:14px; border:1px solid #e5e7eb; border-radius:16px; background:#ffffff; box-shadow:0 8px 20px rgba(15,23,42,0.04); overflow:visible; min-height:auto; height:auto;">
           <div style="display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:12px;">
             <div style="min-width:0; flex:1;">
@@ -216,7 +271,8 @@ async function disciplineFetchByEmployee(employeeId) {
               ${row.discipline_level ? `<span class="badge badge-leave">${esc(row.discipline_level)}</span>` : ''}
               ${row.refused_to_sign === true ? '<span class="badge badge-inactive">Refused to Sign</span>' : ''}
             </div>
-          </div>          <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-bottom:12px; font-size:13px; color:#334155; line-height:1.45;">
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-bottom:12px; font-size:13px; color:#334155; line-height:1.45;">
             <div style="padding:10px; border:1px solid #f1f5f9; border-radius:12px; background:#f8fafc;">
               <div style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">Issue Type</div>
               <div style="font-weight:700; color:#111827; white-space:normal; overflow:visible;">${esc(row.issue_type || 'Not specified')}</div>
@@ -235,7 +291,8 @@ async function disciplineFetchByEmployee(employeeId) {
               <div style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-bottom:4px;">Refused to Sign</div>
               <div style="font-weight:700; color:#111827; white-space:normal; overflow:visible;">${row.refused_to_sign === true ? 'Yes' : 'No'}</div>
             </div>
-          </div>          <div style="font-size:13px; line-height:1.55; color:#334155; white-space:normal; overflow:visible; word-break:break-word;">
+          </div>
+          <div style="font-size:13px; line-height:1.55; color:#334155; white-space:normal; overflow:visible; word-break:break-word;">
             <div style="margin-bottom:12px;">
               <div style="font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; margin-bottom:5px;">Description</div>
               <div style="white-space:normal; overflow:visible;">${nl2br(row.description || '')}</div>
@@ -247,113 +304,163 @@ async function disciplineFetchByEmployee(employeeId) {
             ${renderDisciplineSignatures(row)}
           </div>
         </div>
-      `).join(''); if (typeof buildKpiHoverDetails === 'function') buildKpiHoverDetails(); target.querySelectorAll('[data-edit-discipline-id]').forEach(btn => {
+      `).join('');
+    if (typeof buildKpiHoverDetails === 'function') buildKpiHoverDetails();
+    target.querySelectorAll('[data-edit-discipline-id]').forEach(btn => {
         btn.addEventListener('click', () => {
             const record = data.find(row => String(row.id) === String(btn.dataset.editDisciplineId));
             if (record) startDisciplineEdit(record);
         });
-    }); target.querySelectorAll('[data-delete-discipline-id]').forEach(btn => {
+    });
+    target.querySelectorAll('[data-delete-discipline-id]').forEach(btn => {
         btn.addEventListener('click', () => deleteDisciplineRecord(btn.dataset.deleteDisciplineId));
     });
 }
+
 async function saveDisciplineReport() {
-    if (!currentEmployee) return; const employeeId = currentEmployee?.dbId || currentEmployee?.id;
+    if (!currentEmployee) return;
+
+    const employeeId = currentEmployee?.dbId || currentEmployee?.id;
     if (!employeeId) {
         showToast('No employee selected.', 'error');
         return;
-    } const incident_date = safeGet('disciplineDate')?.value || '';
+    }
+
+    const incident_date = safeGet('disciplineDate')?.value || '';
     const issue_type = safeGet('disciplineType')?.value || '';
     let discipline_level = safeGet('disciplineLevel')?.value || '';
-    // --- Auto Escalation Logic ---    let suggestedLevel = '';    try {        let escalationQuery = supabaseClient
+
+    // --- Auto Escalation Logic ---
+    let suggestedLevel = '';
+    try {
+        let escalationQuery = supabaseClient
             .from('discipline_reports')
-        .select('id, discipline_level, issue_type, report_status')
-        .eq('employee_id', employeeId); if (currentDisciplineReportId) {
+            .select('id, discipline_level, issue_type, report_status')
+            .eq('employee_id', employeeId);
+        if (currentDisciplineReportId) {
             escalationQuery = escalationQuery.neq('id', currentDisciplineReportId);
-        } const { data: priorRecords } = await escalationQuery; const relevantRecords = (priorRecords || []).filter(r => String(r.report_status || '').toLowerCase() !== 'closed'); if (relevantRecords.length) {
-            const count = relevantRecords.length;            // Escalation ladder            if (count === 1) suggestedLevel = 'Level 2 - Verbal Warning';            else if (count === 2) suggestedLevel = 'Level 3 - Written Warning';            else if (count === 3) suggestedLevel = 'Level 4 - Final Warning';            else if (count >= 4) suggestedLevel = 'Level 5 - Termination';            // Repeat issue detection            const sameTypeCount = relevantRecords.filter(r => r.issue_type === issue_type).length;            if (sameTypeCount >= 2) {                showToast('⚠️ Repeat issue detected for this employee.', 'error');            }            const levelRank = (level) => {
-            if (!level) return 0;
-            if (String(level).startsWith('Level 1')) return 1;
-            if (String(level).startsWith('Level 2')) return 2;
-            if (String(level).startsWith('Level 3')) return 3;
-            if (String(level).startsWith('Level 4')) return 4;
-            if (String(level).startsWith('Level 5')) return 5;
-            return 0;
-        }; if (!discipline_level && suggestedLevel && safeGet('disciplineLevel')) {
-            safeGet('disciplineLevel').value = suggestedLevel;
-            discipline_level = suggestedLevel;
-            showToast(`Suggested Level: ${suggestedLevel}`);
-        } if (discipline_level && suggestedLevel && levelRank(discipline_level) < levelRank(suggestedLevel)) {
-            showToast(`⚠️ Selected level is lower than recommended (${suggestedLevel}).`, 'error');
-            return;
         }
-}    } catch (e) { console.warn('Escalation check failed', e); } const description = safeGet('disciplineDescription')?.value.trim() || '';
-const action_taken = safeGet('disciplineAction')?.value.trim() || '';
-const report_status = safeGet('disciplineStatus')?.value || 'Open';
-const refused_to_sign = safeGet('disciplineRefusedToSign')?.checked || false;
-const employee_signature = document.getElementById('disciplineEmployeeSignature')?.dataset.signature || ''; const manager_signature = document.getElementById('disciplineManagerSignature')?.dataset.signature || ''; const witness_signature = document.getElementById('disciplineWitnessSignature')?.dataset.signature || ''; if (!incident_date || !description) {
-    showToast('Enter an incident date and description.', 'error');
-    return;
-} const isUpdatingDiscipline = !!currentDisciplineReportId;
-console.log('[Discipline Save]', {
-    mode: isUpdatingDiscipline ? 'update' : 'create',
-    currentDisciplineReportId,
-    employeeId,
-    discipline_level,
-    issue_type
-});
-const signatureFields = [];
-if (employee_signature) signatureFields.push('employee_signature');
-if (manager_signature) signatureFields.push('manager_signature');
-if (witness_signature) signatureFields.push('witness_signature'); let error; if (currentDisciplineReportId) {
-    const result = await supabaseClient
-        .from('discipline_reports')
-        .update({
-            incident_date,
-            issue_type,
-            discipline_level,
-            description,
-            action_taken,
-            report_status,
-            refused_to_sign,
-            employee_signature,
-            manager_signature,
-            witness_signature,
-        })
-        .eq('id', currentDisciplineReportId)
-        .eq('employee_id', employeeId);
-    error = result.error;
-} else {
-    const result = await supabaseClient
-        .from('discipline_reports')
-        .insert([{
-            employee_id: employeeId,
-            incident_date,
-            issue_type,
-            discipline_level,
-            description,
-            action_taken,
-            report_status,
-            refused_to_sign,
-            employee_signature,
-            manager_signature,
-            witness_signature,
-        }]); error = result.error;
-} if (error) {
-    console.error(error);
-    showToast(currentDisciplineReportId ? 'Could not update discipline report.' : 'Could not save discipline report.', 'error');
-    return;
-} showToast(isUpdatingDiscipline ? 'Discipline report updated.' : 'Discipline report saved.');
-await autoFlagAtRiskFromDiscipline(employeeId, {
-    incident_date,
-    issue_type,
-    discipline_level,
-    description,
-    action_taken,
-    report_status
-}); if (typeof window.writeEmployeeAuditLogToSupabase === 'function') {
-    const publicEmployeeId = typeof window.getEmployeePublicId === 'function'
-        ? window.getEmployeePublicId(currentEmployee, currentEmployee?.displayName || currentEmployee?.name || '')
-        : (currentEmployee?.employee_id || currentEmployee?.employeeId || employeeId); await window.writeEmployeeAuditLogToSupabase({
+        const { data: priorRecords } = await escalationQuery;
+        const relevantRecords = (priorRecords || []).filter(r => String(r.report_status || '').toLowerCase() !== 'closed');
+        if (relevantRecords.length) {
+            const count = relevantRecords.length;
+            // Escalation ladder
+            if (count === 1) suggestedLevel = 'Level 2 - Verbal Warning';
+            else if (count === 2) suggestedLevel = 'Level 3 - Written Warning';
+            else if (count === 3) suggestedLevel = 'Level 4 - Final Warning';
+            else if (count >= 4) suggestedLevel = 'Level 5 - Termination';
+            // Repeat issue detection
+            const sameTypeCount = relevantRecords.filter(r => r.issue_type === issue_type).length;
+            if (sameTypeCount >= 2) {
+                showToast('⚠️ Repeat issue detected for this employee.', 'error');
+            }
+            const levelRank = (level) => {
+                if (!level) return 0;
+                if (String(level).startsWith('Level 1')) return 1;
+                if (String(level).startsWith('Level 2')) return 2;
+                if (String(level).startsWith('Level 3')) return 3;
+                if (String(level).startsWith('Level 4')) return 4;
+                if (String(level).startsWith('Level 5')) return 5;
+                return 0;
+            };
+            if (!discipline_level && suggestedLevel && safeGet('disciplineLevel')) {
+                safeGet('disciplineLevel').value = suggestedLevel;
+                discipline_level = suggestedLevel;
+                showToast(`Suggested Level: ${suggestedLevel}`);
+            }
+            if (discipline_level && suggestedLevel && levelRank(discipline_level) < levelRank(suggestedLevel)) {
+                showToast(`⚠️ Selected level is lower than recommended (${suggestedLevel}).`, 'error');
+                return;
+            }
+        }
+    } catch (e) {
+        console.warn('Escalation check failed', e);
+    }
+
+    const description = safeGet('disciplineDescription')?.value.trim() || '';
+    const action_taken = safeGet('disciplineAction')?.value.trim() || '';
+    const report_status = safeGet('disciplineStatus')?.value || 'Open';
+    const refused_to_sign = safeGet('disciplineRefusedToSign')?.checked || false;
+    const employee_signature = document.getElementById('disciplineEmployeeSignature')?.dataset.signature || '';
+    const manager_signature = document.getElementById('disciplineManagerSignature')?.dataset.signature || '';
+    const witness_signature = document.getElementById('disciplineWitnessSignature')?.dataset.signature || '';
+
+    if (!incident_date || !description) {
+        showToast('Enter an incident date and description.', 'error');
+        return;
+    }
+
+    const isUpdatingDiscipline = !!currentDisciplineReportId;
+    console.log('[Discipline Save]', {
+        mode: isUpdatingDiscipline ? 'update' : 'create',
+        currentDisciplineReportId,
+        employeeId,
+        discipline_level,
+        issue_type
+    });
+    const signatureFields = [];
+    if (employee_signature) signatureFields.push('employee_signature');
+    if (manager_signature) signatureFields.push('manager_signature');
+    if (witness_signature) signatureFields.push('witness_signature');
+
+    let error;
+    if (currentDisciplineReportId) {
+        const result = await supabaseClient
+            .from('discipline_reports')
+            .update({
+                incident_date,
+                issue_type,
+                discipline_level,
+                description,
+                action_taken,
+                report_status,
+                refused_to_sign,
+                employee_signature,
+                manager_signature,
+                witness_signature,
+            })
+            .eq('id', currentDisciplineReportId)
+            .eq('employee_id', employeeId);
+        error = result.error;
+    } else {
+        const result = await supabaseClient
+            .from('discipline_reports')
+            .insert([{
+                employee_id: employeeId,
+                incident_date,
+                issue_type,
+                discipline_level,
+                description,
+                action_taken,
+                report_status,
+                refused_to_sign,
+                employee_signature,
+                manager_signature,
+                witness_signature,
+            }]);
+        error = result.error;
+    }
+    if (error) {
+        console.error(error);
+        showToast(currentDisciplineReportId ? 'Could not update discipline report.' : 'Could not save discipline report.', 'error');
+        return;
+    }
+    showToast(isUpdatingDiscipline ? 'Discipline report updated.' : 'Discipline report saved.');
+
+    await autoFlagAtRiskFromDiscipline(employeeId, {
+        incident_date,
+        issue_type,
+        discipline_level,
+        description,
+        action_taken,
+        report_status
+    });
+
+    if (typeof window.writeEmployeeAuditLogToSupabase === 'function') {
+        const publicEmployeeId = typeof window.getEmployeePublicId === 'function'
+            ? window.getEmployeePublicId(currentEmployee, currentEmployee?.displayName || currentEmployee?.name || '')
+            : (currentEmployee?.employee_id || currentEmployee?.employeeId || employeeId);
+        await window.writeEmployeeAuditLogToSupabase({
             employee_id: publicEmployeeId || employeeId,
             name: `${currentEmployee?.first_name || currentEmployee?.firstName || ''} ${currentEmployee?.last_name || currentEmployee?.lastName || ''}`.trim() || currentEmployee?.displayName || currentEmployee?.name || '',
             action_type: isUpdatingDiscipline ? 'discipline_updated' : 'discipline_created',
@@ -369,7 +476,8 @@ await autoFlagAtRiskFromDiscipline(employeeId, {
                 refused_to_sign,
                 discipline_report_id: currentDisciplineReportId || null
             }
-        }); if (signatureFields.length) {
+        });
+        if (signatureFields.length) {
             await window.writeEmployeeAuditLogToSupabase({
                 employee_id: publicEmployeeId || employeeId,
                 name: `${currentEmployee?.first_name || currentEmployee?.firstName || ''} ${currentEmployee?.last_name || currentEmployee?.lastName || ''}`.trim() || currentEmployee?.displayName || currentEmployee?.name || '',
@@ -383,24 +491,28 @@ await autoFlagAtRiskFromDiscipline(employeeId, {
                     discipline_report_id: currentDisciplineReportId || null
                 }
             });
-        } if (document.getElementById('employeeAuditLogViewer') && typeof window.renderEmployeeAuditLogViewer === 'function') {
+        }
+        if (document.getElementById('employeeAuditLogViewer') && typeof window.renderEmployeeAuditLogViewer === 'function') {
             await window.renderEmployeeAuditLogViewer(currentEmployee);
         }
-} else if (typeof window.recordAuditEvent === 'function') {
-    window.recordAuditEvent(
-        isUpdatingDiscipline ? 'Updated Discipline Report' : 'Created Discipline Report',
-        currentEmployee,
-        [issue_type, discipline_level, report_status, refused_to_sign ? 'Refused to Sign' : 'Signed/Not Marked'].filter(Boolean).join(' • ')
-    );
+    } else if (typeof window.recordAuditEvent === 'function') {
+        window.recordAuditEvent(
+            isUpdatingDiscipline ? 'Updated Discipline Report' : 'Created Discipline Report',
+            currentEmployee,
+            [issue_type, discipline_level, report_status, refused_to_sign ? 'Refused to Sign' : 'Signed/Not Marked'].filter(Boolean).join(' • ')
+        );
+    }
+
+    currentDisciplineReportId = null;
+    cancelDisciplineEdit();
+    await loadEmployeeDiscipline(currentEmployee?.dbId || currentEmployee?.id);
+    await loadSummaryMetrics();
+    await loadRecentActivity();
+    if (typeof loadReviewDashboard === 'function') await loadReviewDashboard();
+    if (typeof buildKpiHoverDetails === 'function') buildKpiHoverDetails();
 }
-currentDisciplineReportId = null;
-cancelDisciplineEdit();
-await loadEmployeeDiscipline(currentEmployee?.dbId || currentEmployee?.id);
-await loadSummaryMetrics();
-await loadRecentActivity();
-if (typeof loadReviewDashboard === 'function') await loadReviewDashboard();
-if (typeof buildKpiHoverDetails === 'function') buildKpiHoverDetails();
-}// =========================
+
+// =========================
 // GLOBAL EXPORTS
 // =========================
 window.disciplineLevelShouldAutoFlagAtRisk = disciplineLevelShouldAutoFlagAtRisk;

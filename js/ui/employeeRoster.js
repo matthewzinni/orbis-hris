@@ -33,7 +33,8 @@ function statusBadge(status) {
 }
 
 function normalizeEmployeeForRoster(employee) {
-    if (!employee) return null; const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || '');
+    if (!employee) return null;
+    const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || '');
     const lastName = cleanRosterEmployeeNameValue(employee.last_name || employee.lastName || employee.last || '');
     const department = employee.department || employee.dept || employee.displayDepartment || '';
     const position = employee.position || employee.title || employee.displayPosition || '';
@@ -132,7 +133,8 @@ function getEmployeePublicId(employee, fallbackName = '') {
 }
 
 function populateEmployeeAdminFallback(employee) {
-    if (!employee) return; const valueFrom = (...keys) => {
+    if (!employee) return;
+    const valueFrom = (...keys) => {
         for (const key of keys) {
             if (employee[key] !== undefined && employee[key] !== null && employee[key] !== '') {
                 return employee[key];
@@ -231,14 +233,18 @@ function populateEmployeeAdminFallback(employee) {
 }
 
 function populateEmployeeAdminByVisibleOrder(employee) {
-    if (!employee) return; const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
+    if (!employee) return;
+    const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
     const drawerSubParts = String(document.getElementById('drawerSub')?.textContent || '')
         .split('•')
-        .map(part => part.trim()); const nameText = employee.displayName || employee.name || drawerTitleName || '';
+        .map(part => part.trim());
+    const nameText = employee.displayName || employee.name || drawerTitleName || '';
     const nameParts = String(nameText).trim().split(/\s+/).filter(Boolean);
     const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || nameParts[0] || '');
-    const lastName = cleanRosterEmployeeNameValue(employee.last_name || employee.lastName || employee.last || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : '')); const employeeIdValue = getEmployeePublicId(employee, drawerTitleName);
-    const statusValue = formatRosterStatus(employee.status || employee.displayStatus || 'Active'); const valuesByLabel = {
+    const lastName = cleanRosterEmployeeNameValue(employee.last_name || employee.lastName || employee.last || (nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''));
+    const employeeIdValue = getEmployeePublicId(employee, drawerTitleName);
+    const statusValue = formatRosterStatus(employee.status || employee.displayStatus || 'Active');
+    const valuesByLabel = {
         'employee id': employeeIdValue,
         'status': statusValue,
         'first name': firstName,
@@ -253,15 +259,18 @@ function populateEmployeeAdminByVisibleOrder(employee) {
         'next review date': employee.next_review_date || employee.nextReviewDate || '',
         'anniversary date': employee.anniversary_date || employee.anniversaryDate || '',
         'tenure bracket': employee.tenure_bracket || employee.tenureBracket || ''
-    }; const isVisible = (el) => {
+    };
+    const isVisible = (el) => {
         if (!el) return false;
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
-    }; const setValue = (field, value) => {
+    };
+    const setValue = (field, value) => {
         if (!field) return;
         const previousSuppress = window.__suppressAuditDirty;
         window.__suppressAuditDirty = true;
-        const nextValue = value ?? ''; if (field.tagName === 'SELECT') {
+        const nextValue = value ?? '';
+        if (field.tagName === 'SELECT') {
             const match = Array.from(field.options || []).find(option => {
                 return String(option.value).toLowerCase() === String(nextValue).toLowerCase()
                     || String(option.textContent).trim().toLowerCase() === String(nextValue).toLowerCase();
@@ -269,15 +278,20 @@ function populateEmployeeAdminByVisibleOrder(employee) {
             field.value = match ? match.value : nextValue;
         } else {
             field.value = nextValue;
-        } field.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        field.dispatchEvent(new Event('input', { bubbles: true }));
         field.dispatchEvent(new Event('change', { bubbles: true }));
         window.__suppressAuditDirty = previousSuppress;
-    }; const adminButton = Array.from(document.querySelectorAll('button, .tab, [data-tab]'))
-        .find(item => (item.textContent || '').trim().toLowerCase().includes('employee admin')); const drawer = adminButton?.closest('#employeeDrawer, .drawer, .drawer-panel, aside, section, div') || document;
-    const fields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible); const labels = Array.from(drawer.querySelectorAll('*')).filter(el => {
+    };
+    const adminButton = Array.from(document.querySelectorAll('button, .tab, [data-tab]'))
+        .find(item => (item.textContent || '').trim().toLowerCase().includes('employee admin'));
+    const drawer = adminButton?.closest('#employeeDrawer, .drawer, .drawer-panel, aside, section, div') || document;
+    const fields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible);
+    const labels = Array.from(drawer.querySelectorAll('*')).filter(el => {
         const text = (el.textContent || '').trim().toLowerCase();
         return Object.keys(valuesByLabel).includes(text) && !['input', 'select', 'textarea', 'button'].includes(el.tagName.toLowerCase());
-    }); labels.forEach(label => {
+    });
+    labels.forEach(label => {
         const labelText = (label.textContent || '').trim().toLowerCase();
         const value = valuesByLabel[labelText];
         const wrapper = label.parentElement;
@@ -285,13 +299,17 @@ function populateEmployeeAdminByVisibleOrder(employee) {
         if (field && ['INPUT', 'SELECT', 'TEXTAREA'].includes(field.tagName)) {
             setValue(field, value);
         }
-    }); const fieldByLabel = (labelText) => {
+    });
+    const fieldByLabel = (labelText) => {
         const label = Array.from(drawer.querySelectorAll('*')).find(el => {
             const text = (el.textContent || '').trim().toLowerCase();
             return text === labelText.toLowerCase() && !['input', 'select', 'textarea', 'button'].includes(el.tagName.toLowerCase());
-        }); if (!label) return null; const wrapper = label.parentElement;
+        });
+        if (!label) return null;
+        const wrapper = label.parentElement;
         return wrapper?.querySelector('input, select, textarea') || null;
-    }; setValue(fieldByLabel('EMPLOYEE ID'), valuesByLabel['employee id']);
+    };
+    setValue(fieldByLabel('EMPLOYEE ID'), valuesByLabel['employee id']);
     setValue(fieldByLabel('STATUS'), valuesByLabel['status']);
     setValue(fieldByLabel('FIRST NAME'), valuesByLabel['first name']);
     setValue(fieldByLabel('LAST NAME'), valuesByLabel['last name']);
@@ -304,7 +322,8 @@ function populateEmployeeAdminByVisibleOrder(employee) {
     setValue(fieldByLabel('HIRE DATE'), valuesByLabel['hire date']);
     setValue(fieldByLabel('NEXT REVIEW DATE'), valuesByLabel['next review date']);
     setValue(fieldByLabel('ANNIVERSARY DATE'), valuesByLabel['anniversary date']);
-    setValue(fieldByLabel('TENURE BRACKET'), valuesByLabel['tenure bracket']); const adminFields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible);
+    setValue(fieldByLabel('TENURE BRACKET'), valuesByLabel['tenure bracket']);
+    const adminFields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible);
     if (adminFields[0] && valuesByLabel['employee id']) {
         setValue(adminFields[0], valuesByLabel['employee id']);
         lockEmployeeIdField(adminFields[0]);
@@ -420,7 +439,8 @@ function bindEmployeeUpdateToast() {
 
 function getEmployeeSnapshotFromRosterRow(employeeId) {
     const row = document.querySelector(`tr.employee-row[data-id="${employeeId}"]`);
-    if (!row) return {}; const cells = Array.from(row.querySelectorAll('td'));
+    if (!row) return {};
+    const cells = Array.from(row.querySelectorAll('td'));
     const nameText = cleanRosterEmployeeNameValue(cells[1]?.querySelector('.link-button')?.textContent?.trim() || cells[1]?.textContent?.trim() || '');
     const nameParts = nameText.split(/\s+/).filter(Boolean);
     const firstName = nameParts[0] || '';
@@ -452,7 +472,9 @@ function getFilteredRosterEmployees() {
     const searchTerm = safeGet('globalSearch')?.value?.toLowerCase().trim() || '';
     const departmentFilter = String(safeGet('deptFilter')?.value || '').trim();
     const explicitStatusFilter = String(safeGet('statusFilter')?.value || '').trim().toUpperCase();
-    const rosterMode = String(window.rosterViewMode || 'active').trim().toLowerCase(); const employees = Array.isArray(EMPLOYEES) ? EMPLOYEES : []; return employees
+    const rosterMode = String(window.rosterViewMode || 'active').trim().toLowerCase();
+    const employees = Array.isArray(EMPLOYEES) ? EMPLOYEES : [];
+    return employees
         .map(normalizeEmployeeForRoster)
         .filter(Boolean)
         .filter(employee => {
@@ -515,12 +537,14 @@ function getFilteredRosterEmployees() {
 
 function renderEmployeeRoster() {
     const tbody = safeGet('empBody') || safeGet('employeeTableBody') || safeGet('rosterBody');
-    if (!tbody) return; const employees = getFilteredRosterEmployees();
+    if (!tbody) return;
+    const employees = getFilteredRosterEmployees();
     currentFilteredEmployees = employees;
     if (safeGet('empCount')) {
         const total = Array.isArray(EMPLOYEES) ? EMPLOYEES.length : employees.length;
         safeGet('empCount').textContent = `Showing ${employees.length} of ${total} employee${total === 1 ? '' : 's'}`;
-    } if (!employees.length) {
+    }
+    if (!employees.length) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="7" class="empty">
@@ -534,9 +558,11 @@ function renderEmployeeRoster() {
             </tr>
         `;
         return;
-    } tbody.innerHTML = employees.map(employee => {
+    }
+    tbody.innerHTML = employees.map(employee => {
         const drawerId = esc(employee.dbId || employee.id || employee.employee_id || '');
-        const hireDate = employee.displayHireDate ? fmtDate(employee.displayHireDate) : '—'; return `
+        const hireDate = employee.displayHireDate ? fmtDate(employee.displayHireDate) : '—';
+        return `
             <tr class="employee-row" data-id="${drawerId}" title="Open ${esc(employee.displayName)}" style="cursor:pointer;" onclick="openDrawerByEmployeeId('${drawerId}')">
                 <td>${esc(employee.displayId)}</td>
                 <td>
@@ -571,9 +597,11 @@ function renderEmployeeRoster() {
                 <td><span class="${statusBadge(employee.displayStatus)}">${esc(employee.displayStatusLabel)}</span></td>
             </tr>
         `;
-    }).join(''); if (typeof updateEmployeeRowBadges === 'function') {
+    }).join('');
+    if (typeof updateEmployeeRowBadges === 'function') {
         updateEmployeeRowBadges();
-    }    // Re-bind At-Risk KPI hover after roster updates
+    }
+    // Re-bind At-Risk KPI hover after roster updates
     if (typeof bindAtRiskKpiHover === 'function') {
         bindAtRiskKpiHover();
     }
@@ -599,14 +627,18 @@ function openDrawerByEmployeeId(employeeId) {
         ...employee,
         ...rosterSnapshot
     });
-    const finalEmployeeId = getEmployeePublicId(drawerEmployee, drawerEmployee.displayName); drawerEmployee.employee_id = finalEmployeeId;
+    const finalEmployeeId = getEmployeePublicId(drawerEmployee, drawerEmployee.displayName);
+    drawerEmployee.employee_id = finalEmployeeId;
     drawerEmployee.employeeId = finalEmployeeId;
-    drawerEmployee.displayId = finalEmployeeId; if (typeof openDrawer === 'function') {
+    drawerEmployee.displayId = finalEmployeeId;
+    if (typeof openDrawer === 'function') {
         isCreatingEmployee = false;
         window.currentEmployee = drawerEmployee;
-        openDrawer(drawerEmployee); if (typeof populateEmployeeAdminForm === 'function') {
+        openDrawer(drawerEmployee);
+        if (typeof populateEmployeeAdminForm === 'function') {
             populateEmployeeAdminForm(drawerEmployee);
-        } populateEmployeeAdminFallback(drawerEmployee);
+        }
+        populateEmployeeAdminFallback(drawerEmployee);
         populateEmployeeAdminByVisibleOrder(drawerEmployee);
         cleanEmployeeAdminVisibleNameFields();
         [50, 150, 300, 600, 1000, 1500].forEach(delay => {
@@ -623,11 +655,13 @@ function openDrawerByEmployeeId(employeeId) {
                     visibleEmployeeIdField.dispatchEvent(new Event('input', { bubbles: true }));
                     visibleEmployeeIdField.dispatchEvent(new Event('change', { bubbles: true }));
                     lockEmployeeIdField(visibleEmployeeIdField);
-                } if (delay === 1500 && typeof setEmployeeAdminAuditBaseline === 'function') {
+                }
+                if (delay === 1500 && typeof setEmployeeAdminAuditBaseline === 'function') {
                     setEmployeeAdminAuditBaseline(getEmployeeAdminFormSnapshot());
                 }
             }, delay);
-        }); if (safeGet('saveEmployeeBtn')) {
+        });
+        if (safeGet('saveEmployeeBtn')) {
             safeGet('saveEmployeeBtn').textContent = 'Update Employee';
         }
     }
@@ -637,12 +671,17 @@ async function deleteEmployeeQuick(employeeId) {
     if (!employeeId) {
         showToast('No employee selected.', 'error');
         return;
-    } const confirmed = confirm('Are you sure you want to delete this employee? This cannot be undone.');
-    if (!confirmed) return; const { error } = await OrbisServices.employees.delete(employeeId); if (error) {
+    }
+    const confirmed = confirm('Are you sure you want to delete this employee? This cannot be undone.');
+    if (!confirmed) return;
+    const { error } = await OrbisServices.employees.delete(employeeId);
+    if (error) {
         console.error(error);
         showToast(`Could not delete employee: ${error.message || 'Unknown error'}`, 'error');
         return;
-    } showToast('Employee deleted.'); if (typeof loadEmployees === 'function') {
+    }
+    showToast('Employee deleted.');
+    if (typeof loadEmployees === 'function') {
         await loadEmployees();
     } else {
         renderEmployeeRoster();
@@ -651,31 +690,41 @@ async function deleteEmployeeQuick(employeeId) {
 
 function ensureRosterViewTabs() {
     const statusFilter = safeGet('statusFilter');
-    const rosterControls = statusFilter?.closest('.filters, .toolbar, .controls, .card, div') || statusFilter?.parentElement; if (!rosterControls || safeGet('rosterViewTabs')) return; const tabs = document.createElement('div');
+    const rosterControls = statusFilter?.closest('.filters, .toolbar, .controls, .card, div') || statusFilter?.parentElement;
+    if (!rosterControls || safeGet('rosterViewTabs')) return;
+    const tabs = document.createElement('div');
     tabs.id = 'rosterViewTabs';
     tabs.style.display = 'flex';
     tabs.style.gap = '8px';
     tabs.style.alignItems = 'center';
-    tabs.style.margin = '8px 0'; const makeTab = (mode, label) => {
+    tabs.style.margin = '8px 0';
+    const makeTab = (mode, label) => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'mini-btn';
         button.dataset.rosterMode = mode;
         button.textContent = label;
         button.onclick = () => {
-            window.rosterViewMode = mode; if (statusFilter) {
+            window.rosterViewMode = mode;
+            if (statusFilter) {
                 statusFilter.value = '';
-            } Array.from(tabs.querySelectorAll('button')).forEach(btn => {
+            }
+            Array.from(tabs.querySelectorAll('button')).forEach(btn => {
                 const active = btn.dataset.rosterMode === mode;
                 btn.classList.toggle('active', active);
                 btn.style.fontWeight = active ? '800' : '600';
                 btn.style.borderColor = active ? '#111827' : '';
-            }); renderEmployeeRoster();
+            });
+            renderEmployeeRoster();
         };
         return button;
-    }; const activeTab = makeTab('active', 'Active Employees');
-    const formerTab = makeTab('former', 'Former Employees'); tabs.appendChild(activeTab);
-    tabs.appendChild(formerTab); rosterControls.appendChild(tabs); const defaultTab = window.rosterViewMode === 'former' ? formerTab : activeTab;
+    };
+    const activeTab = makeTab('active', 'Active Employees');
+    const formerTab = makeTab('former', 'Former Employees');
+    tabs.appendChild(activeTab);
+    tabs.appendChild(formerTab);
+    rosterControls.appendChild(tabs);
+    const defaultTab = window.rosterViewMode === 'former' ? formerTab : activeTab;
     defaultTab.click();
 }
 
@@ -685,7 +734,8 @@ function bindRosterEvents() {
     const searchInput = safeGet('globalSearch');
     const departmentFilter = safeGet('deptFilter');
     const statusFilter = safeGet('statusFilter');
-    const clearFiltersBtn = safeGet('clearFiltersBtn'); if (searchInput) {
+    const clearFiltersBtn = safeGet('clearFiltersBtn');
+    if (searchInput) {
         searchInput.disabled = false;
         searchInput.readOnly = false;
         searchInput.removeAttribute('disabled');
@@ -694,18 +744,22 @@ function bindRosterEvents() {
         searchInput.style.userSelect = 'text';
         searchInput.tabIndex = 0;
         searchInput.style.zIndex = '10';
-        searchInput.style.position = 'relative'; searchInput.oninput = () => {
+        searchInput.style.position = 'relative';
+        searchInput.oninput = () => {
             clearTimeout(rosterSearchTimer);
             rosterSearchTimer = setTimeout(renderEmployeeRoster, 150);
         };
     }
-    if (departmentFilter) departmentFilter.onchange = renderEmployeeRoster;
+    if (departmentFilter) {
+        departmentFilter.onchange = renderEmployeeRoster;
+    }
     if (statusFilter) {
         statusFilter.onchange = () => {
             window.rosterViewMode = 'all';
             renderEmployeeRoster();
         };
-    } if (clearFiltersBtn) {
+    }
+    if (clearFiltersBtn) {
         clearFiltersBtn.onclick = () => {
             if (searchInput) searchInput.value = '';
             if (departmentFilter) departmentFilter.value = '';
@@ -777,6 +831,58 @@ window.refreshEmployeeRoster = async function () {
     }
 };
 
+function getEmployeeAdminFormSnapshot() {
+    return {};
+}
+
+function getEmployeeAdminFieldByLabel() {
+    return null;
+}
+
+function setEmployeeAdminAuditBaseline(snapshot = {}) {
+    window.__employeeAdminAuditBaseline = snapshot;
+}
+
+function getEmployeeAdminAuditBaseline() {
+    return window.__employeeAdminAuditBaseline || {};
+}
+
+function getEmployeeAdminFieldKey(label = '') {
+    return String(label || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_');
+}
+
+function bindEmployeeAdminDirtyTracking() {
+    window.__employeeDirtyFields = window.__employeeDirtyFields || new Set();
+}
+
+function cleanEmployeeAdminVisibleNameFields() {
+    return;
+}
+
+function getMeaningfulEmployeeAuditChanges() {
+    return [];
+}
+
+function writeEmployeeAuditLogLocal(auditEntry) {
+    const existing = JSON.parse(localStorage.getItem('orbis_audit_log') || '[]');
+    existing.unshift(auditEntry);
+    localStorage.setItem('orbis_audit_log', JSON.stringify(existing));
+}
+
+async function fetchEmployeeAuditLogs() {
+    return [];
+}
+
+function getLocalAuditLogsForEmployee() {
+    return JSON.parse(localStorage.getItem('orbis_audit_log') || '[]');
+}
+
+function renderEmployeeAuditLogViewer() {
+    return;
+}
 // =========================
 // EXPORTS
 // =========================
