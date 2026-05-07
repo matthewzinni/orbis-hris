@@ -74,3 +74,14 @@
   background: #fee2e2;
   color: #991b1b;
 }
+
+.backdrop.hidden {
+  display: none;
+  pointer-events: none;
+
+}
+
+.drawer-overlay.hidden {
+  display: none;
+  pointer-events: none;
+}
