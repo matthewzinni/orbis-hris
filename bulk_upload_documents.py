@@ -146,6 +146,13 @@ def document_record_exists(employee_id, storage_path):
 
     return bool(response.data)
 
+def delete_existing_document_records(employee_id, file_name):
+    supabase.table('employee_documents') \
+        .delete() \
+        .eq('employee_id', employee_id) \
+        .eq('file_name', file_name) \
+        .execute()
+
 
 def upload_employee_folder(employee_id, folder_path):
     uploaded_count = 0
@@ -175,18 +182,17 @@ def upload_employee_folder(employee_id, folder_path):
             }
         )
 
-        if document_record_exists(employee_id, storage_path):
-            print(f'Database record already exists, skipped insert: {file_path.name}')
-        else:
-            supabase.table('employee_documents').insert({
-                'employee_id': employee_id,
-                'document_type': 'other',
-                'file_name': file_path.name,
-                'file_path': storage_path,
-                'file_ext': file_ext
-            }).execute()
+        delete_existing_document_records(employee_id, file_path.name)
 
-            print(f'Inserted database record: {file_path.name}')
+        supabase.table('employee_documents').insert({
+            'employee_id': employee_id,
+            'document_type': 'other',
+            'file_name': file_path.name,
+            'file_path': storage_path,
+            'file_ext': file_ext
+        }).execute()
+
+        print(f'Inserted database record: {file_path.name}')
 
         uploaded_count += 1
 
