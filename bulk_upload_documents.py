@@ -51,6 +51,7 @@ def folder_name_to_key(folder_name):
     return f'{last}, {first}'
 
 
+
 def safe_storage_filename(filename):
     path = Path(filename)
     stem = path.stem
@@ -63,6 +64,22 @@ def safe_storage_filename(filename):
         safe_stem = 'document'
 
     return f'{safe_stem}{suffix}'
+
+
+# New function for content type determination
+def get_content_type(file_ext):
+    content_types = {
+        'pdf': 'application/pdf',
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'doc': 'application/msword',
+        'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'csv': 'text/csv',
+        'txt': 'text/plain'
+    }
+
+    return content_types.get(file_ext, 'application/octet-stream')
 
 
 def employee_to_keys(employee):
@@ -147,11 +164,16 @@ def upload_employee_folder(employee_id, folder_path):
         print(f'Uploading {file_path.name} -> {storage_path}')
 
         with open(file_path, 'rb') as file:
-            supabase.storage.from_(BUCKET).upload(
-                storage_path,
-                file,
-                {'upsert': 'true'}
-            )
+            file_bytes = file.read()
+
+        supabase.storage.from_(BUCKET).upload(
+            storage_path,
+            file_bytes,
+            {
+                'upsert': 'true',
+                'content-type': get_content_type(file_ext)
+            }
+        )
 
         if document_record_exists(employee_id, storage_path):
             print(f'Database record already exists, skipped insert: {file_path.name}')
