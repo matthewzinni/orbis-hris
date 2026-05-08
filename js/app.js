@@ -37,10 +37,20 @@ window.addEventListener('DOMContentLoaded', () => {
             if (typeof window.closeDrawer === 'function') { window.closeDrawer(); }
         });
     }
+    if (typeof initCommandPalette === 'function') {
+
+        initCommandPalette();
+
+    }
+
     if (typeof loadAllDashboardData === 'function') {
+
         loadAllDashboardData();
+
     } else {
+
         loadEmployees();
+
     }
 });
 let EMPLOYEES = [];
@@ -257,6 +267,22 @@ async function updateEmployeeById(employeeId, payload) {
         return { data: null, error: new Error('No employee ID provided') };
     }
     const cleanPayload = { ...payload };
+
+    if (Object.prototype.hasOwnProperty.call(cleanPayload, 'nextReviewDate')) {
+        cleanPayload.next_review_date = cleanPayload.nextReviewDate || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(cleanPayload, 'nextReview')) {
+        cleanPayload.next_review_date = cleanPayload.nextReview || null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(cleanPayload, 'next_review')) {
+        cleanPayload.next_review_date = cleanPayload.next_review || null;
+    }
+
+    delete cleanPayload.nextReviewDate;
+    delete cleanPayload.nextReview;
+    delete cleanPayload.next_review;
     delete cleanPayload.dbId;
     delete cleanPayload.displayId;
     delete cleanPayload.displayName;
@@ -266,7 +292,6 @@ async function updateEmployeeById(employeeId, payload) {
     delete cleanPayload.displayPosition;
     delete cleanPayload.displaySupervisor;
     delete cleanPayload.hireDate;
-    delete cleanPayload.nextReview;
     delete cleanPayload.tenureMonths;
     delete cleanPayload.tenureYears;
     delete cleanPayload.payType;
@@ -538,6 +563,7 @@ function populateEmployeeAdminForm(employee) {
     setField('hireDate', values.hireDate);
     setField('empNextReviewDate', values.nextReviewDate);
     setField('nextReviewDate', values.nextReviewDate);
+    setField('employeeNextReviewInput', values.nextReviewDate);
     setField('empAnniversaryDate', values.anniversaryDate);
     setField('anniversaryDate', values.anniversaryDate);
     setField('empTenureBracket', values.tenureBracket);
@@ -1020,7 +1046,71 @@ async function loadAllDashboardData() {
     initKpiHoverUi();
     buildKpiHoverDetails();
 }
+function setEmployeeRosterLoadingState(message = 'Loading employees…') {
+
+    const rosterBody = safeGet('employeeTableBody') ||
+
+        safeGet('employeeRosterBody') ||
+
+        safeGet('rosterBody') ||
+
+        document.querySelector('#employeeRoster tbody, #employeeTable tbody, table tbody');
+
+    if (!rosterBody) {
+
+        return;
+
+    }
+
+    const isErrorState = String(message || '').toLowerCase().includes('could not');
+
+    if (isErrorState) {
+
+        rosterBody.innerHTML = `<tr><td colspan="8" class="empty">${esc(message)}</td></tr>`;
+
+        return;
+
+    }
+
+    rosterBody.innerHTML = `
+        <tr class="skeleton-row">
+            <td><span class="skeleton-line medium"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+            <td><span class="skeleton-line medium"></span></td>
+            <td><span class="skeleton-line long"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+            <td><span class="skeleton-line medium"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+        </tr>
+        <tr class="skeleton-row">
+            <td><span class="skeleton-line medium"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+            <td><span class="skeleton-line medium"></span></td>
+            <td><span class="skeleton-line long"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+            <td><span class="skeleton-line medium"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+        </tr>
+        <tr class="skeleton-row">
+            <td><span class="skeleton-line medium"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+            <td><span class="skeleton-line medium"></span></td>
+            <td><span class="skeleton-line long"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+            <td><span class="skeleton-line medium"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+            <td><span class="skeleton-line short"></span></td>
+        </tr>
+    `;
+
+}
+
 async function loadEmployees() {
+
+    setEmployeeRosterLoadingState('Loading employees…');
+
     try {
         const { data: { user } } = await supabaseClient.auth.getUser();
         const userEmail = String(user?.email || '').trim().toLowerCase();
@@ -1044,9 +1134,15 @@ async function loadEmployees() {
         .from('employees')
         .select('*');
     if (error) {
+
         console.error(error);
+
+        setEmployeeRosterLoadingState('Could not load employees.');
+
         showToast('Could not load employees.', 'error');
+
         return [];
+
     }
     const normalizedEmployees = (Array.isArray(data) ? data : [])
         .map(employee => typeof normalizeEmployee === 'function' ? normalizeEmployee(employee) : employee)
@@ -1099,7 +1195,22 @@ async function loadEmployees() {
 async function loadCandidates() {
     const body = safeGet('candidateBody');
     if (body) {
-        body.innerHTML = '<tr><td colspan="5" class="empty">Loading candidates…</td></tr>';
+        body.innerHTML = `
+            <tr class="skeleton-row">
+                <td><span class="skeleton-line medium"></span></td>
+                <td><span class="skeleton-line medium"></span></td>
+                <td><span class="skeleton-line short"></span></td>
+                <td><span class="skeleton-line short"></span></td>
+                <td><span class="skeleton-line medium"></span></td>
+            </tr>
+            <tr class="skeleton-row">
+                <td><span class="skeleton-line medium"></span></td>
+                <td><span class="skeleton-line medium"></span></td>
+                <td><span class="skeleton-line short"></span></td>
+                <td><span class="skeleton-line short"></span></td>
+                <td><span class="skeleton-line medium"></span></td>
+            </tr>
+        `;
     }
     try {
         const { data, error } = await supabaseClient
@@ -1110,7 +1221,7 @@ async function loadCandidates() {
         if (error) {
             console.error(error);
             if (body) {
-                body.innerHTML = '<tr><td colspan="5" class="empty">Could not load candidates</td></tr>';
+                body.innerHTML = '<tr><td colspan="5" class="empty">Could not load candidates.</td></tr>';
             }
             setText('candidateCount', 'Candidates unavailable');
             return;
@@ -1121,7 +1232,7 @@ async function loadCandidates() {
     catch (err) {
         console.error(err);
         if (body) {
-            body.innerHTML = '<tr><td colspan="5" class="empty">Could not load candidates</td></tr>';
+            body.innerHTML = '<tr><td colspan="5" class="empty">Could not load candidates.</td></tr>';
         }
         setText('candidateCount', 'Candidates unavailable');
     }
@@ -1697,6 +1808,192 @@ async function convertCurrentCandidateToEmployee() {
     await convertCandidateToEmployee(currentCandidate.id);
 }
 window.openCandidatesView = openCandidatesView;
+// =========================
+// COMMAND PALETTE
+// =========================
+
+let commandPaletteInitialized = false;
+
+function buildCommandPaletteShell() {
+
+    if (document.getElementById('commandPaletteOverlay')) {
+        return;
+    }
+
+    const overlay = document.createElement('div');
+
+    overlay.id = 'commandPaletteOverlay';
+
+    overlay.className = 'command-palette-overlay hidden';
+
+    overlay.innerHTML = `
+        <div class="command-palette">
+            <div class="command-palette-header">
+                <span class="command-palette-icon">⌘K</span>
+                <input id="commandPaletteInput" type="text" placeholder="Search employees, actions, and views…" autocomplete="off">
+            </div>
+            <div id="commandPaletteResults" class="command-palette-results"></div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    overlay.addEventListener('click', (event) => {
+        if (event.target === overlay) {
+            closeCommandPalette();
+        }
+    });
+
+}
+
+function getCommandPaletteItems() {
+
+    const employeeItems = (window.EMPLOYEES || EMPLOYEES || []).map(employee => ({
+        title: `${employee.first || employee.first_name || ''} ${employee.last || employee.last_name || ''}`.trim(),
+        subtitle: employee.position || employee.department || 'Employee',
+        action: () => {
+            if (typeof window.openDrawer === 'function') {
+                window.openDrawer(employee);
+            }
+        }
+    }));
+
+    return [
+        {
+            title: 'Open Candidates',
+            subtitle: 'Jump to candidate pipeline',
+            action: () => openCandidatesView()
+        },
+        {
+            title: 'Refresh Dashboard',
+            subtitle: 'Reload dashboard data',
+            action: () => loadAllDashboardData()
+        },
+        {
+            title: 'Clear Filters',
+            subtitle: 'Reset roster filters',
+            action: () => clearFilters()
+        },
+        ...employeeItems
+    ];
+
+}
+
+function renderCommandPaletteResults() {
+
+    const results = document.getElementById('commandPaletteResults');
+
+    const input = document.getElementById('commandPaletteInput');
+
+    if (!results || !input) {
+        return;
+    }
+
+    const query = String(input.value || '').trim().toLowerCase();
+
+    const items = getCommandPaletteItems().filter(item => {
+        return `${item.title} ${item.subtitle}`.toLowerCase().includes(query);
+    }).slice(0, 12);
+
+    if (!items.length) {
+        results.innerHTML = '<div class="command-palette-empty">No results found.</div>';
+        return;
+    }
+
+    results.innerHTML = items.map((item, index) => `
+        <button class="command-palette-item ${index === 0 ? 'active' : ''}" data-command-index="${index}">
+            <div>
+                <strong>${esc(item.title)}</strong>
+                <small>${esc(item.subtitle || '')}</small>
+            </div>
+        </button>
+    `).join('');
+
+    results.querySelectorAll('[data-command-index]').forEach(button => {
+        button.addEventListener('click', () => {
+            const selected = items[Number(button.dataset.commandIndex || 0)];
+            closeCommandPalette();
+            selected?.action?.();
+        });
+    });
+
+}
+
+function openCommandPalette() {
+
+    buildCommandPaletteShell();
+
+    const overlay = document.getElementById('commandPaletteOverlay');
+
+    const input = document.getElementById('commandPaletteInput');
+
+    if (!overlay || !input) {
+        return;
+    }
+
+    overlay.classList.remove('hidden');
+
+    input.value = '';
+
+    renderCommandPaletteResults();
+
+    requestAnimationFrame(() => {
+        input.focus();
+    });
+
+    input.oninput = renderCommandPaletteResults;
+
+}
+
+function closeCommandPalette() {
+
+    const overlay = document.getElementById('commandPaletteOverlay');
+
+    if (overlay) {
+        overlay.classList.add('hidden');
+    }
+
+}
+
+function initCommandPalette() {
+
+    if (commandPaletteInitialized) {
+        return;
+    }
+
+    document.addEventListener('keydown', (event) => {
+
+        const isCommandK = (event.metaKey || event.ctrlKey) && String(event.key || '').toLowerCase() === 'k';
+
+        if (!isCommandK) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const overlay = document.getElementById('commandPaletteOverlay');
+
+        if (overlay && !overlay.classList.contains('hidden')) {
+            closeCommandPalette();
+        } else {
+            openCommandPalette();
+        }
+
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeCommandPalette();
+        }
+    });
+
+    commandPaletteInitialized = true;
+
+}
+
+window.openCommandPalette = openCommandPalette;
+window.closeCommandPalette = closeCommandPalette;
+window.initCommandPalette = initCommandPalette;
 window.openNewCandidateForm = openNewCandidateForm;
 window.openCandidateDrawer = openCandidateDrawer;
 window.closeCandidateDrawer = closeCandidateDrawer;
@@ -2914,8 +3211,13 @@ async function saveEmployeeRecord() {
     const standard_hours_value = safeGet('employeeStandardHoursInput')?.value;
     const standard_hours = standard_hours_value === '' ? null : Number(standard_hours_value);
     const benefits_status = safeGet('employeeBenefitsStatusInput')?.value.trim() || null;
-    const hire_date = safeGet('employeeHireDateInput')?.value || null;
-    const next_review_date = safeGet('employeeNextReviewInput')?.value || null;
+    const hire_date = safeGet('employeeHireDateInput')?.value || safeGet('empHireDate')?.value || safeGet('hireDate')?.value || null;
+    const next_review_date =
+        safeGet('employeeNextReviewInput')?.value ||
+        safeGet('empNextReviewDate')?.value ||
+        safeGet('nextReviewDate')?.value ||
+        document.querySelector('input[name="next_review_date"], input[name="nextReviewDate"]')?.value ||
+        null;
     const anniversary_date = safeGet('employeeAnniversaryDateInput')?.value || null;
     const tenure_bracket = safeGet('employeeTenureBracketInput')?.value.trim() || null;
     if (!id || !first_name || !last_name) {
@@ -2938,12 +3240,17 @@ async function saveEmployeeRecord() {
         anniversary_date,
         tenure_bracket
     };
+    payload.next_review_date = next_review_date || null;
+    payload.hire_date = hire_date || null;
     let error;
     if (isCreatingEmployee || !currentEmployee) {
         const result = await createEmployee(payload);
         error = result.error;
     }
     else {
+        payload.next_review_date = next_review_date || null;
+        console.log('Saving next_review_date:', payload.next_review_date);
+
         const result = await updateEmployeeById(currentEmployee.dbId, payload);
         error = result.error;
     }

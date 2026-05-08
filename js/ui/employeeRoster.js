@@ -731,7 +731,7 @@ function ensureRosterViewTabs() {
 function bindRosterEvents() {
     bindEmployeeUpdateToast();
     ensureRosterViewTabs();
-    const searchInput = safeGet('globalSearch');
+    const searchInput = safeGet('globalSearch') || document.querySelector('#employeeSearch, #searchInput, input[type="search"], input[placeholder*="Search"], input[placeholder*="search"]');
     const departmentFilter = safeGet('deptFilter');
     const statusFilter = safeGet('statusFilter');
     const clearFiltersBtn = safeGet('clearFiltersBtn');
@@ -743,11 +743,33 @@ function bindRosterEvents() {
         searchInput.style.pointerEvents = 'auto';
         searchInput.style.userSelect = 'text';
         searchInput.tabIndex = 0;
-        searchInput.style.zIndex = '10';
+        searchInput.style.zIndex = '9999';
         searchInput.style.position = 'relative';
+        searchInput.addEventListener('click', (event) => {
+            event.stopPropagation();
+            unlockRosterSearchInput();
+            searchInput.focus();
+        });
+
+        searchInput.addEventListener('pointerdown', (event) => {
+            event.stopPropagation();
+            unlockRosterSearchInput();
+            searchInput.focus();
+        });
+
         searchInput.oninput = () => {
+            unlockRosterSearchInput();
             clearTimeout(rosterSearchTimer);
-            rosterSearchTimer = setTimeout(renderEmployeeRoster, 150);
+            rosterSearchTimer = setTimeout(() => {
+                renderEmployeeRoster();
+                requestAnimationFrame(() => {
+                    unlockRosterSearchInput();
+                    const refreshedSearchInput = safeGet('globalSearch') || document.querySelector('#employeeSearch, #searchInput, input[type="search"], input[placeholder*="Search"], input[placeholder*="search"]');
+                    if (refreshedSearchInput) {
+                        refreshedSearchInput.focus();
+                    }
+                });
+            }, 150);
         };
     }
     if (departmentFilter) {
@@ -883,6 +905,22 @@ function getLocalAuditLogsForEmployee() {
 function renderEmployeeAuditLogViewer() {
     return;
 }
+function unlockRosterSearchInput() {
+    const searchInput = safeGet('globalSearch') || document.querySelector('#employeeSearch, #searchInput, input[type="search"], input[placeholder*="Search"], input[placeholder*="search"]');
+
+    if (!searchInput) return;
+
+    searchInput.disabled = false;
+    searchInput.readOnly = false;
+    searchInput.removeAttribute('disabled');
+    searchInput.removeAttribute('readonly');
+    searchInput.style.pointerEvents = 'auto';
+    searchInput.style.userSelect = 'text';
+    searchInput.style.zIndex = '200000';
+    searchInput.style.position = 'relative';
+    searchInput.tabIndex = 0;
+}
+
 // =========================
 // EXPORTS
 // =========================
@@ -899,6 +937,7 @@ window.renderEmployeeRoster = renderEmployeeRoster;
 window.openDrawerByEmployeeId = openDrawerByEmployeeId;
 window.deleteEmployeeQuick = deleteEmployeeQuick;
 window.bindRosterEvents = bindRosterEvents;
+window.unlockRosterSearchInput = unlockRosterSearchInput;
 window.ensureRosterViewTabs = ensureRosterViewTabs;
 window.lockEmployeeIdField = lockEmployeeIdField;
 window.bindEmployeeUpdateToast = bindEmployeeUpdateToast;
@@ -916,6 +955,7 @@ window.writeEmployeeAuditLogLocal = writeEmployeeAuditLogLocal;
 window.fetchEmployeeAuditLogs = fetchEmployeeAuditLogs;
 window.getLocalAuditLogsForEmployee = getLocalAuditLogsForEmployee;
 window.renderEmployeeAuditLogViewer = renderEmployeeAuditLogViewer;
+
 setTimeout(() => {
     const searchInput = safeGet('globalSearch');
     if (searchInput) {
@@ -927,6 +967,10 @@ setTimeout(() => {
         searchInput.style.userSelect = 'text';
     }
 }, 250);
+
+setInterval(() => {
+    unlockRosterSearchInput();
+}, 750);
 
 function getAtRiskKpiHoverNames() {
     const riskMap = window.currentAtRiskRosterMap || (typeof currentAtRiskRosterMap !== 'undefined' ? currentAtRiskRosterMap : {}) || {};

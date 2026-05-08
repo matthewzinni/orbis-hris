@@ -128,6 +128,114 @@ async function signOut() {
 
 }
 
+async function initAuthSession() {
+
+    const db = getAuthClient();
+
+    if (!db) {
+
+        console.error('Supabase auth client is not available.');
+
+        showLoginView();
+
+        return;
+
+    }
+
+    try {
+
+        const { data, error } = await db.auth.getSession();
+
+        if (error) {
+
+            console.error(error);
+
+            showLoginView();
+
+            return;
+
+        }
+
+        const session = data?.session || null;
+
+        if (session?.user) {
+
+            window.currentUser = session.user;
+
+            currentUser = window.currentUser;
+
+            showAppView(window.currentUser);
+
+            if (typeof loadAllDashboardData === 'function') {
+
+                await loadAllDashboardData();
+
+            } else if (typeof loadAppData === 'function') {
+
+                await loadAppData();
+
+            }
+
+        } else {
+
+            window.currentUser = null;
+
+            currentUser = null;
+
+            showLoginView();
+
+        }
+
+    } catch (err) {
+
+        console.error(err);
+
+        showLoginView();
+
+    }
+
+}
+
+function listenForAuthChanges() {
+
+    const db = getAuthClient();
+
+    if (!db) return;
+
+    db.auth.onAuthStateChange(async (_event, session) => {
+
+        if (session?.user) {
+
+            window.currentUser = session.user;
+
+            currentUser = window.currentUser;
+
+            showAppView(window.currentUser);
+
+        } else {
+
+            window.currentUser = null;
+
+            currentUser = null;
+
+            showLoginView();
+
+        }
+
+    });
+
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+
+    listenForAuthChanges();
+
+    await initAuthSession();
+
+});
+
 window.signIn = signIn;
 
 window.signOut = signOut;
+
+window.initAuthSession = initAuthSession;
