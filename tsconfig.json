@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2020",
     "lib": [
       "DOM",
       "ES2017"
@@ -9,6 +9,9 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": ["vite/client"],
     "skipLibCheck": true,
     "allowJs": false,
     "noEmitOnError": false,
@@ -17,7 +20,7 @@
   },
   "include": [
     "js/**/*.ts"
-  ],
+, "src/types/employeeTypes.ts", "src/types/auditTypes.ts", "src/core/state.ts", "src/ui/employeeAudit.ts", "js/legacy/app.d.ts", "js/legacy/app.ts", "src/modules/dashboard.ts"  ],
   "exclude": [
     "node_modules"
   ]

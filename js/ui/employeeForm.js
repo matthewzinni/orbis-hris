@@ -92,6 +92,20 @@ async function saveEmployeeForm() {
     }
 }
 
+function createEmployee() {
+    if (typeof openNewEmployeeForm === 'function') {
+        openNewEmployeeForm();
+        return;
+    }
+
+    window.currentEmployee = null;
+    resetEmployeeForm();
+
+    if (typeof showToast === 'function') {
+        showToast('New employee form ready.');
+    }
+}
+
 // =========================
 // EXPORTS
 // =========================
@@ -101,3 +115,4 @@ window.getEmployeeFormData = getEmployeeFormData;
 window.populateEmployeeForm = populateEmployeeForm;
 window.resetEmployeeForm = resetEmployeeForm;
 window.saveEmployeeForm = saveEmployeeForm;
+window.createEmployee = createEmployee;
