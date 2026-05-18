@@ -3,8 +3,18 @@
 // Employee loading, retrieval, and state sync
 // ============================================
 
-import { supabase } from '../services/supabaseClient';
+import * as SupabaseService from '../services/supabaseClient';
 import { appState } from '../core/state';
+
+const supabaseClient =
+  (SupabaseService as any).supabaseClient ||
+  (SupabaseService as any).supabase ||
+  (window as any).supabaseClient ||
+  (window as any).supabase;
+
+if (!supabaseClient) {
+  console.error('Supabase client was not found. Employee module will not load employee data.');
+}
 
 export interface EmployeeRecord {
   id?: string;
@@ -28,9 +38,16 @@ export interface EmployeeRecord {
 export type NormalizedEmployeeStatus = 'active' | 'inactive' | 'leave' | 'terminated' | 'unknown';
 
 export function normalizeEmployeeStatus(status: unknown): NormalizedEmployeeStatus {
-  const normalized = String(status || '').trim().toLowerCase();
+  const normalized = String(status || '')
+    .trim()
+    .toLowerCase();
 
-  if (!normalized || normalized === 'active' || normalized === 'full-time' || normalized === 'part-time') {
+  if (
+    !normalized ||
+    normalized === 'active' ||
+    normalized === 'full-time' ||
+    normalized === 'part-time'
+  ) {
     return 'active';
   }
 
@@ -45,7 +62,7 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
   try {
     console.log('Loading employees...');
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('employees')
       .select('*')
       .order('last_name', { ascending: true });
@@ -87,11 +104,15 @@ export function getActiveEmployees(): EmployeeRecord[] {
 }
 
 export function getInactiveEmployees(): EmployeeRecord[] {
-  return getEmployees().filter((employee) => normalizeEmployeeStatus(employee.status) === 'inactive');
+  return getEmployees().filter(
+    (employee) => normalizeEmployeeStatus(employee.status) === 'inactive'
+  );
 }
 
 export function getTerminatedEmployees(): EmployeeRecord[] {
-  return getEmployees().filter((employee) => normalizeEmployeeStatus(employee.status) === 'terminated');
+  return getEmployees().filter(
+    (employee) => normalizeEmployeeStatus(employee.status) === 'terminated'
+  );
 }
 
 export function getEmployeesOnLeave(): EmployeeRecord[] {

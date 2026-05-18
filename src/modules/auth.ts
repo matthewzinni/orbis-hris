@@ -1,4 +1,14 @@
-import { supabase } from '../services/supabaseClient.ts';
+import * as SupabaseService from '../services/supabaseClient';
+
+const supabase =
+  (SupabaseService as any).supabaseClient ||
+  (SupabaseService as any).supabase ||
+  (window as any).supabaseClient ||
+  (window as any).supabase;
+
+if (!supabase) {
+  console.error('Supabase client export was not found. Check src/services/supabaseClient.ts exports.');
+}
 
 export async function signIn(email?: string, password?: string) {
   const emailInput = document.querySelector<HTMLInputElement>(
@@ -50,3 +60,7 @@ export function watchAuthState(callback: (event: string, session: unknown) => vo
     callback(event, session);
   });
 }
+
+// Temporary global bridge for legacy inline onclick handlers
+(window as any).signIn = signIn;
+(window as any).signOut = signOut;
