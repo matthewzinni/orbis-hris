@@ -1,0 +1,190 @@
+// At-risk / impact player roster badges
+
+type EmployeeRow = Record<string, unknown>;
+
+type FlagMeta = {
+  manualReason?: string;
+  lowReview?: boolean;
+  highReview?: boolean;
+  reviewScore?: number | null;
+  openIncidentCount?: number;
+  flaggedDate?: string;
+  flaggedBy?: string;
+};
+
+function esc(value: unknown): string {
+  if (typeof window.esc === 'function') {
+    return window.esc(value);
+  }
+  return String(value ?? '');
+}
+
+function getRiskMap(): Record<string, FlagMeta> {
+  return (window.currentAtRiskRosterMap || {}) as Record<string, FlagMeta>;
+}
+
+function getImpactMap(): Record<string, FlagMeta> {
+  return (window.currentImpactPlayerRosterMap || {}) as Record<string, FlagMeta>;
+}
+
+export function hasActiveRiskMeta(meta: FlagMeta | null | undefined): boolean {
+  if (!meta) return false;
+
+  return (
+    meta.lowReview === true ||
+    (meta.openIncidentCount ?? 0) > 0 ||
+    String(meta.manualReason || '').trim() !== ''
+  );
+}
+
+export function hasActiveImpactMeta(meta: FlagMeta | null | undefined): boolean {
+  if (!meta) return false;
+
+  return (
+    meta.highReview === true || String(meta.manualReason || '').trim() !== ''
+  );
+}
+
+export function getEmployeeRiskMeta(employee: EmployeeRow | null | undefined): FlagMeta | null {
+  const map = getRiskMap();
+  const meta =
+    map[String(employee?.dbId)] ||
+    map[String(employee?.id)] ||
+    map[String(employee?.employee_id)] ||
+    null;
+
+  return hasActiveRiskMeta(meta) ? meta : null;
+}
+
+export function getEmployeeImpactMeta(employee: EmployeeRow | null | undefined): FlagMeta | null {
+  const map = getImpactMap();
+  const meta =
+    map[String(employee?.dbId)] ||
+    map[String(employee?.id)] ||
+    map[String(employee?.employee_id)] ||
+    null;
+
+  return hasActiveImpactMeta(meta) ? meta : null;
+}
+
+export function buildRiskBadgeHtml(riskMeta: FlagMeta | null): string {
+  if (!hasActiveRiskMeta(riskMeta)) return '';
+
+  const lines = ['At-Risk Flag'];
+
+  if (riskMeta.manualReason) {
+    lines.push('', `Reason: ${riskMeta.manualReason}`);
+  }
+
+  if (riskMeta.lowReview && riskMeta.reviewScore !== null && riskMeta.reviewScore !== undefined) {
+    lines.push('', `Review Score: ${Number(riskMeta.reviewScore).toFixed(1)}`);
+  }
+
+  if ((riskMeta.openIncidentCount ?? 0) > 0) {
+    lines.push('', `Open Incidents: ${riskMeta.openIncidentCount}`);
+  }
+
+  if (riskMeta.flaggedDate) {
+    const flaggedDateLabel = new Date(`${riskMeta.flaggedDate}T00:00:00`).toLocaleDateString(
+      'en-US',
+      { month: 'short', day: 'numeric' }
+    );
+    lines.push('', `Flagged: ${flaggedDateLabel}`);
+  }
+
+  if (riskMeta.flaggedBy) {
+    lines.push('', `By: ${riskMeta.flaggedBy}`);
+  }
+
+  return `<span class="badge badge-leave" style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; font-weight:700;" title="${esc(lines.join('\n'))}">At-Risk</span>`;
+}
+
+export function buildImpactBadgeHtml(impactMeta: FlagMeta | null): string {
+  if (!hasActiveImpactMeta(impactMeta)) return '';
+
+  const lines = ['Impact Player'];
+
+  if (impactMeta.manualReason) {
+    lines.push('', `Reason: ${impactMeta.manualReason}`);
+  }
+
+  if (impactMeta.highReview && impactMeta.reviewScore !== null && impactMeta.reviewScore !== undefined) {
+    lines.push('', `Review Score: ${Number(impactMeta.reviewScore).toFixed(1)}`);
+  }
+
+  if (impactMeta.flaggedDate) {
+    const flaggedDateLabel = new Date(`${impactMeta.flaggedDate}T00:00:00`).toLocaleDateString(
+      'en-US',
+      { month: 'short', day: 'numeric' }
+    );
+    lines.push('', `Flagged: ${flaggedDateLabel}`);
+  }
+
+  if (impactMeta.flaggedBy) {
+    lines.push('', `By: ${impactMeta.flaggedBy}`);
+  }
+
+  return `<span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;" title="${esc(lines.join('\n'))}">Impact Player</span>`;
+}
+
+export function updateEmployeeRowBadges(): void {
+  const employees = Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : [];
+  const rows = document.querySelectorAll('#employeeTable tbody tr, #employeeRosterBody tr');
+
+  rows.forEach((row) => {
+    const employeeId = row.getAttribute('data-id') || row.getAttribute('data-employee-id');
+    if (!employeeId) return;
+
+    const employee = employees.find(
+      (e: EmployeeRow) =>
+        String(e.dbId) === String(employeeId) ||
+        String(e.id) === String(employeeId) ||
+        String(e.employee_id) === String(employeeId)
+    );
+
+    if (!employee) return;
+
+    const nameMain =
+      row.querySelector('.roster-name-main') || row.querySelector('td:nth-child(2)');
+
+    if (!nameMain) return;
+
+    let badgeContainer = nameMain.querySelector('.employee-badges') as HTMLElement | null;
+
+    if (!badgeContainer) {
+      badgeContainer = document.createElement('div');
+      badgeContainer.className = 'employee-badges';
+      badgeContainer.style.display = 'inline-flex';
+      badgeContainer.style.flexWrap = 'wrap';
+      badgeContainer.style.alignItems = 'center';
+      badgeContainer.style.gap = '4px';
+      badgeContainer.style.marginLeft = '4px';
+      nameMain.appendChild(badgeContainer);
+    }
+
+    const riskHtml = buildRiskBadgeHtml(getEmployeeRiskMeta(employee));
+    const impactHtml = buildImpactBadgeHtml(getEmployeeImpactMeta(employee));
+
+    badgeContainer.innerHTML = `${impactHtml}${riskHtml}`;
+  });
+}
+
+declare global {
+  interface Window {
+    getEmployeeRiskMeta?: (employee: EmployeeRow) => FlagMeta | null;
+    getEmployeeImpactMeta?: (employee: EmployeeRow) => FlagMeta | null;
+    hasActiveRiskMeta?: (meta: FlagMeta | null | undefined) => boolean;
+    hasActiveImpactMeta?: (meta: FlagMeta | null | undefined) => boolean;
+    buildRiskBadgeHtml?: (meta: FlagMeta | null) => string;
+    buildImpactBadgeHtml?: (meta: FlagMeta | null) => string;
+    updateEmployeeRowBadges?: () => void;
+  }
+}
+
+window.getEmployeeRiskMeta = getEmployeeRiskMeta;
+window.getEmployeeImpactMeta = getEmployeeImpactMeta;
+window.hasActiveRiskMeta = hasActiveRiskMeta;
+window.hasActiveImpactMeta = hasActiveImpactMeta;
+window.buildRiskBadgeHtml = buildRiskBadgeHtml;
+window.buildImpactBadgeHtml = buildImpactBadgeHtml;
+window.updateEmployeeRowBadges = updateEmployeeRowBadges;

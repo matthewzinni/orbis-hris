@@ -1,41 +1,23 @@
 // ============================================
-// ORBIS EMPLOYEE MODULE
-// Employee loading, retrieval, and state sync
+// Employee loading + access-scoped roster state
 // ============================================
 
-import * as SupabaseService from '../services/supabaseClient';
+import { supabaseClient } from '../services/supabaseClient';
 import { appState } from '../core/state';
+import {
+  isSupervisorUser,
+  employeeMatchesSupervisorAccess,
+  setCurrentUserAccess,
+} from '../services/access';
 
-const supabaseClient =
-  (SupabaseService as any).supabaseClient ||
-  (SupabaseService as any).supabase ||
-  (window as any).supabaseClient ||
-  (window as any).supabase;
+export type EmployeeRecord = Record<string, unknown>;
 
-if (!supabaseClient) {
-  console.error('Supabase client was not found. Employee module will not load employee data.');
-}
-
-export interface EmployeeRecord {
-  id?: string;
-  dbId?: string;
-  employee_id?: string;
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  department?: string;
-  position?: string;
-  supervisor?: string;
-  status?: 'ACTIVE' | 'INACTIVE' | 'LEAVE' | 'TERMINATED' | string;
-  hire_date?: string;
-  next_review_date?: string;
-  pay_type?: string;
-  benefits_status?: string;
-  standard_hours?: number;
-  [key: string]: unknown;
-}
-
-export type NormalizedEmployeeStatus = 'active' | 'inactive' | 'leave' | 'terminated' | 'unknown';
+export type NormalizedEmployeeStatus =
+  | 'active'
+  | 'inactive'
+  | 'leave'
+  | 'terminated'
+  | 'unknown';
 
 export function normalizeEmployeeStatus(status: unknown): NormalizedEmployeeStatus {
   const normalized = String(status || '')
@@ -58,35 +40,129 @@ export function normalizeEmployeeStatus(status: unknown): NormalizedEmployeeStat
   return 'unknown';
 }
 
+function showToast(message: string, type = 'success'): void {
+  if (typeof window.showToast === 'function') {
+    window.showToast(message, type);
+    return;
+  }
+  console.log(`[${type}] ${message}`);
+}
+
+function normalizeRow(employee: EmployeeRecord): EmployeeRecord | null {
+  if (typeof window.normalizeEmployee === 'function') {
+    return window.normalizeEmployee(employee) as EmployeeRecord | null;
+  }
+  return employee;
+}
+
 export async function loadEmployees(): Promise<EmployeeRecord[]> {
   try {
-    console.log('Loading employees...');
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser();
 
-    const { data, error } = await supabaseClient
-      .from('employees')
-      .select('*')
-      .order('last_name', { ascending: true });
+    const userEmail = String(user?.email || '')
+      .trim()
+      .toLowerCase();
 
-    if (error) {
-      console.error('Failed to load employees:', error);
-      throw error;
+    if (userEmail) {
+      const { data: accessRows, error: accessError } = await supabaseClient
+        .from('user_access')
+        .select('email, display_name, role, supervisor_name, can_delete')
+        .eq('email', userEmail)
+        .limit(1);
+
+      if (!accessError && accessRows?.[0]) {
+        const role = String(accessRows[0].role || window.currentUserRole || 'user')
+          .trim()
+          .toLowerCase();
+        setCurrentUserAccess(accessRows[0], role);
+        console.log('[Access Loaded In loadEmployees]', role, accessRows[0]);
+      }
     }
+  } catch (accessErr) {
+    console.warn('Could not load user access before employee scope.', accessErr);
+  }
 
-    const employees = (data || []) as EmployeeRecord[];
+  const { data, error } = await supabaseClient.from('employees').select('*');
 
-    appState.employees = employees;
-
-    console.log(`Loaded ${employees.length} employees`);
-
-    return employees;
-  } catch (err) {
-    console.error('Employee load failure:', err);
+  if (error) {
+    console.error(error);
+    showToast('Could not load employees.', 'error');
     return [];
   }
+
+  const normalizedEmployees = (Array.isArray(data) ? data : [])
+    .map((employee) => normalizeRow(employee as EmployeeRecord))
+    .filter(Boolean) as EmployeeRecord[];
+
+  window.ALL_EMPLOYEES = normalizedEmployees;
+
+  let scoped: EmployeeRecord[];
+
+  if (isSupervisorUser()) {
+    if (!window.currentUserAccess?.supervisor_name) {
+      showToast('No employee access assigned. Contact HR.', 'error');
+      scoped = [];
+    } else {
+      scoped = normalizedEmployees.filter((employee) =>
+        employeeMatchesSupervisorAccess(employee)
+      );
+    }
+
+    console.log('[Supervisor Filter Applied]', {
+      supervisorName: window.currentUserAccess?.supervisor_name,
+      before: normalizedEmployees.length,
+      after: scoped.length,
+    });
+  } else {
+    scoped = normalizedEmployees;
+  }
+
+  window.EMPLOYEES = scoped;
+  window.currentFilteredEmployees = scoped;
+  appState.employees = scoped;
+
+  console.log(
+    '[Access Scope]',
+    window.currentUserRole,
+    window.currentUserAccess,
+    'visible employees:',
+    scoped.length
+  );
+
+  if (typeof window.renderRoster === 'function') {
+    window.renderRoster();
+  }
+
+  if (typeof window.renderKpiEmployeeMetrics === 'function') {
+    window.renderKpiEmployeeMetrics();
+  }
+
+  if (typeof window.populateDepartmentFilter === 'function') {
+    window.populateDepartmentFilter();
+  }
+
+  if (typeof window.renderDepartmentSummary === 'function') {
+    window.renderDepartmentSummary();
+  }
+
+  if (typeof window.applySupervisorDashboardView === 'function') {
+    window.applySupervisorDashboardView();
+  }
+
+  if (typeof window.renderBasicDashboardKpis === 'function') {
+    window.renderBasicDashboardKpis();
+  }
+
+  return scoped;
 }
 
 export function getEmployees(): EmployeeRecord[] {
-  return appState.employees as EmployeeRecord[];
+  if (Array.isArray(appState.employees) && appState.employees.length) {
+    return appState.employees as EmployeeRecord[];
+  }
+  return Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : [];
 }
 
 export function getEmployeeById(id: string): EmployeeRecord | undefined {
@@ -100,7 +176,9 @@ export function getEmployeeById(id: string): EmployeeRecord | undefined {
 }
 
 export function getActiveEmployees(): EmployeeRecord[] {
-  return getEmployees().filter((employee) => normalizeEmployeeStatus(employee.status) === 'active');
+  return getEmployees().filter(
+    (employee) => normalizeEmployeeStatus(employee.status) === 'active'
+  );
 }
 
 export function getInactiveEmployees(): EmployeeRecord[] {
@@ -116,16 +194,18 @@ export function getTerminatedEmployees(): EmployeeRecord[] {
 }
 
 export function getEmployeesOnLeave(): EmployeeRecord[] {
-  return getEmployees().filter((employee) => normalizeEmployeeStatus(employee.status) === 'leave');
+  return getEmployees().filter(
+    (employee) => normalizeEmployeeStatus(employee.status) === 'leave'
+  );
 }
 
-export function employeeDisplayName(employee: EmployeeRecord): string {
-  const first = String(employee.first_name || '').trim();
-  const last = String(employee.last_name || '').trim();
-
-  const fullName = `${first} ${last}`.trim();
-
-  if (fullName) return fullName;
-
-  return String(employee.email || employee.employee_id || 'Unknown Employee');
+declare global {
+  interface Window {
+    EMPLOYEES?: EmployeeRecord[];
+    ALL_EMPLOYEES?: EmployeeRecord[];
+    currentFilteredEmployees?: EmployeeRecord[];
+    loadEmployees?: () => Promise<EmployeeRecord[]>;
+  }
 }
+
+window.loadEmployees = loadEmployees;

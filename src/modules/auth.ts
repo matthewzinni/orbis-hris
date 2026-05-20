@@ -7,7 +7,9 @@ const supabase =
   (window as any).supabase;
 
 if (!supabase) {
-  console.error('Supabase client export was not found. Check src/services/supabaseClient.ts exports.');
+  console.error(
+    'Supabase client export was not found. Check src/services/supabaseClient.ts exports.'
+  );
 }
 
 export async function signIn(email?: string, password?: string) {

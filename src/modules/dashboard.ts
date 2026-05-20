@@ -30,8 +30,8 @@ export function getDashboardMetrics(): DashboardMetrics {
 }
 
 export async function loadSummaryMetrics(): Promise<void> {
-  if (typeof (window as any).loadSummaryMetrics === 'function') {
-    await (window as any).loadSummaryMetrics();
+  if (typeof window.loadSummaryMetrics === 'function') {
+    await window.loadSummaryMetrics();
   }
 }
 

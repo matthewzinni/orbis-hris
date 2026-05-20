@@ -155,13 +155,13 @@ export function renderDocumentsLibrary(): void {
             </p>
 
             <div class="document-actions">
-                <button type="button" data-doc-id="${doc.id}" class="button soft document-action-btn view-document-btn">
+                <button type="button" data-doc-id="${doc.id}" class="button soft sm document-action-btn view-document-btn">
                     View
                 </button>
-                <button type="button" data-doc-id="${doc.id}" class="button soft document-action-btn download-document-btn">
+                <button type="button" data-doc-id="${doc.id}" class="button soft sm document-action-btn download-document-btn">
                     Download
                 </button>
-                <button type="button" data-doc-id="${doc.id}" class="button danger-soft document-action-btn delete-document-btn">
+                <button type="button" data-doc-id="${doc.id}" class="button danger sm document-action-btn delete-document-btn">
                     Delete
                 </button>
             </div>
@@ -841,39 +841,8 @@ function injectDocumentUploadModalStyles(): void {
             margin-top: 14px;
         }
 
-        .document-action-btn {
-            border: 0;
-            border-radius: 10px;
-            padding: 8px 12px;
-            font-size: 13px;
-            font-weight: 700;
-            line-height: 1;
-            cursor: pointer;
-            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
-        }
-
-        .document-action-btn:hover {
-            transform: translateY(-1px);
-        }
-
-        .document-action-btn.button.soft {
-            color: #1d4ed8;
-            background: #eff6ff;
-            box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.14);
-        }
-
-        .document-action-btn.button.soft:hover {
-            background: #dbeafe;
-        }
-
-        .document-action-btn.button.danger-soft {
-            color: #b91c1c;
-            background: #fef2f2;
-            box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.16);
-        }
-
-        .document-action-btn.button.danger-soft:hover {
-            background: #fee2e2;
+        .document-actions .button {
+            min-width: 88px;
         }
     `;
 

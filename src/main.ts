@@ -1,31 +1,183 @@
-// ============================================
-// ORBIS SUPABASE CLIENT
-// Centralized Supabase connection for TypeScript modules
-// ============================================
+import './styles/styles.css';
+import { supabase } from './services/supabaseClient';
+import {
+  signIn,
+  signOut,
+  watchAuthState,
+  getCurrentSession,
+} from './modules/auth';
+import {
+  markOrbisBootComplete,
+  markOrbisMainBoot,
+  syncEmployeeStateFromWindow,
+} from './bootstrap';
+import './core/legacyGlobals';
+import './services/employeeNormalizer';
+import './services/access';
+import './modules/drawerForms';
+import './ui/history';
+import './ui/drawerUi';
+import './modules/drawer';
+import './ui/navigation';
+import './ui/departmentSummary';
+import './modules/onboarding';
+import './modules/employees';
+import './modules/dashboardBoot';
+import { initAppShell, showAuthenticatedOrbisView, showAuthView } from './app/appShell';
+import './services/auditTrail';
+import './modules/employeeAdmin';
+import './modules/employeeFlags';
+import './ui/badges';
+import './ui/employeeForm';
 
-import { supabase } from './services/supabaseClient.ts';
-import './utils/helpers';
-
-// Documents
 import { initializeDocumentsLibrary } from './modules/documents';
+import {
+  saveReviewRecord,
+  loadEmployeeReviews,
+  editReviewRecord,
+  deleteReviewRecord,
+} from './modules/reviews';
+import {
+  saveDisciplineRecord,
+  loadEmployeeDiscipline,
+  editDisciplineRecord,
+  deleteDisciplineRecord,
+} from './modules/discipline';
+import {
+  saveIncidentRecord,
+  loadEmployeeIncidents,
+  editIncidentRecord,
+  deleteIncidentRecord,
+} from './modules/incidents';
+import {
+  saveMeetingRecord,
+  loadEmployeeMeetings,
+  editMeetingRecord,
+  deleteMeetingRecord,
+} from './modules/meetings';
+import './modules/stayInterviews';
+import './modules/emergencyContacts';
+import './modules/employeeDocuments';
+import {
+  loadCandidates,
+  saveCandidateRecord,
+  editCandidateRecord,
+  deleteCandidateRecord,
+  moveCandidateToStage,
+  convertCandidateToEmployee,
+} from './modules/candidates';
+import './ui/kpis';
+import './ui/employeeRoster';
 
-import { signIn, signOut, watchAuthState, getCurrentSession } from './modules/auth';
+console.log('Orbis main.ts loaded');
 
-import { loadEmployees, getEmployees } from './modules/employees';
+markOrbisMainBoot();
 
-// Current legacy app bridge
-import * as app from '../js/app.js';
+const bridge = window as any;
 
-console.log('main.ts loaded');
-console.log('Supabase bridge:', supabase);
-console.log('initializeDocumentsLibrary import:', initializeDocumentsLibrary);
+bridge.supabase = supabase;
+bridge.supabaseClient = supabase;
+bridge.signIn = signIn;
+bridge.signOut = signOut;
 
-// Legacy JS bridge
-(window as any).supabase = supabase;
-(window as any).supabaseClient = supabase;
+function openCandidatesViewFallback(): void {
+  const candidatesCard = document.getElementById('candidatesCard');
+  const candidatePipeline = document.getElementById('candidatePipeline');
+  const candidatesSection = candidatesCard || candidatePipeline;
+
+  if (candidatesSection) {
+    candidatesSection.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  }
+
+  if (typeof bridge.loadCandidates === 'function') {
+    bridge.loadCandidates();
+  }
+}
+
+function registerLegacyBridges(): void {
+  bridge.signIn = signIn;
+  bridge.signOut = signOut;
+
+  // openNewEmployeeForm, createEmployee, runDeleteEmployee wired in employeeAdmin.ts
+
+  bridge.openCandidatesView = bridge.openCandidatesView || openCandidatesViewFallback;
+
+  bridge.saveReviewRecord = saveReviewRecord;
+  bridge.saveEmployeeReview = saveReviewRecord;
+  bridge.loadEmployeeReviews = loadEmployeeReviews;
+  bridge.editReviewRecord = editReviewRecord;
+  bridge.deleteReviewRecord = deleteReviewRecord;
+
+  bridge.saveDisciplineRecord = saveDisciplineRecord;
+  bridge.saveDisciplineReport = saveDisciplineRecord;
+  bridge.loadEmployeeDiscipline = loadEmployeeDiscipline;
+  bridge.editDisciplineRecord = editDisciplineRecord;
+  bridge.deleteDisciplineRecord = deleteDisciplineRecord;
+
+  bridge.saveIncidentRecord = saveIncidentRecord;
+  bridge.loadEmployeeIncidents = loadEmployeeIncidents;
+  bridge.editIncidentRecord = editIncidentRecord;
+  bridge.deleteIncidentRecord = deleteIncidentRecord;
+
+  bridge.saveMeetingRecord = saveMeetingRecord;
+  bridge.saveMeeting = saveMeetingRecord;
+  bridge.loadEmployeeMeetings = loadEmployeeMeetings;
+  bridge.loadMeetingRecords = loadEmployeeMeetings;
+  bridge.editMeetingRecord = editMeetingRecord;
+  bridge.deleteMeetingRecord = deleteMeetingRecord;
+
+  bridge.loadCandidates = loadCandidates;
+  bridge.refreshCandidatesView = loadCandidates;
+
+  bridge.saveCandidateRecord = saveCandidateRecord;
+  bridge.editCandidateRecord = editCandidateRecord;
+  bridge.deleteCandidateRecord = deleteCandidateRecord;
+  bridge.moveCandidateToStage = moveCandidateToStage;
+  bridge.convertCandidateToEmployee = convertCandidateToEmployee;
+}
+
+async function initializeProtectedModules(): Promise<void> {
+  try {
+    console.log('Initializing Documents Library...');
+    await initializeDocumentsLibrary();
+    console.log('Documents Library initialized successfully');
+  } catch (err) {
+    console.error('Documents Library failed to initialize:', err);
+  }
+
+  try {
+    if (typeof bridge.loadAllDashboardData === 'function') {
+      console.log('Loading dashboard data...');
+      await bridge.loadAllDashboardData();
+    } else if (typeof bridge.loadEmployees === 'function') {
+      console.log('Loading employees...');
+      await bridge.loadEmployees();
+
+      if (typeof bridge.renderEmployeeRoster === 'function') {
+        bridge.renderEmployeeRoster();
+      }
+    } else {
+      console.warn('loadEmployees bridge missing; roster may not populate.');
+      return;
+    }
+
+    syncEmployeeStateFromWindow();
+
+    const employeeCount = Array.isArray(bridge.EMPLOYEES) ? bridge.EMPLOYEES.length : 0;
+    console.log('Employees loaded:', employeeCount);
+  } catch (err) {
+    console.error('Employee module failed to load employees:', err);
+  }
+}
 
 window.addEventListener('DOMContentLoaded', async () => {
   console.log('Orbis booted via main.ts');
+
+  initAppShell();
+  registerLegacyBridges();
 
   const session = await getCurrentSession();
   console.log('Current session:', session);
@@ -34,37 +186,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     console.log('Auth event:', event, sessionData);
   });
 
-  // Do not load protected data until authenticated
   if (!session) {
     console.log('No active session detected. Waiting for sign in...');
-  } else {
-    try {
-      console.log('Initializing Documents Library...');
-      await initializeDocumentsLibrary();
-      console.log('Documents Library initialized successfully');
-    } catch (err) {
-      console.error('Documents Library failed to initialize:', err);
-    }
-
-    try {
-      console.log('Loading employees from employees.ts...');
-      await loadEmployees();
-      console.log('Employees loaded:', getEmployees().length);
-    } catch (err) {
-      console.error('Employee module failed to load employees:', err);
-    }
+    showAuthView();
+    return;
   }
 
-  // TEMP: expose functions for HTML onclick bridge during migration.
-  (window as any).signIn = signIn;
-  (window as any).signOut = signOut;
-
-  (window as any).loadAllDashboardData =
-    (window as any).loadAllDashboardData || (app as any).loadAllDashboardData;
-
-  (window as any).openNewEmployeeForm =
-    (window as any).openNewEmployeeForm || (app as any).openNewEmployeeForm;
-
-  (window as any).openCandidatesView =
-    (window as any).openCandidatesView || (app as any).openCandidatesView;
+  showAuthenticatedOrbisView();
+  await initializeProtectedModules();
+  markOrbisBootComplete();
 });

@@ -1,0 +1,434 @@
+import { supabaseClient } from '../services/supabaseClient';
+
+interface DisciplineRecord {
+  id?: string;
+  employee_id?: string;
+  incident_date?: string;
+  issue_type?: string;
+  discipline_level?: string;
+  description?: string;
+  action_taken?: string;
+  report_status?: string;
+  refused_to_sign?: boolean;
+  employee_signature?: string;
+  manager_signature?: string;
+  witness_signature?: string;
+  created_at?: string;
+  created_by?: string;
+  [key: string]: unknown;
+}
+
+interface DisciplineEmployee {
+  id?: string;
+  dbId?: string;
+  employee_id?: string;
+  displayId?: string;
+  first_name?: string;
+  last_name?: string;
+  first?: string;
+  last?: string;
+  [key: string]: unknown;
+}
+
+declare global {
+  interface Window {
+    currentEmployee?: DisciplineEmployee;
+    currentDisciplineId?: string | null;
+
+    loadEmployeeDiscipline?: (employeeId: string) => Promise<void>;
+    saveDisciplineRecord?: () => Promise<void>;
+    saveDisciplineReport?: () => Promise<void>;
+    editDisciplineRecord?: (record: DisciplineRecord) => void;
+    deleteDisciplineRecord?: (recordId: string, employeeId: string) => Promise<void>;
+    cancelDisciplineEdit?: () => void;
+
+    showToast?: (message: string, type?: string) => void;
+    safeGet?: (id: string) => HTMLElement | null;
+    todayInputValue?: () => string;
+    switchTab?: (tabName: string) => void;
+
+    renderBasicDashboardKpis?: () => void;
+    loadRecentActivityFallback?: () => Promise<void>;
+  }
+}
+
+let currentDisciplineId: string | null = null;
+
+function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
+  if (typeof window.safeGet === 'function') {
+    return window.safeGet(id) as T | null;
+  }
+
+  return document.getElementById(id) as T | null;
+}
+
+function showToast(message: string, type: string = 'success'): void {
+  if (typeof window.showToast === 'function') {
+    window.showToast(message, type);
+    return;
+  }
+
+  console.log(`[${type}] ${message}`);
+}
+
+function todayInputValue(): string {
+  if (typeof window.todayInputValue === 'function') {
+    return window.todayInputValue();
+  }
+
+  return new Date().toISOString().slice(0, 10);
+}
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function nl2br(value: unknown): string {
+  return escapeHtml(value).replace(/\n/g, '<br>');
+}
+
+function getCurrentEmployee(): DisciplineEmployee | null {
+  return window.currentEmployee || null;
+}
+
+function getEmployeeId(employee: DisciplineEmployee | null): string {
+  return String(
+    employee?.dbId || employee?.employee_id || employee?.id || employee?.displayId || ''
+  );
+}
+
+function getEmployeeLookupIds(
+  employee: DisciplineEmployee | null,
+  fallbackId?: string
+): string[] {
+  return [employee?.dbId, employee?.employee_id, employee?.id, employee?.displayId, fallbackId]
+    .filter(Boolean)
+    .map(String)
+    .filter((value, index, array) => array.indexOf(value) === index);
+}
+
+function setInputValue(id: string, value: unknown): void {
+  const input = safeGet<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id);
+
+  if (!input) return;
+
+  input.value = String(value ?? '');
+}
+
+function getCanvasSignature(canvasId: string): string {
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
+
+  return canvas?.dataset?.signature || '';
+}
+
+function setCanvasSignature(canvasId: string, statusId: string, signature: string): void {
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
+  const status = safeGet(statusId);
+
+  if (!canvas) return;
+
+  if (signature) {
+    canvas.dataset.signature = signature;
+    if (status) status.textContent = 'Signed';
+    return;
+  }
+
+  delete canvas.dataset.signature;
+  if (status) status.textContent = 'Not signed';
+}
+
+function clearCanvasSignature(canvasId: string, statusId: string): void {
+  setCanvasSignature(canvasId, statusId, '');
+}
+
+function resetDisciplineForm(): void {
+  setInputValue('disciplineDate', todayInputValue());
+  setInputValue('disciplineType', '');
+  setInputValue('disciplineLevel', '');
+  setInputValue('disciplineDescription', '');
+  setInputValue('disciplineAction', '');
+  setInputValue('disciplineStatus', 'Open');
+
+  const refused = safeGet<HTMLInputElement>('disciplineRefusedToSign');
+
+  if (refused) refused.checked = false;
+
+  clearCanvasSignature('disciplineEmployeeSignature', 'disciplineEmployeeSigStatus');
+  clearCanvasSignature('disciplineManagerSignature', 'disciplineManagerSigStatus');
+  clearCanvasSignature('disciplineWitnessSignature', 'disciplineWitnessSigStatus');
+}
+
+function buildDisciplinePayload(employeeId: string): DisciplineRecord {
+  return {
+    employee_id: employeeId,
+    incident_date: safeGet<HTMLInputElement>('disciplineDate')?.value || '',
+    issue_type: safeGet<HTMLSelectElement>('disciplineType')?.value || '',
+    discipline_level: safeGet<HTMLSelectElement>('disciplineLevel')?.value || '',
+    description: safeGet<HTMLTextAreaElement>('disciplineDescription')?.value.trim() || '',
+    action_taken: safeGet<HTMLTextAreaElement>('disciplineAction')?.value.trim() || '',
+    report_status: safeGet<HTMLSelectElement>('disciplineStatus')?.value || 'Open',
+    refused_to_sign: safeGet<HTMLInputElement>('disciplineRefusedToSign')?.checked || false,
+    employee_signature: getCanvasSignature('disciplineEmployeeSignature'),
+    manager_signature: getCanvasSignature('disciplineManagerSignature'),
+    witness_signature: getCanvasSignature('disciplineWitnessSignature'),
+  };
+}
+
+async function refreshDisciplineDependentUi(employeeId: string): Promise<void> {
+  await loadEmployeeDiscipline(employeeId);
+
+  if (typeof window.loadRecentActivityFallback === 'function') {
+    await window.loadRecentActivityFallback();
+  }
+
+  if (typeof window.renderBasicDashboardKpis === 'function') {
+    window.renderBasicDashboardKpis();
+  }
+}
+
+export async function loadEmployeeDiscipline(employeeId: string): Promise<void> {
+  const target = safeGet('disciplineHistory');
+
+  if (!target) return;
+
+  target.innerHTML = '<div class="empty">Loading discipline history...</div>';
+
+  try {
+    const activeEmployee = getCurrentEmployee();
+    const primaryEmployeeId = String(employeeId || getEmployeeId(activeEmployee) || '').trim();
+    const employeeIds = getEmployeeLookupIds(activeEmployee, primaryEmployeeId);
+
+    if (!primaryEmployeeId && !employeeIds.length) {
+      target.innerHTML = '<div class="empty">Open an employee to view discipline records.</div>';
+      return;
+    }
+
+    const idsToSearch = employeeIds.length ? employeeIds : [primaryEmployeeId];
+
+    const { data, error } = await supabaseClient
+      .from('discipline_reports')
+      .select('*')
+      .in('employee_id', idsToSearch)
+      .order('incident_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[Discipline] Could not load discipline records:', error);
+      target.innerHTML = '<div class="empty">Could not load discipline records.</div>';
+      return;
+    }
+
+    const rows = ((data || []) as DisciplineRecord[]).sort((a, b) => {
+      const dateA = String(a.incident_date || a.created_at || '');
+      const dateB = String(b.incident_date || b.created_at || '');
+      return dateB.localeCompare(dateA);
+    });
+
+    if (!rows.length) {
+      target.innerHTML = '<div class="empty">No discipline records found for this employee.</div>';
+      return;
+    }
+
+    target.innerHTML = rows
+      .map(
+        (row) => `
+      <div class="history-item" data-discipline-id="${escapeHtml(row.id || '')}">
+        <div class="history-top">
+          <div>
+            <strong>${escapeHtml(row.issue_type || 'Discipline Report')}</strong>
+            <span>${escapeHtml(row.incident_date || row.created_at || '')}</span>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button class="button soft sm" type="button" data-edit-discipline-id="${escapeHtml(row.id || '')}">Edit</button>
+            <button class="button danger sm" type="button" data-delete-discipline-id="${escapeHtml(row.id || '')}">Delete</button>
+          </div>
+        </div>
+        <div class="history-body">
+          <strong>Level:</strong> ${escapeHtml(row.discipline_level || '')}<br><br>
+          <strong>Status:</strong> ${escapeHtml(row.report_status || '')}<br><br>
+          <strong>Description:</strong><br>${nl2br(row.description || '')}<br><br>
+          <strong>Action Taken:</strong><br>${nl2br(row.action_taken || '')}
+        </div>
+      </div>
+    `
+      )
+      .join('');
+
+    target.querySelectorAll<HTMLButtonElement>('[data-edit-discipline-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const recordId = button.dataset.editDisciplineId;
+        const record = rows.find((row) => String(row.id) === String(recordId));
+
+        if (!record) return;
+
+        editDisciplineRecord(record);
+      });
+    });
+
+    target.querySelectorAll<HTMLButtonElement>('[data-delete-discipline-id]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const recordId = button.dataset.deleteDisciplineId;
+
+        if (!recordId) return;
+
+        await deleteDisciplineRecord(recordId, primaryEmployeeId || idsToSearch[0]);
+      });
+    });
+  } catch (err) {
+    console.error('[Discipline] Unexpected discipline history failure:', err);
+    target.innerHTML = '<div class="empty">Could not load discipline records.</div>';
+  }
+}
+
+export function editDisciplineRecord(record: DisciplineRecord): void {
+  if (!record) return;
+
+  currentDisciplineId = record.id || null;
+  window.currentDisciplineId = currentDisciplineId;
+
+  setInputValue('disciplineDate', record.incident_date || todayInputValue());
+  setInputValue('disciplineType', record.issue_type || '');
+  setInputValue('disciplineLevel', record.discipline_level || '');
+  setInputValue('disciplineDescription', record.description || '');
+  setInputValue('disciplineAction', record.action_taken || '');
+  setInputValue('disciplineStatus', record.report_status || 'Open');
+
+  const refused = safeGet<HTMLInputElement>('disciplineRefusedToSign');
+
+  if (refused) refused.checked = record.refused_to_sign === true;
+
+  setCanvasSignature(
+    'disciplineEmployeeSignature',
+    'disciplineEmployeeSigStatus',
+    String(record.employee_signature || '')
+  );
+  setCanvasSignature(
+    'disciplineManagerSignature',
+    'disciplineManagerSigStatus',
+    String(record.manager_signature || '')
+  );
+  setCanvasSignature(
+    'disciplineWitnessSignature',
+    'disciplineWitnessSigStatus',
+    String(record.witness_signature || '')
+  );
+
+  const saveButton = safeGet('saveDisciplineBtn');
+
+  if (saveButton) saveButton.textContent = 'Update Discipline Report';
+
+  const editStatus = safeGet('disciplineEditStatus');
+
+  if (editStatus) {
+    editStatus.textContent = 'Editing saved discipline record';
+    editStatus.classList.remove('hidden');
+  }
+
+  safeGet('cancelDisciplineEditBtn')?.classList.remove('hidden');
+
+  if (typeof window.switchTab === 'function') {
+    window.switchTab('discipline');
+  }
+
+  showToast('Discipline record loaded for editing.');
+}
+
+export function cancelDisciplineEdit(): void {
+  currentDisciplineId = null;
+  window.currentDisciplineId = null;
+
+  resetDisciplineForm();
+
+  const saveButton = safeGet('saveDisciplineBtn');
+
+  if (saveButton) saveButton.textContent = 'Save Discipline Report';
+
+  safeGet('cancelDisciplineEditBtn')?.classList.add('hidden');
+  safeGet('disciplineEditStatus')?.classList.add('hidden');
+
+  showToast('Discipline edit cancelled.');
+}
+
+export async function deleteDisciplineRecord(recordId: string, employeeId: string): Promise<void> {
+  if (!recordId) return;
+
+  if (!confirm('Delete this discipline record?')) return;
+
+  const { error } = await supabaseClient.from('discipline_reports').delete().eq('id', recordId);
+
+  if (error) {
+    console.error('[Discipline] Delete failed:', error);
+    showToast(error.message || 'Could not delete discipline record.', 'error');
+    return;
+  }
+
+  showToast('Discipline record deleted.');
+
+  if (String(currentDisciplineId || '') === String(recordId)) {
+    cancelDisciplineEdit();
+  }
+
+  await refreshDisciplineDependentUi(employeeId);
+}
+
+export async function saveDisciplineRecord(): Promise<void> {
+  const activeEmployee = getCurrentEmployee();
+  const employeeId = getEmployeeId(activeEmployee);
+
+  if (!employeeId) {
+    showToast('Open an employee before saving a discipline record.', 'error');
+    return;
+  }
+
+  const disciplinePayload = buildDisciplinePayload(employeeId);
+
+  if (!disciplinePayload.incident_date || !disciplinePayload.description) {
+    showToast('Enter an incident date and description before saving.', 'error');
+    return;
+  }
+
+  const recordId = currentDisciplineId || window.currentDisciplineId;
+
+  const result = recordId
+    ? await supabaseClient
+        .from('discipline_reports')
+        .update(disciplinePayload)
+        .eq('id', recordId)
+        .eq('employee_id', employeeId)
+        .select()
+    : await supabaseClient.from('discipline_reports').insert([disciplinePayload]).select();
+
+  if (result.error) {
+    console.error('[Discipline] Save failed:', result.error);
+    showToast(result.error.message || 'Could not save discipline record.', 'error');
+    return;
+  }
+
+  showToast(recordId ? 'Discipline report updated.' : 'Discipline report saved.');
+
+  currentDisciplineId = null;
+  window.currentDisciplineId = null;
+
+  const saveButton = safeGet('saveDisciplineBtn');
+
+  if (saveButton) saveButton.textContent = 'Save Discipline Report';
+
+  safeGet('cancelDisciplineEditBtn')?.classList.add('hidden');
+  safeGet('disciplineEditStatus')?.classList.add('hidden');
+
+  resetDisciplineForm();
+
+  await refreshDisciplineDependentUi(employeeId);
+}
+
+window.loadEmployeeDiscipline = loadEmployeeDiscipline;
+window.saveDisciplineRecord = saveDisciplineRecord;
+window.saveDisciplineReport = saveDisciplineRecord;
+window.editDisciplineRecord = editDisciplineRecord;
+window.deleteDisciplineRecord = deleteDisciplineRecord;
+window.cancelDisciplineEdit = cancelDisciplineEdit;

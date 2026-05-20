@@ -1,6 +1,6 @@
 declare function showToast(message: string, type?: string): void;
 declare const supabaseClient: any;
-declare function openDrawer(employee: any): void
+declare function openDrawer(employee: any): void;
 declare function loadEmployeeReviews(id: string): Promise<void>;
 declare function setText(id: string, value: any): void;
 declare function loadEmployeeNotes(id: string): Promise<void>;
@@ -1739,6 +1739,7 @@ window.openCandidateDrawer = openCandidateDrawer;
 window.closeCandidateDrawer = closeCandidateDrawer;
 window.switchCandidateTab = switchCandidateTab;
 window.saveCandidateRecord = saveCandidateRecord;
+(window as any).saveEmployeeReview = saveReviewRecord;
 window.deleteCandidateRecord = deleteCandidateRecord;
 window.convertCurrentCandidateToEmployee = convertCurrentCandidateToEmployee;
 function populateDepartmentFilter(): void {
@@ -2813,16 +2814,14 @@ async function markEmployeeAtRisk() {
     return;
   }
   const employeeDbId = currentEmployee.dbId || currentEmployee.id;
-  const { error } = await supabaseClient
-    .from('employee_notes')
-    .insert([
-      {
-        employee_id: employeeDbId,
-        note_date: todayInputValue(),
-        note_type: 'At-Risk Flag',
-        note_text: reason,
-      },
-    ]);
+  const { error } = await supabaseClient.from('employee_notes').insert([
+    {
+      employee_id: employeeDbId,
+      note_date: todayInputValue(),
+      note_type: 'At-Risk Flag',
+      note_text: reason,
+    },
+  ]);
   if (error) {
     console.error(error);
     showToast('Could not mark employee at-risk.', 'error');
@@ -2868,16 +2867,14 @@ async function clearAtRiskStatus() {
   const employeeDbId = currentEmployee.dbId || currentEmployee.id;
   const noteText =
     String(safeGet('atRiskReasonInput')?.value || '').trim() || 'Manual at-risk flag cleared';
-  const { error } = await supabaseClient
-    .from('employee_notes')
-    .insert([
-      {
-        employee_id: employeeDbId,
-        note_date: todayInputValue(),
-        note_type: 'At-Risk Cleared',
-        note_text: noteText,
-      },
-    ]);
+  const { error } = await supabaseClient.from('employee_notes').insert([
+    {
+      employee_id: employeeDbId,
+      note_date: todayInputValue(),
+      note_type: 'At-Risk Cleared',
+      note_text: noteText,
+    },
+  ]);
   if (error) {
     console.error(error);
     showToast('Could not clear at-risk flag.', 'error');
@@ -3316,7 +3313,7 @@ async function deleteEmployeeDocument(docId) {
   }
   showToast('Document deleted.');
   await loadEmployeeDocuments(currentEmployee.id);
-} 
+}
 // =========================
 // EMERGENCY CONTACT
 // =========================
@@ -3383,52 +3380,51 @@ async function saveEmergencyContact(): Promise<void> {
 // =========================
 
 async function uploadEmployeeDocument() {
-
-if (!currentEmployee) {
-  showToast('Open an employee first.', 'error');
-  return;
-}
-const document_type = safeGet('docType')?.value || '';
-const file = safeGet('docFile')?.files?.[0];
-if (!document_type) {
-  showToast('Select a document type.', 'error');
-  return;
-}
-if (!file) {
-  showToast('Choose a file to upload.', 'error');
-  return;
-}
-const fileExt = file.name.includes('.') ? file.name.split('.').pop() : '';
-const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-const filePath = `${currentEmployee.id}/${Date.now()}_${safeName}`;
-const { error: uploadError } = await supabaseClient.storage
-  .from('employee-documents')
-  .upload(filePath, file);
-if (uploadError) {
-  console.error(uploadError);
-  showToast(`Upload failed: ${uploadError.message}`, 'error');
-  return;
-}
-const { data: authData } = await supabaseClient.auth.getUser();
-const { error: insertError } = await supabaseClient.from('employee_documents').insert([
-  {
-    employee_id: currentEmployee.id,
-    document_type,
-    file_name: file.name,
-    file_path: filePath,
-    file_ext: fileExt || null,
-    uploaded_by: authData?.user?.id || null,
-  },
-]);
-if (insertError) {
-  console.error(insertError);
-  showToast(`Saved file but DB insert failed: ${insertError.message}`, 'error');
-  return;
-}
-showToast('Document uploaded.');
-safeGet('docType').value = '';
-safeGet('docFile').value = '';
-await loadEmployeeDocuments(currentEmployee.id);
+  if (!currentEmployee) {
+    showToast('Open an employee first.', 'error');
+    return;
+  }
+  const document_type = safeGet('docType')?.value || '';
+  const file = safeGet('docFile')?.files?.[0];
+  if (!document_type) {
+    showToast('Select a document type.', 'error');
+    return;
+  }
+  if (!file) {
+    showToast('Choose a file to upload.', 'error');
+    return;
+  }
+  const fileExt = file.name.includes('.') ? file.name.split('.').pop() : '';
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filePath = `${currentEmployee.id}/${Date.now()}_${safeName}`;
+  const { error: uploadError } = await supabaseClient.storage
+    .from('employee-documents')
+    .upload(filePath, file);
+  if (uploadError) {
+    console.error(uploadError);
+    showToast(`Upload failed: ${uploadError.message}`, 'error');
+    return;
+  }
+  const { data: authData } = await supabaseClient.auth.getUser();
+  const { error: insertError } = await supabaseClient.from('employee_documents').insert([
+    {
+      employee_id: currentEmployee.id,
+      document_type,
+      file_name: file.name,
+      file_path: filePath,
+      file_ext: fileExt || null,
+      uploaded_by: authData?.user?.id || null,
+    },
+  ]);
+  if (insertError) {
+    console.error(insertError);
+    showToast(`Saved file but DB insert failed: ${insertError.message}`, 'error');
+    return;
+  }
+  showToast('Document uploaded.');
+  safeGet('docType').value = '';
+  safeGet('docFile').value = '';
+  await loadEmployeeDocuments(currentEmployee.id);
 }
 async function loadEmployeeDocuments(employeeId) {
   const target = safeGet('docHistory');
@@ -3798,60 +3794,54 @@ async function loadStayInterviews(employeeId) {
 // STAY INTERVIEWS
 // =========================
 async function saveStayInterview(): Promise<void> {
-    if (!currentEmployee) {
-      showToast('Open an employee first.', 'error');
-      return;
-    }
-  
-    const payload = {
-      employee_id: currentEmployee.dbId,
-      interview_date: safeGet('stayInterviewDate').value || null,
-      interview_type: safeGet('stayInterviewType').value || '',
-      q1: safeGet('stayQ1').value || '',
-      q2: safeGet('stayQ2').value || '',
-      q3: safeGet('stayQ3').value || '',
-      q4: safeGet('stayQ4').value || '',
-      q5: safeGet('stayQ5').value || '',
-      q6: safeGet('stayQ6').value || '',
-      q7: safeGet('stayQ7').value || '',
-      manager_summary: safeGet('stayManagerSummary').value || '',
-    };
-  
-    let error = null;
-  
-    if (currentStayInterviewId) {
-      const result = await supabaseClient
-        .from('stay_interviews')
-        .update(payload)
-        .eq('id', currentStayInterviewId);
-  
-      error = result.error;
-    } else {
-      const result = await supabaseClient
-        .from('stay_interviews')
-        .insert([payload]);
-  
-      error = result.error;
-    }
-  
-    if (error) {
-      console.error(error);
-      showToast('Could not save stay interview.', 'error');
-      return;
-    }
-  
-    showToast(
-      currentStayInterviewId
-        ? 'Stay interview updated.'
-        : 'Stay interview saved.'
-    );
-  
-    currentStayInterviewId = null;
-  
-    if (currentEmployee) {
-      await loadStayInterviews(currentEmployee.id);
-    }
+  if (!currentEmployee) {
+    showToast('Open an employee first.', 'error');
+    return;
   }
+
+  const payload = {
+    employee_id: currentEmployee.dbId,
+    interview_date: safeGet('stayInterviewDate').value || null,
+    interview_type: safeGet('stayInterviewType').value || '',
+    q1: safeGet('stayQ1').value || '',
+    q2: safeGet('stayQ2').value || '',
+    q3: safeGet('stayQ3').value || '',
+    q4: safeGet('stayQ4').value || '',
+    q5: safeGet('stayQ5').value || '',
+    q6: safeGet('stayQ6').value || '',
+    q7: safeGet('stayQ7').value || '',
+    manager_summary: safeGet('stayManagerSummary').value || '',
+  };
+
+  let error = null;
+
+  if (currentStayInterviewId) {
+    const result = await supabaseClient
+      .from('stay_interviews')
+      .update(payload)
+      .eq('id', currentStayInterviewId);
+
+    error = result.error;
+  } else {
+    const result = await supabaseClient.from('stay_interviews').insert([payload]);
+
+    error = result.error;
+  }
+
+  if (error) {
+    console.error(error);
+    showToast('Could not save stay interview.', 'error');
+    return;
+  }
+
+  showToast(currentStayInterviewId ? 'Stay interview updated.' : 'Stay interview saved.');
+
+  currentStayInterviewId = null;
+
+  if (currentEmployee) {
+    await loadStayInterviews(currentEmployee.id);
+  }
+}
 async function editStayInterview(stayInterviewId) {
   const { data, error } = await supabaseClient
     .from('stay_interviews')
@@ -3923,12 +3913,21 @@ async function loadImpactPlayers() {
               .includes('contract')
         )
       : [];
-    const impactPlayers = Object.entries(OrbisState.impactPlayerMap || {})
+    const impactPlayerMap =
+      (window as any).currentImpactPlayerRosterMap || OrbisState.impactPlayerMap || {};
+
+    const impactPlayers = Object.entries(impactPlayerMap)
       .map(([employeeKey, impactMeta]: [string, any]) => {
         const emp = employeeList.find(
-          (e) => String(e.dbId) === String(employeeKey) || String(e.id) === String(employeeKey)
+          (e) =>
+            String(e.dbId) === String(employeeKey) ||
+            String(e.id) === String(employeeKey) ||
+            String(e.employee_id) === String(employeeKey) ||
+            String(e.displayId) === String(employeeKey)
         );
+
         if (!emp || !impactMeta) return null;
+
         return { emp, impactMeta };
       })
       .filter((item): item is { emp: any; impactMeta: any } => Boolean(item))
@@ -3985,6 +3984,7 @@ async function loadImpactPlayers() {
     target.innerHTML = '<div class="empty">Error loading impact players.</div>';
   }
 }
+(window as any).loadImpactPlayers = loadImpactPlayers;
 // =========================
 // KPI TOOLTIP UI
 // =========================
@@ -4115,128 +4115,177 @@ window.clearImpactPlayerStatus = clearImpactPlayerStatus;
 // SAVE REVIEW HANDLER
 // =========================
 async function saveReviewRecord(): Promise<void> {
-// Read review form fields
-const reviewDate = safeGet('reviewDate')?.value || '';
-const reviewType = safeGet('reviewType')?.value || '';
-const reviewQuality = safeGet('reviewQuality')?.value || '';
-const reviewAttendance = safeGet('reviewAttendance')?.value || '';
-const reviewReliability = safeGet('reviewReliability')?.value || '';
-const reviewCommunication = safeGet('reviewCommunication')?.value || '';
-const reviewJudgement = safeGet('reviewJudgement')?.value || '';
-const reviewInitiative = safeGet('reviewInitiative')?.value || '';
-const reviewTeamwork = safeGet('reviewTeamwork')?.value || '';
-const reviewKnowledge = safeGet('reviewKnowledge')?.value || '';
-const reviewTraining = safeGet('reviewTraining')?.value || '';
-const reviewOverallResult = safeGet('reviewOverallResult')?.value || '';
-const reviewStrengths = safeGet('reviewStrengths')?.value || '';
-const reviewImprovements = safeGet('reviewImprovements')?.value || '';
-const reviewEmployeeComments = safeGet('reviewEmployeeComments')?.value || '';
-const reviewManagerComments = safeGet('reviewManagerComments')?.value || ''; // Determine employee ID
-const employeeId = currentEmployee?.dbId || currentEmployee?.id;
-if (!employeeId) {
-  showToast('No employee selected for review.', 'error');
-  return;
-}
-const ratingToScore = (value) => {
-  switch (String(value || '').trim()) {
-    case 'Exceeds Expectations':
-      return 4;
-    case 'Meets Expectations':
-      return 3;
-    case 'Needs Improvement':
-      return 2;
-    case 'Unacceptable':
-      return 1;
-    default:
-      return null;
+  // Read review form fields
+  const reviewDate = safeGet('reviewDate')?.value || '';
+  const reviewType = safeGet('reviewType')?.value || '';
+  const reviewQuality = safeGet('reviewQuality')?.value || '';
+  const reviewAttendance = safeGet('reviewAttendance')?.value || '';
+  const reviewReliability = safeGet('reviewReliability')?.value || '';
+  const reviewCommunication = safeGet('reviewCommunication')?.value || '';
+  const reviewJudgement = safeGet('reviewJudgement')?.value || '';
+  const reviewInitiative = safeGet('reviewInitiative')?.value || '';
+  const reviewTeamwork = safeGet('reviewTeamwork')?.value || '';
+  const reviewKnowledge = safeGet('reviewKnowledge')?.value || '';
+  const reviewTraining = safeGet('reviewTraining')?.value || '';
+  const reviewOverallResult = safeGet('reviewOverallResult')?.value || '';
+  const reviewStrengths = safeGet('reviewStrengths')?.value || '';
+  const reviewImprovements = safeGet('reviewImprovements')?.value || '';
+  const reviewEmployeeComments = safeGet('reviewEmployeeComments')?.value || '';
+  const reviewManagerComments = safeGet('reviewManagerComments')?.value || ''; // Determine employee ID
+  const employeeId = currentEmployee?.dbId || currentEmployee?.id;
+  if (!employeeId) {
+    showToast('No employee selected for review.', 'error');
+    return;
   }
-};
-const communicationScore = ratingToScore(reviewCommunication);
-const judgementScore = ratingToScore(reviewJudgement);
-const initiativeScore = ratingToScore(reviewInitiative);
-const knowledgeScore = ratingToScore(reviewKnowledge);
-const trainingScore = ratingToScore(reviewTraining);
-const blendedAttitudeInputs = [
-  communicationScore,
-  judgementScore,
-  initiativeScore,
-  knowledgeScore,
-  trainingScore,
-].filter((v) => v !== null);
-const blendedAttitudeScore = blendedAttitudeInputs.length
-  ? Math.round(blendedAttitudeInputs.reduce((sum, v) => sum + v, 0) / blendedAttitudeInputs.length)
-  : null;
-const detailedCategorySummary = [
-  `Quality of Work: ${reviewQuality || 'Not Rated'}`,
-  `Attendance & Punctuality: ${reviewAttendance || 'Not Rated'}`,
-  `Reliability / Dependability: ${reviewReliability || 'Not Rated'}`,
-  `Communication Skills: ${reviewCommunication || 'Not Rated'}`,
-  `Judgement & Decision-Making: ${reviewJudgement || 'Not Rated'}`,
-  `Initiative & Flexibility: ${reviewInitiative || 'Not Rated'}`,
-  `Cooperation & Teamwork: ${reviewTeamwork || 'Not Rated'}`,
-  `Knowledge of Position: ${reviewKnowledge || 'Not Rated'}`,
-  `Training & Development: ${reviewTraining || 'Not Rated'}`,
-].join('\n'); // Prepare payload for Supabase
-const payload = {
-  employee_id: employeeId,
-  review_date: reviewDate,
-  review_type: reviewType,
-  attendance_score: ratingToScore(reviewAttendance),
-  performance_score: ratingToScore(reviewQuality),
-  teamwork_score: ratingToScore(reviewTeamwork),
-  attitude_score: blendedAttitudeScore,
-  reliability_score: ratingToScore(reviewReliability),
-  overall_result: reviewOverallResult,
-  strengths: reviewStrengths,
-  improvements: reviewImprovements,
-  employee_comments: reviewEmployeeComments,
-  manager_comments: [reviewManagerComments, detailedCategorySummary].filter(Boolean).join('\n\n'),
-};
-let error, data;
-if (currentReviewId) {
-  // Update existing review
-  const result = await supabaseClient
-    .from('employee_reviews')
-    .update(payload)
-    .eq('id', currentReviewId);
-  error = result.error;
-  data = result.data;
-} else {
-  // Insert new review
-  const result = await supabaseClient.from('employee_reviews').insert([payload]);
-  error = result.error;
-  data = result.data;
-}
-if (error) {
-  console.error(error);
-  showToast(currentReviewId ? 'Could not update review.' : 'Could not save review.', 'error');
-  return;
-}
-showToast(currentReviewId ? 'Review updated.' : 'Review saved.'); // --- Begin Review Auto-Sync Refresh Block ---
-if (typeof loadSummaryMetrics === 'function') {
-  await loadSummaryMetrics();
-}
-if (typeof loadRiskEmployees === 'function') {
-  await loadRiskEmployees();
-}
-if (typeof loadImpactPlayers === 'function') {
-  await loadImpactPlayers();
-}
-if (currentEmployee && typeof openDrawer === 'function') {
-  const refreshedEmployee = EMPLOYEES.find(
-    (e) =>
-      String(e.dbId) === String(currentEmployee.dbId) || String(e.id) === String(currentEmployee.id)
-  );
-  if (refreshedEmployee) {
-    openDrawer(refreshedEmployee);
-    switchTab('reviews');
+  const ratingToScore = (value) => {
+    switch (String(value || '').trim()) {
+      case 'Exceeds Expectations':
+        return 4;
+      case 'Meets Expectations':
+        return 3;
+      case 'Needs Improvement':
+        return 2;
+      case 'Unacceptable':
+        return 1;
+      default:
+        return null;
+    }
+  };
+  const communicationScore = ratingToScore(reviewCommunication);
+  const judgementScore = ratingToScore(reviewJudgement);
+  const initiativeScore = ratingToScore(reviewInitiative);
+  const knowledgeScore = ratingToScore(reviewKnowledge);
+  const trainingScore = ratingToScore(reviewTraining);
+  const blendedAttitudeInputs = [
+    communicationScore,
+    judgementScore,
+    initiativeScore,
+    knowledgeScore,
+    trainingScore,
+  ].filter((v) => v !== null);
+  const blendedAttitudeScore = blendedAttitudeInputs.length
+    ? Math.round(
+        blendedAttitudeInputs.reduce((sum, v) => sum + v, 0) / blendedAttitudeInputs.length
+      )
+    : null;
+  const detailedCategorySummary = [
+    `Quality of Work: ${reviewQuality || 'Not Rated'}`,
+    `Attendance & Punctuality: ${reviewAttendance || 'Not Rated'}`,
+    `Reliability / Dependability: ${reviewReliability || 'Not Rated'}`,
+    `Communication Skills: ${reviewCommunication || 'Not Rated'}`,
+    `Judgement & Decision-Making: ${reviewJudgement || 'Not Rated'}`,
+    `Initiative & Flexibility: ${reviewInitiative || 'Not Rated'}`,
+    `Cooperation & Teamwork: ${reviewTeamwork || 'Not Rated'}`,
+    `Knowledge of Position: ${reviewKnowledge || 'Not Rated'}`,
+    `Training & Development: ${reviewTraining || 'Not Rated'}`,
+  ].join('\n'); // Prepare payload for Supabase
+  const payload = {
+    employee_id: employeeId,
+    review_date: reviewDate,
+    review_type: reviewType,
+    attendance_score: ratingToScore(reviewAttendance),
+    performance_score: ratingToScore(reviewQuality),
+    teamwork_score: ratingToScore(reviewTeamwork),
+    attitude_score: blendedAttitudeScore,
+    reliability_score: ratingToScore(reviewReliability),
+    overall_result: reviewOverallResult,
+    strengths: reviewStrengths,
+    improvements: reviewImprovements,
+    employee_comments: reviewEmployeeComments,
+    manager_comments: [reviewManagerComments, detailedCategorySummary].filter(Boolean).join('\n\n'),
+  };
+  let error, data;
+  if (currentReviewId) {
+    // Update existing review
+    const result = await supabaseClient
+      .from('employee_reviews')
+      .update(payload)
+      .eq('id', currentReviewId);
+    error = result.error;
+    data = result.data;
+  } else {
+    // Insert new review
+    const result = await supabaseClient.from('employee_reviews').insert([payload]);
+    error = result.error;
+    data = result.data;
+  }
+  if (error) {
+    console.error(error);
+    showToast(currentReviewId ? 'Could not update review.' : 'Could not save review.', 'error');
+    return;
+  }
+  showToast(currentReviewId ? 'Review updated.' : 'Review saved.');
+  const overallScores = [
+    payload.attendance_score,
+    payload.performance_score,
+    payload.teamwork_score,
+    payload.attitude_score,
+    payload.reliability_score,
+  ].filter((v) => v !== null);
+
+  const avgReviewScore =
+    overallScores.length > 0
+      ? overallScores.reduce((sum, v) => sum + Number(v), 0) / overallScores.length
+      : null;
+
+  if (avgReviewScore !== null && avgReviewScore >= 4) {
+    const impactMeta = {
+      highReview: true,
+      reviewScore: avgReviewScore,
+      manualReason: '',
+      flaggedDate: todayInputValue(),
+      flaggedBy: 'Matthew Zinni',
+    };
+
+    const impactKeys = [
+      currentEmployee.dbId,
+      currentEmployee.id,
+      currentEmployee.employee_id,
+      currentEmployee.displayId,
+    ]
+      .filter(Boolean)
+      .map(String);
+
+    (window as any).currentImpactPlayerRosterMap =
+      (window as any).currentImpactPlayerRosterMap || OrbisState.impactPlayerMap || {};
+
+    OrbisState.impactPlayerMap = (window as any).currentImpactPlayerRosterMap;
+
+    impactKeys.forEach((key) => {
+      OrbisState.impactPlayerMap[key] = impactMeta;
+      (window as any).currentImpactPlayerRosterMap[key] = impactMeta;
+    });
+  }
+  // --- Begin Review Auto-Sync Refresh Block ---
+  if (typeof loadSummaryMetrics === 'function') {
+    await loadSummaryMetrics();
+  }
+  if (typeof loadRiskEmployees === 'function') {
+    await loadRiskEmployees();
+  }
+  if (typeof loadImpactPlayers === 'function') {
+    await loadImpactPlayers();
+  }
+  if (currentEmployee && typeof openDrawer === 'function') {
+    const refreshedEmployee = EMPLOYEES.find(
+      (e) =>
+        String(e.dbId) === String(currentEmployee.dbId) ||
+        String(e.id) === String(currentEmployee.id)
+    );
+    if (refreshedEmployee) {
+      openDrawer(refreshedEmployee);
+      switchTab('reviews');
+    }
+  }
+  // --- End Review Auto-Sync Refresh Block ---    // Optionally reload employee reviews list
+
+  if (typeof loadEmployeeReviews === 'function') {
+    await loadEmployeeReviews(employeeId);
   }
 }
-// --- End Review Auto-Sync Refresh Block ---    // Optionally reload employee reviews list
-if (typeof loadEmployeeReviews === 'function') {
-  await loadEmployeeReviews(employeeId);
-}
-}
+// Legacy bridge for existing inline review save button
+window.saveReviewRecord = saveReviewRecord;
+window.saveEmployeeReview = saveReviewRecord;
 
 declare global {
   interface Window {

@@ -236,7 +236,7 @@ async function fetchEmployeeAuditLogs(employeeId) {
                     <div style="font-weight:800; color:#111827;">Employee Timeline</div>
                     <div style="color:#6b7280; font-size:12px;">Employee ID: ${esc(employeeId)}</div>
                 </div>
-                <button type="button" class="mini-btn" onclick="renderEmployeeAuditLogViewer()">Refresh</button>
+                <button type="button" class="button soft sm" onclick="renderEmployeeAuditLogViewer()">Refresh</button>
             </div>
             <div style="color:#6b7280; font-size:13px;">Loading employee timeline...</div>
         </div>
@@ -249,7 +249,7 @@ async function fetchEmployeeAuditLogs(employeeId) {
                     <div style="font-weight:800; color:#111827;">Employee Timeline</div>
                     <div style="color:#6b7280; font-size:12px;">Employee ID: ${esc(employeeId)} • ${logs.length} timeline event${logs.length === 1 ? '' : 's'}</div>
                 </div>
-                <button type="button" class="mini-btn" onclick="renderEmployeeAuditLogViewer()">Refresh</button>
+                <button type="button" class="button soft sm" onclick="renderEmployeeAuditLogViewer()">Refresh</button>
             </div>
             ${renderAuditLogsHtml(logs)}
         </div>

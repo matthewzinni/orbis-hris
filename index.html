@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>BTW Global Orbis</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="js/css/styles.css" />
+    <link rel="stylesheet" href="src/styles/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       :root {
@@ -156,15 +156,25 @@
         border-color: rgba(47, 111, 237, 0.45);
       }
 
-      .button {
+      .button,
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
         border-radius: 12px;
         border: 1px solid var(--line);
         background: white;
+        color: var(--text);
         font-size: 0.92rem;
-        padding: 10px 13px;
+        padding: 10px 14px;
+        min-height: 40px;
         outline: none;
         font-weight: 700;
+        line-height: 1.2;
         cursor: pointer;
+        text-decoration: none;
+        white-space: nowrap;
         transition:
           transform 0.16s ease,
           box-shadow 0.16s ease,
@@ -173,32 +183,72 @@
         box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
       }
 
-      .button:hover {
+      .button:hover:not(:disabled),
+      .btn:hover:not(:disabled) {
         transform: translateY(-1px);
         box-shadow: 0 8px 18px rgba(16, 24, 40, 0.08);
       }
 
-      .button.primary {
+      .button.primary,
+      .btn-primary {
         background: linear-gradient(135deg, var(--blue) 0%, var(--navy-2) 100%);
         color: white;
         border-color: transparent;
       }
 
-      .button.soft {
+      .button.soft,
+      .btn-secondary {
         background: #fbfcfe;
         color: var(--text);
       }
 
-      .button.danger {
+      .button.danger,
+      .btn-danger {
         background: #fff5f6;
         color: #a62532;
         border-color: #f3c8cf;
       }
 
-      .button:disabled {
+      .button.warn {
+        background: #fff7ed;
+        color: #9a3412;
+        border-color: #fed7aa;
+      }
+
+      .button.success {
+        background: #ecfdf5;
+        color: #065f46;
+        border-color: #a7f3d0;
+      }
+
+      .button.sm,
+      .btn-sm,
+      .mini-btn {
+        font-size: 0.82rem;
+        padding: 6px 10px;
+        min-height: 32px;
+        border-radius: 10px;
+      }
+
+      .mini-btn.danger {
+        background: #fff5f6;
+        color: #a62532;
+        border-color: #f3c8cf;
+      }
+
+      .button:disabled,
+      .btn:disabled {
         opacity: 0.65;
         cursor: not-allowed;
         transform: none;
+      }
+
+      .button-row,
+      .table-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
       }
 
       .app-header {
@@ -1270,11 +1320,12 @@
                         <th>Stage</th>
                         <th>Source</th>
                         <th>Applied Date</th>
+                        <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody id="candidateBody">
                       <tr>
-                        <td colspan="5" class="empty">Loading candidates...</td>
+                        <td colspan="6" class="empty">Loading candidates...</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1300,7 +1351,7 @@
                         <th data-sort="status">Status</th>
                       </tr>
                     </thead>
-                    <tbody id="empBody"></tbody>
+                    <tbody id="employeeRosterBody"></tbody>
                   </table>
                 </div>
               </div>
@@ -1432,7 +1483,7 @@
 
           <div id="documentsList" class="documents-grid"></div>
         </section>
-        <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+        <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeActiveDrawer()"></div>
         <aside class="drawer" id="candidateDrawer">
           <div class="drawer-header">
             <div>
@@ -1573,7 +1624,7 @@
               <h2 class="drawer-title" id="drawerTitle">Employee</h2>
               <div class="drawer-sub" id="drawerSub">Profile</div>
             </div>
-            <button class="drawer-close" id="drawerClose" type="button" onclick="closeDrawer()">
+            <button class="drawer-close" id="drawerClose" type="button" onclick="closeActiveDrawer()">
               Close
             </button>
           </div>
@@ -1924,7 +1975,7 @@
                         </div>
                       </div>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                    <div class="button-row">
                       <button
                         class="button primary"
                         id="saveDisciplineBtn"
@@ -2063,12 +2114,12 @@
                         </div>
                       </div>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                    <div class="button-row">
                       <button
                         class="button primary"
                         id="saveIncidentBtn"
                         type="button"
-                        onclick="saveIncidentReport()"
+                        onclick="saveIncidentRecord()"
                       >
                         Save Incident Report
                       </button>
@@ -2166,7 +2217,7 @@
                         placeholder="Summarize themes, action items, and follow-up..."
                       ></textarea>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                    <div class="button-row">
                       <button
                         class="button primary"
                         id="saveStayInterviewBtn"
@@ -2235,7 +2286,13 @@
                         placeholder="Document the meeting discussion..."
                       ></textarea>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                    
+                    <div class="field">
+                      <label for="meetingFollowUpDate">Follow-Up Date</label>
+                      <input id="meetingFollowUpDate" type="date" />
+                    </div>
+                    
+                    <div class="button-row">
                       <button
                         class="button primary"
                         id="saveMeetingBtn"
@@ -2473,7 +2530,7 @@
                         </div>
                       </div>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                    <div class="button-row">
                       <button
                         class="button primary"
                         id="saveReviewBtn"
@@ -2729,12 +2786,11 @@
                       />
                     </div>
                   </div>
-                  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px">
+                  <div class="button-row" style="margin-top: 8px">
                     <button
                       class="button primary"
                       id="saveEmployeeBtn"
                       type="button"
-                      onclick="saveEmployeeRecord()"
                     >
                       Save Employee
                     </button>
@@ -2769,7 +2825,7 @@
                         placeholder="Example: Employee seems disengaged, withdrawn, or showing behavioral changes..."
                       ></textarea>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap">
+                    <div class="button-row">
                       <button id="markAtRiskBtn" class="button warn" type="button">
                         Mark At-Risk
                       </button>
@@ -2795,18 +2851,8 @@
                         placeholder="Example: Consistently goes above and beyond, mentors others, high ownership, strong performance..."
                       ></textarea>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap">
-                      <button
-                        id="markImpactPlayerBtn"
-                        class="button"
-                        type="button"
-                        style="
-                          background: #ecfdf5;
-                          color: #065f46;
-                          border: 1px solid #a7f3d0;
-                          font-weight: 700;
-                        "
-                      >
+                    <div class="button-row">
+                      <button id="markImpactPlayerBtn" class="button success" type="button">
                         Mark Impact Player
                       </button>
                       <button id="clearImpactPlayerBtn" class="button soft" type="button">
@@ -2966,14 +3012,9 @@
     <script src="js/core/permissions.js"></script>
     <script src="js/core/state.js"></script>
 
-    <script src="js/ui/employeeForm.js"></script>
-    <script src="js/ui/employeeRoster.js"></script>
-    <script src="js/ui/badges.js"></script>
     <script src="js/ui/history.js"></script>
-    <script src="js/ui/drawer.js"></script>
-    <script src="js/ui/kpis.js"></script>
-
     <script type="module" src="/src/main.ts"></script>
-    <script src="js/app.js"></script>
+
+
   </body>
 </html>

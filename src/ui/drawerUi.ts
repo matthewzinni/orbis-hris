@@ -1,4 +1,101 @@
-function cleanDrawerEmployeeNameValue(value) {
+// Drawer open/close UI (ported from js/ui/drawer.js)
+
+type DrawerUiEmployee = Record<string, unknown> & {
+  id?: string;
+  dbId?: string;
+  employee_id?: string;
+  employeeId?: string;
+  first?: string;
+  last?: string;
+  first_name?: string;
+  last_name?: string;
+  dept?: string;
+  department?: string;
+  position?: string;
+  supervisor?: string;
+  status?: string;
+  payType?: string;
+  pay_type?: string;
+  stdHours?: string | number;
+  standard_hours?: string | number;
+  benefitsStatus?: string;
+  benefits_status?: string;
+  hireDate?: string | Date | null;
+  hire_date?: string;
+  nextReview?: string | Date | null;
+  next_review?: string;
+  next_review_date?: string;
+  anniversaryDate?: string;
+  anniversary_date?: string;
+  tenureMonths?: string | number;
+  tenure_months?: string | number;
+  tenureYears?: string | number;
+  tenure_years?: string | number;
+  tenureBracket?: string;
+  tenure_bracket?: string;
+};
+
+declare global {
+  interface Window {
+    EMPLOYEES?: DrawerUiEmployee[];
+    currentEmployee?: DrawerUiEmployee | null;
+    isCreatingEmployee?: boolean;
+    safeGet?: (id: string) => HTMLElement | null;
+    esc?: (value: unknown) => string;
+    switchTab?: (tabName: string) => void;
+    setText?: (id: string, value: unknown) => void;
+    resetDrawerForms?: () => void;
+    setCurrentEmployeeForOrbis?: (employee: DrawerUiEmployee | null) => void;
+    populateEmployeeForm?: (employee: DrawerUiEmployee) => void;
+    ensureDeleteEmployeeButton?: () => void;
+    runTerminateEmployee?: () => void;
+    applyRolePermissions?: () => void;
+    loadEmployeeNotes?: (employeeId: string) => void;
+    loadEmployeeDiscipline?: (employeeId: string) => void;
+    loadEmployeeMeetings?: (employeeId: string) => void;
+    loadEmergencyContacts?: (employeeId: string) => void;
+    loadEmployeeDocuments?: (employeeId: string) => void;
+    loadEmployeeReviews?: (employeeId: string) => void;
+    loadEmployeeIncidents?: (employeeId: string) => void;
+    loadStayInterviews?: (employeeId: string) => void;
+    loadEmployeeOnboarding?: (employeeId: string) => void;
+    loadEmployeeManualAtRisk?: (employeeId: string) => void;
+    loadEmployeeManualImpactPlayer?: (employeeId: string) => void;
+    loadEmployeeHistory?: (employeeId: string) => void;
+    markEmployeeAtRisk?: () => void;
+    clearAtRiskStatus?: () => void;
+    markImpactPlayer?: () => void;
+    clearImpactPlayerStatus?: () => void;
+    openDrawer?: (employee: DrawerUiEmployee) => void;
+    closeDrawer?: () => void;
+    switchDrawerTab?: (tabName: string) => void;
+    bindDrawerEvents?: () => void;
+    forcePopulateEmployeeAdminPanel?: (employee: DrawerUiEmployee | null | undefined) => void;
+    drawerEscapeKeyBound?: boolean;
+    getResolvedDrawerEmployeeId?: (employee?: DrawerUiEmployee | null) => string | null;
+    getDrawerHeaderEmployeeId?: () => string;
+    formatDrawerDateForDisplay?: (value: unknown) => string;
+    getNextUpcomingAnniversaryDate?: (value: unknown) => string;
+  }
+}
+
+function domGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
+  if (typeof window.safeGet === 'function') {
+    return window.safeGet(id) as T | null;
+  }
+
+  return document.getElementById(id) as T | null;
+}
+
+function domEsc(value: unknown): string {
+  if (typeof window.esc === 'function') {
+    return window.esc(value);
+  }
+
+  return String(value ?? '');
+}
+
+function cleanDrawerEmployeeNameValue(value: unknown): string {
     return String(value || '')
         .replace(/\bAt[-\s]*Risk\b/gi, '')
         .replace(/\bImpact\b/gi, '')
@@ -13,7 +110,7 @@ function cleanVisibleDrawerNameInputs() {
     const possibleLastNameIds = ['empLastName', 'lastName', 'employeeLastName', 'lastNameInput'];
 
     [...possibleFirstNameIds, ...possibleLastNameIds].forEach(id => {
-        const field = typeof safeGet === 'function' ? safeGet(id) : document.getElementById(id);
+        const field = domGet<HTMLInputElement>(id);
 
         if (!field || typeof field.value !== 'string') return;
 
@@ -25,7 +122,7 @@ function cleanVisibleDrawerNameInputs() {
     });
 }
 
-function getTrustedEmployeeDisplayId(employee) {
+function getTrustedEmployeeDisplayId(employee: DrawerUiEmployee | null | undefined): string {
     if (!employee) return '';
 
     const possibleIds = [
@@ -42,7 +139,7 @@ function getTrustedEmployeeDisplayId(employee) {
     return trustedId ? String(trustedId).trim().toUpperCase() : '';
 }
 
-function getDrawerHeaderEmployeeId() {
+export function getDrawerHeaderEmployeeId(): string {
     const header = document.getElementById('employeeDrawerIdentityHeader');
 
     if (!header) return '';
@@ -53,9 +150,9 @@ function getDrawerHeaderEmployeeId() {
     return match ? match[0].toUpperCase() : '';
 }
 
-function setDrawerAdminField(possibleIds, value) {
+function setDrawerAdminField(possibleIds: string[], value: unknown): void {
     possibleIds.forEach(id => {
-        const field = typeof safeGet === 'function' ? safeGet(id) : document.getElementById(id);
+        const field = domGet<HTMLInputElement>(id);
 
         if (!field) return;
 
@@ -75,7 +172,7 @@ function normalizeDrawerLabelText(value) {
 }
 
 function setDrawerAdminFieldByLabel(labelText, value) {
-    const drawer = typeof safeGet === 'function' ? safeGet('employeeDrawer') : document.getElementById('employeeDrawer');
+    const drawer = domGet('employeeDrawer');
 
     if (!drawer) return;
 
@@ -131,7 +228,7 @@ function forcePopulateEmployeeAdminFieldsByLabels(employee) {
     setDrawerAdminFieldByLabel('Anniversary Date', anniversaryDate);
 }
 
-function forcePopulateEmployeeAdminPanel(employee) {
+export function forcePopulateEmployeeAdminPanel(employee: DrawerUiEmployee | null | undefined): void {
 
     forcePopulateEmployeeAdminFields(employee);
 
@@ -146,7 +243,7 @@ function forcePopulateEmployeeAdminPanel(employee) {
 }
 
 function getVisibleEmployeeAdminPanel() {
-    const drawer = typeof safeGet === 'function' ? safeGet('employeeDrawer') : document.getElementById('employeeDrawer');
+    const drawer = domGet('employeeDrawer');
 
     if (!drawer) return null;
 
@@ -189,7 +286,7 @@ function formatDrawerDateForInput(value) {
 
 }
 
-function formatDrawerDateForDisplay(value) {
+export function formatDrawerDateForDisplay(value: unknown): string {
     const inputValue = formatDrawerDateForInput(value);
 
     if (!inputValue) return '';
@@ -207,7 +304,7 @@ function formatDrawerDateForDisplay(value) {
     });
 }
 
-function getNextUpcomingAnniversaryDate(value) {
+export function getNextUpcomingAnniversaryDate(value: unknown): string {
     const inputValue = formatDrawerDateForInput(value);
 
     if (!inputValue) return '';
@@ -299,7 +396,7 @@ function forcePopulateEmployeeAdminFields(employee) {
     setDrawerAdminField(['empAnniversaryDate', 'anniversaryDate', 'employeeAnniversaryDate', 'employeeAnniversaryInput', 'employeeAnniversaryDateInput', 'anniversaryInput', 'anniversaryDateInput', 'adminAnniversaryDate'], anniversaryDate);
 }
 
-function getResolvedDrawerEmployeeId(employee = null) {
+export function getResolvedDrawerEmployeeId(employee: DrawerUiEmployee | null = null): string | null {
     return getTrustedEmployeeDisplayId(employee) ||
         employee?.dbId ||
         window.currentEmployee?.dbId ||
@@ -307,7 +404,7 @@ function getResolvedDrawerEmployeeId(employee = null) {
         null;
 }
 
-function openDrawer(employee) {
+export function openDrawer(employee: DrawerUiEmployee | null | undefined): void {
     if (!employee) return;
 
     employee = {
@@ -362,17 +459,20 @@ function openDrawer(employee) {
         existingHeader.remove();
     }
 
-    if (typeof switchTab === 'function') {
-        switchTab('profile');
+    if (typeof window.switchTab === 'function') {
+        window.switchTab('profile');
     }
 
-    if (typeof setText === 'function') {
-        setText('drawerTitle', `${employee.first} ${employee.last}`);
-        setText('drawerSub', `${employee.position || 'Employee'} • ${employee.dept || employee.department || 'No department'}`);
+    if (typeof window.setText === 'function') {
+        window.setText('drawerTitle', `${employee.first} ${employee.last}`);
+        window.setText(
+            'drawerSub',
+            `${employee.position || 'Employee'} • ${employee.dept || employee.department || 'No department'}`
+        );
     }
 
-    if (typeof populateEmployeeForm === 'function') {
-        populateEmployeeForm(employee);
+    if (typeof window.populateEmployeeForm === 'function') {
+        window.populateEmployeeForm(employee);
     }
 
     forcePopulateEmployeeAdminPanel(employee);
@@ -380,15 +480,15 @@ function openDrawer(employee) {
     setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 250);
     setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 750);
 
-    if (typeof ensureDeleteEmployeeButton === 'function') {
-        ensureDeleteEmployeeButton();
+    if (typeof window.ensureDeleteEmployeeButton === 'function') {
+        window.ensureDeleteEmployeeButton();
     }
 
-    if (typeof safeGet === 'function' && typeof runTerminateEmployee === 'function') {
-        const saveBtn = safeGet('saveEmployeeBtn');
-        const newBtn = safeGet('newEmployeeBtn');
+    if (typeof window.runTerminateEmployee === 'function') {
+        const saveBtn = domGet('saveEmployeeBtn');
+        const newBtn = domGet('newEmployeeBtn');
         const actionsRow = (newBtn && newBtn.parentElement) || (saveBtn && saveBtn.parentElement);
-        let terminateBtn = safeGet('terminateEmployeeBtn');
+        let terminateBtn = domGet('terminateEmployeeBtn');
 
         if (actionsRow && !terminateBtn) {
             terminateBtn = document.createElement('button');
@@ -396,13 +496,13 @@ function openDrawer(employee) {
             terminateBtn.id = 'terminateEmployeeBtn';
             terminateBtn.className = 'button danger';
             terminateBtn.textContent = 'Terminate Employee';
-            terminateBtn.onclick = () => runTerminateEmployee();
+            terminateBtn.onclick = () => window.runTerminateEmployee?.();
             actionsRow.appendChild(terminateBtn);
         }
     }
 
-    if (typeof applyRolePermissions === 'function') {
-        applyRolePermissions();
+    if (typeof window.applyRolePermissions === 'function') {
+        window.applyRolePermissions();
     }
 
     const detailRows = [
@@ -422,19 +522,19 @@ function openDrawer(employee) {
         ['Tenure Bracket', employee.tenureBracket || employee.tenure_bracket]
     ];
 
-    const details = typeof safeGet === 'function' ? safeGet('drawerDetails') : document.getElementById('drawerDetails');
+    const details = domGet('drawerDetails');
 
     if (details) {
         details.innerHTML = detailRows.map(([label, value]) => `
       <div class="detail-card">
-        <div class="detail-label">${esc(label)}</div>
-        <div class="detail-value">${esc(value)}</div>
+        <div class="detail-label">${domEsc(label)}</div>
+        <div class="detail-value">${domEsc(value)}</div>
       </div>
     `).join('');
     }
 
     const setLoading = (id, text) => {
-        const el = typeof safeGet === 'function' ? safeGet(id) : document.getElementById(id);
+        const el = domGet(id);
         if (el) el.innerHTML = `<div class="empty">${text}</div>`;
     };
 
@@ -445,11 +545,11 @@ function openDrawer(employee) {
     setLoading('ecHistory', 'Loading emergency contact...');
     setLoading('docHistory', 'Loading documents...');
     setLoading('reviewsHistory', 'Loading reviews...');
-    setLoading('stayInterviewsHistory', 'Loading stay interviews...');
+    setLoading('stayInterviewHistory', 'Loading stay interviews...');
     setLoading('onboardingHistory', 'Loading onboarding...');
 
-    const backdrop = typeof safeGet === 'function' ? safeGet('drawerBackdrop') : document.getElementById('drawerBackdrop');
-    const drawer = typeof safeGet === 'function' ? safeGet('employeeDrawer') : document.getElementById('employeeDrawer');
+    const backdrop = domGet('drawerBackdrop');
+    const drawer = domGet('employeeDrawer');
 
     if (drawer) {
         const drawerIdentityHeader = document.createElement('div');
@@ -458,13 +558,13 @@ function openDrawer(employee) {
         drawerIdentityHeader.className = 'employee-drawer-identity-header';
 
         drawerIdentityHeader.innerHTML = `
-            <div class="employee-drawer-avatar">${esc(employeeName.charAt(0).toUpperCase())}</div>
+            <div class="employee-drawer-avatar">${domEsc(employeeName.charAt(0).toUpperCase())}</div>
             <div class="employee-drawer-title-block">
-                <div class="employee-drawer-name">${esc(employeeName)}</div>
-                <div class="employee-drawer-meta">${esc(displayEmployeeId)} • ${esc(employeePosition)} • ${esc(employeeDepartment)}</div>
+                <div class="employee-drawer-name">${domEsc(employeeName)}</div>
+                <div class="employee-drawer-meta">${domEsc(displayEmployeeId)} • ${domEsc(employeePosition)} • ${domEsc(employeeDepartment)}</div>
             </div>
             <div class="employee-drawer-header-actions">
-                <div class="employee-drawer-status-pill">${esc(employeeStatus)}</div>
+                <div class="employee-drawer-status-pill">${domEsc(employeeStatus)}</div>
                 <button type="button" class="employee-drawer-close-btn" id="employeeDrawerCloseBtn">×</button>
             </div>
         `;
@@ -519,35 +619,46 @@ function openDrawer(employee) {
         });
     }
 
-    if (typeof loadEmployeeNotes === 'function') loadEmployeeNotes(employeeId);
-    if (typeof loadEmployeeDiscipline === 'function') loadEmployeeDiscipline(employeeId);
-    if (typeof loadEmployeeMeetings === 'function') loadEmployeeMeetings(employeeId);
-    if (typeof loadEmergencyContacts === 'function') loadEmergencyContacts(employeeId);
-    if (typeof loadEmployeeDocuments === 'function') loadEmployeeDocuments(employeeId);
-    if (typeof loadEmployeeReviews === 'function') loadEmployeeReviews(employeeId);
-    if (typeof loadEmployeeIncidents === 'function') loadEmployeeIncidents(employeeId);
-    if (typeof loadStayInterviews === 'function') loadStayInterviews(employeeId);
-    if (typeof loadEmployeeOnboarding === 'function') loadEmployeeOnboarding(employeeId);
-    if (typeof loadEmployeeManualAtRisk === 'function') loadEmployeeManualAtRisk(employeeId);
-    if (typeof loadEmployeeManualImpactPlayer === 'function') loadEmployeeManualImpactPlayer(employeeId);
-    if (typeof loadEmployeeHistory === 'function') loadEmployeeHistory(employeeId);
+    if (typeof window.loadEmployeeNotes === 'function') window.loadEmployeeNotes(employeeId);
+    if (typeof window.loadEmployeeDiscipline === 'function') window.loadEmployeeDiscipline(employeeId);
+    if (typeof window.loadEmployeeMeetings === 'function') window.loadEmployeeMeetings(employeeId);
+    if (typeof window.loadEmergencyContacts === 'function') window.loadEmergencyContacts(employeeId);
+    if (typeof window.loadEmployeeDocuments === 'function') window.loadEmployeeDocuments(employeeId);
+    if (typeof window.loadEmployeeReviews === 'function') window.loadEmployeeReviews(employeeId);
+    if (typeof window.loadEmployeeIncidents === 'function') window.loadEmployeeIncidents(employeeId);
+    if (typeof window.loadStayInterviews === 'function') window.loadStayInterviews(employeeId);
+    if (typeof window.loadEmployeeOnboarding === 'function') window.loadEmployeeOnboarding(employeeId);
+    if (typeof window.loadEmployeeManualAtRisk === 'function') window.loadEmployeeManualAtRisk(employeeId);
+    if (typeof window.loadEmployeeManualImpactPlayer === 'function') {
+        window.loadEmployeeManualImpactPlayer(employeeId);
+    }
+    if (typeof window.loadEmployeeHistory === 'function') window.loadEmployeeHistory(employeeId);
 
-    const markAtRiskBtn = typeof safeGet === 'function' ? safeGet('markAtRiskBtn') : document.getElementById('markAtRiskBtn');
-    const clearAtRiskBtn = typeof safeGet === 'function' ? safeGet('clearAtRiskBtn') : document.getElementById('clearAtRiskBtn');
-    const markImpactPlayerBtn = typeof safeGet === 'function' ? safeGet('markImpactPlayerBtn') : document.getElementById('markImpactPlayerBtn');
-    const clearImpactPlayerBtn = typeof safeGet === 'function' ? safeGet('clearImpactPlayerBtn') : document.getElementById('clearImpactPlayerBtn');
+    const markAtRiskBtn = domGet('markAtRiskBtn');
+    const clearAtRiskBtn = domGet('clearAtRiskBtn');
+    const markImpactPlayerBtn = domGet('markImpactPlayerBtn');
+    const clearImpactPlayerBtn = domGet('clearImpactPlayerBtn');
 
-    if (markAtRiskBtn && typeof markEmployeeAtRisk === 'function') markAtRiskBtn.onclick = markEmployeeAtRisk;
-    if (clearAtRiskBtn && typeof clearAtRiskStatus === 'function') clearAtRiskBtn.onclick = clearAtRiskStatus;
-    if (markImpactPlayerBtn && typeof markImpactPlayer === 'function') markImpactPlayerBtn.onclick = markImpactPlayer;
-    if (clearImpactPlayerBtn && typeof clearImpactPlayerStatus === 'function') clearImpactPlayerBtn.onclick = clearImpactPlayerStatus;
+    if (markAtRiskBtn && typeof window.markEmployeeAtRisk === 'function') {
+        markAtRiskBtn.onclick = window.markEmployeeAtRisk;
+    }
+    if (clearAtRiskBtn && typeof window.clearAtRiskStatus === 'function') {
+        clearAtRiskBtn.onclick = window.clearAtRiskStatus;
+    }
+    if (markImpactPlayerBtn && typeof window.markImpactPlayer === 'function') {
+        markImpactPlayerBtn.onclick = window.markImpactPlayer;
+    }
+    if (clearImpactPlayerBtn && typeof window.clearImpactPlayerStatus === 'function') {
+        clearImpactPlayerBtn.onclick = window.clearImpactPlayerStatus;
+    }
 
     cleanVisibleDrawerNameInputs();
 }
 
-function closeDrawer() {
-    const backdrop = typeof safeGet === 'function' ? safeGet('drawerBackdrop') : document.getElementById('drawerBackdrop');
-    const drawer = typeof safeGet === 'function' ? safeGet('employeeDrawer') : document.getElementById('employeeDrawer');
+/** Closes the employee drawer only (used internally — use closeActiveDrawer for shared backdrop). */
+export function closeDrawer(): void {
+    const backdrop = domGet('drawerBackdrop');
+    const drawer = domGet('employeeDrawer');
 
     backdrop?.classList.remove('open');
 
@@ -571,10 +682,15 @@ function closeDrawer() {
     }
 }
 
-function switchDrawerTab(tabName) {
-    if (typeof switchTab === 'function') {
-        switchTab(tabName);
-        if (tabName === 'admin' || tabName === 'employeeAdmin' || tabName === 'employee-admin') {
+export function switchDrawerTab(tabName: string): void {
+    if (typeof window.switchTab === 'function') {
+        window.switchTab(tabName);
+        if (
+            tabName === 'admin' ||
+            tabName === 'employee' ||
+            tabName === 'employeeAdmin' ||
+            tabName === 'employee-admin'
+        ) {
             setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 25);
             setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 150);
         }
@@ -590,7 +706,7 @@ function switchDrawerTab(tabName) {
     });
 }
 
-function bindDrawerEvents() {
+export function bindDrawerEvents(): void {
     const closeBtn = document.getElementById('drawerClose');
 
     if (closeBtn) {
@@ -623,11 +739,18 @@ function bindDrawerEvents() {
     document.querySelectorAll('.tab-btn').forEach(tab => {
         tab.onclick = () => {
             const tabName = tab.dataset.tab;
-            if (tabName) switchDrawerTab(tabName);
+            if (tabName) {
+                if (typeof window.switchDrawerTab === 'function') {
+                    window.switchDrawerTab(tabName);
+                } else {
+                    switchDrawerTab(tabName);
+                }
+            }
 
             const tabText = String(tab.textContent || '').trim().toLowerCase();
             const isEmployeeAdminTab = tabText.includes('employee admin') ||
                 tabName === 'admin' ||
+                tabName === 'employee' ||
                 tabName === 'employeeAdmin' ||
                 tabName === 'employee-admin';
 
@@ -645,18 +768,18 @@ function bindDrawerEvents() {
 window.getResolvedDrawerEmployeeId = getResolvedDrawerEmployeeId;
 window.openDrawer = openDrawer;
 window.closeDrawer = closeDrawer;
-window.switchDrawerTab = switchDrawerTab;
 window.bindDrawerEvents = bindDrawerEvents;
 window.forcePopulateEmployeeAdminPanel = forcePopulateEmployeeAdminPanel;
 window.drawerEscapeKeyBound = window.drawerEscapeKeyBound || false;
 window.getDrawerHeaderEmployeeId = getDrawerHeaderEmployeeId;
-
 window.formatDrawerDateForDisplay = formatDrawerDateForDisplay;
 window.getNextUpcomingAnniversaryDate = getNextUpcomingAnniversaryDate;
 
+bindDrawerEvents();
+
 setInterval(() => {
-    const drawer = typeof safeGet === 'function' ? safeGet('employeeDrawer') : document.getElementById('employeeDrawer');
-    const adminPanel = typeof getVisibleEmployeeAdminPanel === 'function' ? getVisibleEmployeeAdminPanel() : null;
+    const drawer = domGet('employeeDrawer');
+    const adminPanel = getVisibleEmployeeAdminPanel();
 
     if (!drawer?.classList.contains('open') || !adminPanel || !window.currentEmployee) return;
 

@@ -1,0 +1,1025 @@
+import {
+  openDrawer,
+  closeDrawer as closeDrawerUi,
+  switchDrawerTab as switchDrawerTabUi,
+} from '../ui/drawerUi';
+import { generateAvailableEmployeeId } from '../services/employeeIds';
+import { cleanEmployeeNameValue } from '../services/employeeUtils';
+import { createDefaultOnboardingTasks } from './onboarding';
+
+interface DrawerEmployeeRecord {
+  id?: string;
+  employee_id?: string;
+
+  first_name?: string;
+  last_name?: string;
+
+  preferred_name?: string;
+
+  email?: string;
+  phone?: string;
+
+  department?: string;
+  position?: string;
+  supervisor?: string;
+
+  status?: string;
+
+  hire_date?: string;
+  hireDate?: string | Date | null;
+
+  pay_type?: string;
+  payType?: string;
+  standard_hours?: string | number;
+  stdHours?: string | number;
+  next_review_date?: string;
+  nextReview?: string | Date | null;
+  anniversary_date?: string;
+  anniversaryDate?: string;
+  tenure_months?: string | number;
+  tenureMonths?: string | number;
+  tenure_years?: string | number;
+  tenureYears?: string | number;
+  benefits_status?: string;
+  benefitsStatus?: string;
+  tenure_bracket?: string;
+  tenureBracket?: string;
+
+  dept?: string;
+  dbId?: string;
+
+  at_risk?: boolean;
+  impact_player?: boolean;
+
+  [key: string]: unknown;
+}
+
+declare global {
+  interface Window {
+    openEmployeeDrawer?: (employeeId: string) => Promise<void>;
+
+    closeEmployeeDrawer?: () => void;
+
+    switchDrawerTab?: (tabName: string) => void;
+
+    refreshEmployeeDrawer?: () => Promise<void>;
+
+    saveEmployeeRecord?: () => Promise<void>;
+    deleteEmployeeRecord?: () => Promise<void>;
+
+    selectedEmployeeId?: string | null;
+
+    currentEmployee?: DrawerEmployeeRecord;
+
+    loadEmployeeReviews?: (employeeId: string) => Promise<void>;
+    loadEmployeeDiscipline?: (employeeId: string) => Promise<void>;
+    loadEmployeeIncidents?: (employeeId: string) => Promise<void>;
+    loadEmployeeMeetings?: (employeeId: string) => Promise<void>;
+    loadStayInterviews?: (employeeId: string) => Promise<void>;
+    loadEmergencyContacts?: (employeeId: string) => Promise<void>;
+    loadEmployeeDocuments?: (employeeId: string) => Promise<void>;
+
+    openDrawer?: (employee: DrawerEmployeeRecord) => void;
+    switchTab?: (tabName: string) => void;
+
+    closeDrawer?: () => void;
+    syncOpenedEmployeeRecordId?: (employeeId: string) => void;
+    isCreatingEmployee?: boolean;
+    loadAllDashboardData?: () => Promise<void>;
+  }
+}
+
+let selectedEmployee: DrawerEmployeeRecord | null = null;
+
+/** Primary key captured when the drawer opens — never read from the form. */
+let openedEmployeeRecordId: string | null = null;
+
+function escapeHtml(value: unknown): string {
+  if (typeof (window as Window & { esc?: (v: unknown) => string }).esc === 'function') {
+    return (window as Window & { esc: (v: unknown) => string }).esc(value);
+  }
+
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function formatDrawerDate(value: unknown): string {
+  if (typeof (window as Window & { formatDrawerDateForDisplay?: (v: unknown) => string })
+    .formatDrawerDateForDisplay === 'function') {
+    return (window as Window & { formatDrawerDateForDisplay: (v: unknown) => string })
+      .formatDrawerDateForDisplay(value);
+  }
+
+  const raw = String(value || '').trim();
+
+  if (!raw) return '';
+
+  const date = new Date(`${raw}T00:00:00`);
+
+  if (Number.isNaN(date.getTime())) return raw;
+
+  return date.toLocaleDateString();
+}
+
+function getNextAnniversaryDate(employee: DrawerEmployeeRecord): string {
+  if (typeof (window as Window & { getNextUpcomingAnniversaryDate?: (v: unknown) => string })
+    .getNextUpcomingAnniversaryDate === 'function') {
+    return (window as Window & { getNextUpcomingAnniversaryDate: (v: unknown) => string })
+      .getNextUpcomingAnniversaryDate(
+        employee.anniversary_date || employee.hire_date || employee.hireDate || ''
+      );
+  }
+
+  return formatDrawerDate(employee.anniversary_date || employee.hire_date || '');
+}
+
+const EMPLOYEE_RELATED_TABLES = [
+  'onboarding_tasks',
+  'employee_notes',
+  'employee_meetings',
+  'employee_reviews',
+  'discipline_reports',
+  'incident_reports',
+  'stay_interviews',
+  'emergency_contacts',
+  'employee_audit_logs',
+] as const;
+
+function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
+  return document.getElementById(id) as T | null;
+}
+
+function setText(id: string, value: unknown): void {
+  const el = safeGet(id);
+
+  if (!el) return;
+
+  el.textContent = String(value ?? '');
+}
+
+function setValue(id: string, value: unknown): void {
+  const el = safeGet<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id);
+
+  if (!el) return;
+
+  el.value = String(value ?? '');
+}
+
+function setAdminValue(...ids: string[]): (value: unknown) => void {
+  return (value: unknown) => {
+    ids.forEach((id) => setValue(id, value));
+  };
+}
+
+function normalizeStatusForAdminInput(status: unknown): string {
+  const raw = String(status || '')
+    .trim()
+    .toUpperCase();
+
+  if (raw === 'INACTIVE') return 'INACTIVE';
+  if (raw === 'LEAVE' || raw === 'ON LEAVE') return 'LEAVE';
+  if (raw === 'TERMINATED') return 'TERMINATED';
+
+  return 'ACTIVE';
+}
+
+function getOpenedEmployeeRecordId(): string {
+  if (openedEmployeeRecordId) {
+    return openedEmployeeRecordId;
+  }
+
+  const current = window.currentEmployee as (DrawerEmployeeRecord & { dbId?: string }) | null;
+
+  return String(selectedEmployee?.id || current?.dbId || '').trim();
+}
+
+async function cascadeEmployeeIdChange(
+  oldId: string,
+  newId: string,
+  client: NonNullable<ReturnType<typeof getSupabaseBridgeClient>>
+): Promise<void> {
+  if (!oldId || !newId || oldId === newId) return;
+
+  for (const table of EMPLOYEE_RELATED_TABLES) {
+    const { error } = await (client.from!(table) as {
+      update: (payload: Record<string, string>) => {
+        eq: (column: string, value: string) => Promise<{ error: { message?: string } | null }>;
+      };
+    })
+      .update({ employee_id: newId })
+      .eq('employee_id', oldId);
+
+    if (error) {
+      console.warn(`[Drawer] Could not cascade employee ID to ${table}:`, error);
+    }
+  }
+}
+
+function showDrawer(): void {
+  const drawer = safeGet('employeeDrawer');
+
+  if (!drawer) return;
+
+  drawer.classList.add('open');
+}
+
+function hideDrawer(): void {
+  const drawer = safeGet('employeeDrawer');
+
+  if (!drawer) return;
+
+  drawer.classList.remove('open');
+}
+
+async function fetchEmployeeRecord(employeeId: string): Promise<DrawerEmployeeRecord | null> {
+  try {
+    const bridge = window as Window & {
+      supabase?: unknown;
+      supabaseClient?: unknown;
+    };
+
+    const client = (bridge.supabaseClient || bridge.supabase) as {
+      from?: (table: string) => {
+        select: (query: string) => {
+          eq: (
+            column: string,
+            value: string
+          ) => {
+            single: () => Promise<{
+              data: DrawerEmployeeRecord | null;
+              error: unknown;
+            }>;
+          };
+        };
+      };
+    };
+
+    if (!client?.from) {
+      console.warn('[Drawer] Supabase client missing.');
+
+      return null;
+    }
+
+    const { data, error } = await client
+      .from('employees')
+      .select('*')
+      .eq('id', employeeId)
+      .single();
+
+    if (error) {
+      console.error('[Drawer] Could not load employee:', error);
+
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('[Drawer] Unexpected employee load error:', err);
+
+    return null;
+  }
+}
+
+function populateDrawer(employee: DrawerEmployeeRecord): void {
+  selectedEmployee = employee;
+
+  const dbEmployeeId = String(
+    (employee as DrawerEmployeeRecord & { dbId?: string }).dbId || employee.id || ''
+  ).trim();
+  const displayEmployeeId = String(
+    employee.employee_id || employee.id || ''
+  ).trim();
+
+  openedEmployeeRecordId = dbEmployeeId;
+  window.selectedEmployeeId = dbEmployeeId;
+  window.currentEmployee = employee;
+
+  const setAdmin = setAdminValue(
+    'employeeIdInput',
+    'employeeId',
+    'employeeRecordId',
+    'employeeDisplayId'
+  );
+
+  setAdmin(displayEmployeeId);
+
+  setText('drawerEmployeeName', `${employee.first_name || ''} ${employee.last_name || ''}`.trim());
+
+  setText('drawerEmployeePosition', employee.position || '');
+
+  setText('drawerEmployeeDepartment', employee.department || '');
+
+  setText('drawerEmployeeStatus', employee.status || '');
+
+  setAdminValue('employeeFirstNameInput', 'employeeFirstName')(employee.first_name || '');
+
+  setAdminValue('employeeLastNameInput', 'employeeLastName')(employee.last_name || '');
+
+  setValue('employeeEmail', employee.email || '');
+
+  setValue('employeePhone', employee.phone || '');
+
+  setAdminValue('employeeDepartmentInput', 'employeeDepartment')(employee.department || '');
+
+  setAdminValue('employeePositionInput', 'employeePosition')(employee.position || '');
+
+  setAdminValue('employeeSupervisorInput', 'employeeSupervisor')(employee.supervisor || '');
+
+  setAdminValue('employeeStatusInput', 'employeeStatus')(
+    normalizeStatusForAdminInput(employee.status)
+  );
+
+  setAdminValue('employeeHireDateInput', 'employeeHireDate')(employee.hire_date || '');
+
+  setAdminValue('employeePayTypeInput', 'employeePayType')(
+    String(employee.pay_type || '')
+  );
+
+  setAdminValue('employeeStandardHoursInput', 'employeeStandardHours')(
+    employee.standard_hours ?? ''
+  );
+
+  setAdminValue('employeeBenefitsStatusInput', 'employeeBenefitsStatus')(
+    String(employee.benefits_status || '')
+  );
+
+  setAdminValue('employeeNextReviewInput', 'employeeNextReviewDate')(
+    String(employee.next_review_date || '')
+  );
+
+  setAdminValue('employeeAnniversaryDateInput', 'employeeAnniversaryDate')(
+    String(employee.anniversary_date || '')
+  );
+
+  setAdminValue('employeeTenureBracketInput', 'employeeTenureBracket')(
+    String(employee.tenure_bracket || '')
+  );
+
+  const atRiskBadge = safeGet('drawerAtRiskBadge');
+  const riskMeta =
+    typeof window.getEmployeeRiskMeta === 'function'
+      ? window.getEmployeeRiskMeta(employee)
+      : null;
+
+  if (atRiskBadge) {
+    atRiskBadge.style.display = riskMeta ? 'inline-flex' : 'none';
+  }
+
+  const impactBadge = safeGet('drawerImpactPlayerBadge');
+  const impactMeta =
+    typeof window.getEmployeeImpactMeta === 'function'
+      ? window.getEmployeeImpactMeta(employee)
+      : null;
+
+  if (impactBadge) {
+    impactBadge.style.display = impactMeta ? 'inline-flex' : 'none';
+  }
+}
+
+function populateDrawerProfileDetails(employee: DrawerEmployeeRecord): void {
+  const details = safeGet('drawerDetails');
+
+  if (!details) return;
+
+  const displayEmployeeId = String(
+    employee.employee_id || employee.id || ''
+  ).trim();
+
+  const detailRows: Array<[string, unknown]> = [
+    ['Employee ID', displayEmployeeId],
+    ['Status', employee.status],
+    ['Department', employee.dept || employee.department],
+    ['Position', employee.position],
+    ['Supervisor', employee.supervisor],
+    ['Pay Type', employee.payType || employee.pay_type],
+    ['Standard Hours', employee.stdHours || employee.standard_hours],
+    ['Hire Date', formatDrawerDate(employee.hireDate || employee.hire_date)],
+    [
+      'Next Review',
+      formatDrawerDate(
+        employee.nextReview || employee.next_review_date || employee.next_review
+      ),
+    ],
+    ['Anniversary', getNextAnniversaryDate(employee)],
+    ['Tenure Months', employee.tenureMonths || employee.tenure_months],
+    ['Tenure Years', employee.tenureYears || employee.tenure_years],
+    ['Benefits Status', employee.benefitsStatus || employee.benefits_status],
+    ['Tenure Bracket', employee.tenureBracket || employee.tenure_bracket],
+  ];
+
+  details.innerHTML = detailRows
+    .map(
+      ([label, value]) => `
+        <div class="detail-card">
+          <div class="detail-label">${escapeHtml(label)}</div>
+          <div class="detail-value">${escapeHtml(value)}</div>
+        </div>
+      `
+    )
+    .join('');
+}
+
+async function loadDrawerTabData(employeeId: string): Promise<void> {
+  const recordId = String(employeeId || '').trim();
+
+  if (!recordId) return;
+
+  await Promise.all([
+    window.loadEmployeeReviews?.(recordId),
+    window.loadEmployeeDiscipline?.(recordId),
+    window.loadEmployeeIncidents?.(recordId),
+    window.loadEmployeeMeetings?.(recordId),
+    window.loadStayInterviews?.(recordId),
+    window.loadEmergencyContacts?.(recordId),
+    window.loadEmployeeDocuments?.(recordId),
+  ]);
+}
+
+export async function openEmployeeDrawer(employeeId: string): Promise<void> {
+  if (!employeeId) {
+    console.warn('[Drawer] Missing employee ID.');
+
+    return;
+  }
+
+  let employee = await fetchEmployeeRecord(employeeId);
+
+  if (!employee) {
+    const current = window.currentEmployee as DrawerEmployeeRecord | null | undefined;
+
+    if (
+      current &&
+      [current.id, current.dbId, current.employee_id]
+        .filter(Boolean)
+        .map(String)
+        .includes(String(employeeId))
+    ) {
+      employee = current;
+    }
+  }
+
+  if (!employee) {
+    console.warn('[Drawer] Employee not found.');
+
+    return;
+  }
+
+  const normalized =
+    typeof (window as Window & { normalizeEmployee?: (e: DrawerEmployeeRecord) => DrawerEmployeeRecord | null })
+      .normalizeEmployee === 'function'
+      ? (window as Window & { normalizeEmployee: (e: DrawerEmployeeRecord) => DrawerEmployeeRecord | null })
+          .normalizeEmployee(employee) || employee
+      : employee;
+
+  const recordId = String(
+    (normalized as DrawerEmployeeRecord & { dbId?: string }).dbId || normalized.id || employeeId
+  ).trim();
+
+  populateDrawer(normalized);
+  openDrawer(normalized);
+
+  await loadDrawerTabData(recordId);
+}
+
+export function closeEmployeeDrawer(): void {
+  selectedEmployee = null;
+  openedEmployeeRecordId = null;
+
+  window.selectedEmployeeId = null;
+
+  document.getElementById('employeeDrawerIdentityHeader')?.remove();
+
+  closeDrawerUi();
+}
+
+export function syncOpenedEmployeeRecordId(employeeId: string): void {
+  const recordId = String(employeeId || '').trim();
+
+  if (!recordId) return;
+
+  openedEmployeeRecordId = recordId;
+  window.selectedEmployeeId = recordId;
+}
+
+function normalizeDrawerTabName(tabName: string): string {
+  const rawOriginal = String(tabName || '').trim();
+
+  const raw = rawOriginal
+    .replace(/^#/, '')
+    .replace(/Panel$/i, '')
+    .replace(/Tab$/i, '')
+    .replace(/[^a-z0-9]/gi, '')
+    .toLowerCase();
+
+  if (raw.includes('incidentreport') || raw.includes('incident')) return 'incidentreports';
+  if (raw.includes('stayinterview')) return 'stayinterviews';
+  if (raw.includes('employeeadmin')) return 'employeeadmin';
+  if (raw.includes('meeting')) return 'meetings';
+  if (raw.includes('review')) return 'reviews';
+  if (raw.includes('discipline')) return 'discipline';
+  if (raw.includes('emergency')) return 'emergency';
+  if (raw.includes('onboarding')) return 'onboarding';
+  if (raw.includes('document')) return 'documents';
+  if (raw.includes('history')) return 'history';
+  if (raw.includes('notes')) return 'notes';
+  if (raw.includes('profile')) return 'profile';
+
+  const tabMap: Record<string, string> = {
+    profile: 'profile',
+    notes: 'notes',
+    discipline: 'discipline',
+    incidentreports: 'incidentreports',
+    incidents: 'incidentreports',
+    stayinterviews: 'stayinterviews',
+    meetings: 'meetings',
+    meeting: 'meetings',
+    reviews: 'reviews',
+    review: 'reviews',
+    emergency: 'emergency',
+    onboarding: 'onboarding',
+    documents: 'documents',
+    history: 'history',
+    employeeadmin: 'employeeadmin',
+  };
+
+  return tabMap[raw] || raw;
+}
+
+function getSwitchTabName(normalizedTab: string): string {
+  if (normalizedTab === 'stayinterviews') return 'stay-interviews';
+  if (normalizedTab === 'incidentreports') return 'incidents';
+  if (normalizedTab === 'employeeadmin') return 'employee';
+
+  return normalizedTab;
+}
+
+export function switchDrawerTab(tabName: string): void {
+  const normalizedTab = normalizeDrawerTabName(tabName);
+
+  if (!normalizedTab) return;
+
+  document.querySelectorAll('.tab-panel').forEach((panel) => {
+    (panel as HTMLElement).style.display = '';
+  });
+
+  switchDrawerTabUi(getSwitchTabName(normalizedTab));
+
+  const employeeId = window.selectedEmployeeId || String(selectedEmployee?.id || '');
+
+  if (!employeeId) return;
+
+  if (normalizedTab === 'meetings') {
+    void window.loadEmployeeMeetings?.(employeeId);
+  }
+
+  if (normalizedTab === 'reviews') {
+    void window.loadEmployeeReviews?.(employeeId);
+  }
+
+  if (normalizedTab === 'discipline') {
+    void window.loadEmployeeDiscipline?.(employeeId);
+  }
+
+  if (normalizedTab === 'incidentreports') {
+    void window.loadEmployeeIncidents?.(employeeId);
+  }
+
+  if (normalizedTab === 'stayinterviews') {
+    void window.loadStayInterviews?.(employeeId);
+  }
+
+  if (normalizedTab === 'emergency') {
+    void window.loadEmergencyContacts?.(employeeId);
+  }
+
+  if (normalizedTab === 'documents') {
+    void window.loadEmployeeDocuments?.(employeeId);
+  }
+
+  if (normalizedTab === 'onboarding') {
+    void window.loadOnboardingTasks?.(employeeId);
+  }
+}
+
+export async function refreshEmployeeDrawer(): Promise<void> {
+  if (!window.selectedEmployeeId) {
+    return;
+  }
+
+  await openEmployeeDrawer(window.selectedEmployeeId);
+}
+
+function getSupabaseBridgeClient() {
+  const bridge = window as Window & {
+    supabase?: unknown;
+    supabaseClient?: unknown;
+  };
+
+  return (bridge.supabaseClient || bridge.supabase) as {
+    from?: (table: string) => {
+      update: (payload: Record<string, unknown>) => {
+        eq: (column: string, value: string) => Promise<{ data: unknown; error: { message?: string } | null }>;
+      };
+      delete: () => {
+        eq: (column: string, value: string) => Promise<{ data: unknown; error: { message?: string } | null }>;
+      };
+    };
+  } | null;
+}
+
+function getInputValue(...ids: string[]): string {
+  for (const id of ids) {
+    const field = safeGet<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id);
+
+    if (!field) continue;
+
+    return String(field.value || '').trim();
+  }
+
+  return '';
+}
+
+function showToast(message: string, type: string = 'success'): void {
+  const maybeToast = (window as any).showToast;
+
+  if (typeof maybeToast === 'function') {
+    maybeToast(message, type);
+    return;
+  }
+
+  console.log(`[${type}] ${message}`);
+}
+
+export async function saveEmployeeRecord(): Promise<void> {
+  if (!openedEmployeeRecordId) {
+    const current = window.currentEmployee as (DrawerEmployeeRecord & { dbId?: string }) | null;
+
+    openedEmployeeRecordId = String(current?.dbId || selectedEmployee?.id || '').trim();
+  }
+
+  const originalRecordId = getOpenedEmployeeRecordId();
+  const isCreating =
+    Boolean(window.isCreatingEmployee) || !originalRecordId;
+
+  let editedEmployeeId = getInputValue(
+    'employeeIdInput',
+    'employeeId',
+    'empId',
+    'empEmployeeId',
+    'employeeRecordId',
+    'employeeDisplayId'
+  );
+
+  const first_name = cleanEmployeeNameValue(
+    getInputValue(
+      'employeeFirstNameInput',
+      'employeeFirstName',
+      'empFirstName',
+      'firstName',
+      'employeeFirst'
+    )
+  );
+  const last_name = cleanEmployeeNameValue(
+    getInputValue(
+      'employeeLastNameInput',
+      'employeeLastName',
+      'empLastName',
+      'lastName',
+      'employeeLast'
+    )
+  );
+
+  if (!first_name || !last_name) {
+    showToast('First name and last name are required.', 'error');
+    return;
+  }
+
+  if (!editedEmployeeId && isCreating) {
+    editedEmployeeId = await generateAvailableEmployeeId();
+    const idFields = [
+      'employeeIdInput',
+      'employeeId',
+      'empId',
+      'empEmployeeId',
+    ];
+    idFields.forEach((id) => {
+      const field = safeGet<HTMLInputElement>(id);
+      if (field) {
+        field.value = editedEmployeeId;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  }
+
+  if (!editedEmployeeId) {
+    showToast('Employee ID is required.', 'error');
+    return;
+  }
+
+  const client = getSupabaseBridgeClient();
+
+  if (!client?.from) {
+    showToast('Supabase client is not ready.', 'error');
+    return;
+  }
+
+  const standardHoursRaw = getInputValue(
+    'employeeStandardHoursInput',
+    'employeeStandardHours'
+  );
+
+  const payload: Record<string, unknown> = {
+    first_name,
+    last_name,
+    department: getInputValue(
+      'employeeDepartmentInput',
+      'employeeDepartment',
+      'empDepartment',
+      'department'
+    ),
+    position: getInputValue(
+      'employeePositionInput',
+      'employeePosition',
+      'empPosition',
+      'position'
+    ),
+    supervisor: getInputValue(
+      'employeeSupervisorInput',
+      'employeeSupervisor',
+      'empSupervisor',
+      'supervisor'
+    ),
+    status:
+      getInputValue('employeeStatusInput', 'employeeStatus', 'empStatus', 'status') ||
+      'ACTIVE',
+    hire_date:
+      getInputValue('employeeHireDateInput', 'employeeHireDate', 'empHireDate', 'hireDate') ||
+      null,
+    pay_type:
+      getInputValue('employeePayTypeInput', 'employeePayType', 'empPayType', 'payType') ||
+      null,
+    benefits_status: getInputValue(
+      'employeeBenefitsStatusInput',
+      'employeeBenefitsStatus',
+      'empBenefitsStatus',
+      'benefitsStatus'
+    ) || null,
+    next_review_date:
+      getInputValue('employeeNextReviewInput', 'employeeNextReviewDate', 'empNextReviewDate', 'nextReviewDate') ||
+      null,
+    anniversary_date:
+      getInputValue(
+        'employeeAnniversaryDateInput',
+        'employeeAnniversaryDate',
+        'empAnniversaryDate',
+        'anniversaryDate'
+      ) || null,
+    tenure_bracket:
+      getInputValue(
+        'employeeTenureBracketInput',
+        'employeeTenureBracket',
+        'empTenureBracket',
+        'tenureBracket'
+      ) || null,
+    work_email: getInputValue('empWorkEmail', 'workEmail') || null,
+    personal_email: getInputValue('empPersonalEmail', 'personalEmail') || null,
+    phone: getInputValue('empPhone', 'phone') || null,
+    notes: getInputValue('empNotes', 'notes') || null,
+  };
+
+  payload.id = editedEmployeeId;
+
+  if (standardHoursRaw !== '') {
+    payload.standard_hours = Number(standardHoursRaw);
+  }
+
+  Object.keys(payload).forEach((key) => {
+    if (payload[key] === '') delete payload[key];
+  });
+
+  if (isCreating) {
+    const insertResult = await client
+      .from('employees')
+      .insert([payload])
+      .select();
+
+    const insertError = insertResult.error;
+    if (insertError) {
+      showToast(insertError.message || 'Could not create employee.', 'error');
+      return;
+    }
+
+    showToast('Employee created.');
+    window.isCreatingEmployee = false;
+
+    await createDefaultOnboardingTasks(editedEmployeeId);
+
+    if (typeof window.loadAllDashboardData === 'function') {
+      await window.loadAllDashboardData();
+    } else if (typeof window.loadEmployees === 'function') {
+      await window.loadEmployees();
+    }
+
+    syncOpenedEmployeeRecordId(editedEmployeeId);
+
+    const employees = window.EMPLOYEES || [];
+    const refreshed = Array.isArray(employees)
+      ? employees.find((e: DrawerEmployeeRecord) => String(e.id) === String(editedEmployeeId))
+      : null;
+
+    if (refreshed) {
+      openDrawer(refreshed);
+      if (typeof window.switchTab === 'function') {
+        window.switchTab('employee');
+      }
+    } else {
+      await openEmployeeDrawer(editedEmployeeId);
+    }
+
+    return;
+  }
+
+  if (!originalRecordId) {
+    showToast('Open an employee first.', 'error');
+    return;
+  }
+
+  const isEmployeeIdChanging = editedEmployeeId !== originalRecordId;
+
+  console.log('[Drawer] Saving employee:', {
+    originalRecordId,
+    editedEmployeeId,
+    isEmployeeIdChanging,
+    payload,
+  });
+
+  if (isEmployeeIdChanging) {
+    await cascadeEmployeeIdChange(originalRecordId, editedEmployeeId, client);
+  }
+
+  const updateEmployeeById = (window as {
+    updateEmployeeById?: (
+      employeeId: string,
+      payload: Record<string, unknown>
+    ) => Promise<{ error: { message?: string } | null }>;
+  }).updateEmployeeById;
+
+  let error: { message?: string } | null = null;
+
+  if (typeof updateEmployeeById === 'function') {
+    const result = await updateEmployeeById(originalRecordId, payload);
+    error = result.error;
+  } else {
+    const result = await client
+      .from('employees')
+      .update(payload)
+      .eq('id', originalRecordId);
+
+    error = result.error;
+  }
+
+  if (error) {
+    showToast(error.message || 'Could not save employee.', 'error');
+    return;
+  }
+
+  showToast('Employee saved.');
+
+  syncOpenedEmployeeRecordId(editedEmployeeId);
+
+  window.dispatchEvent(
+    new CustomEvent('orbis:employee-record-saved', {
+      detail: {
+        originalRecordId,
+        editedEmployeeId,
+        isEmployeeIdChanging,
+      },
+    })
+  );
+
+  const maybeLoadEmployees = (window as any).loadEmployees;
+
+  if (typeof maybeLoadEmployees === 'function') {
+    await maybeLoadEmployees();
+  }
+
+  await openEmployeeDrawer(editedEmployeeId);
+}
+
+export async function deleteEmployeeRecord(): Promise<void> {
+  const employeeId = getOpenedEmployeeRecordId();
+
+  if (!employeeId) {
+    showToast('Open an employee first.', 'error');
+    return;
+  }
+
+  if (!confirm('Delete this employee record?')) {
+    return;
+  }
+
+  const client = getSupabaseBridgeClient();
+
+  if (!client?.from) {
+    showToast('Supabase client is not ready.', 'error');
+    return;
+  }
+
+  const { error } = await client
+    .from('employees')
+    .delete()
+    .eq('id', employeeId);
+
+  if (error) {
+    showToast(error.message || 'Could not delete employee.', 'error');
+    return;
+  }
+
+  showToast('Employee deleted.');
+  closeEmployeeDrawer();
+
+  const maybeLoadEmployees = (window as any).loadEmployees;
+
+  if (typeof maybeLoadEmployees === 'function') {
+    await maybeLoadEmployees();
+  }
+}
+
+function bindEmployeeAdminActions(): void {
+  if ((window as any).__employeeAdminActionsBound) return;
+  (window as any).__employeeAdminActionsBound = true;
+
+  document.addEventListener(
+    'click',
+    async (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+
+      const button = target.closest('button') as HTMLButtonElement | null;
+      if (!button) return;
+
+      const employeeDrawer = safeGet('employeeDrawer');
+      if (employeeDrawer && !employeeDrawer.contains(button)) return;
+
+      const buttonText = String(button.textContent || '')
+        .trim()
+        .toLowerCase();
+      const buttonId = String(button.id || '')
+        .trim()
+        .toLowerCase();
+
+      const isSaveEmployeeButton =
+        buttonId === 'saveemployeebtn' ||
+        buttonId === 'saveemployee' ||
+        buttonText === 'save employee';
+
+      const isDeleteEmployeeButton =
+        buttonId === 'deleteemployeebtn' ||
+        buttonId === 'deleteemployee' ||
+        buttonText === 'delete employee';
+
+      if (!isSaveEmployeeButton && !isDeleteEmployeeButton) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+
+      if (isSaveEmployeeButton) {
+        await saveEmployeeRecord();
+        return;
+      }
+
+      if (isDeleteEmployeeButton) {
+        await deleteEmployeeRecord();
+      }
+    },
+    true
+  );
+}
+
+bindEmployeeAdminActions();
+
+window.openEmployeeDrawer = openEmployeeDrawer;
+
+window.closeEmployeeDrawer = closeEmployeeDrawer;
+
+window.switchDrawerTab = switchDrawerTab;
+
+window.refreshEmployeeDrawer = refreshEmployeeDrawer;
+
+window.saveEmployeeRecord = saveEmployeeRecord;
+window.deleteEmployeeRecord = deleteEmployeeRecord;
+window.syncOpenedEmployeeRecordId = syncOpenedEmployeeRecordId;
+window.closeDrawer = () => {
+  if (typeof window.closeActiveDrawer === 'function') {
+    window.closeActiveDrawer();
+    return;
+  }
+
+  closeEmployeeDrawer();
+};
