@@ -689,6 +689,7 @@ input[type="search"] {
 }
 
 #employeeDrawerIdentityHeader.employee-drawer-identity-header,
+#candidateDrawerIdentityHeader.employee-drawer-identity-header,
 .employee-drawer-identity-header {
   position: sticky !important;
   top: 0 !important;
@@ -746,7 +747,9 @@ input[type="search"] {
 }
 
 #employeeDrawerIdentityHeader+.drawer-content,
-#employeeDrawerIdentityHeader+.drawer-body {
+#employeeDrawerIdentityHeader+.drawer-body,
+#candidateDrawerIdentityHeader+.drawer-content,
+#candidateDrawerIdentityHeader+.drawer-body {
   margin-top: 0 !important;
   padding-top: 0 !important;
 }

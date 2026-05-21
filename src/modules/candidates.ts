@@ -960,6 +960,104 @@ function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null
   drawer.style.setProperty('z-index', '99999', 'important');
 }
 
+function hideCandidateDrawerLegacyHeader(drawer: HTMLElement): void {
+  const oldDrawerHeader = drawer.querySelector('.drawer-header');
+
+  if (!oldDrawerHeader) return;
+
+  const header = oldDrawerHeader as HTMLElement;
+  header.style.display = 'none';
+  header.style.height = '0';
+  header.style.minHeight = '0';
+  header.style.padding = '0';
+  header.style.margin = '0';
+  header.style.overflow = 'hidden';
+}
+
+function restoreCandidateDrawerLegacyHeader(drawer: HTMLElement): void {
+  const oldDrawerHeader = drawer.querySelector('.drawer-header');
+
+  if (!oldDrawerHeader) return;
+
+  const header = oldDrawerHeader as HTMLElement;
+  header.style.removeProperty('display');
+  header.style.removeProperty('height');
+  header.style.removeProperty('min-height');
+  header.style.removeProperty('padding');
+  header.style.removeProperty('margin');
+  header.style.removeProperty('overflow');
+}
+
+function removeCandidateDrawerIdentityHeader(): void {
+  document.getElementById('candidateDrawerIdentityHeader')?.remove();
+}
+
+function renderCandidateDrawerIdentityHeader(candidate: CandidateRecord | null): void {
+  const drawer = safeGet('candidateDrawer');
+
+  if (!drawer) return;
+
+  removeCandidateDrawerIdentityHeader();
+
+  const firstName = candidate?.first_name || '';
+  const lastName = candidate?.last_name || '';
+  const displayName =
+    `${firstName} ${lastName}`.trim() || (candidate?.id ? 'Candidate' : 'New Candidate');
+  const position = String(candidate?.position || 'Candidate');
+  const stage = String(candidate?.stage || 'Applied');
+  const subtitle = candidate?.id ? `${position} • ${stage}` : 'Create candidate record';
+  const statusLabel = candidate?.id ? stage : 'Draft';
+  const initial = displayName.charAt(0).toUpperCase() || 'C';
+
+  const drawerIdentityHeader = document.createElement('div');
+  drawerIdentityHeader.id = 'candidateDrawerIdentityHeader';
+  drawerIdentityHeader.className = 'employee-drawer-identity-header';
+  drawerIdentityHeader.innerHTML = `
+    <div class="employee-drawer-avatar">${escapeHtml(initial)}</div>
+    <div class="employee-drawer-title-block">
+      <div class="employee-drawer-name">${escapeHtml(displayName)}</div>
+      <div class="employee-drawer-meta">${escapeHtml(subtitle)}</div>
+    </div>
+    <div class="employee-drawer-header-actions">
+      <div class="employee-drawer-status-pill">${escapeHtml(statusLabel)}</div>
+      <button type="button" class="employee-drawer-close-btn" id="candidateDrawerCloseBtn">×</button>
+    </div>
+  `;
+
+  drawer.prepend(drawerIdentityHeader);
+
+  const tabRow =
+    drawer.querySelector('.tab-btn')?.parentElement ||
+    drawer.querySelector('.drawer-tabs') ||
+    drawer.querySelector('.tab-bar') ||
+    drawer.querySelector('.tabs') ||
+    drawer.querySelector('.tab-nav') ||
+    drawer.querySelector('.tab-buttons') ||
+    drawer.querySelector('.drawer-tab-row');
+
+  if (tabRow) {
+    drawerIdentityHeader.after(tabRow);
+  }
+
+  const customCloseBtn = drawer.querySelector('#candidateDrawerCloseBtn');
+
+  if (customCloseBtn) {
+    customCloseBtn.addEventListener('click', () => closeCandidateDrawer());
+  }
+
+  hideCandidateDrawerLegacyHeader(drawer);
+
+  const drawerContent = drawer.querySelector('.drawer-content') || drawer.querySelector('.drawer-body');
+
+  if (drawerContent) {
+    (drawerContent as HTMLElement).style.paddingTop = '0';
+    (drawerContent as HTMLElement).style.marginTop = '0';
+  }
+
+  setText('candidateDrawerTitle', displayName);
+  setText('candidateDrawerSub', subtitle);
+}
+
 export function switchCandidateTab(tabName: string): void {
   document.querySelectorAll('[data-candidate-tab]').forEach((btn) => {
     btn.classList.toggle('active', (btn as HTMLElement).dataset.candidateTab === tabName);
@@ -995,6 +1093,8 @@ export function closeCandidateDrawer(): void {
   }
 
   if (drawer) {
+    removeCandidateDrawerIdentityHeader();
+    restoreCandidateDrawerLegacyHeader(drawer);
     drawer.classList.remove('open', 'closing');
     drawer.classList.add('hidden');
     drawer.setAttribute('aria-hidden', 'true');
@@ -1090,15 +1190,7 @@ export async function openCandidateDrawer(candidateId: string): Promise<void> {
   }
 
   applyDrawerOpenStyles(drawer, backdrop);
-
-  setText(
-    'candidateDrawerTitle',
-    `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim() || 'Candidate'
-  );
-  setText(
-    'candidateDrawerSub',
-    `${candidate.position || 'Candidate'} • ${candidate.stage || 'Applied'}`
-  );
+  renderCandidateDrawerIdentityHeader(candidate);
 
   fillCandidateDrawerFields(candidate);
   switchCandidateTab('profile');
@@ -1123,9 +1215,6 @@ export function openNewCandidateForm(): void {
     return;
   }
 
-  setText('candidateDrawerTitle', 'New Candidate');
-  setText('candidateDrawerSub', 'Create candidate record');
-
   fillCandidateDrawerFields({
     stage: 'Applied',
     applied_date: todayInputValue(),
@@ -1133,6 +1222,7 @@ export function openNewCandidateForm(): void {
 
   switchCandidateTab('profile');
   applyDrawerOpenStyles(drawer, backdrop);
+  renderCandidateDrawerIdentityHeader(null);
 }
 
 function bindCandidateDrawerClicks(): void {
