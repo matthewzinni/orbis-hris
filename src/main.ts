@@ -1,4 +1,6 @@
+import './styles/app-shell.css';
 import './styles/styles.css';
+import './utils/helpers';
 import { supabase } from './services/supabaseClient';
 import {
   signIn,
@@ -16,8 +18,12 @@ import './services/employeeNormalizer';
 import './services/access';
 import './modules/drawerForms';
 import './ui/history';
+import './ui/drawerLayout';
+import './ui/drawerIdentityHeader';
 import './ui/drawerUi';
+import './ui/drawerTabs';
 import './modules/drawer';
+import './modules/notes';
 import './ui/navigation';
 import './ui/departmentSummary';
 import './modules/onboarding';
@@ -66,6 +72,11 @@ import {
   moveCandidateToStage,
   convertCandidateToEmployee,
 } from './modules/candidates';
+import './modules/candidateNotes';
+import './ui/loadingUi';
+import './ui/dashboardRetry';
+import './ui/confirmModal';
+import './ui/commandPalette';
 import './ui/kpis';
 import './ui/employeeRoster';
 
@@ -79,6 +90,9 @@ bridge.supabase = supabase;
 bridge.supabaseClient = supabase;
 bridge.signIn = signIn;
 bridge.signOut = signOut;
+bridge.showAuthenticatedOrbisView = showAuthenticatedOrbisView;
+bridge.showAuthView = showAuthView;
+bridge.bootstrapOrbisAfterAuth = initializeProtectedModules;
 
 function openCandidatesViewFallback(): void {
   const candidatesCard = document.getElementById('candidatesCard');
@@ -193,6 +207,15 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   showAuthenticatedOrbisView();
+
+  if (typeof window.showDashboardLoadingSkeletons === 'function') {
+    window.showDashboardLoadingSkeletons();
+  }
+
   await initializeProtectedModules();
   markOrbisBootComplete();
+
+  if (typeof window.hideDashboardLoadingSkeletons === 'function') {
+    window.hideDashboardLoadingSkeletons();
+  }
 });

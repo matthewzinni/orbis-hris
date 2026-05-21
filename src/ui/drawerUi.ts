@@ -1,5 +1,14 @@
 // Drawer open/close UI (ported from js/ui/drawer.js)
 
+import {
+  mountDrawerIdentityHeader,
+  mountLegacyDrawerHeader,
+  removeDrawerIdentityHeader,
+  restoreDrawerLegacyHeader,
+  restoreDrawerTabPlacement,
+} from './drawerIdentityHeader';
+import { ensureDrawerLayout, setEmployeeDrawerCreateMode } from './drawerLayout';
+
 type DrawerUiEmployee = Record<string, unknown> & {
   id?: string;
   dbId?: string;
@@ -22,6 +31,8 @@ type DrawerUiEmployee = Record<string, unknown> & {
   benefits_status?: string;
   hireDate?: string | Date | null;
   hire_date?: string;
+  termination_date?: string;
+  terminationDate?: string;
   nextReview?: string | Date | null;
   next_review?: string;
   next_review_date?: string;
@@ -72,6 +83,7 @@ declare global {
     bindDrawerEvents?: () => void;
     forcePopulateEmployeeAdminPanel?: (employee: DrawerUiEmployee | null | undefined) => void;
     drawerEscapeKeyBound?: boolean;
+    drawerFocusTrapBound?: boolean;
     getResolvedDrawerEmployeeId?: (employee?: DrawerUiEmployee | null) => string | null;
     getDrawerHeaderEmployeeId?: () => string;
     formatDrawerDateForDisplay?: (value: unknown) => string;
@@ -85,6 +97,80 @@ function domGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   }
 
   return document.getElementById(id) as T | null;
+}
+
+let drawerTriggerElement: HTMLElement | null = null;
+let drawerFocusTrapHandler: ((event: KeyboardEvent) => void) | null = null;
+
+function getDrawerFocusableElements(drawer: HTMLElement): HTMLElement[] {
+  return Array.from(
+    drawer.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((element) => element.offsetParent !== null);
+}
+
+function bindDrawerFocusTrap(drawer: HTMLElement): void {
+  if (drawerFocusTrapHandler) {
+    drawer.removeEventListener('keydown', drawerFocusTrapHandler);
+  }
+
+  drawerFocusTrapHandler = (event: KeyboardEvent) => {
+    if (event.key !== 'Tab') return;
+
+    const focusable = getDrawerFocusableElements(drawer);
+    if (!focusable.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  drawer.addEventListener('keydown', drawerFocusTrapHandler);
+}
+
+function activateEmployeeDrawerA11y(drawer: HTMLElement, backdrop: HTMLElement | null): void {
+  drawer.setAttribute('aria-hidden', 'false');
+  backdrop?.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('orbis-drawer-open');
+  bindDrawerFocusTrap(drawer);
+
+  const focusable = getDrawerFocusableElements(drawer);
+  const closeBtn = drawer.querySelector('#employeeDrawerCloseBtn') as HTMLElement | null;
+
+  requestAnimationFrame(() => {
+    (closeBtn || focusable[0])?.focus();
+  });
+}
+
+function deactivateEmployeeDrawerA11y(drawer: HTMLElement | null, backdrop: HTMLElement | null): void {
+  if (drawer) {
+    drawer.setAttribute('aria-hidden', 'true');
+
+    if (drawerFocusTrapHandler) {
+      drawer.removeEventListener('keydown', drawerFocusTrapHandler);
+      drawerFocusTrapHandler = null;
+    }
+  }
+
+  backdrop?.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('orbis-drawer-open');
+
+  if (drawerTriggerElement && typeof drawerTriggerElement.focus === 'function') {
+    drawerTriggerElement.focus();
+  }
+
+  drawerTriggerElement = null;
 }
 
 function domEsc(value: unknown): string {
@@ -172,12 +258,16 @@ function normalizeDrawerLabelText(value) {
 }
 
 function setDrawerAdminFieldByLabel(labelText, value) {
-    const drawer = domGet('employeeDrawer');
+    const scope =
+        (typeof window.getEmployeeAdminPanel === 'function' && window.getEmployeeAdminPanel()) ||
+        domGet('employeeDrawer');
 
-    if (!drawer) return;
+    if (!scope) return;
 
     const normalizedTarget = normalizeDrawerLabelText(labelText);
-    const possibleLabels = Array.from(drawer.querySelectorAll('label, .field-label, .form-label, .detail-label, [class*="label"], div, span'));
+    const possibleLabels = Array.from(
+        scope.querySelectorAll('label, .field-label, .form-label, .detail-label')
+    );
 
     const label = possibleLabels.find(el => normalizeDrawerLabelText(el.textContent) === normalizedTarget);
 
@@ -210,8 +300,11 @@ function forcePopulateEmployeeAdminFieldsByLabels(employee) {
     const status = employee.status || 'Active';
     const benefitsStatus = employee.benefitsStatus || employee.benefits_status || '';
     const hireDate = formatDrawerDateForInput(employee.hireDate || employee.hire_date || '');
+    const terminationDate = formatDrawerDateForInput(
+        employee.termination_date || employee.terminationDate || ''
+    );
     const nextReview = formatDrawerDateForInput(employee.nextReview || employee.next_review || employee.next_review_date || '');
-    const anniversaryDate = getNextUpcomingAnniversaryDate(employee.anniversaryDate || employee.anniversary_date || employee.hireDate || employee.hire_date || '');
+    const anniversaryDate = getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee));
 
     setDrawerAdminFieldByLabel('Employee ID', employeeId);
     setDrawerAdminFieldByLabel('First Name', firstName);
@@ -224,11 +317,15 @@ function forcePopulateEmployeeAdminFieldsByLabels(employee) {
     setDrawerAdminFieldByLabel('Status', status);
     setDrawerAdminFieldByLabel('Benefits Status', benefitsStatus);
     setDrawerAdminFieldByLabel('Hire Date', hireDate);
-    setDrawerAdminFieldByLabel('Next Review Date', nextReview);
+    setDrawerAdminFieldByLabel('Termination Date', terminationDate);
+    setDrawerAdminFieldByLabel('Next Stay Interview Date', nextReview);
     setDrawerAdminFieldByLabel('Anniversary Date', anniversaryDate);
 }
 
 export function forcePopulateEmployeeAdminPanel(employee: DrawerUiEmployee | null | undefined): void {
+    if (window.isCreatingEmployee || !employee) {
+        return;
+    }
 
     forcePopulateEmployeeAdminFields(employee);
 
@@ -236,7 +333,10 @@ export function forcePopulateEmployeeAdminPanel(employee: DrawerUiEmployee | nul
 
     forcePopulateVisibleEmployeeAdminPanel(employee);
 
-    setDrawerAdminField(['empAnniversaryDate', 'anniversaryDate', 'employeeAnniversaryDate', 'employeeAnniversaryInput', 'employeeAnniversaryDateInput', 'anniversaryInput', 'anniversaryDateInput', 'adminAnniversaryDate'], getNextUpcomingAnniversaryDate(employee.anniversaryDate || employee.anniversary_date || employee.hireDate || employee.hire_date || ''));
+    setDrawerAdminField(
+        ['empAnniversaryDate', 'anniversaryDate', 'employeeAnniversaryDate', 'employeeAnniversaryInput', 'employeeAnniversaryDateInput', 'anniversaryInput', 'anniversaryDateInput', 'adminAnniversaryDate'],
+        getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee))
+    );
 
     cleanVisibleDrawerNameInputs();
 
@@ -304,6 +404,30 @@ export function formatDrawerDateForDisplay(value: unknown): string {
     });
 }
 
+function getEmployeeAnniversarySource(employee: DrawerUiEmployee | null | undefined): string {
+  if (!employee) {
+    return '';
+  }
+
+  return String(
+    employee.anniversaryDate ||
+      employee.anniversary_date ||
+      employee.hireDate ||
+      employee.hire_date ||
+      ''
+  );
+}
+
+function scheduleEmployeeAdminPopulate(delayMs: number): void {
+  window.setTimeout(() => {
+    if (window.isCreatingEmployee || !window.currentEmployee) {
+      return;
+    }
+
+    forcePopulateEmployeeAdminPanel(window.currentEmployee);
+  }, delayMs);
+}
+
 export function getNextUpcomingAnniversaryDate(value: unknown): string {
     const inputValue = formatDrawerDateForInput(value);
 
@@ -351,7 +475,7 @@ function forcePopulateVisibleEmployeeAdminPanel(employee) {
         employee.benefitsStatus || employee.benefits_status || '',
         formatDrawerDateForInput(employee.hireDate || employee.hire_date || ''),
         formatDrawerDateForInput(employee.nextReview || employee.next_review || employee.next_review_date || ''),
-        getNextUpcomingAnniversaryDate(employee.anniversaryDate || employee.anniversary_date || employee.hireDate || employee.hire_date || ''),
+        getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee)),
         employee.tenureBracket || employee.tenure_bracket || ''
     ];
 
@@ -378,8 +502,11 @@ function forcePopulateEmployeeAdminFields(employee) {
     const status = employee.status || 'Active';
     const benefitsStatus = employee.benefitsStatus || employee.benefits_status || '';
     const hireDate = formatDrawerDateForInput(employee.hireDate || employee.hire_date || '');
+    const terminationDate = formatDrawerDateForInput(
+        employee.termination_date || employee.terminationDate || ''
+    );
     const nextReview = formatDrawerDateForInput(employee.nextReview || employee.next_review || employee.next_review_date || '');
-    const anniversaryDate = getNextUpcomingAnniversaryDate(employee.anniversaryDate || employee.anniversary_date || employee.hireDate || employee.hire_date || '');
+    const anniversaryDate = getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee));
 
     setDrawerAdminField(['empId', 'employeeId', 'employeeID', 'employee_id', 'adminEmployeeId'], employeeId);
     setDrawerAdminField(['empFirstName', 'firstName', 'employeeFirstName', 'firstNameInput', 'adminFirstName'], firstName);
@@ -392,8 +519,121 @@ function forcePopulateEmployeeAdminFields(employee) {
     setDrawerAdminField(['empStatus', 'status', 'employeeStatus', 'statusInput', 'adminStatus'], status);
     setDrawerAdminField(['empBenefitsStatus', 'benefitsStatus', 'employeeBenefitsStatus', 'benefitsStatusInput', 'adminBenefitsStatus'], benefitsStatus);
     setDrawerAdminField(['empHireDate', 'hireDate', 'employeeHireDate', 'hireDateInput', 'adminHireDate'], hireDate);
+    setDrawerAdminField(
+        ['employeeTerminationDateInput', 'employeeTerminationDate', 'empTerminationDate', 'terminationDate', 'adminTerminationDate'],
+        terminationDate
+    );
     setDrawerAdminField(['empNextReviewDate', 'nextReviewDate', 'nextReview', 'employeeNextReview', 'nextReviewInput', 'adminNextReview'], nextReview);
+
+    if (typeof window.syncEmployeeTerminationDateFieldVisibility === 'function') {
+        window.syncEmployeeTerminationDateFieldVisibility(status);
+    }
     setDrawerAdminField(['empAnniversaryDate', 'anniversaryDate', 'employeeAnniversaryDate', 'employeeAnniversaryInput', 'employeeAnniversaryDateInput', 'anniversaryInput', 'anniversaryDateInput', 'adminAnniversaryDate'], anniversaryDate);
+}
+
+export function ensureEmployeeDrawerVisible(): HTMLElement | null {
+  const backdrop = domGet('drawerBackdrop');
+  const drawer = domGet('employeeDrawer');
+  const candidateDrawer = domGet('candidateDrawer');
+
+  candidateDrawer?.classList.remove('open', 'closing');
+
+  if (backdrop) {
+    backdrop.classList.remove('hidden');
+    backdrop.removeAttribute('style');
+  }
+
+  if (!drawer) {
+    return null;
+  }
+
+  drawer.classList.remove('hidden', 'closing');
+  drawer.style.removeProperty('display');
+  drawer.removeAttribute('aria-hidden');
+
+  return drawer;
+}
+
+export function openNewEmployeeDrawer(): void {
+  const backdrop = domGet('drawerBackdrop');
+  const drawer = ensureEmployeeDrawerVisible();
+
+  if (!drawer) {
+    return;
+  }
+
+  ensureDrawerLayout('employeeDrawer');
+  setEmployeeDrawerCreateMode(true);
+  renderEmployeeDrawerIdentityHeader(null);
+  ensureDrawerLayout('employeeDrawer');
+
+  const drawerBody = drawer.querySelector('.drawer-body') as HTMLElement | null;
+  if (drawerBody) {
+    drawerBody.scrollTop = 0;
+  }
+  drawer.scrollTop = 0;
+
+  backdrop?.classList.add('open');
+
+  drawer.classList.remove('closing');
+  requestAnimationFrame(() => {
+    drawer.classList.add('open');
+    activateEmployeeDrawerA11y(drawer, backdrop);
+  });
+
+  if (typeof window.activateDrawerTab === 'function') {
+    window.activateDrawerTab('employee', 'employee', false);
+  } else if (typeof window.switchTab === 'function') {
+    window.switchTab('employee');
+  }
+}
+
+export function renderEmployeeDrawerIdentityHeader(
+  employee: DrawerUiEmployee | null | undefined
+): void {
+  const isNew = !employee || Boolean(window.isCreatingEmployee);
+
+  if (isNew) {
+    mountLegacyDrawerHeader('employeeDrawer', {
+      title: 'New Employee',
+      subtitle: 'Create employee record',
+      onClose: () => closeDrawer(),
+    });
+
+    if (typeof window.setText === 'function') {
+      window.setText('drawerTitle', 'New Employee');
+      window.setText('drawerSub', 'Create employee record');
+    }
+
+    return;
+  }
+
+  const firstName = cleanDrawerEmployeeNameValue(employee?.first || employee?.first_name || '');
+  const lastName = cleanDrawerEmployeeNameValue(employee?.last || employee?.last_name || '');
+  const employeeName =
+    `${firstName} ${lastName}`.trim() || 'Employee Record';
+  const displayEmployeeId =
+    getTrustedEmployeeDisplayId(employee) || getResolvedDrawerEmployeeId(employee) || '—';
+  const employeePosition = String(employee?.position || 'Employee');
+  const employeeDepartment = String(employee?.dept || employee?.department || 'No department');
+  const employeeStatus = String(employee?.status || 'Active');
+  const meta = `${displayEmployeeId} • ${employeePosition} • ${employeeDepartment}`;
+
+  mountDrawerIdentityHeader({
+    drawerId: 'employeeDrawer',
+    headerId: 'employeeDrawerIdentityHeader',
+    closeButtonId: 'employeeDrawerCloseBtn',
+    name: employeeName,
+    meta,
+    status: employeeStatus,
+    initial: employeeName.charAt(0).toUpperCase() || 'E',
+    onClose: () => closeDrawer(),
+  });
+
+  if (typeof window.setText === 'function') {
+    window.setText('drawerTitle', employeeName);
+    window.setText('drawerSub', meta);
+  }
 }
 
 export function getResolvedDrawerEmployeeId(employee: DrawerUiEmployee | null = null): string | null {
@@ -406,6 +646,12 @@ export function getResolvedDrawerEmployeeId(employee: DrawerUiEmployee | null = 
 
 export function openDrawer(employee: DrawerUiEmployee | null | undefined): void {
     if (!employee) return;
+
+    ensureEmployeeDrawerVisible();
+    setEmployeeDrawerCreateMode(false);
+    ensureDrawerLayout('employeeDrawer');
+
+    drawerTriggerElement = document.activeElement as HTMLElement | null;
 
     employee = {
         ...employee,
@@ -453,12 +699,6 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
     const employeeDepartment = employee.dept || employee.department || 'No department';
     const employeeStatus = employee.status || 'Active';
 
-    const existingHeader = document.getElementById('employeeDrawerIdentityHeader');
-
-    if (existingHeader) {
-        existingHeader.remove();
-    }
-
     if (typeof window.switchTab === 'function') {
         window.switchTab('profile');
     }
@@ -476,9 +716,14 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
     }
 
     forcePopulateEmployeeAdminPanel(employee);
-    setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 50);
-    setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 250);
-    setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 750);
+    scheduleEmployeeAdminPopulate(50);
+    scheduleEmployeeAdminPopulate(250);
+    scheduleEmployeeAdminPopulate(750);
+    window.setTimeout(() => {
+        if (typeof window.resetDrawerEntryForms === 'function') {
+            window.resetDrawerEntryForms();
+        }
+    }, 800);
 
     if (typeof window.ensureDeleteEmployeeButton === 'function') {
         window.ensureDeleteEmployeeButton();
@@ -505,6 +750,11 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
         window.applyRolePermissions();
     }
 
+    const terminationDate = employee.termination_date || employee.terminationDate || '';
+    const isTerminated =
+        String(employee.status || '').trim().toUpperCase() === 'TERMINATED'
+        && Boolean(String(terminationDate).trim());
+
     const detailRows = [
         ['Employee ID', displayEmployeeId],
         ['Status', employee.status],
@@ -514,8 +764,11 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
         ['Pay Type', employee.payType || employee.pay_type],
         ['Standard Hours', employee.stdHours || employee.standard_hours],
         ['Hire Date', formatDrawerDateForDisplay(employee.hireDate || employee.hire_date)],
-        ['Next Review', formatDrawerDateForDisplay(employee.nextReview || employee.next_review || employee.next_review_date)],
-        ['Anniversary', formatDrawerDateForDisplay(getNextUpcomingAnniversaryDate(employee.anniversaryDate || employee.anniversary_date || employee.hireDate || employee.hire_date))],
+        ...(isTerminated
+            ? [['Termination Date', formatDrawerDateForDisplay(terminationDate)]]
+            : []),
+        ['Next Stay Interview', formatDrawerDateForDisplay(employee.nextReview || employee.next_review || employee.next_review_date)],
+        ['Anniversary', formatDrawerDateForDisplay(getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee)))],
         ['Tenure Months', employee.tenureMonths || employee.tenure_months],
         ['Tenure Years', employee.tenureYears || employee.tenure_years],
         ['Benefits Status', employee.benefitsStatus || employee.benefits_status],
@@ -544,7 +797,13 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
     setLoading('incidentsHistory', 'Loading incidents...');
     setLoading('ecHistory', 'Loading emergency contact...');
     setLoading('docHistory', 'Loading documents...');
-    setLoading('reviewsHistory', 'Loading reviews...');
+    const canLoadReviews =
+        typeof window.canAccessPerformanceReviews !== 'function' ||
+        window.canAccessPerformanceReviews(employee);
+
+    if (canLoadReviews) {
+        setLoading('reviewsHistory', 'Loading reviews...');
+    }
     setLoading('stayInterviewHistory', 'Loading stay interviews...');
     setLoading('onboardingHistory', 'Loading onboarding...');
 
@@ -552,62 +811,7 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
     const drawer = domGet('employeeDrawer');
 
     if (drawer) {
-        const drawerIdentityHeader = document.createElement('div');
-
-        drawerIdentityHeader.id = 'employeeDrawerIdentityHeader';
-        drawerIdentityHeader.className = 'employee-drawer-identity-header';
-
-        drawerIdentityHeader.innerHTML = `
-            <div class="employee-drawer-avatar">${domEsc(employeeName.charAt(0).toUpperCase())}</div>
-            <div class="employee-drawer-title-block">
-                <div class="employee-drawer-name">${domEsc(employeeName)}</div>
-                <div class="employee-drawer-meta">${domEsc(displayEmployeeId)} • ${domEsc(employeePosition)} • ${domEsc(employeeDepartment)}</div>
-            </div>
-            <div class="employee-drawer-header-actions">
-                <div class="employee-drawer-status-pill">${domEsc(employeeStatus)}</div>
-                <button type="button" class="employee-drawer-close-btn" id="employeeDrawerCloseBtn">×</button>
-            </div>
-        `;
-
-        drawer.prepend(drawerIdentityHeader);
-
-        const tabRow = drawer.querySelector('.tab-btn')?.parentElement ||
-            drawer.querySelector('.drawer-tabs') ||
-            drawer.querySelector('.tab-bar') ||
-            drawer.querySelector('.tabs') ||
-            drawer.querySelector('.tab-nav') ||
-            drawer.querySelector('.tab-buttons') ||
-            drawer.querySelector('.drawer-tab-row');
-
-        if (tabRow && tabRow.parentElement !== drawer) {
-            drawerIdentityHeader.after(tabRow);
-        } else if (tabRow) {
-            drawerIdentityHeader.after(tabRow);
-        }
-
-        const customCloseBtn = drawer.querySelector('#employeeDrawerCloseBtn');
-
-        if (customCloseBtn) {
-            customCloseBtn.onclick = () => closeDrawer();
-        }
-
-        const oldDrawerHeader = drawer.querySelector('.drawer-header');
-
-        if (oldDrawerHeader) {
-            oldDrawerHeader.style.display = 'none';
-            oldDrawerHeader.style.height = '0';
-            oldDrawerHeader.style.minHeight = '0';
-            oldDrawerHeader.style.padding = '0';
-            oldDrawerHeader.style.margin = '0';
-            oldDrawerHeader.style.overflow = 'hidden';
-        }
-
-        const drawerContent = drawer.querySelector('.drawer-content') || drawer.querySelector('.drawer-body');
-
-        if (drawerContent) {
-            drawerContent.style.paddingTop = '0';
-            drawerContent.style.marginTop = '0';
-        }
+        renderEmployeeDrawerIdentityHeader(employee);
     }
 
     backdrop?.classList.add('open');
@@ -616,6 +820,7 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
         drawer.classList.remove('closing');
         requestAnimationFrame(() => {
             drawer.classList.add('open');
+            activateEmployeeDrawerA11y(drawer, backdrop);
         });
     }
 
@@ -624,7 +829,9 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
     if (typeof window.loadEmployeeMeetings === 'function') window.loadEmployeeMeetings(employeeId);
     if (typeof window.loadEmergencyContacts === 'function') window.loadEmergencyContacts(employeeId);
     if (typeof window.loadEmployeeDocuments === 'function') window.loadEmployeeDocuments(employeeId);
-    if (typeof window.loadEmployeeReviews === 'function') window.loadEmployeeReviews(employeeId);
+    if (canLoadReviews && typeof window.loadEmployeeReviews === 'function') {
+        window.loadEmployeeReviews(employeeId);
+    }
     if (typeof window.loadEmployeeIncidents === 'function') window.loadEmployeeIncidents(employeeId);
     if (typeof window.loadStayInterviews === 'function') window.loadStayInterviews(employeeId);
     if (typeof window.loadEmployeeOnboarding === 'function') window.loadEmployeeOnboarding(employeeId);
@@ -661,6 +868,7 @@ export function closeDrawer(): void {
     const drawer = domGet('employeeDrawer');
 
     backdrop?.classList.remove('open');
+    deactivateEmployeeDrawerA11y(drawer, backdrop);
 
     if (drawer) {
         drawer.classList.add('closing');
@@ -669,6 +877,15 @@ export function closeDrawer(): void {
         setTimeout(() => {
             drawer.classList.remove('closing');
         }, 250);
+    }
+
+    removeDrawerIdentityHeader('employeeDrawerIdentityHeader');
+    document.getElementById('employeeDrawerChrome')?.replaceChildren();
+    setEmployeeDrawerCreateMode(false);
+    ensureDrawerLayout('employeeDrawer');
+
+    if (drawer) {
+        restoreDrawerLegacyHeader(drawer);
     }
 
     window.currentEmployee = null;
@@ -686,13 +903,14 @@ export function switchDrawerTab(tabName: string): void {
     if (typeof window.switchTab === 'function') {
         window.switchTab(tabName);
         if (
-            tabName === 'admin' ||
+            !window.isCreatingEmployee &&
+            (tabName === 'admin' ||
             tabName === 'employee' ||
             tabName === 'employeeAdmin' ||
-            tabName === 'employee-admin'
+            tabName === 'employee-admin')
         ) {
-            setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 25);
-            setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 150);
+            scheduleEmployeeAdminPopulate(25);
+            scheduleEmployeeAdminPopulate(150);
         }
         return;
     }
@@ -712,6 +930,30 @@ export function bindDrawerEvents(): void {
     if (closeBtn) {
         closeBtn.onclick = closeDrawer;
     }
+
+    const addEmployeeBtn = document.getElementById('addEmployeeBtn');
+    if (addEmployeeBtn && !(addEmployeeBtn as HTMLElement & { __orbisAddBound?: boolean }).__orbisAddBound) {
+        (addEmployeeBtn as HTMLElement & { __orbisAddBound?: boolean }).__orbisAddBound = true;
+        addEmployeeBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (typeof window.openNewEmployeeForm === 'function') {
+                window.openNewEmployeeForm();
+            }
+        });
+    }
+
+    document.querySelectorAll("button[onclick='openNewEmployeeForm()']").forEach((btn) => {
+        const el = btn as HTMLButtonElement;
+        if ((el as HTMLElement & { __orbisAddBound?: boolean }).__orbisAddBound) return;
+        (el as HTMLElement & { __orbisAddBound?: boolean }).__orbisAddBound = true;
+        el.removeAttribute('onclick');
+        el.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (typeof window.openNewEmployeeForm === 'function') {
+                window.openNewEmployeeForm();
+            }
+        });
+    });
 
     const backdrop = document.getElementById('drawerBackdrop');
 
@@ -736,38 +978,18 @@ export function bindDrawerEvents(): void {
         window.drawerEscapeKeyBound = true;
     }
 
-    document.querySelectorAll('.tab-btn').forEach(tab => {
-        tab.onclick = () => {
-            const tabName = tab.dataset.tab;
-            if (tabName) {
-                if (typeof window.switchDrawerTab === 'function') {
-                    window.switchDrawerTab(tabName);
-                } else {
-                    switchDrawerTab(tabName);
-                }
-            }
-
-            const tabText = String(tab.textContent || '').trim().toLowerCase();
-            const isEmployeeAdminTab = tabText.includes('employee admin') ||
-                tabName === 'admin' ||
-                tabName === 'employee' ||
-                tabName === 'employeeAdmin' ||
-                tabName === 'employee-admin';
-
-            if (isEmployeeAdminTab) {
-                setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 25);
-                setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 150);
-                setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 500);
-                setTimeout(() => forcePopulateEmployeeAdminPanel(window.currentEmployee), 1000);
-            }
-        };
-    });
+    if (typeof window.initAccessibleDrawerTabs === 'function') {
+        window.initAccessibleDrawerTabs();
+    }
 }
 
 
 window.getResolvedDrawerEmployeeId = getResolvedDrawerEmployeeId;
 window.openDrawer = openDrawer;
 window.closeDrawer = closeDrawer;
+window.renderEmployeeDrawerIdentityHeader = renderEmployeeDrawerIdentityHeader;
+window.openNewEmployeeDrawer = openNewEmployeeDrawer;
+window.ensureEmployeeDrawerVisible = ensureEmployeeDrawerVisible;
 window.bindDrawerEvents = bindDrawerEvents;
 window.forcePopulateEmployeeAdminPanel = forcePopulateEmployeeAdminPanel;
 window.drawerEscapeKeyBound = window.drawerEscapeKeyBound || false;
@@ -776,19 +998,24 @@ window.formatDrawerDateForDisplay = formatDrawerDateForDisplay;
 window.getNextUpcomingAnniversaryDate = getNextUpcomingAnniversaryDate;
 
 bindDrawerEvents();
+ensureDrawerLayout('employeeDrawer');
+ensureDrawerLayout('candidateDrawer');
 
 setInterval(() => {
     const drawer = domGet('employeeDrawer');
     const adminPanel = getVisibleEmployeeAdminPanel();
 
-    if (!drawer?.classList.contains('open') || !adminPanel || !window.currentEmployee) return;
+    if (
+        !drawer?.classList.contains('open') ||
+        !adminPanel ||
+        window.isCreatingEmployee ||
+        !window.currentEmployee
+    ) {
+        return;
+    }
 
     const nextAnniversary = getNextUpcomingAnniversaryDate(
-        window.currentEmployee.anniversaryDate ||
-        window.currentEmployee.anniversary_date ||
-        window.currentEmployee.hireDate ||
-        window.currentEmployee.hire_date ||
-        ''
+        getEmployeeAnniversarySource(window.currentEmployee)
     );
 
     setDrawerAdminField(

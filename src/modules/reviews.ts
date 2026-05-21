@@ -1,4 +1,6 @@
+import { canAccessPerformanceReviews } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
+import { showOrbisConfirm } from '../ui/confirmModal';
 
 type ReviewScoreLabel =
   | 'Exceeds Expectations'
@@ -142,6 +144,15 @@ function getCurrentEmployee(): ReviewEmployee | null {
   }
 
   return window.currentEmployee || null;
+}
+
+function assertPerformanceReviewAccess(employee?: ReviewEmployee | null): boolean {
+  if (canAccessPerformanceReviews(employee ?? getCurrentEmployee())) {
+    return true;
+  }
+
+  showToast('You do not have access to performance reviews for this employee.', 'error');
+  return false;
 }
 
 function setInputValue(id: string, value: unknown): void {
@@ -290,6 +301,11 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
   const target = safeGet('reviewsHistory');
   if (!target) return;
 
+  if (!assertPerformanceReviewAccess()) {
+    target.innerHTML = '<div class="empty">Performance reviews are not available for this employee.</div>';
+    return;
+  }
+
   const { data, error } = await supabaseClient
     .from('employee_reviews')
     .select('*')
@@ -354,6 +370,7 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
 
 export function editReviewRecord(review: ReviewRecord): void {
   if (!review) return;
+  if (!assertPerformanceReviewAccess()) return;
 
   currentReviewId = review.id || null;
   window.currentReviewId = currentReviewId;
@@ -390,7 +407,16 @@ export function editReviewRecord(review: ReviewRecord): void {
 
 export async function deleteReviewRecord(reviewId: string, employeeId: string): Promise<void> {
   if (!reviewId) return;
-  if (!confirm('Delete this review?')) return;
+  if (!assertPerformanceReviewAccess()) return;
+  if (
+    !(await showOrbisConfirm('Delete this review?', {
+      title: 'Delete review',
+      confirmLabel: 'Delete',
+      danger: true,
+    }))
+  ) {
+    return;
+  }
 
   const { error } = await supabaseClient.from('employee_reviews').delete().eq('id', reviewId);
 
@@ -422,6 +448,8 @@ export async function saveReviewRecord(): Promise<void> {
     showToast('Open an employee before saving a review.', 'error');
     return;
   }
+
+  if (!assertPerformanceReviewAccess(activeEmployee)) return;
 
   const reviewPayload: ReviewRecord = {
     employee_id: employeeId,

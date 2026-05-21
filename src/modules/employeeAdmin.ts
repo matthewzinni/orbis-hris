@@ -3,7 +3,10 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { recordAuditEvent } from '../services/auditTrail';
 import { cleanEmployeeNameValue } from '../services/employeeUtils';
+import { showOrbisConfirm } from '../ui/confirmModal';
 import { resetDrawerForms } from './drawerForms';
+import { generateAvailableEmployeeId } from '../services/employeeIds';
+import { openNewEmployeeDrawer } from '../ui/drawerUi';
 
 type EmployeeRow = Record<string, unknown>;
 
@@ -89,9 +92,15 @@ export async function runDeleteEmployee(): Promise<void> {
     `${currentEmployee.first || currentEmployee.first_name || ''} ${currentEmployee.last || currentEmployee.last_name || ''}`.trim() ||
     'this employee';
 
-  const confirmed = confirm(
-    `Permanently delete ${employeeName}'s employee file? This removes the record completely and cannot be undone.`
+  const confirmed = await showOrbisConfirm(
+    `Permanently delete ${employeeName}'s employee file? This removes the record completely and cannot be undone.`,
+    {
+      title: 'Delete employee',
+      confirmLabel: 'Delete permanently',
+      danger: true,
+    }
   );
+
   if (!confirmed) return;
 
   const employeeId = String(
@@ -124,9 +133,15 @@ export async function runTerminateEmployee(): Promise<void> {
     `${currentEmployee.first || currentEmployee.first_name || ''} ${currentEmployee.last || currentEmployee.last_name || ''}`.trim() ||
     'this employee';
 
-  const confirmed = confirm(
-    `Terminate ${employeeName}? This will mark them as TERMINATED but keep their file.`
+  const confirmed = await showOrbisConfirm(
+    `Terminate ${employeeName}? This will mark them as TERMINATED but keep their file.`,
+    {
+      title: 'Terminate employee',
+      confirmLabel: 'Terminate',
+      danger: true,
+    }
   );
+
   if (!confirmed) return;
 
   const targetId = String(
@@ -203,6 +218,7 @@ export async function updateEmployeeById(
     'displayPosition',
     'displaySupervisor',
     'hireDate',
+    'terminationDate',
     'tenureMonths',
     'tenureYears',
     'payType',
@@ -265,6 +281,7 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
     standardHours: normalized.standard_hours || '',
     benefitsStatus: normalized.benefits_status || '',
     hireDate: normalized.hire_date || '',
+    terminationDate: normalized.termination_date || '',
     nextReviewDate: normalized.next_review_date || '',
     anniversaryDate: normalized.anniversary_date || '',
     tenureBracket: normalized.tenure_bracket || '',
@@ -343,6 +360,10 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
   setByPlaceholder('Benefits status', values.benefitsStatus);
   setField('empHireDate', values.hireDate);
   setField('hireDate', values.hireDate);
+  setField('employeeHireDateInput', values.hireDate);
+  setField('employeeTerminationDateInput', values.terminationDate);
+  setField('empTerminationDate', values.terminationDate);
+  setField('terminationDate', values.terminationDate);
   setField('empNextReviewDate', values.nextReviewDate);
   setField('nextReviewDate', values.nextReviewDate);
   setField('employeeNextReviewInput', values.nextReviewDate);
@@ -414,7 +435,168 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
     statusSelect.dispatchEvent(new Event('input', { bubbles: true }));
     statusSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
+
+  syncEmployeeTerminationDateFieldVisibility(values.status);
 }
+
+function unlockEmployeeIdFields(): void {
+  const drawer = safeGet('employeeDrawer') || document.querySelector('#employeeDrawer');
+  const fields = drawer
+    ? Array.from(
+        drawer.querySelectorAll<HTMLInputElement>(
+          'input.locked-field, #employeeIdInput, #empId, #employeeId, #empEmployeeId'
+        )
+      )
+    : [];
+
+  fields.forEach((field) => {
+    field.readOnly = false;
+    field.removeAttribute('readonly');
+    field.removeAttribute('aria-readonly');
+    field.classList.remove('locked-field');
+    field.title = '';
+  });
+}
+
+export function clearEmployeeAdminForm(): void {
+  const fieldIds = [
+    'employeeIdInput',
+    'empId',
+    'employeeId',
+    'empEmployeeId',
+    'employeeStatusInput',
+    'empStatus',
+    'status',
+    'employeeFirstNameInput',
+    'empFirstName',
+    'firstName',
+    'employeeFirstName',
+    'employeeLastNameInput',
+    'empLastName',
+    'lastName',
+    'employeeLastName',
+    'employeeDepartmentInput',
+    'empDepartment',
+    'department',
+    'employeeDepartment',
+    'employeePositionInput',
+    'empPosition',
+    'position',
+    'employeePosition',
+    'employeeSupervisorInput',
+    'empSupervisor',
+    'supervisor',
+    'employeePayTypeInput',
+    'empPayType',
+    'payType',
+    'employeeStandardHoursInput',
+    'empStandardHours',
+    'standardHours',
+    'employeeBenefitsStatusInput',
+    'empBenefitsStatus',
+    'benefitsStatus',
+    'employeeHireDateInput',
+    'empHireDate',
+    'hireDate',
+    'employeeTerminationDateInput',
+    'empTerminationDate',
+    'terminationDate',
+    'employeeNextReviewInput',
+    'empNextReviewDate',
+    'nextReviewDate',
+    'employeeAnniversaryDateInput',
+    'empAnniversaryDate',
+    'anniversaryDate',
+    'employeeTenureBracketInput',
+    'empTenureBracket',
+    'tenureBracket',
+    'employeeWorkEmailInput',
+    'empWorkEmail',
+    'workEmail',
+    'employeePersonalEmailInput',
+    'empPersonalEmail',
+    'personalEmail',
+    'employeePhoneInput',
+    'empPhone',
+    'phone',
+    'employeeNotesInput',
+    'empNotes',
+    'notes',
+  ];
+
+  fieldIds.forEach((id) => {
+    const el = safeGet(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
+    if (!el) return;
+    if (el instanceof HTMLSelectElement) {
+      const activeOption = Array.from(el.options).find(
+        (option) => String(option.value || option.textContent || '').trim().toUpperCase() === 'ACTIVE'
+      );
+      el.value = activeOption?.value || 'ACTIVE';
+    } else {
+      el.value = '';
+    }
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  unlockEmployeeIdFields();
+  syncEmployeeTerminationDateFieldVisibility('ACTIVE');
+}
+
+export function syncEmployeeTerminationDateFieldVisibility(status?: unknown): void {
+  const normalized = String(status || '')
+    .trim()
+    .toUpperCase();
+
+  const resolvedStatus =
+    normalized ||
+    String(
+      (safeGet('employeeStatusInput') as HTMLSelectElement | null)?.value ||
+        (safeGet('empStatus') as HTMLSelectElement | null)?.value ||
+        (safeGet('status') as HTMLSelectElement | null)?.value ||
+        ''
+    )
+      .trim()
+      .toUpperCase();
+
+  const showField = resolvedStatus === 'TERMINATED';
+  const fieldWrap = safeGet('employeeTerminationDateField');
+
+  if (fieldWrap) {
+    fieldWrap.hidden = !showField;
+  }
+
+  const terminationInput = safeGet('employeeTerminationDateInput') as HTMLInputElement | null;
+
+  if (terminationInput) {
+    terminationInput.disabled = !showField;
+    if (!showField) {
+      terminationInput.value = '';
+    }
+  }
+}
+
+function bindEmployeeTerminationDateVisibility(): void {
+  if ((window as { __employeeTerminationDateBind?: boolean }).__employeeTerminationDateBind) {
+    return;
+  }
+
+  (window as { __employeeTerminationDateBind?: boolean }).__employeeTerminationDateBind = true;
+
+  const statusSelectors = ['employeeStatusInput', 'empStatus', 'status'];
+
+  statusSelectors.forEach((id) => {
+    const select = safeGet(id) as HTMLSelectElement | null;
+
+    if (!select) return;
+
+    select.addEventListener('change', () => {
+      syncEmployeeTerminationDateFieldVisibility(select.value);
+    });
+  });
+}
+
+bindEmployeeTerminationDateVisibility();
 
 function setText(id: string, value: unknown): void {
   if (typeof window.setText === 'function') {
@@ -447,27 +629,47 @@ export function sanitizeVisibleEmployeeNameFields(): void {
 }
 
 export function openNewEmployeeForm(): void {
-  const startNewEmployee = (window as { startNewEmployee?: () => void }).startNewEmployee;
-  if (typeof startNewEmployee === 'function') {
-    try {
-      startNewEmployee();
-      return;
-    } catch (err) {
-      console.error(err);
-    }
+  window.currentEmployee = null;
+  window.selectedEmployeeId = null;
+  window.isCreatingEmployee = true;
+
+  if (typeof window.setCurrentEmployeeForOrbis === 'function') {
+    window.setCurrentEmployeeForOrbis(null);
   }
 
-  window.currentEmployee = null;
-  window.isCreatingEmployee = true;
   resetDrawerForms();
   window.isCreatingEmployee = true;
 
-  if (typeof window.switchTab === 'function') {
-    window.switchTab('employee');
-  }
+  clearEmployeeAdminForm();
+
+  void (async () => {
+    try {
+      const nextEmployeeId = await generateAvailableEmployeeId();
+
+      ['employeeIdInput', 'employeeId', 'empId', 'empEmployeeId'].forEach((fieldId) => {
+        const field = safeGet(fieldId) as HTMLInputElement | null;
+
+        if (!field) {
+          return;
+        }
+
+        field.value = nextEmployeeId;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        field.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    } catch (error) {
+      console.warn('[EmployeeAdmin] Could not assign next employee ID:', error);
+    }
+  })();
 
   setText('drawerTitle', 'New Employee');
   setText('drawerSub', 'Create employee record');
+
+  const details = safeGet('drawerDetails');
+  if (details) {
+    details.innerHTML =
+      '<div class="detail-card"><div class="detail-label">New Record</div><div class="detail-value">Complete the Employee Admin tab to create a new employee.</div></div>';
+  }
 
   if (typeof window.resetEmployeeForm === 'function') {
     window.resetEmployeeForm();
@@ -497,8 +699,17 @@ export function openNewEmployeeForm(): void {
   const bar = safeGet('onboardingProgressBar') as HTMLElement | null;
   if (bar) bar.style.width = '0%';
 
-  safeGet('drawerBackdrop')?.classList.add('open');
-  safeGet('employeeDrawer')?.classList.add('open');
+  if (typeof window.ensureDrawerLayout === 'function') {
+    window.ensureDrawerLayout('employeeDrawer');
+  }
+
+  openNewEmployeeDrawer();
+
+  if (typeof window.ensureDrawerLayout === 'function') {
+    window.ensureDrawerLayout('employeeDrawer');
+  }
+
+  syncEmployeeTerminationDateFieldVisibility('ACTIVE');
 
   if (typeof window.applyRolePermissions === 'function') {
     window.applyRolePermissions();
@@ -525,9 +736,12 @@ declare global {
     runDeleteEmployee?: () => Promise<void>;
     runTerminateEmployee?: () => Promise<void>;
     openNewEmployeeForm?: () => void;
+    clearEmployeeAdminForm?: () => void;
     createEmployee?: () => void;
     sanitizeVisibleEmployeeNameFields?: () => void;
     resetEmployeeForm?: () => void;
+    renderEmployeeDrawerIdentityHeader?: (employee: EmployeeRow | null | undefined) => void;
+    syncEmployeeTerminationDateFieldVisibility?: (status?: unknown) => void;
   }
 }
 
@@ -537,5 +751,7 @@ window.deleteEmployeeById = deleteEmployeeById;
 window.runDeleteEmployee = runDeleteEmployee;
 window.runTerminateEmployee = runTerminateEmployee;
 window.openNewEmployeeForm = openNewEmployeeForm;
+window.clearEmployeeAdminForm = clearEmployeeAdminForm;
 window.createEmployee = createEmployee;
 window.sanitizeVisibleEmployeeNameFields = sanitizeVisibleEmployeeNameFields;
+window.syncEmployeeTerminationDateFieldVisibility = syncEmployeeTerminationDateFieldVisibility;

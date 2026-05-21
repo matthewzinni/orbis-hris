@@ -1,3 +1,6 @@
+import { supabaseClient } from '../services/supabaseClient';
+import { esc } from '../utils/helpers';
+
 type HistoryRecord = {
   id?: string | number;
   type?: string;
@@ -17,8 +20,21 @@ type ActivityRecord = {
   [key: string]: unknown;
 };
 
+type TimelineItem = {
+  type: string;
+  date?: string;
+  text?: string;
+};
+
 declare global {
   interface Window {
+    currentEmployee?: {
+      id?: string;
+      dbId?: string;
+      employee_id?: string;
+    } | null;
+    loadEmployeeHistory?: (employeeId: string) => Promise<void>;
+    getResolvedHistoryEmployeeId?: (employeeId?: string | null) => string;
     renderHistoryList?: (
       containerId: string,
       records: HistoryRecord[],
@@ -28,6 +44,7 @@ declare global {
     clearHistoryList?: (containerId: string, emptyMessage?: string) => void;
     renderRecentActivity?: () => Promise<void>;
     loadRecentActivityFallback?: () => Promise<void>;
+    loadRecentHrActivity?: () => Promise<void>;
     getAuditTrail?: () => ActivityRecord[];
     getOrCreateDashboardSectionBody?: (title: string, id: string) => HTMLElement | null;
   }
@@ -139,10 +156,17 @@ export async function renderRecentActivity(): Promise<void> {
       ? window.getAuditTrail()
       : [];
 
+  if (typeof window.loadRecentHrActivity === 'function') {
+    await window.loadRecentHrActivity();
+    return;
+  }
+
   const container =
-    typeof window.getOrCreateDashboardSectionBody === 'function'
-      ? window.getOrCreateDashboardSectionBody('Recent HR Activity', 'recentHrActivityList')
-      : document.getElementById('recentHrActivityList');
+    document.getElementById('recentActivity') ||
+    document.getElementById('recentHrActivityList') ||
+    (typeof window.getOrCreateDashboardSectionBody === 'function'
+      ? window.getOrCreateDashboardSectionBody('Recent HR Activity', 'recentActivity')
+      : null);
 
   if (!container) return;
 
@@ -165,8 +189,110 @@ export async function renderRecentActivity(): Promise<void> {
     .join('');
 }
 
+export function getResolvedHistoryEmployeeId(employeeId: string | null = null): string {
+  const employee = window.currentEmployee;
+
+  return String(employee?.dbId || employee?.id || employee?.employee_id || employeeId || '').trim();
+}
+
+async function fetchHistoryRows(
+  table: string,
+  employeeId: string,
+  orderColumn: string
+): Promise<Record<string, unknown>[]> {
+  const { data, error } = await supabaseClient
+    .from(table)
+    .select('*')
+    .eq('employee_id', employeeId)
+    .order(orderColumn, { ascending: false });
+
+  if (error) {
+    console.warn(`[History] Could not load ${table}:`, error);
+    return [];
+  }
+
+  return (data || []) as Record<string, unknown>[];
+}
+
+export async function loadEmployeeHistory(employeeId: string): Promise<void> {
+  const actualEmployeeId = getResolvedHistoryEmployeeId(employeeId);
+  const target = document.getElementById('historyFeed');
+
+  if (!actualEmployeeId || !target) {
+    return;
+  }
+
+  target.innerHTML = '<div class="empty">Loading history...</div>';
+
+  const [notes, meetings, discipline, incidents, reviews] = await Promise.all([
+    fetchHistoryRows('employee_notes', actualEmployeeId, 'note_date'),
+    fetchHistoryRows('employee_meetings', actualEmployeeId, 'meeting_date'),
+    fetchHistoryRows('discipline_reports', actualEmployeeId, 'incident_date'),
+    fetchHistoryRows('incident_reports', actualEmployeeId, 'incident_date'),
+    fetchHistoryRows('employee_reviews', actualEmployeeId, 'review_date'),
+  ]);
+
+  const timeline: TimelineItem[] = [
+    ...notes.map((note) => ({
+      type: 'Note',
+      date: String(note.note_date || ''),
+      text: String(note.note_text || ''),
+    })),
+    ...meetings.map((meeting) => ({
+      type: 'Meeting',
+      date: String(meeting.meeting_date || ''),
+      text: String(meeting.subject || meeting.notes || ''),
+    })),
+    ...discipline.map((record) => ({
+      type: 'Discipline',
+      date: String(record.incident_date || ''),
+      text: String(record.description || ''),
+    })),
+    ...incidents.map((incident) => ({
+      type: 'Incident',
+      date: String(incident.incident_date || ''),
+      text: String(incident.description || ''),
+    })),
+    ...reviews.map((review) => ({
+      type: 'Review',
+      date: String(review.review_date || ''),
+      text: String(review.overall_result || ''),
+    })),
+  ];
+
+  timeline.sort((a, b) => {
+    const dateA = a.date ? new Date(`${a.date}T00:00:00`).getTime() : 0;
+    const dateB = b.date ? new Date(`${b.date}T00:00:00`).getTime() : 0;
+
+    return dateB - dateA;
+  });
+
+  if (!timeline.length) {
+    target.innerHTML = '<div class="empty">No history available.</div>';
+    return;
+  }
+
+  target.innerHTML = timeline
+    .map((item) => {
+      const date = item.date
+        ? new Date(`${item.date}T00:00:00`).toLocaleDateString()
+        : '—';
+
+      return `
+        <div class="card" style="margin-bottom:10px;">
+          <strong>${esc(item.type)}</strong>
+          <div style="font-size:12px; color:#64748b;">${date}</div>
+          <div style="margin-top:4px;">${esc(item.text || '—')}</div>
+        </div>
+      `;
+    })
+    .join('');
+}
+
 window.renderHistoryList = renderHistoryList;
 window.appendHistoryItem = appendHistoryItem;
 window.clearHistoryList = clearHistoryList;
 window.renderRecentActivity = renderRecentActivity;
 window.loadRecentActivityFallback = renderRecentActivity;
+window.loadEmployeeHistory = loadEmployeeHistory;
+window.getResolvedHistoryEmployeeId = getResolvedHistoryEmployeeId;

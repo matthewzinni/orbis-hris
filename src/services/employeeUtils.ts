@@ -39,7 +39,17 @@ export function isActiveDashboardEmployee(employee: EmployeeLike | null | undefi
     .trim()
     .toUpperCase();
 
-  return status !== 'TERMINATED' && status !== 'INACTIVE' && status !== 'ARCHIVED';
+  if (status === 'TERMINATED') {
+    const terminationDate = String(
+      (employee as { termination_date?: string; terminationDate?: string })?.termination_date
+      || (employee as { terminationDate?: string })?.terminationDate
+      || ''
+    ).trim();
+
+    return !terminationDate;
+  }
+
+  return status !== 'INACTIVE' && status !== 'ARCHIVED';
 }
 
 export function daysUntilDate(dateValue: unknown): number | null {

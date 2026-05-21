@@ -1,3 +1,5 @@
+import { showOrbisConfirm } from '../ui/confirmModal';
+
 export interface DocumentRecord {
   id: string;
   title: string;
@@ -44,6 +46,15 @@ declare global {
 const DOCUMENT_TABLE = 'document_library';
 const DOCUMENT_BUCKETS = ['documents', 'document-library'];
 const DOCUMENT_UPLOAD_BUCKET = 'documents';
+
+function showOrbisToast(message: string, type: 'success' | 'error' = 'success'): void {
+  if (typeof window.showToast === 'function') {
+    window.showToast(message, type);
+    return;
+  }
+
+  console.log(`[${type}] ${message}`);
+}
 
 function getDocumentsSupabaseClient(): any {
   const possibleWindow = window as any;
@@ -351,7 +362,7 @@ export async function uploadDocument(payload: UploadDocumentPayload): Promise<vo
 
     if (uploadError) {
       console.error('Document upload failed:', uploadError);
-      alert(`Document upload failed: ${uploadError.message || 'Unknown error'}`);
+      showOrbisToast(`Document upload failed: ${uploadError.message || 'Unknown error'}`, 'error');
       return;
     }
 
@@ -478,7 +489,7 @@ async function openDocument(doc: DocumentRecord): Promise<void> {
   const url = await getUsableDocumentUrl(doc, false);
 
   if (!url) {
-    alert('Could not open this document. Check the console for details.');
+    showOrbisToast('Could not open this document.', 'error');
     return;
   }
 
@@ -489,7 +500,7 @@ async function downloadDocument(doc: DocumentRecord): Promise<void> {
   const url = await getUsableDocumentUrl(doc, true);
 
   if (!url) {
-    alert('Could not download this document. Check the console for details.');
+    showOrbisToast('Could not download this document.', 'error');
     return;
   }
 
@@ -500,14 +511,21 @@ async function downloadDocument(doc: DocumentRecord): Promise<void> {
 }
 
 async function deleteDocument(doc: DocumentRecord): Promise<void> {
-  const confirmed = window.confirm(`Delete "${doc.title}" from the Document Library?`);
+  const confirmed = await showOrbisConfirm(
+    `Delete "${doc.title}" from the Document Library?`,
+    {
+      title: 'Delete document',
+      confirmLabel: 'Delete',
+      danger: true,
+    }
+  );
   if (!confirmed) return;
 
   const db = getDocumentsSupabaseClient();
 
   if (!db || !db.storage || typeof db.storage.from !== 'function') {
     console.error('Delete failed because Supabase storage is unavailable.');
-    alert('Delete failed. Check the console for details.');
+    showOrbisToast('Delete failed.', 'error');
     return;
   }
 

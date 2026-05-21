@@ -15,11 +15,10 @@
     "noEmit": true,
     "ignoreDeprecations": "6.0"
   },
-  "include": ["src/**/*.ts", "js/**/*.ts"],
+  "include": ["src/**/*.ts"],
   "exclude": [
     "node_modules",
     "dist",
-    "js/legacy",
     "src/ui/employeeRoster.ts",
     "src/services/auditService.ts"
   ]

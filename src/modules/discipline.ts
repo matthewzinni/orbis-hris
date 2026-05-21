@@ -1,4 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { showOrbisConfirm } from '../ui/confirmModal';
 
 interface DisciplineRecord {
   id?: string;
@@ -118,6 +119,27 @@ function setInputValue(id: string, value: unknown): void {
   if (!input) return;
 
   input.value = String(value ?? '');
+}
+
+function normalizeDateInputValue(value: unknown): string {
+  const raw = String(value ?? '').trim();
+
+  if (!raw) return todayInputValue();
+
+  const match = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+
+  return match ? match[1] : raw;
+}
+
+function activateDisciplineTab(): void {
+  document.querySelectorAll('.tab-btn').forEach((btn) => {
+    const el = btn as HTMLElement;
+    el.classList.toggle('active', el.dataset.tab === 'discipline');
+  });
+
+  document.querySelectorAll('.tab-panel').forEach((panel) => {
+    panel.classList.toggle('active', panel.id === 'tab-discipline');
+  });
 }
 
 function getCanvasSignature(canvasId: string): string {
@@ -291,7 +313,9 @@ export function editDisciplineRecord(record: DisciplineRecord): void {
   currentDisciplineId = record.id || null;
   window.currentDisciplineId = currentDisciplineId;
 
-  setInputValue('disciplineDate', record.incident_date || todayInputValue());
+  activateDisciplineTab();
+
+  setInputValue('disciplineDate', normalizeDateInputValue(record.incident_date));
   setInputValue('disciplineType', record.issue_type || '');
   setInputValue('disciplineLevel', record.discipline_level || '');
   setInputValue('disciplineDescription', record.description || '');
@@ -331,10 +355,6 @@ export function editDisciplineRecord(record: DisciplineRecord): void {
 
   safeGet('cancelDisciplineEditBtn')?.classList.remove('hidden');
 
-  if (typeof window.switchTab === 'function') {
-    window.switchTab('discipline');
-  }
-
   showToast('Discipline record loaded for editing.');
 }
 
@@ -357,7 +377,15 @@ export function cancelDisciplineEdit(): void {
 export async function deleteDisciplineRecord(recordId: string, employeeId: string): Promise<void> {
   if (!recordId) return;
 
-  if (!confirm('Delete this discipline record?')) return;
+  if (
+    !(await showOrbisConfirm('Delete this discipline record?', {
+      title: 'Delete discipline',
+      confirmLabel: 'Delete',
+      danger: true,
+    }))
+  ) {
+    return;
+  }
 
   const { error } = await supabaseClient.from('discipline_reports').delete().eq('id', recordId);
 

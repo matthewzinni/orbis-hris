@@ -3,6 +3,7 @@ import {
   closeDrawer as closeDrawerUi,
   switchDrawerTab as switchDrawerTabUi,
 } from '../ui/drawerUi';
+import { showOrbisConfirm } from '../ui/confirmModal';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
 import { cleanEmployeeNameValue } from '../services/employeeUtils';
 import { createDefaultOnboardingTasks } from './onboarding';
@@ -27,6 +28,8 @@ interface DrawerEmployeeRecord {
 
   hire_date?: string;
   hireDate?: string | Date | null;
+  termination_date?: string;
+  terminationDate?: string;
 
   pay_type?: string;
   payType?: string;
@@ -86,6 +89,7 @@ declare global {
     syncOpenedEmployeeRecordId?: (employeeId: string) => void;
     isCreatingEmployee?: boolean;
     loadAllDashboardData?: () => Promise<void>;
+    syncEmployeeTerminationDateFieldVisibility?: (status?: unknown) => void;
   }
 }
 
@@ -185,6 +189,22 @@ function normalizeStatusForAdminInput(status: unknown): string {
   if (raw === 'TERMINATED') return 'TERMINATED';
 
   return 'ACTIVE';
+}
+
+function formatDateForAdminInput(value: unknown): string {
+  const raw = String(value || '').trim();
+
+  if (!raw) return '';
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return raw.slice(0, 10);
+  }
+
+  const date = new Date(raw);
+
+  if (Number.isNaN(date.getTime())) return '';
+
+  return date.toISOString().slice(0, 10);
 }
 
 function getOpenedEmployeeRecordId(): string {
@@ -335,6 +355,16 @@ function populateDrawer(employee: DrawerEmployeeRecord): void {
 
   setAdminValue('employeeHireDateInput', 'employeeHireDate')(employee.hire_date || '');
 
+  setAdminValue('employeeTerminationDateInput', 'employeeTerminationDate')(
+    formatDateForAdminInput(employee.termination_date || employee.terminationDate || '')
+  );
+
+  if (typeof window.syncEmployeeTerminationDateFieldVisibility === 'function') {
+    window.syncEmployeeTerminationDateFieldVisibility(
+      normalizeStatusForAdminInput(employee.status)
+    );
+  }
+
   setAdminValue('employeePayTypeInput', 'employeePayType')(
     String(employee.pay_type || '')
   );
@@ -399,7 +429,7 @@ function populateDrawerProfileDetails(employee: DrawerEmployeeRecord): void {
     ['Standard Hours', employee.stdHours || employee.standard_hours],
     ['Hire Date', formatDrawerDate(employee.hireDate || employee.hire_date)],
     [
-      'Next Review',
+      'Next Stay Interview',
       formatDrawerDate(
         employee.nextReview || employee.next_review_date || employee.next_review
       ),
@@ -491,7 +521,18 @@ export function closeEmployeeDrawer(): void {
 
   window.selectedEmployeeId = null;
 
-  document.getElementById('employeeDrawerIdentityHeader')?.remove();
+  if (typeof window.removeDrawerIdentityHeader === 'function') {
+    window.removeDrawerIdentityHeader('employeeDrawerIdentityHeader');
+  } else {
+    document.getElementById('employeeDrawerIdentityHeader')?.remove();
+  }
+
+  document.getElementById('employeeDrawerChrome')?.replaceChildren();
+
+  const drawer = document.getElementById('employeeDrawer');
+  if (drawer && typeof window.restoreDrawerLegacyHeader === 'function') {
+    window.restoreDrawerLegacyHeader(drawer);
+  }
 
   closeDrawerUi();
 }
@@ -577,6 +618,15 @@ export function switchDrawerTab(tabName: string): void {
   }
 
   if (normalizedTab === 'reviews') {
+    const employee = selectedEmployee || (window.currentEmployee as Record<string, unknown> | null);
+    if (typeof window.canAccessPerformanceReviews === 'function' && !window.canAccessPerformanceReviews(employee)) {
+      window.showToast?.(
+        'Performance reviews are only available for employees you supervise.',
+        'error'
+      );
+      switchDrawerTabUi('profile');
+      return;
+    }
     void window.loadEmployeeReviews?.(employeeId);
   }
 
@@ -733,6 +783,22 @@ export async function saveEmployeeRecord(): Promise<void> {
     'employeeStandardHours'
   );
 
+  const status =
+    normalizeStatusForAdminInput(
+      getInputValue('employeeStatusInput', 'employeeStatus', 'empStatus', 'status') || 'ACTIVE'
+    ) || 'ACTIVE';
+
+  let terminationDate = getInputValue(
+    'employeeTerminationDateInput',
+    'employeeTerminationDate',
+    'empTerminationDate',
+    'terminationDate'
+  );
+
+  if (status === 'TERMINATED' && !terminationDate) {
+    terminationDate = new Date().toISOString().slice(0, 10);
+  }
+
   const payload: Record<string, unknown> = {
     first_name,
     last_name,
@@ -754,9 +820,7 @@ export async function saveEmployeeRecord(): Promise<void> {
       'empSupervisor',
       'supervisor'
     ),
-    status:
-      getInputValue('employeeStatusInput', 'employeeStatus', 'empStatus', 'status') ||
-      'ACTIVE',
+    status,
     hire_date:
       getInputValue('employeeHireDateInput', 'employeeHireDate', 'empHireDate', 'hireDate') ||
       null,
@@ -790,6 +854,7 @@ export async function saveEmployeeRecord(): Promise<void> {
     personal_email: getInputValue('empPersonalEmail', 'personalEmail') || null,
     phone: getInputValue('empPhone', 'phone') || null,
     notes: getInputValue('empNotes', 'notes') || null,
+    termination_date: status === 'TERMINATED' ? terminationDate || null : null,
   };
 
   payload.id = editedEmployeeId;
@@ -919,7 +984,13 @@ export async function deleteEmployeeRecord(): Promise<void> {
     return;
   }
 
-  if (!confirm('Delete this employee record?')) {
+  if (
+    !(await showOrbisConfirm('Delete this employee record?', {
+      title: 'Delete employee',
+      confirmLabel: 'Delete',
+      danger: true,
+    }))
+  ) {
     return;
   }
 

@@ -25,13 +25,24 @@ export function setCurrentEmployeeForOrbis(employee: Record<string, unknown> | n
 }
 
 export function switchTab(tabName: string): void {
-  document.querySelectorAll('.tab-btn').forEach((btn) => {
+  if (typeof window.activateDrawerTab === 'function') {
+    window.activateDrawerTab('employee', tabName, false);
+    return;
+  }
+
+  const drawer = document.getElementById('employeeDrawer');
+
+  drawer?.querySelectorAll('[data-tab]').forEach((btn) => {
     const el = btn as HTMLElement;
-    el.classList.toggle('active', el.dataset.tab === tabName);
+    const isSelected = el.dataset.tab === tabName;
+    el.classList.toggle('active', isSelected);
+    el.setAttribute('aria-selected', isSelected ? 'true' : 'false');
   });
 
-  document.querySelectorAll('.tab-panel').forEach((panel) => {
-    panel.classList.toggle('active', panel.id === `tab-${tabName}`);
+  drawer?.querySelectorAll('.tab-panel').forEach((panel) => {
+    const isSelected = panel.id === `tab-${tabName}`;
+    panel.classList.toggle('active', isSelected);
+    (panel as HTMLElement).hidden = !isSelected;
   });
 
   if (tabName === 'discipline') {
@@ -135,6 +146,12 @@ declare global {
     renderEmployeeRoster?: () => void;
     closeDrawer?: () => void;
     initCommandPalette?: () => void;
+    initAccessibleDrawerTabs?: () => void;
+    activateDrawerTab?: (
+      kind: 'employee' | 'candidate',
+      tabName: string,
+      focusTab?: boolean
+    ) => boolean;
   }
 }
 
@@ -145,6 +162,11 @@ window.setCurrentEmployeeForOrbis = setCurrentEmployeeForOrbis;
 window.ensureDrawerTabFallbacks = ensureDrawerTabFallbacks;
 
 export function showAuthView(): void {
+  const loginError = document.getElementById('loginError');
+  if (loginError) {
+    loginError.textContent = '';
+    loginError.classList.add('hidden');
+  }
   document.querySelectorAll('#authView, #loginView, .auth-shell, .login-shell').forEach((el) => {
     el.classList.remove('hidden');
     (el as HTMLElement).style.display = '';

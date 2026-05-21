@@ -1,4 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { showOrbisConfirm } from '../ui/confirmModal';
 
 interface IncidentRecord {
   id?: string;
@@ -276,7 +277,15 @@ export function editIncidentRecord(record: IncidentRecord): void {
 
 export async function deleteIncidentRecord(incidentId: string, employeeId: string): Promise<void> {
   if (!incidentId) return;
-  if (!confirm('Delete this incident record?')) return;
+  if (
+    !(await showOrbisConfirm('Delete this incident record?', {
+      title: 'Delete incident',
+      confirmLabel: 'Delete',
+      danger: true,
+    }))
+  ) {
+    return;
+  }
 
   const { error } = await supabaseClient
     .from('incident_reports')

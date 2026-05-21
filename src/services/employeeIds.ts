@@ -1,29 +1,73 @@
 import { supabaseClient } from './supabaseClient';
 
-export function generateEmployeeId(): string {
-  const year = new Date().getFullYear().toString().slice(-2);
-  const random = Math.floor(10 + Math.random() * 90);
-  return `BTW${year}${random}`;
+/**
+ * Employee number prefix by calendar year.
+ * BTW26 for 2026 (through end of 2026); BTW27 from 2027 (first assignable: BTW2701).
+ */
+export function getEmployeeIdPrefix(referenceDate: Date = new Date()): string {
+  const year = referenceDate.getFullYear();
+
+  if (year >= 2027) {
+    return 'BTW27';
+  }
+
+  if (year >= 2026) {
+    return 'BTW26';
+  }
+
+  return `BTW${String(year).slice(-2)}`;
 }
 
-function collectUsedIdNumbers(value: unknown, usedNumbers: Set<number>): void {
-  const match = String(value || '').match(/(\d+)$/);
-  if (match) usedNumbers.add(Number(match[1]));
+/** Format sequence for display/storage (BTW2701 uses two-digit seq in the 2027 series). */
+export function formatEmployeeId(prefix: string, sequence: number): string {
+  if (prefix === 'BTW27') {
+    return `${prefix}${String(sequence).padStart(2, '0')}`;
+  }
+
+  return `${prefix}${sequence}`;
 }
 
-export async function generateAvailableEmployeeId(): Promise<string> {
-  const usedNumbers = new Set<number>();
+function parseEmployeeSequence(id: string, prefix: string): number | null {
+  const normalized = String(id || '').trim().toUpperCase();
 
+  if (!normalized.startsWith(prefix)) {
+    return null;
+  }
+
+  const suffix = normalized.slice(prefix.length);
+
+  if (!/^\d+$/.test(suffix)) {
+    return null;
+  }
+
+  const sequence = Number(suffix);
+
+  return Number.isFinite(sequence) && sequence > 0 ? sequence : null;
+}
+
+function collectUsedSequences(value: unknown, prefix: string, usedSequences: Set<number>): void {
+  const sequence = parseEmployeeSequence(String(value || ''), prefix);
+
+  if (sequence != null) {
+    usedSequences.add(sequence);
+  }
+}
+
+function collectIdSources(prefix: string, usedSequences: Set<number>): void {
   const employees = window.EMPLOYEES || window.ALL_EMPLOYEES || [];
+
   if (Array.isArray(employees)) {
     employees.forEach((employee: Record<string, unknown>) => {
-      collectUsedIdNumbers(
+      collectUsedSequences(
         employee.employee_id || employee.displayId || employee.id,
-        usedNumbers
+        prefix,
+        usedSequences
       );
     });
   }
+}
 
+async function collectRemoteSequences(prefix: string, usedSequences: Set<number>): Promise<void> {
   try {
     const [employeeRes, onboardingRes] = await Promise.all([
       supabaseClient.from('employees').select('id'),
@@ -32,33 +76,63 @@ export async function generateAvailableEmployeeId(): Promise<string> {
 
     if (!employeeRes.error) {
       (employeeRes.data || []).forEach((row: { id?: string }) => {
-        collectUsedIdNumbers(row.id, usedNumbers);
+        collectUsedSequences(row.id, prefix, usedSequences);
       });
     }
 
     if (!onboardingRes.error) {
       (onboardingRes.data || []).forEach((row: { employee_id?: string }) => {
-        collectUsedIdNumbers(row.employee_id, usedNumbers);
+        collectUsedSequences(row.employee_id, prefix, usedSequences);
       });
     }
   } catch (err) {
     console.warn(
-      'Could not check existing employee/onboarding IDs. Falling back to local list.',
+      '[EmployeeIds] Could not check remote IDs; using local roster only.',
       err
     );
   }
+}
 
-  let nextNumber = usedNumbers.size ? Math.max(...Array.from(usedNumbers)) + 1 : 1;
-  while (usedNumbers.has(nextNumber)) {
-    nextNumber += 1;
+function resolveNextSequence(prefix: string, usedSequences: Set<number>): number {
+  if (!usedSequences.size) {
+    return 1;
   }
 
-  return `BTW${nextNumber}`;
+  let nextSequence = Math.max(...Array.from(usedSequences)) + 1;
+
+  while (usedSequences.has(nextSequence)) {
+    nextSequence += 1;
+  }
+
+  return nextSequence;
+}
+
+/** @deprecated Use generateAvailableEmployeeId for the next sequential BTW number. */
+export function generateEmployeeId(referenceDate: Date = new Date()): string {
+  const prefix = getEmployeeIdPrefix(referenceDate);
+  return formatEmployeeId(prefix, 1);
+}
+
+export async function generateAvailableEmployeeId(
+  referenceDate: Date = new Date()
+): Promise<string> {
+  const prefix = getEmployeeIdPrefix(referenceDate);
+  const usedSequences = new Set<number>();
+
+  collectIdSources(prefix, usedSequences);
+  await collectRemoteSequences(prefix, usedSequences);
+
+  const nextSequence = resolveNextSequence(prefix, usedSequences);
+
+  return formatEmployeeId(prefix, nextSequence);
 }
 
 declare global {
   interface Window {
     EMPLOYEES?: Record<string, unknown>[];
     ALL_EMPLOYEES?: Record<string, unknown>[];
+    generateAvailableEmployeeId?: () => Promise<string>;
   }
 }
+
+window.generateAvailableEmployeeId = () => generateAvailableEmployeeId();

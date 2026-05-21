@@ -1,4 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { showOrbisConfirm } from '../ui/confirmModal';
 
 interface StayInterviewRecord {
   id?: string;
@@ -351,7 +352,14 @@ export async function editStayInterview(stayInterviewId: string): Promise<void> 
 }
 
 export async function deleteStayInterview(stayInterviewId: string): Promise<void> {
-  const confirmed = window.confirm('Delete this stay interview? This cannot be undone.');
+  const confirmed = await showOrbisConfirm(
+    'Delete this stay interview? This cannot be undone.',
+    {
+      title: 'Delete stay interview',
+      confirmLabel: 'Delete',
+      danger: true,
+    }
+  );
 
   if (!confirmed) return;
 

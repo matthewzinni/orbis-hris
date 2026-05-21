@@ -7,7 +7,16 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db:login": "supabase login",
+    "db:link": "supabase link",
+    "db:push": "supabase db push",
+    "db:pull": "supabase db pull",
+    "db:status": "supabase migration list",
+    "db:new": "supabase migration new",
+    "db:diff": "supabase db diff",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop"
   },
   "repository": {
     "type": "git",
@@ -22,6 +31,7 @@
   },
   "homepage": "https://github.com/matthewzinni/orbis-hris#readme",
   "devDependencies": {
+    "supabase": "^2.101.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.10"
   },

@@ -2,6 +2,8 @@
 // EMPLOYEE ROSTER MODULE (TypeScript)
 // =========================
 
+import { showOrbisConfirm } from './confirmModal';
+
 type RosterEmployee = Record<string, unknown> & {
   id?: string;
   dbId?: string;
@@ -26,6 +28,9 @@ type RosterEmployee = Record<string, unknown> & {
   displayHireDate?: string;
   hire_date?: string;
   hireDate?: string;
+  termination_date?: string;
+  terminationDate?: string;
+  displayTerminationDate?: string;
 };
 
 type OrbisRosterWindow = Window & {
@@ -134,6 +139,42 @@ function statusBadge(status) {
     return 'badge badge-inactive';
 }
 
+function getRosterTerminationDate(employee: RosterEmployee): string {
+    return String(
+        employee.termination_date
+        || employee.terminationDate
+        || employee.displayTerminationDate
+        || ''
+    ).trim();
+}
+
+function isCompletedTermination(employee: RosterEmployee): boolean {
+    const status = String(employee.status || employee.displayStatus || '').trim().toUpperCase();
+    return status === 'TERMINATED' && Boolean(getRosterTerminationDate(employee));
+}
+
+function matchesRosterView(employee: RosterEmployee, rosterMode: string, explicitStatusFilter: string): boolean {
+    const employeeStatus = String(employee.status || employee.displayStatus || '').trim().toUpperCase();
+
+    if (explicitStatusFilter) {
+        return employeeStatus === explicitStatusFilter;
+    }
+
+    if (rosterMode === 'former') {
+        return employeeStatus === 'INACTIVE' || isCompletedTermination(employee);
+    }
+
+    if (rosterMode === 'active') {
+        return (
+            employeeStatus === 'ACTIVE'
+            || employeeStatus === 'LEAVE'
+            || (employeeStatus === 'TERMINATED' && !getRosterTerminationDate(employee))
+        );
+    }
+
+    return true;
+}
+
 function normalizeEmployeeForRoster(employee) {
     if (!employee) return null;
     const firstName = cleanRosterEmployeeNameValue(employee.first_name || employee.firstName || employee.first || '');
@@ -142,8 +183,15 @@ function normalizeEmployeeForRoster(employee) {
     const position = employee.position || employee.title || employee.displayPosition || '';
     const supervisor = employee.supervisor || employee.displaySupervisor || '';
     const hireDate = employee.hire_date || employee.hireDate || employee.displayHireDate || '';
+    const terminationDate =
+      employee.termination_date || employee.terminationDate || employee.displayTerminationDate || '';
     const employeeId = employee.employee_id || employee.employeeId || employee.employee_number || employee.employeeNumber || employee.btw_id || employee.btwId || employee.displayId || '';
     const status = employee.status || employee.displayStatus || 'ACTIVE';
+    const hasTerminationDate = Boolean(String(terminationDate).trim());
+    const rosterDisplayStatus =
+        String(status).trim().toUpperCase() === 'TERMINATED' && !hasTerminationDate
+            ? 'ACTIVE'
+            : status;
     const payType = employee.pay_type || employee.payType || '';
     const standardHours = employee.standard_hours || employee.standardHours || '';
     const benefitsStatus = employee.benefits_status || employee.benefitsStatus || '';
@@ -179,8 +227,11 @@ function normalizeEmployeeForRoster(employee) {
         displayPosition: position,
         displaySupervisor: supervisor,
         displayHireDate: hireDate,
-        displayStatus: status,
-        displayStatusLabel: formatRosterStatus(status),
+        termination_date: terminationDate,
+        terminationDate,
+        displayTerminationDate: terminationDate,
+        displayStatus: rosterDisplayStatus,
+        displayStatusLabel: formatRosterStatus(rosterDisplayStatus),
         pay_type: payType,
         payType,
         standard_hours: standardHours,
@@ -243,8 +294,17 @@ function getEmployeePublicId(employee, fallbackName = '') {
     ).trim();
 }
 
+function getEmployeeAdminScope(): ParentNode {
+    if (typeof window.getEmployeeAdminPanel === 'function') {
+        const panel = window.getEmployeeAdminPanel();
+        if (panel) return panel;
+    }
+    return document.getElementById('employeeDrawer') || document;
+}
+
 function populateEmployeeAdminFallback(employee) {
     if (!employee) return;
+    const adminScope = getEmployeeAdminScope();
     const valueFrom = (...keys) => {
         for (const key of keys) {
             if (employee[key] !== undefined && employee[key] !== null && employee[key] !== '') {
@@ -278,7 +338,7 @@ function populateEmployeeAdminFallback(employee) {
         window.__suppressAuditDirty = previousSuppress;
     };
     const setBySelector = (selector, value) => {
-        const fields = Array.from(document.querySelectorAll(selector));
+        const fields = Array.from(adminScope.querySelectorAll(selector));
         const el = fields.find(isVisibleField) || fields[0];
         applyValue(el, value);
     };
@@ -286,7 +346,7 @@ function populateEmployeeAdminFallback(employee) {
         setBySelector(`input[placeholder="${placeholder}"], select[placeholder="${placeholder}"], textarea[placeholder="${placeholder}"]`, value);
     };
     const setByLabelText = (labelText, value) => {
-        const labels = Array.from(document.querySelectorAll('label'));
+        const labels = Array.from(adminScope.querySelectorAll('label'));
         const label = labels.find(item => item.textContent.trim().toLowerCase() === labelText.toLowerCase());
         if (!label) return;
         let field = null;
@@ -304,7 +364,7 @@ function populateEmployeeAdminFallback(employee) {
     };
     setByPlaceholder('Employee ID', employeePublicId);
     setByLabelText('EMPLOYEE ID', employeePublicId);
-    const visibleEmployeeIdField = Array.from(document.querySelectorAll('input')).find(input => {
+    const visibleEmployeeIdField = Array.from(adminScope.querySelectorAll('input')).find(input => {
         const label = input.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase() || '';
         return label === 'employee id' || input.placeholder?.trim().toLowerCase() === 'employee id';
     });
@@ -327,11 +387,11 @@ function populateEmployeeAdminFallback(employee) {
     setByLabelText('BENEFITS STATUS', valueFrom('benefits_status', 'benefitsStatus'));
     const hireDateValue = valueFrom('hire_date', 'hireDate');
     const nextReviewValue = valueFrom('next_review_date', 'nextReviewDate');
-    const dateInputs = Array.from(document.querySelectorAll('input[type="date"]'));
+    const dateInputs = Array.from(adminScope.querySelectorAll('input[type="date"]'));
     if (dateInputs[0]) dateInputs[0].value = hireDateValue || '';
     if (dateInputs[1]) dateInputs[1].value = nextReviewValue || '';
     const statusValue = formatRosterStatus(valueFrom('status', 'displayStatus') || 'Active');
-    const statusSelect = Array.from(document.querySelectorAll('select')).find(select => {
+    const statusSelect = Array.from(adminScope.querySelectorAll('select')).find(select => {
         return Array.from(select.options || []).some(option => option.textContent.trim().toLowerCase() === 'active' || option.textContent.trim().toLowerCase() === 'inactive');
     });
     if (statusSelect) {
@@ -345,6 +405,7 @@ function populateEmployeeAdminFallback(employee) {
 
 function populateEmployeeAdminByVisibleOrder(employee) {
     if (!employee) return;
+    const adminScope = getEmployeeAdminScope();
     const drawerTitleName = String(document.getElementById('drawerTitle')?.textContent || '').trim();
     const drawerSubParts = String(document.getElementById('drawerSub')?.textContent || '')
         .split('•')
@@ -394,11 +455,8 @@ function populateEmployeeAdminByVisibleOrder(employee) {
         field.dispatchEvent(new Event('change', { bubbles: true }));
         window.__suppressAuditDirty = previousSuppress;
     };
-    const adminButton = Array.from(document.querySelectorAll('button, .tab, [data-tab]'))
-        .find(item => (item.textContent || '').trim().toLowerCase().includes('employee admin'));
-    const drawer = adminButton?.closest('#employeeDrawer, .drawer, .drawer-panel, aside, section, div') || document;
-    const fields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible);
-    const labels = Array.from(drawer.querySelectorAll('*')).filter(el => {
+    const fields = Array.from(adminScope.querySelectorAll('input, select, textarea')).filter(isVisible);
+    const labels = Array.from(adminScope.querySelectorAll('label, .field-label')).filter(el => {
         const text = (el.textContent || '').trim().toLowerCase();
         return Object.keys(valuesByLabel).includes(text) && !['input', 'select', 'textarea', 'button'].includes(el.tagName.toLowerCase());
     });
@@ -412,9 +470,9 @@ function populateEmployeeAdminByVisibleOrder(employee) {
         }
     });
     const fieldByLabel = (labelText) => {
-        const label = Array.from(drawer.querySelectorAll('*')).find(el => {
+        const label = Array.from(adminScope.querySelectorAll('label, .field-label')).find(el => {
             const text = (el.textContent || '').trim().toLowerCase();
-            return text === labelText.toLowerCase() && !['input', 'select', 'textarea', 'button'].includes(el.tagName.toLowerCase());
+            return text === labelText.toLowerCase();
         });
         if (!label) return null;
         const wrapper = label.parentElement;
@@ -434,7 +492,7 @@ function populateEmployeeAdminByVisibleOrder(employee) {
     setValue(fieldByLabel('NEXT REVIEW DATE'), valuesByLabel['next review date']);
     setValue(fieldByLabel('ANNIVERSARY DATE'), valuesByLabel['anniversary date']);
     setValue(fieldByLabel('TENURE BRACKET'), valuesByLabel['tenure bracket']);
-    const adminFields = Array.from(drawer.querySelectorAll('input, select, textarea')).filter(isVisible);
+    const adminFields = Array.from(adminScope.querySelectorAll('input, select, textarea')).filter(isVisible);
     if (adminFields[0] && valuesByLabel['employee id']) {
         setValue(adminFields[0], valuesByLabel['employee id']);
         lockEmployeeIdField(adminFields[0]);
@@ -573,8 +631,9 @@ function getEmployeeSnapshotFromRosterRow(employeeId) {
         supervisor: cells[4]?.textContent?.trim() || '',
         displaySupervisor: cells[4]?.textContent?.trim() || '',
         displayHireDate: cells[5]?.textContent?.trim() || '',
-        status: cells[6]?.textContent?.trim() || '',
-        displayStatus: cells[6]?.textContent?.trim() || ''
+        displayTerminationDate: cells[6]?.textContent?.trim() || '',
+        status: cells[7]?.textContent?.trim() || '',
+        displayStatus: cells[7]?.textContent?.trim() || ''
     };
 }
 
@@ -597,13 +656,8 @@ function getFilteredRosterEmployees() {
                 employee.displayStatus
             ].join(' ').toLowerCase(); const matchesSearch = !searchTerm || searchableText.includes(searchTerm);
             const matchesDepartment = !departmentFilter || employee.displayDepartment === departmentFilter;
-            const employeeStatus = String(employee.status || employee.displayStatus || '').trim().toUpperCase(); let matchesStatus = true; if (explicitStatusFilter) {
-                matchesStatus = employeeStatus === explicitStatusFilter;
-            } else if (rosterMode === 'former') {
-                matchesStatus = employeeStatus === 'INACTIVE' || employeeStatus === 'TERMINATED';
-            } else if (rosterMode === 'active') {
-                matchesStatus = employeeStatus === 'ACTIVE';
-            } return matchesSearch && matchesDepartment && matchesStatus;
+            const matchesStatus = matchesRosterView(employee, rosterMode, explicitStatusFilter);
+            return matchesSearch && matchesDepartment && matchesStatus;
         })
         .sort((a, b) => {
             let valA;
@@ -633,6 +687,11 @@ function getFilteredRosterEmployees() {
                     const timeB = b.displayHireDate ? new Date(b.displayHireDate).getTime() : 0;
                     return win.currentSort?.direction === 'desc' ? timeB - timeA : timeA - timeB;
                 }
+                case 'terminationDate': {
+                    const timeA = a.displayTerminationDate ? new Date(a.displayTerminationDate).getTime() : 0;
+                    const timeB = b.displayTerminationDate ? new Date(b.displayTerminationDate).getTime() : 0;
+                    return win.currentSort?.direction === 'desc' ? timeB - timeA : timeA - timeB;
+                }
                 case 'status':
                     valA = a.displayStatus || '';
                     valB = b.displayStatus || '';
@@ -654,6 +713,18 @@ function renderEmployeeRoster() {
     if (!tbody) return;
     const employees = getFilteredRosterEmployees();
     win.currentFilteredEmployees = employees;
+
+    const rosterMode = String(window.rosterViewMode || 'active').trim().toLowerCase();
+    const rosterTable = tbody.closest('table');
+
+    if (rosterTable) {
+        rosterTable.classList.remove('roster-view-active', 'roster-view-former');
+        rosterTable.classList.add(
+            rosterMode === 'former' ? 'roster-view-former' : 'roster-view-active'
+        );
+        rosterTable.classList.add('employee-roster-table');
+    }
+
     if (safeGet('empCount')) {
         const total = getEmployeesList().length || employees.length;
         safeGet('empCount').textContent = `Showing ${employees.length} of ${total} employee${total === 1 ? '' : 's'}`;
@@ -661,7 +732,7 @@ function renderEmployeeRoster() {
     if (!employees.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="empty">
+                <td colspan="8" class="empty">
                     <div style="padding:20px; text-align:center;">
                         <strong>No employees found</strong><br>
                         <span style="color:#6b7280; font-size:13px;">
@@ -675,7 +746,11 @@ function renderEmployeeRoster() {
     }
     tbody.innerHTML = employees.map(employee => {
         const drawerId = esc(employee.dbId || employee.id || employee.employee_id || '');
-        const hireDate = employee.displayHireDate ? fmtDate(employee.displayHireDate) : '—';
+        const hireDateCell = employee.displayHireDate ? fmtDate(employee.displayHireDate) : '—';
+        const terminationDateCell =
+            isCompletedTermination(employee) && employee.displayTerminationDate
+                ? fmtDate(employee.displayTerminationDate)
+                : '—';
         return `
             <tr class="employee-row" data-id="${drawerId}" title="Open ${esc(employee.displayName)}" style="cursor:pointer;" onclick="openDrawerByEmployeeId('${drawerId}')">
                 <td>${esc(employee.displayId)}</td>
@@ -695,7 +770,8 @@ function renderEmployeeRoster() {
                 <td>${esc(employee.displayDepartment)}</td>
                 <td>${esc(employee.displayPosition)}</td>
                 <td>${esc(employee.displaySupervisor)}</td>
-                <td>${hireDate}</td>
+                <td>${hireDateCell}</td>
+                <td class="roster-col-terminated">${terminationDateCell}</td>
                 <td><span class="${statusBadge(employee.displayStatus)}">${esc(employee.displayStatusLabel)}</span></td>
             </tr>
         `;
@@ -761,6 +837,9 @@ async function openDrawerByEmployeeId(employeeId) {
         setTimeout(() => {
             populateEmployeeAdminFallback(drawerEmployee);
             populateEmployeeAdminByVisibleOrder(drawerEmployee);
+            if (typeof window.resetDrawerEntryForms === 'function') {
+                window.resetDrawerEntryForms();
+            }
             cleanEmployeeAdminVisibleNameFields();
             const visibleEmployeeIdField = Array.from(document.querySelectorAll('input')).find(input => {
                 const label = input.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase() || '';
@@ -787,7 +866,14 @@ async function deleteEmployeeQuick(employeeId) {
         showToast('No employee selected.', 'error');
         return;
     }
-    const confirmed = confirm('Are you sure you want to delete this employee? This cannot be undone.');
+    const confirmed = await showOrbisConfirm(
+        'Are you sure you want to delete this employee? This cannot be undone.',
+        {
+            title: 'Delete employee',
+            confirmLabel: 'Delete',
+            danger: true,
+        }
+    );
     if (!confirmed) return;
     const { error } = await OrbisServices.employees.delete(employeeId);
     if (error) {
@@ -930,7 +1016,7 @@ if (!window.__employeeAdminBind) {
         const tab = e.target.closest('button, .tab, [data-tab]');
         if (!tab) return; const text = (tab.textContent || '').toLowerCase();
         const isEmployeeAdmin = text.includes('employee admin') || tab.getAttribute('data-tab') === 'employee-admin';
-        const isHistoryTab = text.includes('history') || tab.getAttribute('data-tab') === 'history'; if (isEmployeeAdmin && window.currentEmployee && typeof populateEmployeeAdminForm === 'function') {
+        const isHistoryTab = text.includes('history') || tab.getAttribute('data-tab') === 'history'; if (isEmployeeAdmin && window.currentEmployee && !window.isCreatingEmployee && typeof populateEmployeeAdminForm === 'function') {
             setTimeout(() => {
                 populateEmployeeAdminForm(window.currentEmployee);
                 if (typeof populateEmployeeAdminFallback === 'function') {
@@ -1144,69 +1230,44 @@ function getAtRiskKpiHoverNames() {
 }
 
 function bindAtRiskKpiHover() {
-    const riskElement = document.getElementById('kRisk');
-    if (!riskElement) return;
     const riskCard =
-        riskElement.closest('.kpi-card, .card, [class*="kpi"]') ||
-        riskElement.parentElement;
+        document.getElementById('cardAtRiskEmployees') ||
+        document.getElementById('kAtRiskEmployees')?.closest('.kpi-card');
+
     if (!riskCard) return;
-    riskCard.style.position = riskCard.style.position || 'relative';
-    let tooltip = document.getElementById('atRiskKpiTooltip');
-    if (!tooltip) {
-        tooltip = document.createElement('div');
-        tooltip.id = 'atRiskKpiTooltip';
-        tooltip.style.position = 'absolute';
-        tooltip.style.left = '12px';
-        tooltip.style.right = '12px';
-        tooltip.style.top = 'calc(100% + 8px)';
-        tooltip.style.zIndex = '9999';
-        tooltip.style.background = '#0f172a';
-        tooltip.style.color = '#ffffff';
-        tooltip.style.borderRadius = '12px';
-        tooltip.style.padding = '10px 12px';
-        tooltip.style.boxShadow = '0 12px 28px rgba(15, 23, 42, 0.28)';
-        tooltip.style.fontSize = '12px';
-        tooltip.style.lineHeight = '1.4';
-        tooltip.style.display = 'none';
-        tooltip.style.pointerEvents = 'none';
-        riskCard.appendChild(tooltip);
-    }
+
+    const riskElement = document.getElementById('kAtRiskEmployees');
     const getRiskCount = () => {
+        if (!riskElement) return 0;
+
         const directCount = Number(String(riskElement.textContent || '').trim());
+
         if (!Number.isNaN(directCount)) return directCount;
+
         const cardText = String(riskCard.textContent || '');
-        const match = cardText.match(/AT-RISK EMPLOYEES\s*(\d+)/i) || cardText.match(/\b(\d+)\b/);
+        const match =
+            cardText.match(/AT-RISK EMPLOYEES\s*(\d+)/i) || cardText.match(/\b(\d+)\b/);
+
         return match ? Number(match[1]) : 0;
     };
-    const updateHoverText = () => {
-        const names = getAtRiskKpiHoverNames();
-        const riskCount = getRiskCount();
-        let text;
-        if (names.length) {
-            text = `At-Risk Employees: ${names.join(', ')}`;
-        } else if (riskCount > 0) {
-            text = `At-Risk Employees: ${riskCount} employee${riskCount === 1 ? '' : 's'} flagged`;
-        } else {
-            text = 'No employees currently flagged at-risk.';
-        }
-        riskElement.title = text;
-        riskCard.title = text;
-        riskCard.setAttribute('data-tooltip', text);
-        riskCard.setAttribute('aria-label', text);
-        tooltip.textContent = text;
-    };
-    const showTooltip = () => {
-        updateHoverText();
-        tooltip.style.display = 'block';
-    };
-    const hideTooltip = () => {
-        tooltip.style.display = 'none';
-    };
-    riskCard.onmouseenter = showTooltip;
-    riskCard.onfocusin = showTooltip;
-    riskCard.onmouseleave = hideTooltip;
-    riskCard.onfocusout = hideTooltip;
-    updateHoverText();
+
+    const names = getAtRiskKpiHoverNames();
+    const riskCount = getRiskCount();
+    let text;
+
+    if (names.length) {
+        text = names.join('\n');
+    } else if (riskCount > 0) {
+        text = `${riskCount} employee${riskCount === 1 ? '' : 's'} flagged`;
+    } else {
+        text = 'No employees currently flagged at-risk.';
+    }
+
+    riskCard.removeAttribute('title');
+    riskCard.setAttribute('data-tooltip', text);
+    riskCard.setAttribute('aria-label', text);
+
+    document.getElementById('atRiskKpiTooltip')?.remove();
 }
 
 function renderRoster(): void {

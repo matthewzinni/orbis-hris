@@ -1,4 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { showOrbisConfirm } from '../ui/confirmModal';
 
 interface MeetingRecord {
   id?: string;
@@ -270,7 +271,13 @@ export function editMeetingRecord(record: MeetingRecord): void {
 export async function deleteMeetingRecord(meetingId: string, employeeId: string): Promise<void> {
   if (!meetingId) return;
 
-  if (!confirm('Delete this meeting record?')) {
+  if (
+    !(await showOrbisConfirm('Delete this meeting record?', {
+      title: 'Delete meeting',
+      confirmLabel: 'Delete',
+      danger: true,
+    }))
+  ) {
     return;
   }
 

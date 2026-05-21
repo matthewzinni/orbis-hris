@@ -121,6 +121,7 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
 
   window.EMPLOYEES = scoped;
   window.currentFilteredEmployees = scoped;
+  window.currentEmployeeRoster = scoped;
   appState.employees = scoped;
 
   console.log(
@@ -147,8 +148,10 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
     window.renderDepartmentSummary();
   }
 
-  if (typeof window.applySupervisorDashboardView === 'function') {
-    window.applySupervisorDashboardView();
+  if (isSupervisorUser()) {
+    window.applySupervisorDashboardView?.();
+  } else {
+    window.applyAdminDashboardView?.();
   }
 
   if (typeof window.renderBasicDashboardKpis === 'function') {
@@ -203,6 +206,7 @@ declare global {
   interface Window {
     EMPLOYEES?: EmployeeRecord[];
     ALL_EMPLOYEES?: EmployeeRecord[];
+    currentEmployeeRoster?: EmployeeRecord[];
     currentFilteredEmployees?: EmployeeRecord[];
     loadEmployees?: () => Promise<EmployeeRecord[]>;
   }

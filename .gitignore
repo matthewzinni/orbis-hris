@@ -1,3 +1,11 @@
 hr_audit.py
 .env.python
 tools/.env.python
+
+# Local secrets & Supabase CLI
+.env
+.env.local
+.env.*.local
+supabase/.branches
+supabase/.temp
+.mcp-*.json

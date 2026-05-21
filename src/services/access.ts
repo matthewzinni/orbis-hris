@@ -105,12 +105,31 @@ export async function getUserRole(): Promise<string | null> {
   }
 }
 
-export function canManageEmployeeRecords(): boolean {
+export function isAdminUser(): boolean {
   return String(currentUserRole || '').toLowerCase() === 'admin';
+}
+
+export function canManageEmployeeRecords(): boolean {
+  return isAdminUser();
 }
 
 export function isSupervisorUser(): boolean {
   return String(currentUserRole || '').toLowerCase() === 'supervisor';
+}
+
+/** Performance reviews: admins always; supervisors only for their direct reports. */
+export function canAccessPerformanceReviews(employee?: EmployeeLike | null): boolean {
+  if (Boolean(window.isCreatingEmployee)) return false;
+
+  if (isAdminUser()) return true;
+
+  if (isSupervisorUser()) {
+    const target =
+      employee ?? (window.currentEmployee as EmployeeLike | null | undefined) ?? null;
+    return employeeMatchesSupervisorAccess(target);
+  }
+
+  return false;
 }
 
 export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | undefined): boolean {
@@ -148,8 +167,76 @@ export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | 
   );
 }
 
+export function applyAdminDashboardView(): void {
+  document.getElementById('supervisorBanner')?.remove();
+
+  const appTitle = document.querySelector('.app-title');
+  if (appTitle) appTitle.textContent = 'BTW Global Orbis';
+
+  const dashboardTitle = safeGet('dashboardTitle');
+  if (dashboardTitle) dashboardTitle.textContent = 'Dashboard';
+
+  const rosterHeader = document.querySelector('#employeeRosterCard .card-header > span');
+  if (rosterHeader) rosterHeader.textContent = 'Employee Roster';
+
+  const activeLabel = document
+    .querySelector('#kActiveHC')
+    ?.closest('.kpi-card')
+    ?.querySelector('.kpi-label');
+  if (activeLabel) activeLabel.textContent = 'Active Headcount';
+
+  const reviewsLabel = document.querySelector('#cardReviewsDue .kpi-label');
+  if (reviewsLabel) {
+    reviewsLabel.innerHTML = `Stay Interviews Due
+              <span
+                id="kReviewsDueInfo"
+                class="info-icon"
+                title="Counts active employees whose next stay interview date is today or earlier."
+                style="cursor: help; font-size: 0.8rem; color: var(--muted)"
+                >ⓘ</span
+              >`;
+  }
+
+  const riskLabel = document.querySelector('#cardTurnoverRisk .kpi-label');
+  if (riskLabel) {
+    riskLabel.innerHTML = `Turnover Risk
+              <span
+                class="info-icon"
+                title="Score is based on early tenure (0-6 months) and overdue reviews. Higher score = higher retention risk."
+                style="cursor: help; font-size: 0.8rem; color: var(--muted)"
+                >ⓘ</span
+              >`;
+  }
+
+  const leaveLabel = document
+    .querySelector('#kOnLeave')
+    ?.closest('.kpi-card')
+    ?.querySelector('.kpi-label');
+  if (leaveLabel) leaveLabel.textContent = 'Employees on Leave';
+
+  const deptCard = document.querySelector('#kDepartments')?.closest('.kpi-card');
+  if (deptCard) deptCard.classList.remove('hidden');
+
+  document.querySelectorAll('[data-admin-only="true"], .admin-only').forEach((el) => {
+    (el as HTMLElement).classList.remove('hidden');
+    (el as HTMLInputElement).disabled = false;
+    (el as HTMLElement).removeAttribute('title');
+  });
+}
+
+export function clearOrbisSessionState(): void {
+  setCurrentUserAccess(null, 'user');
+  window.EMPLOYEES = [];
+  window.ALL_EMPLOYEES = [];
+  window.currentEmployeeRoster = [];
+  window.currentFilteredEmployees = [];
+  applyAdminDashboardView();
+}
+
 export function applySupervisorDashboardView(): void {
   if (!isSupervisorUser()) return;
+
+  applyAdminDashboardView();
 
   const name =
     currentUserAccess?.display_name || currentUserAccess?.supervisor_name || 'Supervisor';
@@ -173,7 +260,7 @@ export function applySupervisorDashboardView(): void {
     .querySelector('#kReviewsDue')
     ?.closest('.kpi-card')
     ?.querySelector('.kpi-label');
-  if (reviewsLabel) reviewsLabel.textContent = 'My Reviews Due';
+  if (reviewsLabel) reviewsLabel.textContent = 'My Stay Interviews Due';
 
   const riskLabel = document
     .querySelector('#kTurnoverRisk')
@@ -213,7 +300,17 @@ export function applySupervisorDashboardView(): void {
       return risk && (risk.lowReview || (risk.openIncidentCount ?? 0) > 0 || risk.manualReason);
     }).length;
 
-    banner.textContent = `You have ${employees.length} employees. ${atRisk} may need attention.`;
+    const teamCount = employees.filter((e: EmployeeLike) => {
+      if (typeof window.isActiveDashboardEmployee === 'function') {
+        return window.isActiveDashboardEmployee(e);
+      }
+      const status = String(e.status || e.displayStatus || '')
+        .trim()
+        .toUpperCase();
+      return status === 'ACTIVE' || status === 'LEAVE';
+    }).length;
+
+    banner.textContent = `You have ${teamCount} active team member${teamCount === 1 ? '' : 's'}. ${atRisk} may need attention.`;
     const container = document.querySelector('.dashboard') || document.body;
     container?.prepend(banner);
   }
@@ -389,6 +486,10 @@ export function applyRolePermissions(): void {
       'benefitsStatus',
       'empHireDate',
       'hireDate',
+      'employeeTerminationDateInput',
+      'employeeTerminationDate',
+      'empTerminationDate',
+      'terminationDate',
       'empNextReviewDate',
       'nextReviewDate',
       'empAnniversaryDate',
@@ -433,6 +534,39 @@ export function applyRolePermissions(): void {
       newEmployeeBtn.title = 'Locked: supervisors cannot create employee records';
     }
   }
+
+  applyPerformanceReviewTabAccess(currentEmployee as EmployeeLike | null | undefined);
+}
+
+function applyPerformanceReviewTabAccess(employee?: EmployeeLike | null): void {
+  const allowed = canAccessPerformanceReviews(employee);
+  const drawer = document.getElementById('employeeDrawer');
+  const tabBtn = drawer?.querySelector<HTMLButtonElement>('[data-tab="reviews"]');
+  const panel = document.getElementById('tab-reviews');
+  const wasOnReviewsTab =
+    tabBtn?.getAttribute('aria-selected') === 'true' || tabBtn?.classList.contains('active');
+
+  if (tabBtn) {
+    tabBtn.classList.toggle('hidden', !allowed);
+    tabBtn.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+    if (!allowed) {
+      tabBtn.classList.remove('active');
+      tabBtn.setAttribute('aria-selected', 'false');
+      tabBtn.tabIndex = -1;
+    }
+  }
+
+  if (panel) {
+    if (!allowed) {
+      panel.classList.remove('active');
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  if (!allowed && wasOnReviewsTab && typeof window.activateDrawerTab === 'function') {
+    window.activateDrawerTab('employee', 'profile', false);
+  }
 }
 
 declare global {
@@ -440,10 +574,16 @@ declare global {
     currentUserRole?: string;
     currentUserAccess?: UserAccessRow | null;
     getUserRole?: () => Promise<string | null>;
+    isAdminUser?: () => boolean;
     canManageEmployeeRecords?: () => boolean;
     isSupervisorUser?: () => boolean;
+    canAccessPerformanceReviews?: (employee?: EmployeeLike | null) => boolean;
     employeeMatchesSupervisorAccess?: (employee: EmployeeLike) => boolean;
+    applyAdminDashboardView?: () => void;
     applySupervisorDashboardView?: () => void;
+    clearOrbisSessionState?: () => void;
+    currentFilteredEmployees?: unknown[];
+    isActiveDashboardEmployee?: (employee: EmployeeLike) => boolean;
     applyRoleLocks?: () => void;
     applyRolePermissions?: () => void;
     ensureDeleteEmployeeButton?: () => HTMLButtonElement | null;
@@ -457,10 +597,14 @@ declare global {
 window.currentUserRole = currentUserRole;
 window.currentUserAccess = currentUserAccess;
 window.getUserRole = getUserRole;
+window.isAdminUser = isAdminUser;
 window.canManageEmployeeRecords = canManageEmployeeRecords;
 window.isSupervisorUser = isSupervisorUser;
+window.canAccessPerformanceReviews = canAccessPerformanceReviews;
 window.employeeMatchesSupervisorAccess = employeeMatchesSupervisorAccess;
+window.applyAdminDashboardView = applyAdminDashboardView;
 window.applySupervisorDashboardView = applySupervisorDashboardView;
+window.clearOrbisSessionState = clearOrbisSessionState;
 window.applyRoleLocks = applyRoleLocks;
 window.applyRolePermissions = applyRolePermissions;
 window.ensureDeleteEmployeeButton = ensureDeleteEmployeeButton;

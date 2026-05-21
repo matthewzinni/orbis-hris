@@ -1,4 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { showOrbisConfirm } from '../ui/confirmModal';
 
 interface EmergencyContactRecord {
   id?: string;
@@ -310,7 +311,13 @@ export async function deleteEmergencyContact(): Promise<void> {
     return;
   }
 
-  if (!confirm('Are you sure you want to delete this emergency contact?')) {
+  if (
+    !(await showOrbisConfirm('Are you sure you want to delete this emergency contact?', {
+      title: 'Delete contact',
+      confirmLabel: 'Delete',
+      danger: true,
+    }))
+  ) {
     return;
   }
 

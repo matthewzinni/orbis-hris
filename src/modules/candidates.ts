@@ -1,4 +1,14 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { generateAvailableEmployeeId } from '../services/employeeIds';
+import { renderDashboardRetryState } from '../ui/dashboardRetry';
+import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  mountDrawerIdentityHeader,
+  mountLegacyDrawerHeader,
+  removeDrawerIdentityHeader,
+  restoreDrawerLegacyHeader,
+  restoreDrawerTabPlacement,
+} from '../ui/drawerIdentityHeader';
 
 interface CandidateRecord {
   id?: string;
@@ -103,13 +113,6 @@ function getNextCandidateStage(currentStage: unknown): string {
   if (stage === 'Offer') return 'Hired';
 
   return 'Applied';
-}
-
-function generateEmployeeId(): string {
-  const year = new Date().getFullYear().toString().slice(-2);
-  const random = Math.floor(10 + Math.random() * 90);
-
-  return `BTW${year}${random}`;
 }
 
 function setInputValue(id: string, value: unknown): void {
@@ -298,7 +301,7 @@ export async function loadCandidates(): Promise<void> {
     if (error) {
       console.error('[Candidates] Could not load candidates:', error);
 
-      target.innerHTML = '<div class="empty">Could not load candidates.</div>';
+      renderDashboardRetryState(target, 'Could not load candidates.', () => loadCandidates());
 
       return;
     }
@@ -426,7 +429,7 @@ export async function loadCandidates(): Promise<void> {
   } catch (err) {
     console.error('[Candidates] Unexpected candidate load failure:', err);
 
-    target.innerHTML = '<div class="empty">Could not load candidates.</div>';
+    renderDashboardRetryState(target, 'Could not load candidates.', () => loadCandidates());
   }
 }
 
@@ -516,7 +519,13 @@ export async function deleteCandidateRecord(candidateId?: string): Promise<void>
     return;
   }
 
-  if (!confirm('Delete this candidate?')) {
+  if (
+    !(await showOrbisConfirm('Delete this candidate?', {
+      title: 'Delete candidate',
+      confirmLabel: 'Delete',
+      danger: true,
+    }))
+  ) {
     return;
   }
 
@@ -716,7 +725,13 @@ export async function saveCandidateRecord(): Promise<void> {
 
     showToast(currentCandidateId ? 'Candidate updated.' : 'Candidate saved.');
 
-    currentCandidateId = null;
+    if (savedCandidateId) {
+      currentCandidateId = savedCandidateId;
+      (window as { currentCandidateId?: string | null }).currentCandidateId = savedCandidateId;
+    } else {
+      currentCandidateId = null;
+      (window as { currentCandidateId?: string | null }).currentCandidateId = null;
+    }
 
     const saveButton = safeGet('saveCandidateBtn');
 
@@ -814,7 +829,7 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
   }
 
   const employeePayload = {
-    id: generateEmployeeId(),
+    id: await generateAvailableEmployeeId(),
     first_name: data.first_name || '',
     last_name: data.last_name || '',
     phone: data.phone || '',
@@ -960,45 +975,7 @@ function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null
   drawer.style.setProperty('z-index', '99999', 'important');
 }
 
-function hideCandidateDrawerLegacyHeader(drawer: HTMLElement): void {
-  const oldDrawerHeader = drawer.querySelector('.drawer-header');
-
-  if (!oldDrawerHeader) return;
-
-  const header = oldDrawerHeader as HTMLElement;
-  header.style.display = 'none';
-  header.style.height = '0';
-  header.style.minHeight = '0';
-  header.style.padding = '0';
-  header.style.margin = '0';
-  header.style.overflow = 'hidden';
-}
-
-function restoreCandidateDrawerLegacyHeader(drawer: HTMLElement): void {
-  const oldDrawerHeader = drawer.querySelector('.drawer-header');
-
-  if (!oldDrawerHeader) return;
-
-  const header = oldDrawerHeader as HTMLElement;
-  header.style.removeProperty('display');
-  header.style.removeProperty('height');
-  header.style.removeProperty('min-height');
-  header.style.removeProperty('padding');
-  header.style.removeProperty('margin');
-  header.style.removeProperty('overflow');
-}
-
-function removeCandidateDrawerIdentityHeader(): void {
-  document.getElementById('candidateDrawerIdentityHeader')?.remove();
-}
-
 function renderCandidateDrawerIdentityHeader(candidate: CandidateRecord | null): void {
-  const drawer = safeGet('candidateDrawer');
-
-  if (!drawer) return;
-
-  removeCandidateDrawerIdentityHeader();
-
   const firstName = candidate?.first_name || '';
   const lastName = candidate?.last_name || '';
   const displayName =
@@ -1009,61 +986,50 @@ function renderCandidateDrawerIdentityHeader(candidate: CandidateRecord | null):
   const statusLabel = candidate?.id ? stage : 'Draft';
   const initial = displayName.charAt(0).toUpperCase() || 'C';
 
-  const drawerIdentityHeader = document.createElement('div');
-  drawerIdentityHeader.id = 'candidateDrawerIdentityHeader';
-  drawerIdentityHeader.className = 'employee-drawer-identity-header';
-  drawerIdentityHeader.innerHTML = `
-    <div class="employee-drawer-avatar">${escapeHtml(initial)}</div>
-    <div class="employee-drawer-title-block">
-      <div class="employee-drawer-name">${escapeHtml(displayName)}</div>
-      <div class="employee-drawer-meta">${escapeHtml(subtitle)}</div>
-    </div>
-    <div class="employee-drawer-header-actions">
-      <div class="employee-drawer-status-pill">${escapeHtml(statusLabel)}</div>
-      <button type="button" class="employee-drawer-close-btn" id="candidateDrawerCloseBtn">×</button>
-    </div>
-  `;
-
-  drawer.prepend(drawerIdentityHeader);
-
-  const tabRow =
-    drawer.querySelector('.tab-btn')?.parentElement ||
-    drawer.querySelector('.drawer-tabs') ||
-    drawer.querySelector('.tab-bar') ||
-    drawer.querySelector('.tabs') ||
-    drawer.querySelector('.tab-nav') ||
-    drawer.querySelector('.tab-buttons') ||
-    drawer.querySelector('.drawer-tab-row');
-
-  if (tabRow) {
-    drawerIdentityHeader.after(tabRow);
+  if (!candidate?.id) {
+    mountLegacyDrawerHeader('candidateDrawer', {
+      title: displayName,
+      subtitle,
+      onClose: () => closeCandidateDrawer(),
+    });
+    setText('candidateDrawerTitle', displayName);
+    setText('candidateDrawerSub', subtitle);
+    return;
   }
 
-  const customCloseBtn = drawer.querySelector('#candidateDrawerCloseBtn');
-
-  if (customCloseBtn) {
-    customCloseBtn.addEventListener('click', () => closeCandidateDrawer());
-  }
-
-  hideCandidateDrawerLegacyHeader(drawer);
-
-  const drawerContent = drawer.querySelector('.drawer-content') || drawer.querySelector('.drawer-body');
-
-  if (drawerContent) {
-    (drawerContent as HTMLElement).style.paddingTop = '0';
-    (drawerContent as HTMLElement).style.marginTop = '0';
-  }
+  mountDrawerIdentityHeader({
+    drawerId: 'candidateDrawer',
+    headerId: 'candidateDrawerIdentityHeader',
+    closeButtonId: 'candidateDrawerCloseBtn',
+    name: displayName,
+    meta: subtitle,
+    status: statusLabel,
+    initial,
+    onClose: () => closeCandidateDrawer(),
+  });
 
   setText('candidateDrawerTitle', displayName);
   setText('candidateDrawerSub', subtitle);
 }
 
 export function switchCandidateTab(tabName: string): void {
-  document.querySelectorAll('[data-candidate-tab]').forEach((btn) => {
-    btn.classList.toggle('active', (btn as HTMLElement).dataset.candidateTab === tabName);
+  if (typeof window.activateDrawerTab === 'function') {
+    window.activateDrawerTab('candidate', tabName, false);
+    return;
+  }
+
+  const drawer = document.getElementById('candidateDrawer');
+
+  drawer?.querySelectorAll('[data-candidate-tab]').forEach((btn) => {
+    const isSelected = (btn as HTMLElement).dataset.candidateTab === tabName;
+    btn.classList.toggle('active', isSelected);
+    (btn as HTMLElement).setAttribute('aria-selected', isSelected ? 'true' : 'false');
   });
-  document.querySelectorAll('#candidateDrawer .tab-panel').forEach((panel) => {
-    panel.classList.toggle('active', panel.id === `candidate-tab-${tabName}`);
+
+  drawer?.querySelectorAll('.tab-panel').forEach((panel) => {
+    const isSelected = panel.id === `candidate-tab-${tabName}`;
+    panel.classList.toggle('active', isSelected);
+    (panel as HTMLElement).hidden = !isSelected;
   });
 }
 
@@ -1093,8 +1059,10 @@ export function closeCandidateDrawer(): void {
   }
 
   if (drawer) {
-    removeCandidateDrawerIdentityHeader();
-    restoreCandidateDrawerLegacyHeader(drawer);
+    removeDrawerIdentityHeader('candidateDrawerIdentityHeader');
+    document.getElementById('candidateDrawerChrome')?.replaceChildren();
+    restoreDrawerTabPlacement('candidateDrawer');
+    restoreDrawerLegacyHeader(drawer);
     drawer.classList.remove('open', 'closing');
     drawer.classList.add('hidden');
     drawer.setAttribute('aria-hidden', 'true');
@@ -1102,7 +1070,9 @@ export function closeCandidateDrawer(): void {
   }
 
   if (employeeDrawer) {
+    employeeDrawer.classList.remove('hidden');
     employeeDrawer.style.removeProperty('display');
+    employeeDrawer.removeAttribute('aria-hidden');
   }
 
   document.body.style.overflow = '';
@@ -1193,6 +1163,7 @@ export async function openCandidateDrawer(candidateId: string): Promise<void> {
   renderCandidateDrawerIdentityHeader(candidate);
 
   fillCandidateDrawerFields(candidate);
+  (window as { currentCandidateId?: string | null }).currentCandidateId = currentCandidateId;
   switchCandidateTab('profile');
 
   requestAnimationFrame(() => {
@@ -1214,6 +1185,8 @@ export function openNewCandidateForm(): void {
     console.error('candidateDrawer not found');
     return;
   }
+
+  restoreDrawerTabPlacement('candidateDrawer');
 
   fillCandidateDrawerFields({
     stage: 'Applied',

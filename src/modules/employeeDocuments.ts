@@ -1,4 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { showOrbisConfirm } from '../ui/confirmModal';
 
 const EMPLOYEE_DOCUMENTS_BUCKET = 'employee-documents';
 
@@ -87,7 +88,15 @@ function getResolvedEmployeeId(fallbackId?: string): string {
 export async function deleteEmployeeDocument(docId: string): Promise<void> {
   if (!docId) return;
 
-  if (!confirm('Delete this document?')) return;
+  if (
+    !(await showOrbisConfirm('Delete this document?', {
+      title: 'Delete document',
+      confirmLabel: 'Delete',
+      danger: true,
+    }))
+  ) {
+    return;
+  }
 
   const { data: docRows, error: fetchError } = await supabaseClient
     .from('employee_documents')

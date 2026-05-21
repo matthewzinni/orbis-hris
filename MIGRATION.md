@@ -2,16 +2,17 @@
 
 ## Boot order (single path)
 
-1. Legacy script tags: helpers, permissions, state, history
-2. `src/main.ts` (Vite module) — auth, Supabase, TS modules, `registerLegacyBridges()`
-3. `main.ts` calls `window.loadAllDashboardData` from `src/modules/dashboardBoot.ts` (employees + KPI fallbacks)
-4. `js/app.js` removed — boot and bridges live in `src/main.ts` + typed modules
+1. Vite module `src/main.ts` — styles, helpers, auth, Supabase, TS modules
+2. `main.ts` calls `window.loadAllDashboardData` from `src/modules/dashboardBoot.ts` (employees + KPI fallbacks)
 
 ## Ownership
 
 | Concern | Owner |
 |--------|--------|
 | Auth | `src/modules/auth.ts` |
+| DOM helpers, toast, print | `src/utils/helpers.ts` |
+| User access / roles | `src/services/access.ts` |
+| Employee notes | `src/modules/notes.ts` |
 | Employee save / delete / drawer tabs | `src/modules/drawer.ts` |
 | Drawer open/close UI | `src/ui/drawerUi.ts` |
 | Employee load + access scope | `src/modules/employees.ts` + `src/services/access.ts` |
@@ -26,32 +27,26 @@
 | Reviews, discipline, incidents, meetings, stay interviews, candidates | `src/modules/*.ts` |
 | Documents | `src/modules/documents.ts` |
 | Dashboard KPIs + turnover hover | `src/ui/kpis.ts` |
+| History tab + recent activity UI | `src/ui/history.ts` |
 
-## Loaded from TS (Vite module)
+## Legacy JavaScript removed
 
-- `src/ui/employeeRoster.ts` — roster, drawer open by ID, filters, audit hooks
-- `src/ui/kpis.ts` — dashboard KPIs, turnover metrics, hover tooltips
-- `src/ui/drawerUi.ts` — drawer chrome (identity header, profile grid, tab events)
-- `src/ui/history.ts` — history list rendering helpers
-- `src/modules/stayInterviews.ts` — stay interview CRUD + history
-- `src/modules/employees.ts` — scoped employee load, `EMPLOYEES` / `ALL_EMPLOYEES`
-- `src/modules/dashboardBoot.ts` — `loadAllDashboardData`, review/risk/impact fallbacks
-- `src/modules/onboarding.ts` — onboarding checklist tab
-- `src/services/access.ts` — roles, supervisor scoping, drawer permission locks
-- `src/app/appShell.ts` — `switchTab`, `initAppShell`, auth/app view toggle, roster sort headers
-- `src/modules/drawerForms.ts` — `resetDrawerForms`
-- `src/modules/candidates.ts` — candidate drawer (`openCandidateDrawer`, `openNewCandidateForm`)
-- `src/ui/employeeForm.ts` — `populateEmployeeForm`, `resetEmployeeForm`, `saveEmployeeForm` bridge
-- `src/services/employeeIds.ts` — `generateAvailableEmployeeId` for new employees
+- No `<script src="/js/...">` tags in `index.html`
+- `public/js/` deleted (empty `permissions.js` / `state.js` stubs)
+- `js/` application folder deleted (helpers, history, badges, `app.js`, `legacy/` archive)
 
-## Legacy script tags still in `index.html`
+## Supabase (CLI)
 
-- `js/utils/helpers.js` — DOM helpers, toast, print
-- `js/core/permissions.js`, `js/core/state.js`
-- `js/ui/history.js` — employee audit trail load (TS `src/ui/history.ts` also loaded)
+Link the repo and push migrations (RLS, `candidate_notes`, etc.):
 
-## Next migration steps
+```bash
+npm run db:login
+npm run db:link      # paste Project Reference ID from Supabase dashboard
+npm run db:push
+```
 
-1. Port `js/ui/history.js` fully or merge with `src/ui/history.ts`
-2. Port remaining `js/core/permissions.js` and `js/core/state.js`
-4. Delete obsolete `js/main.js` / legacy `js/legacy/` when confirmed unused
+See `supabase/README.md` for the full workflow and access model.
+
+## Remaining config
+
+- `vite.config.js` — Vite configuration (not app runtime)

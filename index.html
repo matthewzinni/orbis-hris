@@ -5,1102 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>BTW Global Orbis</title>
     <link rel="icon" href="data:," />
-    <script src="/js/utils/helpers.js"></script>
-    <script src="/js/core/permissions.js"></script>
-    <script src="/js/core/state.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-      :root {
-        --navy: #102a43;
-        --navy-2: #1f4f82;
-        --blue: #3b82f6;
-        --blue-strong: #2563eb;
-        --blue-light: #eaf2ff;
-        --bg: #f4f7fb;
-        --bg-2: #eef3f9;
-        --card: #ffffff;
-        --text: #0f172a;
-        --muted: #64748b;
-        --line: #e2e8f0;
-        --line-strong: #d7e1ec;
-        --green: #0f8a63;
-        --green-bg: #e8fbf3;
-        --red: #c24159;
-        --red-bg: #fff0f3;
-        --yellow: #a16207;
-        --yellow-bg: #fff7db;
-        --shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
-        --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.12);
-        --radius: 22px;
-        --radius-sm: 16px;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
-        background:
-          radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 24%),
-          radial-gradient(circle at 85% 10%, rgba(16, 42, 67, 0.06), transparent 22%),
-          linear-gradient(180deg, #f8fbff 0%, var(--bg) 28%, var(--bg-2) 100%);
-        color: var(--text);
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-      }
-
-      .hidden {
-        display: none !important;
-      }
-
-      .auth-shell {
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-        background:
-          radial-gradient(circle at top left, rgba(46, 117, 182, 0.08), transparent 30%),
-          radial-gradient(circle at bottom right, rgba(22, 58, 90, 0.08), transparent 28%),
-          var(--bg);
-      }
-
-      .auth-card {
-        width: min(460px, 100%);
-        background: white;
-        border-radius: 24px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-      }
-
-      .auth-head {
-        background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
-        color: white;
-        padding: 26px;
-      }
-
-      .auth-head h1 {
-        margin: 0;
-        font-size: 1.65rem;
-        letter-spacing: -0.03em;
-      }
-
-      .auth-head p {
-        margin: 8px 0 0;
-        opacity: 0.92;
-        font-size: 0.95rem;
-      }
-
-      .auth-body {
-        padding: 22px;
-      }
-
-      .field {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-        margin-bottom: 12px;
-      }
-
-      .field label {
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      .field input,
-      .field select,
-      .field textarea {
-        width: 100%;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        padding: 10px 12px;
-        font-size: 0.94rem;
-        outline: none;
-        background: rgba(255, 255, 255, 0.98);
-        color: var(--text);
-        font-family: inherit;
-        box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.03);
-        transition:
-          border-color 0.16s ease,
-          box-shadow 0.16s ease,
-          background 0.16s ease;
-      }
-
-      .field textarea {
-        resize: vertical;
-        min-height: 100px;
-      }
-
-      .field input:focus,
-      .field select:focus,
-      .field textarea:focus,
-      .input:focus {
-        border-color: var(--blue);
-        box-shadow: 0 0 0 3px rgba(46, 117, 182, 0.12);
-      }
-
-      .field input:focus-visible,
-      .field select:focus-visible,
-      .field textarea:focus-visible,
-      .input:focus-visible,
-      .button:focus-visible,
-      .tab-btn:focus-visible,
-      .link-button:focus-visible,
-      .drawer-close:focus-visible {
-        outline: none;
-        box-shadow: 0 0 0 4px rgba(47, 111, 237, 0.16);
-        border-color: rgba(47, 111, 237, 0.45);
-      }
-
-      .button,
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
-        border-radius: 12px;
-        border: 1px solid var(--line);
-        background: white;
-        color: var(--text);
-        font-size: 0.92rem;
-        padding: 10px 14px;
-        min-height: 40px;
-        outline: none;
-        font-weight: 700;
-        line-height: 1.2;
-        cursor: pointer;
-        text-decoration: none;
-        white-space: nowrap;
-        transition:
-          transform 0.16s ease,
-          box-shadow 0.16s ease,
-          border-color 0.16s ease,
-          background 0.16s ease;
-        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-      }
-
-      .button:hover:not(:disabled),
-      .btn:hover:not(:disabled) {
-        transform: translateY(-1px);
-        box-shadow: 0 8px 18px rgba(16, 24, 40, 0.08);
-      }
-
-      .button.primary,
-      .btn-primary {
-        background: linear-gradient(135deg, var(--blue) 0%, var(--navy-2) 100%);
-        color: white;
-        border-color: transparent;
-      }
-
-      .button.soft,
-      .btn-secondary {
-        background: #fbfcfe;
-        color: var(--text);
-      }
-
-      .button.danger,
-      .btn-danger {
-        background: #fff5f6;
-        color: #a62532;
-        border-color: #f3c8cf;
-      }
-
-      .button.warn {
-        background: #fff7ed;
-        color: #9a3412;
-        border-color: #fed7aa;
-      }
-
-      .button.success {
-        background: #ecfdf5;
-        color: #065f46;
-        border-color: #a7f3d0;
-      }
-
-      .button.sm,
-      .btn-sm,
-      .mini-btn {
-        font-size: 0.82rem;
-        padding: 6px 10px;
-        min-height: 32px;
-        border-radius: 10px;
-      }
-
-      .mini-btn.danger {
-        background: #fff5f6;
-        color: #a62532;
-        border-color: #f3c8cf;
-      }
-
-      .button:disabled,
-      .btn:disabled {
-        opacity: 0.65;
-        cursor: not-allowed;
-        transform: none;
-      }
-
-      .button-row,
-      .table-actions {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .app-header {
-        position: relative;
-        top: 0;
-        z-index: 40;
-        backdrop-filter: blur(10px);
-        background: linear-gradient(
-          135deg,
-          rgba(16, 42, 67, 0.96) 0%,
-          rgba(31, 79, 130, 0.94) 54%,
-          rgba(59, 130, 246, 0.92) 100%
-        );
-        color: white;
-        padding: 24px 32px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.14);
-      }
-
-      .app-header-inner {
-        max-width: 1440px;
-        margin: 0 auto;
-        display: flex;
-        justify-content: space-between;
-        gap: 20px;
-        align-items: flex-start;
-      }
-
-      .app-title {
-        margin: 0;
-        font-size: 2rem;
-        font-weight: 800;
-        letter-spacing: -0.04em;
-      }
-
-      .app-subtitle {
-        margin-top: 6px;
-        opacity: 0.88;
-        font-size: 0.96rem;
-      }
-
-      .header-meta {
-        text-align: right;
-        font-size: 0.9rem;
-        opacity: 0.95;
-      }
-
-      .header-meta .small {
-        font-size: 0.8rem;
-        margin-top: 6px;
-        opacity: 0.85;
-      }
-
-      .page {
-        max-width: 1480px;
-        margin: 0 auto;
-        padding: 28px 24px 36px;
-      }
-
-      .toolbar {
-        display: flex;
-        justify-content: space-between;
-        gap: 14px;
-        flex-wrap: wrap;
-        margin-bottom: 20px;
-        background: rgba(255, 255, 255, 0.72);
-        border: 1px solid rgba(226, 232, 240, 0.9);
-        border-radius: 20px;
-        padding: 12px;
-        box-shadow: var(--shadow);
-        backdrop-filter: blur(10px);
-      }
-
-      .toolbar-left,
-      .toolbar-right {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .input,
-      .select {
-        border-radius: 12px;
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.96);
-        font-size: 0.92rem;
-        padding: 11px 14px;
-        outline: none;
-        min-width: 240px;
-        box-shadow: inset 0 1px 2px rgba(16, 24, 40, 0.03);
-        transition:
-          border-color 0.16s ease,
-          box-shadow 0.16s ease,
-          background 0.16s ease;
-      }
-
-      .kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 14px;
-        margin-bottom: 20px;
-        position: relative;
-        z-index: 20;
-      }
-
-      .kpi-card {
-        position: relative;
-        z-index: 1;
-        overflow: visible;
-        background: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.98) 0%,
-          rgba(248, 251, 255, 0.98) 100%
-        );
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        padding: 18px 18px 16px;
-        border: 1px solid rgba(226, 232, 240, 0.95);
-        border-left: 4px solid var(--blue);
-        transition:
-          transform 0.18s ease,
-          box-shadow 0.18s ease,
-          border-color 0.18s ease;
-      }
-
-      .kpi-card:hover {
-        transform: translateY(-3px);
-        box-shadow: var(--shadow-lg);
-        border-color: rgba(59, 130, 246, 0.22);
-        z-index: 50;
-      }
-
-      .kpi-card[data-tooltip]:hover::after,
-      .kpi-card[title]:hover::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        left: 12px;
-        top: calc(100% + 8px);
-        z-index: 1000;
-        min-width: 220px;
-        max-width: 340px;
-        isolation: isolate;
-        white-space: pre-line;
-        background: #163a5a;
-        color: #ffffff;
-        border-radius: 12px;
-        padding: 10px 12px;
-        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
-        font-size: 0.82rem;
-        line-height: 1.35;
-        font-weight: 600;
-        pointer-events: none;
-      }
-
-      .kpi-card[title]:hover::after {
-        content: attr(title);
-      }
-
-      .kpi-card.good {
-        border-left-color: var(--green);
-      }
-
-      .kpi-card.warn {
-        border-left-color: var(--yellow);
-      }
-
-      .kpi-card.alert {
-        border-left-color: var(--red);
-      }
-
-      .kpi-label {
-        font-size: 0.75rem;
-        color: var(--muted);
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-      }
-
-      .kpi-value {
-        margin-top: 6px;
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: var(--navy);
-        line-height: 1;
-      }
-
-      .kpi-sub {
-        margin-top: 6px;
-        color: var(--muted);
-        font-size: 0.82rem;
-      }
-
-      .layout {
-        display: grid;
-        grid-template-columns: 1.15fr 0.85fr;
-        gap: 20px;
-      }
-
-      .stack {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
-
-      .card {
-        background: linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.98) 0%,
-          rgba(252, 253, 255, 0.98) 100%
-        );
-        border-radius: var(--radius);
-        box-shadow: var(--shadow);
-        overflow: hidden;
-        border: 1px solid rgba(226, 232, 240, 0.96);
-      }
-
-      .card-header {
-        background: linear-gradient(
-          135deg,
-          rgba(255, 255, 255, 0.98) 0%,
-          rgba(246, 249, 253, 0.98) 100%
-        );
-        color: var(--navy);
-        padding: 16px 18px;
-        font-weight: 800;
-        font-size: 0.95rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        border-bottom: 1px solid var(--line);
-      }
-
-      .card-body {
-        padding: 18px;
-      }
-
-      .table-wrap,
-      .mini-table-wrap {
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        overflow: auto;
-        background: white;
-        position: relative;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
-        box-shadow:
-          inset 0 1px 0 rgba(255, 255, 255, 0.9),
-          0 1px 2px rgba(15, 23, 42, 0.03);
-      }
-
-      .mini-table-wrap {
-        max-height: 360px;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.9rem;
-      }
-
-      th {
-        position: sticky;
-        top: 0;
-        z-index: 3;
-        background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
-        color: var(--navy);
-        text-align: left;
-        font-size: 0.76rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        padding: 12px 14px;
-        border-bottom: 1px solid #d6e2f0;
-        box-shadow: inset 0 -1px 0 rgba(214, 226, 240, 0.9);
-        white-space: nowrap;
-      }
-
-      thead th:first-child {
-        border-top-left-radius: 14px;
-      }
-
-      thead th:last-child {
-        border-top-right-radius: 14px;
-      }
-
-      td {
-        padding: 12px 14px;
-        border-bottom: 1px solid #edf2f7;
-        vertical-align: top;
-      }
-
-      tr:nth-child(even) td {
-        background: #fbfcff;
-      }
-
-      tr:hover td {
-        background: #f3f8ff;
-      }
-
-      .link-button {
-        border: none;
-        background: none;
-        color: var(--blue);
-        font-weight: 700;
-        cursor: pointer;
-        padding: 0 2px;
-        text-align: left;
-        font-size: 0.92rem;
-        border-radius: 8px;
-        transition:
-          color 0.16s ease,
-          background 0.16s ease;
-      }
-
-      .link-button:hover {
-        color: var(--navy-2);
-        background: rgba(47, 111, 237, 0.06);
-      }
-
-      .muted {
-        color: var(--muted);
-        font-size: 0.84rem;
-      }
-
-      .badge {
-        display: inline-block;
-        padding: 5px 10px;
-        border-radius: 999px;
-        font-size: 0.7rem;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        border: 1px solid transparent;
-      }
-
-      .badge-active {
-        background: var(--green-bg);
-        color: var(--green);
-        border-color: #b9ead5;
-      }
-
-      .badge-inactive {
-        background: var(--red-bg);
-        color: var(--red);
-        border-color: #f1c4cb;
-      }
-
-      .badge-terminated {
-        background: #fee2e2;
-        color: #991b1b;
-        border-color: #fecaca;
-      }
-
-      .badge-leave {
-        background: var(--yellow-bg);
-        color: var(--yellow);
-        border-color: #f1df9c;
-      }
-
-      .badge-soft {
-        background: #edf4ff;
-        color: var(--navy);
-        border-color: #d6e5fb;
-      }
-
-      .candidate-interview-alert {
-        display: inline-block;
-        margin-top: 6px;
-        padding: 4px 8px;
-        border-radius: 999px;
-        background: #fef3c7;
-        color: #78350f;
-        font-size: 11px;
-        font-weight: 800;
-        line-height: 1.25;
-      }
-
-      .candidate-actions-row {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        margin-top: 8px;
-      }
-
-      .two-col {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 18px;
-      }
-
-      .empty {
-        color: var(--muted);
-        text-align: center;
-        padding: 18px;
-        font-size: 0.9rem;
-      }
-
-      .drawer-backdrop {
-        position: fixed;
-        inset: 0;
-        background: rgba(7, 18, 32, 0.42);
-        display: none;
-        z-index: 80;
-        pointer-events: none;
-      }
-
-      .drawer-backdrop.open {
-        display: block;
-        pointer-events: auto;
-      }
-
-      .drawer {
-        position: fixed;
-        top: 0;
-        right: -760px;
-        width: min(760px, 100vw);
-        height: 100vh;
-        background: #ffffff;
-        box-shadow: -16px 0 40px rgba(15, 23, 42, 0.18);
-        z-index: 90;
-        transition: right 0.25s ease;
-        display: flex;
-        flex-direction: column;
-        pointer-events: auto;
-      }
-
-      .drawer.open {
-        right: 0;
-      }
-
-      .drawer-header {
-        padding: 20px 22px;
-        position: sticky;
-        top: 0;
-        z-index: 5;
-        background: var(--navy);
-        color: white;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-      }
-
-      .drawer-title {
-        margin: 0;
-        font-size: 1.25rem;
-        font-weight: 800;
-      }
-
-      .drawer-sub {
-        margin-top: 4px;
-        font-size: 0.85rem;
-        opacity: 0.88;
-      }
-
-      .drawer-close {
-        background: rgba(255, 255, 255, 0.14);
-        border: none;
-        color: white;
-        border-radius: 10px;
-        padding: 10px 12px;
-        cursor: pointer;
-        font-weight: 700;
-      }
-
-      .drawer-body {
-        padding: 20px 20px 30px;
-        padding-top: 24px;
-        overflow: auto;
-        flex: 1;
-        background: linear-gradient(180deg, #f8fbff 0%, #f5f8fc 100%);
-      }
-
-      .tabs {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-bottom: 16px;
-      }
-
-      .tab-btn {
-        border: 1px solid var(--line);
-        background: rgba(255, 255, 255, 0.94);
-        color: var(--text);
-        border-radius: 999px;
-        padding: 9px 13px;
-        font-weight: 700;
-        cursor: pointer;
-        font-size: 0.88rem;
-        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition:
-          transform 0.16s ease,
-          box-shadow 0.16s ease,
-          border-color 0.16s ease;
-      }
-
-      .tab-btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 8px 18px rgba(16, 24, 40, 0.08);
-      }
-
-      .tab-btn.active {
-        background: linear-gradient(135deg, var(--blue) 0%, var(--navy-2) 100%);
-        border-color: transparent;
-        color: white;
-      }
-
-      .tab-btn::before {
-        content: '';
-        width: 8px;
-        height: 8px;
-        border-radius: 999px;
-        background: rgba(20, 50, 77, 0.22);
-        box-shadow: inset 0 0 0 1px rgba(20, 50, 77, 0.06);
-        flex: 0 0 8px;
-      }
-
-      .tab-btn.active::before {
-        background: rgba(255, 255, 255, 0.92);
-        box-shadow: none;
-      }
-
-      .tab-panel {
-        display: none;
-      }
-
-      .tab-panel.active {
-        display: block;
-      }
-
-      .detail-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-
-      .detail-card {
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 14px;
-        background: linear-gradient(180deg, #ffffff 0%, #f9fbfe 100%);
-        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.045);
-      }
-
-      .detail-label {
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: var(--muted);
-        font-weight: 700;
-      }
-
-      .detail-value {
-        margin-top: 6px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: var(--text);
-        word-break: break-word;
-      }
-
-      .history-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .history-item {
-        border: 1px solid var(--line);
-        border-radius: 18px;
-        padding: 16px !important;
-        margin-bottom: 12px;
-        background: linear-gradient(180deg, #ffffff 0%, #fafcff 100%);
-        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.045);
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        line-height: 1.45 !important;
-        box-sizing: border-box;
-      }
-
-      .history-top {
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-        align-items: flex-start;
-        margin-bottom: 10px;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        line-height: 1.35 !important;
-      }
-
-      .history-title {
-        display: block !important;
-        font-weight: 800;
-        color: var(--navy);
-        font-size: 0.95rem;
-        line-height: 1.35 !important;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        white-space: normal !important;
-        text-overflow: clip !important;
-        padding-top: 2px;
-        margin-bottom: 3px;
-      }
-
-      .history-date {
-        display: block !important;
-        color: var(--muted);
-        font-size: 0.82rem;
-        margin-top: 3px;
-        line-height: 1.35 !important;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        white-space: normal !important;
-      }
-
-      .history-body {
-        font-size: 0.92rem;
-        line-height: 1.5 !important;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        white-space: normal !important;
-        word-break: break-word !important;
-        padding-top: 4px;
-      }
-
-      #historyFeed .history-item,
-      #notesHistory .history-item,
-      #disciplineHistory .history-item,
-      #incidentsHistory .history-item,
-      #meetingsHistory .history-item,
-      #reviewsHistory .history-item,
-      #stayInterviewHistory .history-item {
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-      }
-
-      /* Dedicated Employee History feed fix: prevents left/top text clipping */
-      #historyFeed {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 14px !important;
-        padding: 6px 4px 10px 4px !important;
-        overflow: visible !important;
-      }
-
-      #historyFeed .history-item {
-        display: block !important;
-        position: relative !important;
-        width: 100% !important;
-        height: auto !important;
-        min-height: 72px !important;
-        padding: 18px 20px 18px 24px !important;
-        margin: 0 0 12px 0 !important;
-        overflow: visible !important;
-        transform: none !important;
-        text-indent: 0 !important;
-        border: 1px solid var(--line) !important;
-        border-radius: 18px !important;
-        background: #ffffff !important;
-        box-sizing: border-box !important;
-      }
-
-      #historyFeed .history-item * {
-        transform: none !important;
-        text-indent: 0 !important;
-        overflow: visible !important;
-        white-space: normal !important;
-        clip-path: none !important;
-      }
-
-      #historyFeed .history-top {
-        display: block !important;
-        padding: 0 !important;
-        margin: 0 0 8px 0 !important;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-      }
-
-      #historyFeed .history-title {
-        display: block !important;
-        padding: 0 !important;
-        margin: 0 0 4px 0 !important;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        line-height: 1.35 !important;
-        font-size: 15px !important;
-        font-weight: 900 !important;
-        color: var(--navy) !important;
-      }
-
-      #historyFeed .history-date {
-        display: block !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        line-height: 1.35 !important;
-        font-size: 12px !important;
-        color: var(--muted) !important;
-      }
-
-      #historyFeed .history-body {
-        display: block !important;
-        padding: 2px 0 0 0 !important;
-        margin: 0 !important;
-        height: auto !important;
-        min-height: auto !important;
-        overflow: visible !important;
-        line-height: 1.5 !important;
-        font-size: 13px !important;
-        color: #334155 !important;
-      }
-
-      .card,
-      .detail-card,
-      .history-item,
-      .kpi-card,
-      .toolbar {
-        position: relative;
-      }
-
-      .card::before,
-      .kpi-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: linear-gradient(
-          90deg,
-          rgba(255, 255, 255, 0.75),
-          rgba(255, 255, 255, 0.18),
-          rgba(255, 255, 255, 0.75)
-        );
-        pointer-events: none;
-      }
-
-      .toast-wrap {
-        position: fixed;
-        top: 16px;
-        right: 16px;
-        z-index: 120;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .toast {
-        background: white;
-        border-left: 4px solid var(--blue);
-        padding: 12px 14px;
-        border-radius: 12px;
-        box-shadow: var(--shadow);
-        min-width: 260px;
-        max-width: 360px;
-        font-size: 0.9rem;
-      }
-
-      .toast.error {
-        border-left-color: var(--red);
-      }
-
-      @media (max-width: 1180px) {
-        .kpi-grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
-
-        .layout {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      @media (max-width: 900px) {
-        .two-col,
-        .detail-grid {
-          grid-template-columns: 1fr;
-        }
-      }
-
-      @media print {
-        body {
-          margin: 0;
-          background: white;
-        }
-
-        body > *:not(#printArea) {
-          display: none !important;
-        }
-
-        #printArea {
-          display: block !important;
-          position: static !important;
-          width: 100% !important;
-          padding: 24px !important;
-          margin: 0 !important;
-          background: white !important;
-        }
-
-        #printContent {
-          display: block !important;
-          width: 100% !important;
-        }
-
-        @page {
-          size: auto;
-          margin: 0.5in;
-        }
-      }
-
-      @media (max-width: 640px) {
-        .page {
-          padding: 16px;
-        }
-
-        .app-header {
-          padding: 22px 18px;
-        }
-
-        .app-header-inner {
-          flex-direction: column;
-          align-items: flex-start;
-        }
-
-        .header-meta {
-          text-align: left;
-        }
-
-        .kpi-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .input,
-        .select {
-          min-width: 100%;
-        }
-      }
-    </style>
+    <!-- App styles loaded via Vite: src/styles/app-shell.css + src/styles/styles.css -->
   </head>
 
   <body>
@@ -1131,6 +36,12 @@
               onkeydown="if (event.key === 'Enter') signIn();"
             />
           </div>
+          <div
+            id="loginError"
+            class="login-error hidden"
+            role="alert"
+            aria-live="polite"
+          ></div>
           <div style="display: flex; gap: 10px; margin-top: 18px">
             <button class="button primary" id="loginBtn" type="button" onclick="signIn()">
               Sign In
@@ -1152,18 +63,21 @@
           <div class="header-meta">
             <div id="currentDate"></div>
             <div class="small">Signed in as: <span id="currentUserEmail">—</span></div>
-            <div class="small">Last refresh: <span id="lastRefresh">—</span></div>
+            <div class="small" id="dashboardSyncLine">
+              Last synced: <span id="lastRefresh">—</span>
+            </div>
           </div>
         </div>
       </div>
-      <div class="page">
+      <div class="page" id="dashboardTop">
         <div class="toolbar">
           <div class="toolbar-left">
             <input
               class="input"
               id="globalSearch"
-              type="text"
-              placeholder="Search employee, ID, position, department, supervisor..."
+              type="search"
+              placeholder="Search roster… or press ⌘K for commands"
+              aria-label="Search employees by name, ID, position, department, or supervisor. Press Command K or Control K for the command palette."
             />
             <select class="select" id="deptFilter">
               <option value="">All Departments</option>
@@ -1178,66 +92,81 @@
           </div>
           <div class="toolbar-right">
             <button
-              class="button primary"
+              class="button primary toolbar-primary"
               id="addEmployeeBtn"
               type="button"
+              data-nav-view="employeesView"
               onclick="openNewEmployeeForm()"
             >
               ＋ Add Employee
             </button>
             <button
-              class="button soft"
-              id="viewCandidatesBtn"
+              class="button soft toolbar-menu-btn"
+              id="toolbarMenuBtn"
               type="button"
-              onclick="openCandidatesView()"
+              aria-expanded="false"
+              aria-controls="toolbarOverflowMenu"
             >
-              Candidate Pipeline
+              More
             </button>
-            <button
-              class="button soft"
-              id="addCandidateBtn"
-              type="button"
-              onclick="openNewCandidateForm()"
-            >
-              ＋ Add Candidate
-            </button>
-            <button
-              class="button soft"
-              type="button"
-              onclick="
-                document.getElementById('documentsPage')?.scrollIntoView({ behavior: 'smooth' })
-              "
-            >
-              Documents
-            </button>
-            <button
-              class="button soft"
-              id="refreshBtn"
-              type="button"
-              onclick="loadAllDashboardData()"
-            >
-              Refresh
-            </button>
-            <button class="button soft" id="clearFiltersBtn" type="button" onclick="clearFilters()">
-              Clear Filters
-            </button>
-            <button class="button danger" id="logoutBtn" type="button" onclick="signOut()">
-              Log Out
-            </button>
+            <div class="toolbar-overflow-menu" id="toolbarOverflowMenu">
+              <button
+                class="button soft toolbar-more-item"
+                id="viewCandidatesBtn"
+                type="button"
+                data-nav-view="candidatesView"
+              >
+                Candidate Pipeline
+              </button>
+              <button
+                class="button soft toolbar-more-item"
+                id="addCandidateBtn"
+                type="button"
+                onclick="openNewCandidateForm()"
+              >
+                ＋ Add Candidate
+              </button>
+              <button
+                class="button soft toolbar-more-item"
+                type="button"
+                data-nav-view="documentsView"
+              >
+                Documents
+              </button>
+              <button
+                class="button soft toolbar-more-item"
+                id="refreshBtn"
+                type="button"
+                onclick="loadAllDashboardData()"
+              >
+                Refresh
+              </button>
+              <button
+                class="button soft toolbar-more-item"
+                id="clearFiltersBtn"
+                type="button"
+                onclick="clearFilters()"
+              >
+                Clear Filters
+              </button>
+              <button class="button danger toolbar-more-item" id="logoutBtn" type="button" onclick="signOut()">
+                Log Out
+              </button>
+            </div>
           </div>
         </div>
         <div class="kpi-grid">
-          <div class="kpi-card" id="cardActiveHC" onmouseenter="buildKpiHoverDetails()">
+          <div class="kpi-card" id="cardActiveHC">
             <div class="kpi-label">Active Headcount</div>
             <div class="kpi-value" id="kActiveHC">—</div>
             <div class="kpi-sub">Live workforce snapshot</div>
           </div>
-          <div class="kpi-card good" id="cardDepartments" onmouseenter="buildKpiHoverDetails()">
+          <div class="kpi-card good" id="cardDepartments">
             <div class="kpi-label">Departments</div>
             <div class="kpi-value" id="kDepartments">—</div>
             <div class="kpi-sub">Operational structure coverage</div>
           </div>
-          <div class="kpi-card alert" id="cardTurnoverRisk" onmouseenter="buildKpiHoverDetails()">
+          <div class="kpi-card alert" id="cardTurnoverRisk">
             <div class="kpi-label" style="display: flex; align-items: center; gap: 6px">
               Turnover Risk
               <span
@@ -1250,14 +179,14 @@
             <div class="kpi-value" id="kTurnoverRisk">—</div>
             <div class="kpi-sub" id="kTurnoverRiskSub">Weighted early-tenure retention risk</div>
           </div>
-          <div class="kpi-card warn" id="cardTurnover" onmouseenter="buildKpiHoverDetails()">
+          <div class="kpi-card warn" id="cardTurnover">
             <div class="kpi-label">Turnover Rate</div>
             <div class="kpi-value" id="kTurnover">0.0%</div>
             <div class="kpi-sub" id="kTurnoverSubtext">
               Terminated employees retained for turnover tracking
             </div>
           </div>
-          <div class="kpi-card warn" id="cardNewHireTurnover" onmouseenter="buildKpiHoverDetails()">
+          <div class="kpi-card warn" id="cardNewHireTurnover">
             <div class="kpi-label">New Hire Turnover</div>
             <div class="kpi-value" id="kNewHireTurnover">0.0%</div>
             <div class="kpi-sub" id="kNewHireTurnoverSubtext">First 90 days</div>
@@ -1265,7 +194,6 @@
           <div
             class="kpi-card alert"
             id="cardAtRiskEmployees"
-            onmouseenter="buildKpiHoverDetails()"
           >
             <div class="kpi-label">At-Risk Employees</div>
             <div class="kpi-value" id="kAtRiskEmployees">—</div>
@@ -1273,31 +201,31 @@
               No employees currently flagged from latest review scores or HR indicators
             </div>
           </div>
-          <div class="kpi-card warn" id="cardOnLeave" onmouseenter="buildKpiHoverDetails()">
+          <div class="kpi-card warn" id="cardOnLeave">
             <div class="kpi-label">Employees on Leave</div>
             <div class="kpi-value" id="kOnLeave">—</div>
             <div class="kpi-sub">Employees currently in leave status</div>
           </div>
-          <div class="kpi-card alert" id="cardOpenDiscipline" onmouseenter="buildKpiHoverDetails()">
+          <div class="kpi-card alert" id="cardOpenDiscipline">
             <div class="kpi-label">Open Discipline Cases</div>
             <div class="kpi-value" id="kOpenDiscipline">—</div>
             <div class="kpi-sub">Cases requiring HR follow-up</div>
           </div>
-          <div class="kpi-card warn" id="cardReviewsDue" onmouseenter="buildKpiHoverDetails()">
+          <div class="kpi-card warn" id="cardReviewsDue">
             <div class="kpi-label" style="display: flex; align-items: center; gap: 6px">
-              Reviews Due
+              Stay Interviews Due
               <span
                 id="kReviewsDueInfo"
                 class="info-icon"
-                title="Counts active employees whose next review date is today or earlier."
+                title="Counts active employees whose next stay interview date is today or earlier."
                 style="cursor: help; font-size: 0.8rem; color: var(--muted)"
                 >ⓘ</span
               >
             </div>
             <div class="kpi-value" id="kReviewsDue">—</div>
-            <div class="kpi-sub">Active employees with overdue reviews</div>
+            <div class="kpi-sub">Active employees with overdue stay interviews</div>
           </div>
-          <div class="kpi-card good" id="cardImpactPlayers" onmouseenter="buildKpiHoverDetails()">
+          <div class="kpi-card good" id="cardImpactPlayers">
             <div class="kpi-label">Impact Players</div>
             <div class="kpi-value" id="kImpactPlayers">—</div>
             <div class="kpi-sub">
@@ -1334,7 +262,7 @@
                 </div>
               </div>
             </div>
-            <div class="card">
+            <div class="card" id="employeeRosterCard">
               <div class="card-header">
                 <span>Employee Roster</span>
                 <span class="muted" id="empCount">Loading employees...</span>
@@ -1350,6 +278,7 @@
                         <th data-sort="position">Position</th>
                         <th data-sort="supervisor">Supervisor</th>
                         <th data-sort="hireDate">Hire Date</th>
+                        <th data-sort="terminationDate" class="roster-col-terminated">Terminated</th>
                         <th data-sort="status">Status</th>
                       </tr>
                     </thead>
@@ -1376,21 +305,21 @@
                 </div>
               </div>
             </div>
-            <div class="card">
-              <div class="card-header">Review Dashboard</div>
+            <div class="card" id="reviewDashboardCard">
+              <div class="card-header">Stay Interview Dashboard</div>
               <div class="card-body">
                 <div class="detail-grid" id="reviewDashboardSummary" style="margin-bottom: 16px">
                   <div class="detail-card">
-                    <div class="detail-label">Overdue Reviews</div>
-                    <div class="detail-value">—</div>
+                    <div class="detail-label">Overdue Interviews</div>
+                    <div class="detail-value" id="reviewDashboardOverdue" data-stay-interview-metric="overdue">—</div>
                   </div>
                   <div class="detail-card">
                     <div class="detail-label">Due in 30 Days</div>
-                    <div class="detail-value">—</div>
+                    <div class="detail-value" id="reviewDashboardDueSoon" data-stay-interview-metric="due-soon">—</div>
                   </div>
                   <div class="detail-card">
                     <div class="detail-label">Completed in 30 Days</div>
-                    <div class="detail-value">—</div>
+                    <div class="detail-value" id="reviewDashboardCompleted" data-stay-interview-metric="completed">—</div>
                   </div>
                 </div>
                 <div class="mini-table-wrap">
@@ -1399,15 +328,15 @@
                       <tr>
                         <th>Employee</th>
                         <th>Department</th>
-                        <th>Next Review</th>
-                        <th>Last Review</th>
-                        <th>Performance</th>
+                        <th>Next Stay Interview</th>
+                        <th>Last Stay Interview</th>
+                        <th>Interview Type</th>
                         <th>Status</th>
                       </tr>
                     </thead>
                     <tbody id="reviewDashboardBody">
                       <tr>
-                        <td colspan="6" class="empty">Loading review dashboard...</td>
+                        <td colspan="6" class="empty">Loading stay interview dashboard...</td>
                       </tr>
                     </tbody>
                   </table>
@@ -1441,7 +370,17 @@
               </div>
             </div>
             <div class="card">
-              <div class="card-header">Recent HR Activity</div>
+              <div class="card-header">
+                <span>Recent HR Activity</span>
+                <button
+                  id="clearRecentActivityBtn"
+                  class="button soft sm"
+                  type="button"
+                  title="Hide all current activity from this feed"
+                >
+                  Clear All
+                </button>
+              </div>
               <div class="card-body">
                 <div id="recentActivity" class="history-list">
                   <div class="empty">Loading activity...</div>
@@ -1485,8 +424,14 @@
 
           <div id="documentsList" class="documents-grid"></div>
         </section>
-        <div class="drawer-backdrop" id="drawerBackdrop" onclick="closeActiveDrawer()"></div>
+        <div
+          class="drawer-backdrop"
+          id="drawerBackdrop"
+          aria-hidden="true"
+          onclick="closeActiveDrawer()"
+        ></div>
         <aside class="drawer" id="candidateDrawer">
+          <div id="candidateDrawerChrome" class="drawer-chrome"></div>
           <div class="drawer-header">
             <div>
               <h2 class="drawer-title" id="candidateDrawerTitle">Candidate</h2>
@@ -1497,12 +442,11 @@
             </button>
           </div>
           <div class="drawer-body">
-            <div class="tabs">
+            <div class="tabs drawer-tablist" aria-label="Candidate record sections">
               <button
                 class="tab-btn active"
                 data-candidate-tab="profile"
                 type="button"
-                onclick="switchCandidateTab('profile')"
               >
                 Profile
               </button>
@@ -1510,7 +454,6 @@
                 class="tab-btn"
                 data-candidate-tab="notes"
                 type="button"
-                onclick="switchCandidateTab('notes')"
               >
                 Notes
               </button>
@@ -1569,11 +512,11 @@
                     </div>
                   </div>
                   <div class="field">
-                    <label for="candidateNotesInput">Candidate Notes</label>
+                    <label for="candidateNotesInput">Profile Summary</label>
                     <textarea
                       id="candidateNotesInput"
-                      rows="6"
-                      placeholder="Interview notes, comments, observations..."
+                      rows="4"
+                      placeholder="Short pipeline summary saved on the candidate profile..."
                     ></textarea>
                   </div>
                   <div class="candidate-actions-row">
@@ -1609,18 +552,77 @@
               </div>
             </section>
             <section class="tab-panel" id="candidate-tab-notes">
-              <div class="card">
-                <div class="card-header">Candidate Notes</div>
-                <div class="card-body">
-                  <div id="candidateNotesPreview" class="history-list">
-                    <div class="empty">Candidate notes will appear here.</div>
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Add Candidate Note</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="candidateNoteDate">Note Date</label>
+                      <input id="candidateNoteDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="candidateNoteType">Note Type</label>
+                      <select id="candidateNoteType">
+                        <option value="">Select type</option>
+                        <option value="General">General</option>
+                        <option value="Phone Screen">Phone Screen</option>
+                        <option value="Interview">Interview</option>
+                        <option value="Reference Check">Reference Check</option>
+                        <option value="Offer Discussion">Offer Discussion</option>
+                        <option value="Follow-Up">Follow-Up</option>
+                        <option value="Rejection Feedback">Rejection Feedback</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="candidateNoteText">Note</label>
+                      <textarea
+                        id="candidateNoteText"
+                        rows="7"
+                        placeholder="Interview notes, recruiter observations, follow-ups..."
+                      ></textarea>
+                    </div>
+                    <button
+                      class="button primary"
+                      id="saveCandidateNoteBtn"
+                      type="button"
+                      onclick="saveCandidateNote()"
+                    >
+                      Save Note
+                    </button>
+                    <button
+                      class="button soft hidden"
+                      id="cancelCandidateNoteEditBtn"
+                      type="button"
+                      onclick="cancelCandidateNoteEdit()"
+                    >
+                      Cancel Edit
+                    </button>
+                    <div class="muted hidden" id="candidateNoteEditStatus" style="margin-top: 10px">
+                      Editing an existing note.
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Note History</div>
+                  <div class="card-body">
+                    <div id="candidateNotesHistory" class="history-list">
+                      <div class="empty">Open a saved candidate to view note history.</div>
+                    </div>
                   </div>
                 </div>
               </div>
             </section>
           </div>
         </aside>
-        <aside class="drawer" id="employeeDrawer">
+        <aside
+          class="drawer"
+          id="employeeDrawer"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="employeeDrawerTitle"
+          aria-hidden="true"
+        >
+          <div id="employeeDrawerChrome" class="drawer-chrome"></div>
           <div class="drawer-header">
             <div>
               <h2 class="drawer-title" id="drawerTitle">Employee</h2>
@@ -1631,23 +633,21 @@
             </button>
           </div>
           <div class="drawer-body">
-            <div class="tabs">
+            <div class="tabs drawer-tablist" aria-label="Employee record sections">
               <button
                 class="tab-btn active"
                 data-tab="profile"
                 type="button"
-                onclick="switchTab('profile')"
               >
                 Profile
               </button>
-              <button class="tab-btn" data-tab="notes" type="button" onclick="switchTab('notes')">
+              <button class="tab-btn" data-tab="notes" type="button">
                 Notes
               </button>
               <button
                 class="tab-btn"
                 data-tab="discipline"
                 type="button"
-                onclick="switchTab('discipline')"
               >
                 Discipline
               </button>
@@ -1655,7 +655,6 @@
                 class="tab-btn"
                 data-tab="incidents"
                 type="button"
-                onclick="switchTab('incidents')"
               >
                 Incident Reports
               </button>
@@ -1663,7 +662,6 @@
                 class="tab-btn"
                 data-tab="stay-interviews"
                 type="button"
-                onclick="switchTab('stay-interviews')"
               >
                 Stay Interviews
               </button>
@@ -1671,7 +669,6 @@
                 class="tab-btn"
                 data-tab="meetings"
                 type="button"
-                onclick="switchTab('meetings')"
               >
                 Meetings
               </button>
@@ -1679,15 +676,13 @@
                 class="tab-btn"
                 data-tab="reviews"
                 type="button"
-                onclick="switchTab('reviews')"
               >
-                Reviews
+                Performance Review
               </button>
               <button
                 class="tab-btn"
                 data-tab="emergency"
                 type="button"
-                onclick="switchTab('emergency')"
               >
                 Emergency
               </button>
@@ -1695,7 +690,6 @@
                 class="tab-btn"
                 data-tab="onboarding"
                 type="button"
-                onclick="switchTab('onboarding')"
               >
                 Onboarding
               </button>
@@ -1703,7 +697,6 @@
                 class="tab-btn"
                 data-tab="documents"
                 type="button"
-                onclick="switchTab('documents')"
               >
                 Documents
               </button>
@@ -1711,7 +704,6 @@
                 class="tab-btn"
                 data-tab="history"
                 type="button"
-                onclick="switchTab('history')"
               >
                 History
               </button>
@@ -1719,7 +711,6 @@
                 class="tab-btn"
                 data-tab="employee"
                 type="button"
-                onclick="switchTab('employee')"
               >
                 Employee Admin
               </button>
@@ -2771,8 +1762,12 @@
                       <label for="employeeHireDateInput">Hire Date</label>
                       <input id="employeeHireDateInput" type="date" />
                     </div>
+                    <div class="field employee-termination-date-field" id="employeeTerminationDateField" hidden>
+                      <label for="employeeTerminationDateInput">Termination Date</label>
+                      <input id="employeeTerminationDateInput" type="date" />
+                    </div>
                     <div class="field">
-                      <label for="employeeNextReviewInput">Next Review Date</label>
+                      <label for="employeeNextReviewInput">Next Stay Interview Date</label>
                       <input id="employeeNextReviewInput" type="date" />
                     </div>
                     <div class="field">
@@ -2876,7 +1871,23 @@
         </aside>
       </div>
     </div>
-    <div class="toast-wrap" id="toastWrap"></div>
+    <div class="orbis-confirm-backdrop" id="orbisConfirmBackdrop" role="presentation">
+      <div
+        class="orbis-confirm-dialog"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="orbisConfirmTitle"
+        aria-describedby="orbisConfirmMessage"
+      >
+        <div class="orbis-confirm-title" id="orbisConfirmTitle">Confirm action</div>
+        <p class="orbis-confirm-message" id="orbisConfirmMessage"></p>
+        <div class="orbis-confirm-actions">
+          <button class="button soft" id="orbisConfirmCancel" type="button">Cancel</button>
+          <button class="button primary" id="orbisConfirmAccept" type="button">Confirm</button>
+        </div>
+      </div>
+    </div>
+    <div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
     <div id="printArea" class="hidden">
       <div id="printContent"></div>
     </div>

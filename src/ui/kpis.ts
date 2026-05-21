@@ -1,5 +1,7 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { hideKpiRetryBanner, showKpiRetryBanner } from './dashboardRetry';
 import {
+  daysUntilDate,
   employeeDisplayName,
   isActiveDashboardEmployee,
 } from '../services/employeeUtils';
@@ -80,6 +82,7 @@ declare global {
     renderKpiEmployeeMetrics?: () => void;
     refreshTurnoverKpisFromSupabase?: () => Promise<void>;
     buildKpiHoverDetails?: () => void;
+    initKpiHoverUi?: () => void;
     updateTurnoverRiskKpi?: (rate: number, subtext: string) => void;
     currentImpactPlayerRosterMap?: Record<string, ImpactPlayerMeta>;
     currentAtRiskRosterMap?: Record<string, AtRiskMeta>;
@@ -242,7 +245,7 @@ function buildKpiMetrics(employees: KpiEmployeeRecord[]): KpiMetric[] {
 
 function renderKpiCard(metric: KpiMetric): string {
   return `
-    <div class="kpi-card" data-kpi-id="${escapeHtml(metric.id)}" title="${escapeHtml(metric.helper || '')}">
+    <div class="kpi-card" data-kpi-id="${escapeHtml(metric.id)}" data-tooltip="${escapeHtml(metric.helper || '')}">
       <span class="kpi-label">${escapeHtml(metric.label)}</span>
       <strong id="${escapeHtml(metric.id)}">${escapeHtml(metric.value)}</strong>
       ${metric.helper ? `<small>${escapeHtml(metric.helper)}</small>` : ''}
@@ -264,14 +267,15 @@ function getKpiRoster(employees?: KpiEmployeeRecord[]): KpiEmployeeRecord[] {
     return employees;
   }
 
-  if (Array.isArray(window.currentEmployeeRoster) && window.currentEmployeeRoster.length) {
-    return window.currentEmployeeRoster;
+  // Prefer access-scoped roster (supervisor team or full company for admins).
+  const scopedEmployees = (window as { EMPLOYEES?: KpiEmployeeRecord[] }).EMPLOYEES;
+
+  if (Array.isArray(scopedEmployees)) {
+    return scopedEmployees;
   }
 
-  const legacyEmployees = (window as { EMPLOYEES?: KpiEmployeeRecord[] }).EMPLOYEES;
-
-  if (Array.isArray(legacyEmployees) && legacyEmployees.length) {
-    return legacyEmployees;
+  if (Array.isArray(window.currentEmployeeRoster) && window.currentEmployeeRoster.length) {
+    return window.currentEmployeeRoster;
   }
 
   return [];
@@ -284,6 +288,8 @@ export function renderBasicDashboardKpis(employees?: KpiEmployeeRecord[]): void 
 
   if (container) {
     container.innerHTML = metrics.map(renderKpiCard).join('');
+    updateTurnoverRateKpis(roster);
+    buildKpiHoverDetails();
     return;
   }
 
@@ -294,6 +300,8 @@ export function renderBasicDashboardKpis(employees?: KpiEmployeeRecord[]): void 
       el.setAttribute('title', metric.helper || '');
     }
   });
+
+  updateTurnoverRateKpis(roster);
 }
 
 export function refreshDashboardKpis(employees?: KpiEmployeeRecord[]): void {
@@ -406,6 +414,60 @@ function getEmployeeStatus(employee: KpiEmployeeRecord): string {
     .toUpperCase();
 }
 
+function hasTerminationDate(employee: KpiEmployeeRecord): boolean {
+  return Boolean(String(employee.termination_date || '').trim());
+}
+
+function isCompletedTermination(employee: KpiEmployeeRecord): boolean {
+  return getEmployeeStatus(employee) === 'TERMINATED' && hasTerminationDate(employee);
+}
+
+function updateTurnoverRateKpis(employees: KpiEmployeeRecord[]): void {
+  const activeEmployees = employees.filter((employee) => getEmployeeStatus(employee) === 'ACTIVE');
+  const terminatedEmployees = employees.filter((employee) => isCompletedTermination(employee));
+  const totalWorkforce = activeEmployees.length + terminatedEmployees.length;
+
+  const turnoverRate = totalWorkforce
+    ? ((terminatedEmployees.length / totalWorkforce) * 100).toFixed(1)
+    : '0.0';
+
+  setKpiText('kTurnover', `${turnoverRate}%`);
+
+  const turnoverSubtext =
+    document.getElementById('turnoverSubtext') || document.getElementById('kTurnoverSubtext');
+
+  if (turnoverSubtext) {
+    turnoverSubtext.textContent = `${terminatedEmployees.length} terminated employee${terminatedEmployees.length === 1 ? '' : 's'} retained for turnover tracking`;
+  }
+
+  const newHireTerminatedEmployees = terminatedEmployees.filter((employee) => {
+    const tenureMonths = getEmployeeTenureMonths(employee);
+    return tenureMonths >= 0 && tenureMonths <= 3;
+  });
+
+  const newHirePopulation = employees.filter((employee) => {
+    const status = getEmployeeStatus(employee);
+    const tenureMonths = getEmployeeTenureMonths(employee);
+    return (
+      tenureMonths >= 0 && tenureMonths <= 3 && (status === 'ACTIVE' || status === 'TERMINATED')
+    );
+  });
+
+  const newHireTurnoverRate = newHirePopulation.length
+    ? ((newHireTerminatedEmployees.length / newHirePopulation.length) * 100).toFixed(1)
+    : '0.0';
+
+  setKpiText('kNewHireTurnover', `${newHireTurnoverRate}%`);
+
+  const newHireTurnoverSubtext =
+    document.getElementById('newHireTurnoverSubtext') ||
+    document.getElementById('kNewHireTurnoverSubtext');
+
+  if (newHireTurnoverSubtext) {
+    newHireTurnoverSubtext.textContent = `${newHireTerminatedEmployees.length} terminated new hire${newHireTerminatedEmployees.length === 1 ? '' : 's'} in first 90 days`;
+  }
+}
+
 function getEmployeeTenureMonths(employee: KpiEmployeeRecord): number {
   const storedTenure = Number(employee.tenureMonths || employee.tenure_months || 0);
 
@@ -455,86 +517,264 @@ function pruneInactiveImpactMap(map: Record<string, ImpactPlayerMeta>): void {
 function applyTooltip(card: Element | null, text: string): void {
   if (!card) return;
 
-  card.setAttribute('title', text);
+  card.removeAttribute('title');
   card.setAttribute('data-tooltip', text);
   card.setAttribute('aria-label', text);
 }
 
-export function buildKpiHoverDetails(): void {
-  const roster = getKpiRoster();
-  const metrics = buildKpiMetrics(roster);
+function setKpiCardTooltip(
+  cardId: string,
+  lines: string[],
+  emptyText = 'No data available'
+): void {
+  const card = document.getElementById(cardId);
 
-  metrics.forEach((metric) => {
-    const card = document.querySelector(`[data-kpi-id="${metric.id}"]`);
+  if (!card) return;
 
-    if (card && metric.helper) {
-      card.setAttribute('title', metric.helper);
-    }
+  const cleaned = lines.map((value) => String(value || '').trim()).filter(Boolean);
+  const text = cleaned.length ? cleaned.join('\n') : emptyText;
+
+  applyTooltip(card, text);
+}
+
+function formatReviewDateLabel(reviewDate: Date | null): string {
+  if (!reviewDate) return '';
+
+  return reviewDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   });
+}
 
-  const employees = getKpiEmployees();
+function getEmployeeDepartmentLabel(employee: KpiEmployeeRecord): string {
+  return String(employee.dept || employee.department || '').trim();
+}
 
-  const terminatedNames = employees
-    .filter((employee) => getEmployeeStatus(employee) === 'TERMINATED')
-    .map(employeeDisplayName)
-    .filter(Boolean)
-    .sort(compareKpiText);
+function isReviewOverdue(employee: KpiEmployeeRecord, today: Date): boolean {
+  const reviewDate = getEmployeeNextReviewDate(employee);
 
-  const turnoverCard =
-    document.getElementById('cardTurnover') ||
-    document.getElementById('kTurnover')?.closest('.kpi-card, .card, [class*="kpi"]');
+  if (reviewDate) {
+    const normalized = new Date(reviewDate);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized.getTime() <= today.getTime();
+  }
 
-  applyTooltip(
-    turnoverCard,
-    terminatedNames.length
-      ? `Terminated Employees: ${terminatedNames.join(', ')}`
-      : 'No terminated employees retained for turnover tracking'
+  const days = daysUntilDate(
+    employee.next_review_date ||
+      employee.nextReviewDate ||
+      employee.nextReview ||
+      ''
   );
 
-  const turnoverRiskNames = employees
-    .filter(
-      (employee) => getEmployeeStatus(employee) === 'ACTIVE' && employeeHasAtRiskMeta(employee)
-    )
-    .map(employeeDisplayName)
+  return days !== null && days <= 0;
+}
+
+function getEmployeeNextReviewLabel(employee: KpiEmployeeRecord): string {
+  const reviewDate = getEmployeeNextReviewDate(employee);
+
+  if (reviewDate) {
+    return formatReviewDateLabel(reviewDate);
+  }
+
+  const raw = String(
+    employee.next_review_date ||
+      employee.nextReviewDate ||
+      employee.nextReview ||
+      ''
+  ).trim();
+
+  return raw;
+}
+
+export function buildKpiHoverDetails(): void {
+  const roster = getKpiRoster();
+  const employees = getDashboardKpiEmployees();
+  const activeEmployees = employees.filter((employee) =>
+    typeof window.isActiveDashboardEmployee === 'function'
+      ? window.isActiveDashboardEmployee(employee)
+      : getEmployeeStatus(employee) === 'ACTIVE'
+  );
+  const leaveEmployees = employees.filter((employee) =>
+    isOnLeaveStatus(getEmployeeStatus(employee))
+  );
+  const reviewEligibleActive = activeEmployees.filter(
+    (employee) =>
+      !String(employee.payType || employee.pay_type || '').toLowerCase().includes('contract')
+  );
+
+  setKpiCardTooltip(
+    'cardActiveHC',
+    activeEmployees.map(employeeDisplayName),
+    'No active employees'
+  );
+
+  const departmentCounts = [
+    ...new Set(activeEmployees.map(getEmployeeDepartmentLabel).filter(Boolean)),
+  ]
+    .sort(compareKpiText)
+    .map((department) => {
+      const count = activeEmployees.filter(
+        (employee) => getEmployeeDepartmentLabel(employee) === department
+      ).length;
+
+      return `${department}: ${count}`;
+    });
+
+  setKpiCardTooltip('cardDepartments', departmentCounts, 'No departments available');
+
+  const turnoverRiskEmployees = activeEmployees
+    .filter((employee) => {
+      const tenureMonths = getEmployeeTenureMonths(employee);
+      return tenureMonths > 0 && tenureMonths <= 6 && employeeHasAtRiskMeta(employee);
+    })
+    .map((employee) => {
+      const tenureMonths = getEmployeeTenureMonths(employee);
+      const name = employeeDisplayName(employee);
+
+      return tenureMonths > 0 ? `${name} • ${tenureMonths} mo` : name;
+    })
     .filter(Boolean)
     .sort(compareKpiText);
 
-  const turnoverRiskCard =
-    document.getElementById('cardTurnoverRisk') ||
-    document.getElementById('kTurnoverRisk')?.closest('.kpi-card, .card, [class*="kpi"]');
+  setKpiCardTooltip(
+    'cardTurnoverRisk',
+    turnoverRiskEmployees,
+    'No at-risk employees in early tenure'
+  );
 
-  applyTooltip(
-    turnoverRiskCard,
-    turnoverRiskNames.length
-      ? `Turnover Risk: ${turnoverRiskNames.join(', ')}`
-      : 'No at-risk employees identified'
+  const terminatedNames = employees
+    .filter((employee) => isCompletedTermination(employee))
+    .map((employee) => {
+      const name = employeeDisplayName(employee);
+      const termDate = employee.termination_date;
+      if (!name) return '';
+      if (!termDate) return name;
+      const formatted = new Date(termDate).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+      return `${name} • ${formatted}`;
+    })
+    .filter(Boolean)
+    .sort(compareKpiText);
+
+  setKpiCardTooltip(
+    'cardTurnover',
+    terminatedNames,
+    'No terminated employees retained for turnover tracking'
   );
 
   const newHireTerminatedNames = employees
     .filter((employee) => {
       const status = getEmployeeStatus(employee);
       const tenureMonths = getEmployeeTenureMonths(employee);
-      return status === 'TERMINATED' && tenureMonths >= 0 && tenureMonths <= 3;
+      return isCompletedTermination(employee) && tenureMonths >= 0 && tenureMonths <= 3;
     })
     .map(employeeDisplayName)
     .filter(Boolean)
     .sort(compareKpiText);
 
-  const newHireTurnoverCard =
-    document.getElementById('cardNewHireTurnover') ||
-    document.getElementById('kNewHireTurnover')?.closest('.kpi-card, .card, [class*="kpi"]');
-
-  applyTooltip(
-    newHireTurnoverCard,
-    newHireTerminatedNames.length
-      ? `New Hire Turnover: ${newHireTerminatedNames.join(', ')}`
-      : 'No terminated new hires in their first 90 days'
+  setKpiCardTooltip(
+    'cardNewHireTurnover',
+    newHireTerminatedNames,
+    'No terminated new hires in their first 90 days'
   );
+
+  const atRiskNames = activeEmployees
+    .filter(employeeHasAtRiskMeta)
+    .map(employeeDisplayName)
+    .filter(Boolean)
+    .sort(compareKpiText);
+
+  const atRiskCount =
+    Number(String(safeGet('kAtRiskEmployees')?.textContent || '0').trim()) || 0;
+
+  setKpiCardTooltip(
+    'cardAtRiskEmployees',
+    atRiskNames.length
+      ? atRiskNames
+      : atRiskCount > 0
+        ? [`${atRiskCount} employee${atRiskCount === 1 ? '' : 's'} flagged`]
+        : [],
+    'No employees currently flagged'
+  );
+
+  const impactPlayerNames = activeEmployees
+    .filter(isImpactPlayer)
+    .map(employeeDisplayName)
+    .filter(Boolean)
+    .sort(compareKpiText);
+
+  setKpiCardTooltip('cardImpactPlayers', impactPlayerNames, 'No impact players');
+
+  setKpiCardTooltip(
+    'cardOnLeave',
+    leaveEmployees.map(employeeDisplayName),
+    'No employees currently on leave'
+  );
+
+  const disciplineCard = document.getElementById('cardOpenDiscipline');
+  const existingDisciplineTooltip = disciplineCard?.getAttribute('data-tooltip') || '';
+  const disciplineCountText = String(safeGet('kOpenDiscipline')?.textContent || '').trim();
+  const hasRealDisciplineTooltip =
+    Boolean(existingDisciplineTooltip) &&
+    existingDisciplineTooltip !== 'No open discipline cases' &&
+    existingDisciplineTooltip !== 'Could not load discipline cases';
+
+  if (!hasRealDisciplineTooltip) {
+    if (disciplineCountText === '0') {
+      setKpiCardTooltip('cardOpenDiscipline', [], 'No open discipline cases');
+    } else if (disciplineCountText === '—' || disciplineCountText === '') {
+      setKpiCardTooltip('cardOpenDiscipline', [], 'Could not load discipline cases');
+    }
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const overdueReviews = reviewEligibleActive
+    .filter((employee) => isReviewOverdue(employee, today))
+    .map((employee) => {
+      const name = employeeDisplayName(employee);
+      const dateLabel = getEmployeeNextReviewLabel(employee);
+
+      return dateLabel ? `${name} • ${dateLabel}` : name;
+    })
+    .filter(Boolean)
+    .sort(compareKpiText);
+
+  setKpiCardTooltip('cardReviewsDue', overdueReviews, 'No overdue stay interviews');
+
+  const metrics = buildKpiMetrics(roster);
+
+  metrics.forEach((metric) => {
+    const card = document.querySelector(`[data-kpi-id="${metric.id}"]`);
+
+    if (card && metric.helper) {
+      applyTooltip(card, metric.helper);
+    }
+  });
+}
+
+let kpiHoverUiBound = false;
+
+export function initKpiHoverUi(): void {
+  buildKpiHoverDetails();
+
+  if (kpiHoverUiBound) return;
+
+  kpiHoverUiBound = true;
 }
 
 export function renderKpiEmployeeMetrics(): void {
   const employees = getDashboardKpiEmployees();
-  const activeEmployees = employees.filter((employee) => getEmployeeStatus(employee) === 'ACTIVE');
+  const activeEmployees = employees.filter((employee) =>
+    typeof window.isActiveDashboardEmployee === 'function'
+      ? window.isActiveDashboardEmployee(employee)
+      : getEmployeeStatus(employee) === 'ACTIVE'
+  );
   const reviewEligibleActive = activeEmployees.filter(
     (employee) =>
       !String(employee.payType || employee.pay_type || '').toLowerCase().includes('contract')
@@ -555,13 +795,9 @@ export function renderKpiEmployeeMetrics(): void {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const overdueReviewEmployees = reviewEligibleActive.filter((employee) => {
-    const reviewDate = getEmployeeNextReviewDate(employee);
-    if (!reviewDate) return false;
-    const normalized = new Date(reviewDate);
-    normalized.setHours(0, 0, 0, 0);
-    return normalized.getTime() <= today.getTime();
-  });
+  const overdueReviewEmployees = reviewEligibleActive.filter((employee) =>
+    isReviewOverdue(employee, today)
+  );
 
   const reviewsDue = overdueReviewEmployees.length;
 
@@ -618,16 +854,19 @@ export function renderKpiEmployeeMetrics(): void {
       .sort(compareKpiText);
 
     reviewsDueInfo.title = overdueNames.length
-      ? `Counts active non-contract employees whose next review date is today or earlier. Due now: ${overdueNames.join(', ')}`
-      : 'Counts active non-contract employees whose next review date is today or earlier. No overdue reviews right now.';
+      ? `Counts active non-contract employees whose next stay interview date is today or earlier. Due now: ${overdueNames.join(', ')}`
+      : 'Counts active non-contract employees whose next stay interview date is today or earlier. No overdue stay interviews right now.';
   }
 
+  updateTurnoverRateKpis(employees);
   buildKpiHoverDetails();
 }
 
 export async function loadSummaryMetrics(): Promise<void> {
   const atRiskMap = window.currentAtRiskRosterMap || {};
   const impactMap = window.currentImpactPlayerRosterMap || {};
+
+  hideKpiRetryBanner();
 
   try {
     const [disciplineRes, reviewsRes, incidentsRes, manualRiskRes, impactPlayerRes] =
@@ -931,6 +1170,7 @@ export async function loadSummaryMetrics(): Promise<void> {
     }
 
     renderKpiEmployeeMetrics();
+    hideKpiRetryBanner();
   } catch (err) {
     console.error(err);
     if (Array.isArray(window.EMPLOYEES) && window.EMPLOYEES.length && typeof window.renderRoster === 'function') {
@@ -944,68 +1184,30 @@ export async function loadSummaryMetrics(): Promise<void> {
     if (impactSubEl) {
       impactSubEl.textContent = 'Could not load impact player data';
     }
+
+    showKpiRetryBanner('Some KPI metrics could not be loaded from Supabase.', () => loadSummaryMetrics());
+    throw err;
   }
 }
 
 export async function refreshTurnoverKpisFromSupabase(): Promise<void> {
   try {
-    const { data, error } = await supabaseClient
-      .from('employees')
-      .select('id, first_name, last_name, status, hire_date, tenure_months');
+    let employees = getDashboardKpiEmployees();
 
-    if (error) {
-      console.warn('[KPIs] Could not refresh turnover KPIs from Supabase:', error);
-      return;
+    if (!employees.length) {
+      const { data, error } = await supabaseClient
+        .from('employees')
+        .select('id, first_name, last_name, status, hire_date, tenure_months, termination_date');
+
+      if (error) {
+        console.warn('[KPIs] Could not refresh turnover KPIs from Supabase:', error);
+        return;
+      }
+
+      employees = (Array.isArray(data) ? data : []) as KpiEmployeeRecord[];
     }
 
-    const employees = (Array.isArray(data) ? data : []) as KpiEmployeeRecord[];
-    const activeEmployees = employees.filter((employee) => getEmployeeStatus(employee) === 'ACTIVE');
-    const terminatedEmployees = employees.filter(
-      (employee) => getEmployeeStatus(employee) === 'TERMINATED'
-    );
-    const totalWorkforce = activeEmployees.length + terminatedEmployees.length;
-
-    const turnoverRate = totalWorkforce
-      ? ((terminatedEmployees.length / totalWorkforce) * 100).toFixed(1)
-      : '0.0';
-
-    setKpiText('kTurnover', `${turnoverRate}%`);
-
-    const turnoverSubtext =
-      document.getElementById('turnoverSubtext') || document.getElementById('kTurnoverSubtext');
-
-    if (turnoverSubtext) {
-      turnoverSubtext.textContent = `${terminatedEmployees.length} terminated employee${terminatedEmployees.length === 1 ? '' : 's'} retained for turnover tracking`;
-    }
-
-    const newHireTerminatedEmployees = terminatedEmployees.filter((employee) => {
-      const tenureMonths = getEmployeeTenureMonths(employee);
-      return tenureMonths >= 0 && tenureMonths <= 3;
-    });
-
-    const newHirePopulation = employees.filter((employee) => {
-      const status = getEmployeeStatus(employee);
-      const tenureMonths = getEmployeeTenureMonths(employee);
-      return (
-        tenureMonths >= 0 && tenureMonths <= 3 && (status === 'ACTIVE' || status === 'TERMINATED')
-      );
-    });
-
-    const newHireTurnoverRate = newHirePopulation.length
-      ? ((newHireTerminatedEmployees.length / newHirePopulation.length) * 100).toFixed(1)
-      : '0.0';
-
-    setKpiText('kNewHireTurnover', `${newHireTurnoverRate}%`);
-
-    const newHireTurnoverSubtext =
-      document.getElementById('newHireTurnoverSubtext') ||
-      document.getElementById('kNewHireTurnoverSubtext');
-
-    if (newHireTurnoverSubtext) {
-      newHireTurnoverSubtext.textContent = `${newHireTerminatedEmployees.length} terminated new hire${newHireTerminatedEmployees.length === 1 ? '' : 's'} in first 90 days`;
-    }
-
-    window.ALL_EMPLOYEES = employees;
+    updateTurnoverRateKpis(employees);
     buildKpiHoverDetails();
   } catch (err) {
     console.warn('[KPIs] Unexpected turnover KPI refresh failure:', err);
@@ -1015,9 +1217,7 @@ export async function refreshTurnoverKpisFromSupabase(): Promise<void> {
 window.renderBasicDashboardKpis = renderBasicDashboardKpis;
 window.refreshDashboardKpis = refreshDashboardKpis;
 window.buildKpiHoverDetails = buildKpiHoverDetails;
+window.initKpiHoverUi = initKpiHoverUi;
 window.renderKpiEmployeeMetrics = renderKpiEmployeeMetrics;
 window.loadSummaryMetrics = loadSummaryMetrics;
 window.refreshTurnoverKpisFromSupabase = refreshTurnoverKpisFromSupabase;
-
-setTimeout(() => void refreshTurnoverKpisFromSupabase(), 500);
-setTimeout(() => void refreshTurnoverKpisFromSupabase(), 1500);
