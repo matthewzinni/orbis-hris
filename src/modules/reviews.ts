@@ -1,6 +1,11 @@
 import { canAccessPerformanceReviews } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  clearCanvasSignature,
+  getCanvasSignature,
+  setCanvasSignature,
+} from '../ui/signaturePads';
 
 type ReviewScoreLabel =
   | 'Exceeds Expectations'
@@ -27,6 +32,10 @@ interface ReviewRecord {
   improvements?: string;
   employee_comments?: string;
   manager_comments?: string;
+  refused_to_sign?: boolean;
+  employee_signature?: string;
+  manager_signature?: string;
+  witness_signature?: string;
   [key: string]: unknown;
 }
 
@@ -391,6 +400,27 @@ export function editReviewRecord(review: ReviewRecord): void {
   setInputValue('reviewEmployeeComments', review.employee_comments || '');
   setInputValue('reviewManagerComments', review.manager_comments || '');
 
+  const refused = safeGet<HTMLInputElement>('reviewRefusedToSign');
+  if (refused) {
+    refused.checked = review.refused_to_sign === true;
+  }
+
+  setCanvasSignature(
+    'reviewEmployeeSignature',
+    'reviewEmployeeSigStatus',
+    String(review.employee_signature || '')
+  );
+  setCanvasSignature(
+    'reviewManagerSignature',
+    'reviewManagerSigStatus',
+    String(review.manager_signature || '')
+  );
+  setCanvasSignature(
+    'reviewWitnessSignature',
+    'reviewWitnessSigStatus',
+    String(review.witness_signature || '')
+  );
+
   const saveButton = safeGet('saveReviewBtn');
   if (saveButton) saveButton.textContent = 'Update Review';
 
@@ -470,6 +500,10 @@ export async function saveReviewRecord(): Promise<void> {
     improvements: safeGet<HTMLTextAreaElement>('reviewImprovements')?.value || '',
     employee_comments: safeGet<HTMLTextAreaElement>('reviewEmployeeComments')?.value || '',
     manager_comments: safeGet<HTMLTextAreaElement>('reviewManagerComments')?.value || '',
+    refused_to_sign: safeGet<HTMLInputElement>('reviewRefusedToSign')?.checked || false,
+    employee_signature: getCanvasSignature('reviewEmployeeSignature'),
+    manager_signature: getCanvasSignature('reviewManagerSignature'),
+    witness_signature: getCanvasSignature('reviewWitnessSignature'),
   };
 
   const reviewId = currentReviewId || window.currentReviewId;
@@ -524,6 +558,15 @@ export async function saveReviewRecord(): Promise<void> {
 
   safeGet('cancelReviewEditBtn')?.classList.add('hidden');
   safeGet('reviewEditStatus')?.classList.add('hidden');
+
+  const refused = safeGet<HTMLInputElement>('reviewRefusedToSign');
+  if (refused) {
+    refused.checked = false;
+  }
+
+  clearCanvasSignature('reviewEmployeeSignature', 'reviewEmployeeSigStatus');
+  clearCanvasSignature('reviewManagerSignature', 'reviewManagerSigStatus');
+  clearCanvasSignature('reviewWitnessSignature', 'reviewWitnessSigStatus');
 
   await refreshReviewDependentUi(employeeId);
 }

@@ -81,6 +81,18 @@ function runEmployeeTabSideEffects(tabName: string): void {
     }
   }
 
+  if (tabName === 'discipline' && typeof window.initDisciplineSignaturePads === 'function') {
+    window.initDisciplineSignaturePads();
+  }
+
+  if (tabName === 'incidents' && typeof window.initIncidentSignaturePads === 'function') {
+    window.initIncidentSignaturePads();
+  }
+
+  if (tabName === 'reviews' && typeof window.initReviewSignaturePads === 'function') {
+    window.initReviewSignaturePads();
+  }
+
   const isEmployeeAdminTab =
     tabName === 'employee' || tabName === 'admin' || tabName === 'employeeAdmin';
 

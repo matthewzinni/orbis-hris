@@ -140,8 +140,11 @@ function isBlockingModalOpen(): boolean {
   return document.getElementById('orbisConfirmBackdrop')?.classList.contains('open') === true;
 }
 
-function normalizeSearchText(value: string): string {
-  return value.toLowerCase().trim().replace(/\s+/g, ' ');
+function normalizeSearchText(value: unknown): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' ');
 }
 
 function matchesQuery(searchText: string, query: string): boolean {
@@ -358,34 +361,39 @@ async function refreshCandidateIndex(): Promise<void> {
 }
 
 function buildCommandList(query: string): CommandItem[] {
-  const combined = [...ACTION_COMMANDS, ...getEmployeeCommands(), ...getCandidateCommands()];
+  try {
+    const combined = [...ACTION_COMMANDS, ...getEmployeeCommands(), ...getCandidateCommands()];
 
-  const ranked = combined
-    .map((item) => ({
-      item,
-      score: scoreMatch(item.searchText, query),
-    }))
-    .filter((entry) => entry.score >= 0)
-    .sort((a, b) => {
-      if (b.score !== a.score) {
-        return b.score - a.score;
-      }
+    const ranked = combined
+      .map((item) => ({
+        item,
+        score: scoreMatch(item.searchText || item.title || '', query),
+      }))
+      .filter((entry) => entry.score >= 0)
+      .sort((a, b) => {
+        if (b.score !== a.score) {
+          return b.score - a.score;
+        }
 
-      if (a.item.kind !== b.item.kind) {
-        const kindOrder: Record<CommandKind, number> = {
-          action: 0,
-          employee: 1,
-          candidate: 2,
-        };
+        if (a.item.kind !== b.item.kind) {
+          const kindOrder: Record<CommandKind, number> = {
+            action: 0,
+            employee: 1,
+            candidate: 2,
+          };
 
-        return kindOrder[a.item.kind] - kindOrder[b.item.kind];
-      }
+          return kindOrder[a.item.kind] - kindOrder[b.item.kind];
+        }
 
-      return a.item.title.localeCompare(b.item.title);
-    })
-    .map((entry) => entry.item);
+        return String(a.item.title || '').localeCompare(String(b.item.title || ''));
+      })
+      .map((entry) => entry.item);
 
-  return ranked.slice(0, 40);
+    return ranked.slice(0, 40);
+  } catch (error) {
+    console.error('[CommandPalette] Failed to build command list:', error);
+    return ACTION_COMMANDS;
+  }
 }
 
 function renderResults(): void {
@@ -429,8 +437,8 @@ function renderResults(): void {
     .join('');
 }
 
-function escapeHtml(value: string): string {
-  return value
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -486,35 +494,44 @@ export function openCommandPalette(): void {
     return;
   }
 
-  mountPaletteDom();
+  try {
+    mountPaletteDom();
 
-  const overlay = getOverlay();
-  const input = getInput();
+    const overlay = getOverlay();
+    const input = getInput();
 
-  if (!overlay || !input) {
-    return;
-  }
-
-  paletteOpen = true;
-  overlay.classList.remove('hidden');
-  document.body.classList.add('orbis-modal-open');
-
-  candidateRows = [];
-  applyFilter('');
-
-  void refreshCandidateIndex().then(() => {
-    if (!paletteOpen) {
+    if (!overlay || !input) {
       return;
     }
 
-    applyFilter(input.value);
-  });
+    paletteOpen = true;
+    overlay.classList.remove('hidden');
+    document.body.classList.add('orbis-modal-open');
 
-  requestAnimationFrame(() => {
-    input.value = '';
-    input.focus();
-    input.select();
-  });
+    candidateRows = [];
+    applyFilter('');
+
+    void refreshCandidateIndex().then(() => {
+      if (!paletteOpen) {
+        return;
+      }
+
+      applyFilter(input.value || '');
+    });
+
+    requestAnimationFrame(() => {
+      input.value = '';
+      input.focus();
+      input.select();
+    });
+  } catch (error) {
+    console.error('[CommandPalette] Could not open:', error);
+    paletteOpen = false;
+
+    if (typeof window.showToast === 'function') {
+      window.showToast('Command palette is unavailable right now.', 'error');
+    }
+  }
 }
 
 export function closeCommandPalette(): void {

@@ -760,9 +760,20 @@
                     >
                       Save Note
                     </button>
+                    <button
+                      class="button soft hidden"
+                      id="cancelNoteEditBtn"
+                      type="button"
+                      onclick="cancelNoteEdit()"
+                    >
+                      Cancel Edit
+                    </button>
                     <button class="button soft" type="button" onclick="printNote()">
                       Print / PDF
                     </button>
+                    <div class="muted hidden" id="noteEditStatus" style="margin-top: 10px">
+                      Editing saved note
+                    </div>
                   </div>
                 </div>
                 <div class="card">
@@ -1088,19 +1099,103 @@
                         "
                       >
                         <div>
-                          <div style="border-bottom: 1px solid #cbd5e1; height: 36px"></div>
+                          <canvas
+                            id="incidentEmployeeSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="incidentEmployeeSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig(
+                                  'incidentEmployeeSignature',
+                                  'incidentEmployeeSigStatus'
+                                )
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
                           <div style="font-size: 12px; color: #667085; margin-top: 4px">
                             Employee Signature
                           </div>
                         </div>
                         <div>
-                          <div style="border-bottom: 1px solid #cbd5e1; height: 36px"></div>
+                          <canvas
+                            id="incidentManagerSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="incidentManagerSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('incidentManagerSignature', 'incidentManagerSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
                           <div style="font-size: 12px; color: #667085; margin-top: 4px">
                             Manager Signature
                           </div>
                         </div>
                         <div>
-                          <div style="border-bottom: 1px solid #cbd5e1; height: 36px"></div>
+                          <canvas
+                            id="incidentWitnessSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="incidentWitnessSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('incidentWitnessSignature', 'incidentWitnessSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
                           <div style="font-size: 12px; color: #667085; margin-top: 4px">
                             Witness Signature
                           </div>
@@ -1504,19 +1599,100 @@
                         "
                       >
                         <div>
-                          <div style="border-bottom: 1px solid #cbd5e1; height: 36px"></div>
+                          <canvas
+                            id="reviewEmployeeSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="reviewEmployeeSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('reviewEmployeeSignature', 'reviewEmployeeSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
                           <div style="font-size: 12px; color: #667085; margin-top: 4px">
                             Employee Signature
                           </div>
                         </div>
                         <div>
-                          <div style="border-bottom: 1px solid #cbd5e1; height: 36px"></div>
+                          <canvas
+                            id="reviewManagerSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="reviewManagerSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('reviewManagerSignature', 'reviewManagerSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
                           <div style="font-size: 12px; color: #667085; margin-top: 4px">
                             Manager Signature
                           </div>
                         </div>
                         <div>
-                          <div style="border-bottom: 1px solid #cbd5e1; height: 36px"></div>
+                          <canvas
+                            id="reviewWitnessSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="reviewWitnessSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('reviewWitnessSignature', 'reviewWitnessSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
                           <div style="font-size: 12px; color: #667085; margin-top: 4px">
                             Witness Signature
                           </div>

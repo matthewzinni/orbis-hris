@@ -77,6 +77,7 @@ import './ui/loadingUi';
 import './ui/dashboardRetry';
 import './ui/confirmModal';
 import './ui/commandPalette';
+import './ui/signaturePads';
 import './ui/kpis';
 import './ui/employeeRoster';
 

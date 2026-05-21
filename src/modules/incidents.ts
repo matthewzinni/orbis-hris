@@ -1,5 +1,10 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  clearCanvasSignature,
+  getCanvasSignature,
+  setCanvasSignature,
+} from '../ui/signaturePads';
 
 interface IncidentRecord {
   id?: string;
@@ -10,6 +15,10 @@ interface IncidentRecord {
   description?: string;
   follow_up?: string;
   status?: string;
+  refused_to_sign?: boolean;
+  employee_signature?: string;
+  manager_signature?: string;
+  witness_signature?: string;
   created_at?: string;
   created_by?: string;
   [key: string]: unknown;
@@ -261,6 +270,27 @@ export function editIncidentRecord(record: IncidentRecord): void {
   setInputValue('incidentCorrectiveAction', record.follow_up || '');
   setInputValue('incidentStatus', record.status || '');
 
+  const refused = safeGet<HTMLInputElement>('incidentRefusedToSign');
+  if (refused) {
+    refused.checked = record.refused_to_sign === true;
+  }
+
+  setCanvasSignature(
+    'incidentEmployeeSignature',
+    'incidentEmployeeSigStatus',
+    String(record.employee_signature || '')
+  );
+  setCanvasSignature(
+    'incidentManagerSignature',
+    'incidentManagerSigStatus',
+    String(record.manager_signature || '')
+  );
+  setCanvasSignature(
+    'incidentWitnessSignature',
+    'incidentWitnessSigStatus',
+    String(record.witness_signature || '')
+  );
+
   const saveButton = safeGet('saveIncidentBtn');
   if (saveButton) saveButton.textContent = 'Update Incident Record';
 
@@ -330,7 +360,11 @@ export async function saveIncidentRecord(): Promise<void> {
       safeGet<HTMLTextAreaElement>('incidentCorrectiveAction')?.value ||
       safeGet<HTMLTextAreaElement>('incidentFollowUp')?.value ||
       '',
-    status: safeGet<HTMLInputElement>('incidentStatus')?.value || '',
+    status: safeGet<HTMLSelectElement>('incidentStatus')?.value || '',
+    refused_to_sign: safeGet<HTMLInputElement>('incidentRefusedToSign')?.checked || false,
+    employee_signature: getCanvasSignature('incidentEmployeeSignature'),
+    manager_signature: getCanvasSignature('incidentManagerSignature'),
+    witness_signature: getCanvasSignature('incidentWitnessSignature'),
   };
 
   if (!incidentPayload.incident_type && !incidentPayload.description) {
@@ -403,6 +437,15 @@ export async function saveIncidentRecord(): Promise<void> {
   setInputValue('incidentDescription', '');
   setInputValue('incidentCorrectiveAction', '');
   setInputValue('incidentFollowUp', '');
+
+  const refused = safeGet<HTMLInputElement>('incidentRefusedToSign');
+  if (refused) {
+    refused.checked = false;
+  }
+
+  clearCanvasSignature('incidentEmployeeSignature', 'incidentEmployeeSigStatus');
+  clearCanvasSignature('incidentManagerSignature', 'incidentManagerSigStatus');
+  clearCanvasSignature('incidentWitnessSignature', 'incidentWitnessSigStatus');
 
   await refreshIncidentDependentUi(reloadEmployeeId);
 }

@@ -1,5 +1,10 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  clearCanvasSignature,
+  getCanvasSignature,
+  setCanvasSignature,
+} from '../ui/signaturePads';
 
 interface DisciplineRecord {
   id?: string;
@@ -140,32 +145,6 @@ function activateDisciplineTab(): void {
   document.querySelectorAll('.tab-panel').forEach((panel) => {
     panel.classList.toggle('active', panel.id === 'tab-discipline');
   });
-}
-
-function getCanvasSignature(canvasId: string): string {
-  const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
-
-  return canvas?.dataset?.signature || '';
-}
-
-function setCanvasSignature(canvasId: string, statusId: string, signature: string): void {
-  const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
-  const status = safeGet(statusId);
-
-  if (!canvas) return;
-
-  if (signature) {
-    canvas.dataset.signature = signature;
-    if (status) status.textContent = 'Signed';
-    return;
-  }
-
-  delete canvas.dataset.signature;
-  if (status) status.textContent = 'Not signed';
-}
-
-function clearCanvasSignature(canvasId: string, statusId: string): void {
-  setCanvasSignature(canvasId, statusId, '');
 }
 
 function resetDisciplineForm(): void {

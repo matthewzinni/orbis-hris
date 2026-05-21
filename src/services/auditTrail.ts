@@ -1,4 +1,6 @@
-// Local audit trail (legacy localStorage bridge)
+// Employee audit trail — Supabase primary, localStorage fallback
+
+import { supabaseClient } from './supabaseClient';
 
 type EmployeeRow = Record<string, unknown>;
 
@@ -16,6 +18,66 @@ function normalizeEmployee(row: EmployeeRow): EmployeeRow {
     return window.normalizeEmployee(row) as EmployeeRow;
   }
   return row;
+}
+
+function getEmployeeDisplayName(employee: EmployeeRow | null | undefined): string {
+  if (!employee) {
+    return '';
+  }
+
+  if (typeof window.employeeDisplayName === 'function') {
+    return window.employeeDisplayName(employee as Parameters<typeof window.employeeDisplayName>[0]);
+  }
+
+  return `${employee.first || employee.first_name || ''} ${employee.last || employee.last_name || ''}`.trim();
+}
+
+function writeLocalAuditEntry(entry: AuditEntry): void {
+  try {
+    const raw = localStorage.getItem('btw_hris_audit_trail');
+    const audit = raw ? JSON.parse(raw) : [];
+    const list = Array.isArray(audit) ? (audit as AuditEntry[]) : [];
+    list.unshift(entry);
+    localStorage.setItem('btw_hris_audit_trail', JSON.stringify(list.slice(0, 75)));
+  } catch (err) {
+    console.warn('[Audit] Could not write local audit fallback:', err);
+  }
+}
+
+async function writeSupabaseAuditEntry(
+  action: string,
+  employee: EmployeeRow | null | undefined,
+  details: string
+): Promise<boolean> {
+  const employeeId = String(employee?.id || employee?.dbId || employee?.employee_id || '').trim();
+
+  if (!employeeId) {
+    return false;
+  }
+
+  const payload = {
+    employee_id: employeeId,
+    employee_name: getEmployeeDisplayName(employee),
+    action_type: String(action || 'employee_update').trim(),
+    fields_changed: [{ summary: details }],
+    changed_at: new Date().toISOString(),
+    changed_by:
+      String(
+        (window as { currentUser?: { email?: string } }).currentUser?.email ||
+          window.currentUserEmail ||
+          'Current user'
+      ).trim() || 'Current user',
+    metadata: { details, userRole: window.currentUserRole || 'user' },
+  };
+
+  const { error } = await supabaseClient.from('employee_audit_logs').insert([payload]);
+
+  if (error) {
+    console.warn('[Audit] Supabase audit insert failed:', error);
+    return false;
+  }
+
+  return true;
 }
 
 export function getAuditTrail(): AuditEntry[] {
@@ -69,46 +131,45 @@ export function buildEmployeeChangeLog(
     .join(' | ');
 }
 
-export function recordAuditEvent(
+export async function recordAuditEvent(
   action: string,
   employee: EmployeeRow | null | undefined,
   details = ''
-): void {
-  try {
-    const cleanDetails = String(details || '').trim();
-    if (!cleanDetails || cleanDetails === 'Blank → Blank') {
-      console.warn('Skipped empty audit log entry.');
-      return;
-    }
+): Promise<void> {
+  const cleanDetails = String(details || '').trim();
 
-    const audit = getAuditTrail();
-    const entry: AuditEntry = {
-      action,
-      employeeId: String(employee?.id || employee?.dbId || ''),
-      employeeName: employee
-        ? `${employee.first || employee.first_name || ''} ${employee.last || employee.last_name || ''}`.trim()
-        : '',
-      details: cleanDetails,
-      userRole: window.currentUserRole || 'user',
-      timestamp: new Date().toISOString(),
-    };
+  if (!cleanDetails || cleanDetails === 'Blank → Blank') {
+    console.warn('Skipped empty audit log entry.');
+    return;
+  }
 
-    audit.unshift(entry);
-    localStorage.setItem('btw_hris_audit_trail', JSON.stringify(audit.slice(0, 75)));
-  } catch (err) {
-    console.error('Could not write audit trail.', err);
+  const entry: AuditEntry = {
+    action,
+    employeeId: String(employee?.id || employee?.dbId || employee?.employee_id || ''),
+    employeeName: getEmployeeDisplayName(employee),
+    details: cleanDetails,
+    userRole: window.currentUserRole || 'user',
+    timestamp: new Date().toISOString(),
+  };
+
+  const savedToSupabase = await writeSupabaseAuditEntry(action, employee, cleanDetails);
+
+  if (!savedToSupabase) {
+    writeLocalAuditEntry(entry);
   }
 }
 
 declare global {
   interface Window {
+    currentUserEmail?: string;
+    currentUserRole?: string;
     getAuditTrail?: () => AuditEntry[];
     buildEmployeeChangeLog?: (oldEmployee: EmployeeRow, newEmployee: EmployeeRow) => string;
     recordAuditEvent?: (
       action: string,
       employee: EmployeeRow | null | undefined,
       details?: string
-    ) => void;
+    ) => void | Promise<void>;
   }
 }
 

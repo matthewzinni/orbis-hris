@@ -9,3 +9,6 @@ tools/.env.python
 supabase/.branches
 supabase/.temp
 .mcp-*.json
+
+# Vite build output (Vercel builds on deploy)
+dist/
