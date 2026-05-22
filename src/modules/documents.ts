@@ -871,3 +871,4 @@ console.log('documents.ts module loaded');
 console.log('Documents module using buckets:', DOCUMENT_BUCKETS);
 
 window.initializeDocumentsLibrary = initializeDocumentsLibrary;
+window.loadDocuments = loadDocuments;

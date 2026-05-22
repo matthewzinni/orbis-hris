@@ -54,108 +54,119 @@
       </div>
     </div>
     <div id="appView" class="hidden">
-      <div class="app-header">
-        <div class="app-header-inner">
-          <div>
-            <h1 class="app-title">BTW Global Orbis</h1>
-            <div class="app-subtitle">HR Intelligence & Operations System</div>
-          </div>
-          <div class="header-meta">
-            <div id="currentDate"></div>
-            <div class="small">Signed in as: <span id="currentUserEmail">—</span></div>
-            <div class="small" id="dashboardSyncLine">
-              Last synced: <span id="lastRefresh">—</span>
+      <div class="orbis-app-shell">
+        <aside class="orbis-sidebar" aria-label="Primary navigation">
+          <div class="orbis-sidebar-brand">
+            <div class="orbis-sidebar-logo" aria-hidden="true">BTW</div>
+            <div>
+              <div class="orbis-sidebar-title">Orbis</div>
+              <div class="orbis-sidebar-subtitle">HR Intelligence</div>
             </div>
           </div>
-        </div>
-      </div>
-      <div class="page" id="dashboardTop">
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <input
-              class="input"
-              id="globalSearch"
-              type="search"
-              placeholder="Search roster… or press ⌘K for commands"
-              aria-label="Search employees by name, ID, position, department, or supervisor. Press Command K or Control K for the command palette."
-            />
-            <select class="select" id="deptFilter">
-              <option value="">All Departments</option>
-            </select>
-            <select class="select" id="statusFilter">
-              <option value="">All Statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-              <option value="LEAVE">Leave</option>
-              <option value="TERMINATED">Terminated</option>
-            </select>
-          </div>
-          <div class="toolbar-right">
+          <nav class="orbis-sidebar-nav" aria-label="Main navigation">
             <button
-              class="button primary toolbar-primary"
-              id="addEmployeeBtn"
+              class="orbis-nav-item active"
               type="button"
-              data-nav-view="employeesView"
-              onclick="openNewEmployeeForm()"
+              data-nav-view="dashboardView"
+              aria-current="page"
             >
-              ＋ Add Employee
+              Dashboard
+            </button>
+            <button class="orbis-nav-item" type="button" data-nav-view="employeesView">
+              Employees
+            </button>
+            <button class="orbis-nav-item" type="button" data-nav-view="candidatesView">
+              Candidates
+            </button>
+            <button class="orbis-nav-item" type="button" data-nav-view="documentsView">
+              Documents
             </button>
             <button
-              class="button soft toolbar-menu-btn"
-              id="toolbarMenuBtn"
+              class="orbis-nav-item"
               type="button"
-              aria-expanded="false"
-              aria-controls="toolbarOverflowMenu"
+              data-nav-view="operationsView"
+              data-operations-access
             >
-              More
+              Operations
             </button>
-            <div class="toolbar-overflow-menu" id="toolbarOverflowMenu">
+            <button
+              class="orbis-nav-item admin-only hidden"
+              type="button"
+              data-nav-view="reportsView"
+              data-admin-only
+            >
+              Reports
+            </button>
+            <button
+              class="orbis-nav-item admin-only hidden"
+              type="button"
+              data-nav-view="settingsView"
+              data-admin-only
+            >
+              Admin
+            </button>
+          </nav>
+        </aside>
+        <div class="orbis-workspace">
+          <header class="orbis-topbar">
+            <div class="orbis-topbar-left">
+              <h1 class="orbis-page-title" id="dashboardTitle">Dashboard</h1>
+            </div>
+            <div class="orbis-topbar-right">
+              <span class="orbis-topbar-meta-item" id="currentDate"></span>
+              <span class="orbis-topbar-meta-item">
+                Signed in as <strong id="currentUserEmail">—</strong>
+              </span>
+              <span class="orbis-topbar-meta-item" id="dashboardSyncLine">
+                Last synced: <span id="lastRefresh">—</span>
+              </span>
+              <div class="orbis-alerts-wrap">
+                <button
+                  type="button"
+                  class="button soft orbis-icon-btn"
+                  id="orbisAlertsBtn"
+                  aria-label="HR alerts"
+                  aria-expanded="false"
+                  aria-controls="orbisAlertsPanel"
+                  title="HR alerts"
+                >
+                  <span class="orbis-alerts-icon" aria-hidden="true">🔔</span>
+                  <span class="orbis-alerts-badge hidden" id="orbisAlertsBadge"></span>
+                </button>
+                <div
+                  id="orbisAlertsPanel"
+                  class="orbis-alerts-panel hidden"
+                  role="region"
+                  aria-label="HR alerts"
+                >
+                  <div class="orbis-alerts-panel-head">Priority alerts</div>
+                  <div id="orbisAlertsList" class="orbis-alerts-list">
+                    <div class="orbis-alerts-empty muted">Loading alerts…</div>
+                  </div>
+                </div>
+              </div>
               <button
-                class="button soft toolbar-more-item"
-                id="viewCandidatesBtn"
                 type="button"
-                data-nav-view="candidatesView"
-              >
-                Candidate Pipeline
-              </button>
-              <button
-                class="button soft toolbar-more-item"
-                id="addCandidateBtn"
-                type="button"
-                onclick="openNewCandidateForm()"
-              >
-                ＋ Add Candidate
-              </button>
-              <button
-                class="button soft toolbar-more-item"
-                type="button"
-                data-nav-view="documentsView"
-              >
-                Documents
-              </button>
-              <button
-                class="button soft toolbar-more-item"
+                class="button soft"
                 id="refreshBtn"
-                type="button"
-                onclick="loadAllDashboardData()"
+                onclick="refreshOrbisWorkspace()"
               >
                 Refresh
               </button>
-              <button
-                class="button soft toolbar-more-item"
-                id="clearFiltersBtn"
-                type="button"
-                onclick="clearFilters()"
-              >
-                Clear Filters
-              </button>
-              <button class="button danger toolbar-more-item" id="logoutBtn" type="button" onclick="signOut()">
-                Log Out
+              <button type="button" class="button danger" id="logoutBtn" onclick="signOut()">
+                Log out
               </button>
             </div>
-          </div>
-        </div>
-        <div class="kpi-grid">
+          </header>
+          <main id="orbisAppMain" class="orbis-app-main">
+        <section
+          id="orbisSectionDashboard"
+          class="orbis-app-section active"
+          data-section="dashboardView"
+          aria-hidden="false"
+        >
+          <div class="page" id="dashboardTop">
+            <div class="kpi-grid dashboard-kpi-grid">
           <div class="kpi-card" id="cardActiveHC">
             <div class="kpi-label">Active Headcount</div>
             <div class="kpi-value" id="kActiveHC">—</div>
@@ -233,61 +244,47 @@
             </div>
           </div>
         </div>
-        <div class="layout">
-          <div class="stack">
-            <div class="card" id="candidatesCard">
-              <div class="card-header">
-                <span>Candidate Pipeline</span>
-                <span class="muted" id="candidateCount">Loading candidates...</span>
-              </div>
+            <div class="card dashboard-quick-links" id="dashboardQuickLinks">
+              <div class="card-header">Quick links</div>
               <div class="card-body">
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Position</th>
-                        <th>Stage</th>
-                        <th>Source</th>
-                        <th>Applied Date</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="candidateBody">
-                      <tr>
-                        <td colspan="6" class="empty">Loading candidates...</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div class="dashboard-quick-links-grid">
+                  <button class="button soft" type="button" data-nav-view="employeesView">
+                    Employee roster
+                  </button>
+                  <button class="button soft" type="button" data-nav-view="candidatesView">
+                    Candidate pipeline
+                  </button>
+                  <button
+                    class="button soft"
+                    id="addCandidateBtn"
+                    type="button"
+                    onclick="openNewCandidateForm()"
+                  >
+                    ＋ Add candidate
+                  </button>
+                  <button class="button soft" type="button" data-nav-view="documentsView">
+                    Document library
+                  </button>
+                  <button
+                    class="button soft"
+                    type="button"
+                    data-nav-view="operationsView"
+                    data-operations-access
+                  >
+                    Operations center
+                  </button>
+                  <button
+                    class="button soft admin-only hidden"
+                    type="button"
+                    data-nav-view="reportsView"
+                    data-admin-only
+                  >
+                    Reports
+                  </button>
                 </div>
               </div>
             </div>
-            <div class="card" id="employeeRosterCard">
-              <div class="card-header">
-                <span>Employee Roster</span>
-                <span class="muted" id="empCount">Loading employees...</span>
-              </div>
-              <div class="card-body">
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th data-sort="id">ID</th>
-                        <th data-sort="name">Name</th>
-                        <th data-sort="dept">Department</th>
-                        <th data-sort="position">Position</th>
-                        <th data-sort="supervisor">Supervisor</th>
-                        <th data-sort="hireDate">Hire Date</th>
-                        <th data-sort="terminationDate" class="roster-col-terminated">Terminated</th>
-                        <th data-sort="status">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody id="employeeRosterBody"></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div class="layout layout-dashboard-overview">
           <div class="stack">
             <div class="card">
               <div class="card-header">Leadership Snapshot</div>
@@ -389,6 +386,285 @@
             </div>
           </div>
         </div>
+          </div>
+        </section>
+
+        <section
+          id="orbisSectionEmployees"
+          class="orbis-app-section hidden"
+          data-section="employeesView"
+          aria-hidden="true"
+        >
+          <div class="page">
+            <div class="toolbar employees-toolbar">
+              <div class="toolbar-left">
+                <input
+                  class="input"
+                  id="globalSearch"
+                  type="search"
+                  placeholder="Search roster… or press ⌘K for commands"
+                  aria-label="Search employees by name, ID, position, department, or supervisor. Press Command K or Control K for the command palette."
+                />
+                <select class="select" id="deptFilter">
+                  <option value="">All Departments</option>
+                </select>
+                <select class="select" id="statusFilter">
+                  <option value="">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="LEAVE">Leave</option>
+                  <option value="TERMINATED">Terminated</option>
+                </select>
+              </div>
+              <div class="toolbar-right">
+                <button
+                  class="button primary toolbar-primary"
+                  id="addEmployeeBtn"
+                  type="button"
+                  onclick="openNewEmployeeForm()"
+                >
+                  ＋ Add Employee
+                </button>
+                <button
+                  class="button soft"
+                  id="clearFiltersBtn"
+                  type="button"
+                  onclick="clearFilters()"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+            <div class="card" id="employeeRosterCard">
+              <div class="card-header">
+                <span>Employee Roster</span>
+                <span class="muted" id="empCount">Loading employees...</span>
+              </div>
+              <div class="card-body">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th data-sort="id">ID</th>
+                        <th data-sort="name">Name</th>
+                        <th data-sort="dept">Department</th>
+                        <th data-sort="position">Position</th>
+                        <th data-sort="supervisor">Supervisor</th>
+                        <th data-sort="hireDate">Hire Date</th>
+                        <th data-sort="terminationDate" class="roster-col-terminated">Terminated</th>
+                        <th data-sort="status">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="employeeRosterBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="orbisSectionCandidates"
+          class="orbis-app-section hidden"
+          data-section="candidatesView"
+          aria-hidden="true"
+        >
+          <div class="page">
+            <div class="toolbar candidates-toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Candidate pipeline</span>
+              </div>
+              <div class="toolbar-right">
+                <button
+                  class="button primary"
+                  id="addCandidateToolbarBtn"
+                  type="button"
+                  onclick="openNewCandidateForm()"
+                >
+                  ＋ Add Candidate
+                </button>
+              </div>
+            </div>
+            <div class="card" id="candidatesCard">
+              <div class="card-header">
+                <span>Candidate Pipeline</span>
+                <span class="muted" id="candidateCount">Loading candidates...</span>
+              </div>
+              <div class="card-body">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Position</th>
+                        <th>Stage</th>
+                        <th>Source</th>
+                        <th>Applied Date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="candidateBody">
+                      <tr>
+                        <td colspan="6" class="empty">Loading candidates...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="orbisSectionOperations"
+          class="orbis-app-section hidden"
+          data-section="operationsView"
+          aria-hidden="true"
+          data-operations-access
+        >
+        <section id="operationsCenterTop" class="page" data-operations-access>
+          <div class="page-header">
+            <div>
+              <h1>Operations Resolution Center</h1>
+              <p>
+                Track software problems, workflow bottlenecks, equipment failures, and process
+                improvement items across the company.
+              </p>
+            </div>
+            <button
+              class="button soft"
+              id="refreshOperationsIssuesBtn"
+              type="button"
+            >
+              Refresh
+            </button>
+            <button class="button soft" id="exportOperationsIssuesBtn" type="button">
+              Export CSV
+            </button>
+            <button
+              class="button primary"
+              id="newOperationsIssueBtn"
+              type="button"
+            >
+              ＋ Report Issue
+            </button>
+          </div>
+
+          <div class="kpi-grid" id="operationsKpiGrid">
+            <div class="kpi-card alert" id="cardOpsOpenIssues">
+              <div class="kpi-label">Open Issues</div>
+              <div class="kpi-value" id="kOpsOpenIssues">—</div>
+              <div class="kpi-sub">Active operational issues</div>
+            </div>
+            <div class="kpi-card alert" id="cardOpsCritical">
+              <div class="kpi-label">Critical Issues</div>
+              <div class="kpi-value" id="kOpsCritical">—</div>
+              <div class="kpi-sub">Urgent or critical impact</div>
+            </div>
+            <div class="kpi-card warn" id="cardOpsAging">
+              <div class="kpi-label">Aging Issues</div>
+              <div class="kpi-value" id="kOpsAging">—</div>
+              <div class="kpi-sub">Open 7+ days</div>
+            </div>
+            <div class="kpi-card warn" id="cardOpsRecurring">
+              <div class="kpi-label">Recurring Problems</div>
+              <div class="kpi-value" id="kOpsRecurring">—</div>
+              <div class="kpi-sub">Flagged as recurring</div>
+            </div>
+            <div class="kpi-card good" id="cardOpsAvgResolution">
+              <div class="kpi-label">Avg Resolution Time</div>
+              <div class="kpi-value" id="kOpsAvgResolution">—</div>
+              <div class="kpi-sub">Resolved issues (90 days)</div>
+            </div>
+            <div class="kpi-card" id="cardOpsTopSystem">
+              <div class="kpi-label">Top Reported System</div>
+              <div class="kpi-value" id="kOpsTopSystem" style="font-size: 1.1rem">—</div>
+              <div class="kpi-sub">Most frequent system affected</div>
+            </div>
+          </div>
+
+          <div class="layout">
+            <div class="stack">
+              <div class="card" id="operationsIssuesCard">
+                <div class="card-header">
+                  <span>Operations Issues</span>
+                  <span class="muted" id="operationsIssuesCount">Loading issues...</span>
+                </div>
+                <div class="card-body">
+                  <div class="toolbar" style="margin-bottom: 12px">
+                    <div class="toolbar-left">
+                      <input
+                        class="input"
+                        id="opsIssuesSearchInput"
+                        type="search"
+                        placeholder="Search issues..."
+                      />
+                      <select class="select" id="opsIssuesStatusFilter">
+                        <option value="">All Statuses</option>
+                      </select>
+                      <select class="select" id="opsIssuesCategoryFilter">
+                        <option value="">All Categories</option>
+                      </select>
+                      <select class="select" id="opsIssuesDepartmentFilter">
+                        <option value="">All Departments</option>
+                      </select>
+                      <select class="select" id="opsIssuesPriorityFilter">
+                        <option value="">All Priorities</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Category</th>
+                          <th>Department</th>
+                          <th>Priority</th>
+                          <th>Status</th>
+                          <th>Assigned To</th>
+                          <th>Created</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="operationsIssuesBody">
+                        <tr>
+                          <td colspan="8" class="empty">Loading operational issues...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="stack">
+              <div class="card">
+                <div class="card-header">Issues by Department</div>
+                <div class="card-body">
+                  <div id="operationsDeptBreakdown" class="history-list">
+                    <div class="empty">Loading department breakdown...</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Software with Most Complaints</div>
+                <div class="card-body">
+                  <div id="operationsSoftwareBreakdown" class="history-list">
+                    <div class="empty">Loading software breakdown...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        </section>
+
+        <section
+          id="orbisSectionDocuments"
+          class="orbis-app-section hidden"
+          data-section="documentsView"
+          aria-hidden="true"
+        >
         <section id="documentsPage" class="page">
           <div class="page-header">
             <div>
@@ -424,7 +700,372 @@
 
           <div id="documentsList" class="documents-grid"></div>
         </section>
-        <div
+        </section>
+
+        <section
+          id="orbisSectionReports"
+          class="orbis-app-section hidden admin-only"
+          data-section="reportsView"
+          aria-hidden="true"
+          data-admin-only
+        >
+          <div class="page" id="reportsPage">
+            <div class="card hidden" id="reportsAdminGate">
+              <div class="card-header">Admin access required</div>
+              <div class="card-body">
+                <p class="muted" style="margin: 0">
+                  Reports and analytics are limited to Orbis admin users.
+                </p>
+              </div>
+            </div>
+            <div id="reportsAdminContent">
+            <div class="toolbar reports-toolbar">
+              <div class="toolbar-left">
+                <span class="muted">HR metrics and exports for your current scope</span>
+              </div>
+              <div class="toolbar-right">
+                <button class="button soft" id="reportsRefreshBtn" type="button">Refresh</button>
+                <button class="button soft" id="exportReportsHeadcountCsvBtn" type="button">
+                  Export headcount CSV
+                </button>
+                <button class="button soft" id="exportReportsStayCsvBtn" type="button">
+                  Export stay interviews CSV
+                </button>
+                <button class="button soft" id="exportReportsErCsvBtn" type="button">
+                  Export ER trends CSV
+                </button>
+                <button class="button soft" id="printReportsBtn" type="button">Print</button>
+              </div>
+            </div>
+            <div class="detail-grid reports-metric-grid" id="reportsMetricGrid">
+              <div class="detail-card">
+                <div class="detail-label">Active headcount</div>
+                <div class="detail-value" id="reportsKpiActiveHc">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Departments</div>
+                <div class="detail-value" id="reportsKpiDepartments">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Stay interviews due</div>
+                <div class="detail-value" id="reportsKpiReviewsDue">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">At-risk employees</div>
+                <div class="detail-value" id="reportsKpiAtRisk">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Open discipline</div>
+                <div class="detail-value" id="reportsKpiOpenDiscipline">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Turnover rate</div>
+                <div class="detail-value" id="reportsKpiTurnover">—</div>
+              </div>
+            </div>
+            <div class="layout layout-reports">
+              <div class="stack">
+                <div class="card">
+                  <div class="card-header">
+                    <span>Stay interview report</span>
+                    <span class="muted" id="reportsStayInterviewCount">Loading...</span>
+                  </div>
+                  <div class="card-body">
+                    <div class="detail-grid" style="margin-bottom: 12px">
+                      <div class="detail-card">
+                        <div class="detail-label">Overdue</div>
+                        <div class="detail-value" id="reportsStayOverdue">—</div>
+                      </div>
+                      <div class="detail-card">
+                        <div class="detail-label">Due in 30 days</div>
+                        <div class="detail-value" id="reportsStayDueSoon">—</div>
+                      </div>
+                      <div class="detail-card">
+                        <div class="detail-label">Completed (30 days)</div>
+                        <div class="detail-value" id="reportsStayCompleted">—</div>
+                      </div>
+                    </div>
+                    <div class="table-wrap reports-table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Next stay interview</th>
+                            <th>Last stay interview</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody id="reportsStayInterviewBody">
+                          <tr>
+                            <td colspan="6" class="empty">Loading stay interview report...</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="stack">
+                <div class="card">
+                  <div class="card-header">Headcount by department</div>
+                  <div class="card-body">
+                    <div class="mini-table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Department</th>
+                            <th>Headcount</th>
+                          </tr>
+                        </thead>
+                        <tbody id="reportsDeptHeadcountBody">
+                          <tr>
+                            <td colspan="2" class="empty">Loading headcount...</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Additional workforce metrics</div>
+                  <div class="card-body">
+                    <div class="reports-extra-metrics">
+                      <div><span class="muted">Turnover risk score</span><strong id="reportsKpiTurnoverRisk">—</strong></div>
+                      <div><span class="muted">New hire turnover</span><strong id="reportsKpiNewHireTurnover">—</strong></div>
+                      <div><span class="muted">On leave</span><strong id="reportsKpiOnLeave">—</strong></div>
+                      <div><span class="muted">Impact players</span><strong id="reportsKpiImpactPlayers">—</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card reports-er-card">
+              <div class="card-header">
+                <span>Discipline &amp; incident trends</span>
+                <span class="muted" id="reportsErTrendsSubtitle">Loading...</span>
+              </div>
+              <div class="card-body">
+                <div class="detail-grid reports-er-summary">
+                  <div class="detail-card">
+                    <div class="detail-label">Open discipline</div>
+                    <div class="detail-value" id="reportsErOpenDiscipline">—</div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-label">Open incidents</div>
+                    <div class="detail-value" id="reportsErOpenIncidents">—</div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-label">Discipline (90 days)</div>
+                    <div class="detail-value" id="reportsErDiscipline90">—</div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-label">Incidents (90 days)</div>
+                    <div class="detail-value" id="reportsErIncidents90">—</div>
+                  </div>
+                </div>
+                <div class="layout layout-reports-er">
+                  <div class="stack">
+                    <div class="reports-subsection">
+                      <div class="reports-subheading">Monthly discipline</div>
+                      <div class="mini-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Month</th>
+                              <th>Cases</th>
+                            </tr>
+                          </thead>
+                          <tbody id="reportsDisciplineMonthlyBody">
+                            <tr>
+                              <td colspan="2" class="empty">Loading...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="reports-subsection">
+                      <div class="reports-subheading">Discipline by issue type</div>
+                      <div class="mini-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Issue type</th>
+                              <th>Count</th>
+                            </tr>
+                          </thead>
+                          <tbody id="reportsDisciplineByTypeBody">
+                            <tr>
+                              <td colspan="2" class="empty">Loading...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="stack">
+                    <div class="reports-subsection">
+                      <div class="reports-subheading">Monthly incidents</div>
+                      <div class="mini-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Month</th>
+                              <th>Reports</th>
+                            </tr>
+                          </thead>
+                          <tbody id="reportsIncidentMonthlyBody">
+                            <tr>
+                              <td colspan="2" class="empty">Loading...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="reports-subsection">
+                      <div class="reports-subheading">Incidents by type</div>
+                      <div class="mini-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Type</th>
+                              <th>Count</th>
+                            </tr>
+                          </thead>
+                          <tbody id="reportsIncidentByTypeBody">
+                            <tr>
+                              <td colspan="2" class="empty">Loading...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="reports-subsection" style="margin-top: 16px">
+                  <div class="reports-subheading-row">
+                    <div class="reports-subheading">Recent employee relations activity</div>
+                    <span class="muted" id="reportsErRecentCount">Loading...</span>
+                  </div>
+                  <div class="table-wrap reports-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Type</th>
+                          <th>Date</th>
+                          <th>Employee</th>
+                          <th>Department</th>
+                          <th>Category</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody id="reportsErRecentBody">
+                        <tr>
+                          <td colspan="6" class="empty">Loading recent activity...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="orbisSectionSettings"
+          class="orbis-app-section hidden admin-only"
+          data-section="settingsView"
+          aria-hidden="true"
+          data-admin-only
+        >
+          <div class="page" id="settingsPage">
+            <div class="card hidden" id="settingsAdminGate">
+              <div class="card-header">Admin access required</div>
+              <div class="card-body">
+                <p class="muted" style="margin: 0">
+                  Settings and system administration are limited to Orbis admin users.
+                </p>
+              </div>
+            </div>
+            <div id="settingsAdminContent">
+              <div class="toolbar settings-toolbar">
+                <div class="toolbar-left">
+                  <span class="muted">User access and recent audit activity</span>
+                </div>
+                <div class="toolbar-right">
+                  <button class="button primary" id="settingsAddUserBtn" type="button">Add user</button>
+                  <button class="button soft" id="settingsRefreshBtn" type="button">Refresh</button>
+                </div>
+              </div>
+              <div class="layout layout-settings">
+                <div class="stack">
+                  <div class="card">
+                    <div class="card-header">
+                      <span>User access</span>
+                      <span class="muted" id="settingsUserAccessCount">Loading...</span>
+                    </div>
+                    <div class="card-body">
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Email</th>
+                              <th>Display name</th>
+                              <th>Role</th>
+                              <th>Supervisor</th>
+                              <th>Can delete</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody id="settingsUserAccessBody">
+                            <tr>
+                              <td colspan="6" class="empty">Loading user access...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="stack">
+                  <div class="card">
+                    <div class="card-header">
+                      <span>Recent audit log</span>
+                      <span class="muted" id="settingsAuditLogCount">Loading...</span>
+                    </div>
+                    <div class="card-body">
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Employee</th>
+                              <th>Action</th>
+                              <th>Summary</th>
+                              <th>Changed by</th>
+                              <th>Changed at</th>
+                            </tr>
+                          </thead>
+                          <tbody id="settingsAuditLogBody">
+                            <tr>
+                              <td colspan="5" class="empty">Loading audit log...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+          </main>
+        </div>
+      </div>
+      <div
           class="drawer-backdrop"
           id="drawerBackdrop"
           aria-hidden="true"
@@ -612,6 +1253,144 @@
                 </div>
               </div>
             </section>
+          </div>
+        </aside>
+        <aside class="drawer hidden" id="operationsIssueDrawer" aria-hidden="true">
+          <div class="drawer-header">
+            <div>
+              <h2 class="drawer-title" id="operationsIssueDrawerTitle">Operational Issue</h2>
+              <div class="drawer-sub" id="operationsIssueDrawerSub">Operations Resolution Center</div>
+            </div>
+            <button class="drawer-close" type="button" onclick="closeOperationsIssueDrawer()">
+              Close
+            </button>
+          </div>
+          <div class="drawer-body">
+            <div class="card">
+              <div class="card-header">Issue Details</div>
+              <div class="card-body">
+                <div class="two-col">
+                  <div class="field">
+                    <label for="opsIssueTitleInput">Issue Title</label>
+                    <input id="opsIssueTitleInput" type="text" placeholder="Brief issue title" />
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueCategoryInput">Category</label>
+                    <select id="opsIssueCategoryInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueSystemInput">Software / System Affected</label>
+                    <input
+                      id="opsIssueSystemInput"
+                      type="text"
+                      placeholder="ShipStation, scanner, ERP, etc."
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueDepartmentInput">Department</label>
+                    <select id="opsIssueDepartmentInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueImpactInput">Impact Level</label>
+                    <select id="opsIssueImpactInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssuePriorityInput">Priority</label>
+                    <select id="opsIssuePriorityInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueStatusInput">Status</label>
+                    <select id="opsIssueStatusInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueAssignedToInput">Assigned To</label>
+                    <select id="opsIssueAssignedToInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueDueDateInput">Due Date</label>
+                    <input id="opsIssueDueDateInput" type="date" />
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueRecurringInput" style="display: flex; align-items: center; gap: 8px">
+                      <input id="opsIssueRecurringInput" type="checkbox" />
+                      Recurring issue
+                    </label>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="opsIssueDescriptionInput">Description</label>
+                  <textarea
+                    id="opsIssueDescriptionInput"
+                    rows="5"
+                    placeholder="What happened, who is affected, and what is blocked?"
+                  ></textarea>
+                </div>
+                <div class="field">
+                  <label for="opsIssueRootCauseInput">Root Cause</label>
+                  <textarea
+                    id="opsIssueRootCauseInput"
+                    rows="3"
+                    placeholder="Underlying cause once identified"
+                  ></textarea>
+                </div>
+                <div class="field">
+                  <label for="opsIssueResolutionNotesInput">Resolution Notes</label>
+                  <textarea
+                    id="opsIssueResolutionNotesInput"
+                    rows="3"
+                    placeholder="Fix applied, workaround, or next steps"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Attachments</div>
+              <div class="card-body">
+                <div class="field">
+                  <label for="opsIssueAttachmentBtn">Add attachment</label>
+                  <div class="button-row file-upload-row">
+                    <button
+                      class="button soft"
+                      id="opsIssueAttachmentBtn"
+                      type="button"
+                    >
+                      Choose File
+                    </button>
+                    <span class="muted file-upload-name" id="opsIssueAttachmentFileName"
+                      >No file chosen</span
+                    >
+                  </div>
+                  <input
+                    id="opsIssueAttachmentInput"
+                    type="file"
+                    accept="image/*,.pdf,.txt"
+                    hidden
+                  />
+                </div>
+                <div id="operationsIssueAttachments" class="history-list" style="margin-top: 12px">
+                  <div class="empty">Save the issue to upload screenshots or files.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Activity</div>
+              <div class="card-body">
+                <div id="operationsIssueActivity" class="history-list">
+                  <div class="empty">Activity will appear after the issue is saved.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="drawer-actions drawer-footer">
+            <button class="button primary" id="saveOperationsIssueBtn" type="button">
+              Save Issue
+            </button>
+            <button class="button soft" id="cancelOperationsIssueBtn" type="button">
+              Cancel
+            </button>
+            <button class="button danger hidden" id="deleteOperationsIssueBtn" type="button">
+              Delete Issue
+            </button>
           </div>
         </aside>
         <aside
@@ -1366,6 +2145,42 @@
                       <label for="meetingSubject">Subject</label>
                       <input id="meetingSubject" type="text" placeholder="Meeting subject" />
                     </div>
+                    <div class="field" id="meetingDictationField">
+                      <label>Voice dictation</label>
+                      <div class="dictation-consent" id="meetingDictationConsent" role="note">
+                        Before using dictation, make sure everyone in the meeting knows notes are
+                        being transcribed. Speech recognition runs in your browser; Orbis does not
+                        save or upload meeting audio.
+                      </div>
+                      <label class="dictation-consent-check" for="meetingDictationConsentCheck">
+                        <input type="checkbox" id="meetingDictationConsentCheck" />
+                        I confirm participants were informed that notes are being transcribed.
+                      </label>
+                      <div class="button-row">
+                        <button
+                          class="button soft"
+                          type="button"
+                          id="meetingDictationStartBtn"
+                          disabled
+                        >
+                          Start Dictation
+                        </button>
+                        <button
+                          class="button soft hidden"
+                          type="button"
+                          id="meetingDictationStopBtn"
+                        >
+                          Stop Dictation
+                        </button>
+                      </div>
+                      <div
+                        class="dictation-status muted"
+                        id="meetingDictationStatus"
+                        aria-live="polite"
+                      >
+                        Not started
+                      </div>
+                    </div>
                     <div class="field">
                       <label for="meetingNotes">Notes</label>
                       <textarea
@@ -1374,7 +2189,6 @@
                         placeholder="Document the meeting discussion..."
                       ></textarea>
                     </div>
-                    
                     <div class="field">
                       <label for="meetingFollowUpDate">Follow-Up Date</label>
                       <input id="meetingFollowUpDate" type="date" />
@@ -2045,7 +2859,6 @@
             </section>
           </div>
         </aside>
-      </div>
     </div>
     <div class="orbis-confirm-backdrop" id="orbisConfirmBackdrop" role="presentation">
       <div

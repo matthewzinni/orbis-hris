@@ -1,4 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { isAdminUser } from '../services/access';
 import { employeeDisplayName, type EmployeeLike } from '../services/employeeUtils';
 import { switchMainView } from './navigation';
 
@@ -63,6 +64,43 @@ const ACTION_COMMANDS: CommandItem[] = [
     run: () => switchMainView('documentsView'),
   },
   {
+    id: 'nav-operations',
+    kind: 'action',
+    title: 'Go to Operations Center',
+    subtitle: 'Navigation',
+    searchText: 'operations issues resolution shipstation workflow equipment',
+    run: () => switchMainView('operationsView'),
+  },
+  {
+    id: 'nav-reports',
+    kind: 'action',
+    title: 'Go to Reports',
+    subtitle: 'Navigation',
+    searchText: 'reports analytics turnover metrics export',
+    run: () => switchMainView('reportsView'),
+  },
+  {
+    id: 'nav-settings',
+    kind: 'action',
+    title: 'Go to Admin & Settings',
+    subtitle: 'Navigation',
+    searchText: 'settings admin permissions audit configuration',
+    run: () => switchMainView('settingsView'),
+  },
+  {
+    id: 'action-new-operations-issue',
+    kind: 'action',
+    title: 'Report operational issue',
+    subtitle: 'Quick action',
+    searchText: 'operations issue bug bottleneck equipment software',
+    run: async () => {
+      switchMainView('operationsView');
+      if (typeof window.openNewOperationsIssueForm === 'function') {
+        window.openNewOperationsIssueForm();
+      }
+    },
+  },
+  {
     id: 'action-add-employee',
     kind: 'action',
     title: 'Add employee',
@@ -102,7 +140,9 @@ const ACTION_COMMANDS: CommandItem[] = [
     subtitle: 'Quick action',
     searchText: 'reload refresh sync data',
     run: async () => {
-      if (typeof window.loadAllDashboardData === 'function') {
+      if (typeof window.refreshOrbisWorkspace === 'function') {
+        await window.refreshOrbisWorkspace();
+      } else if (typeof window.loadAllDashboardData === 'function') {
         await window.loadAllDashboardData();
         return;
       }
@@ -360,9 +400,23 @@ async function refreshCandidateIndex(): Promise<void> {
   }
 }
 
+function getNavigationCommands(): CommandItem[] {
+  const adminOnlyIds = new Set(['nav-reports', 'nav-settings']);
+
+  if (isAdminUser()) {
+    return ACTION_COMMANDS;
+  }
+
+  return ACTION_COMMANDS.filter((command) => !adminOnlyIds.has(command.id));
+}
+
 function buildCommandList(query: string): CommandItem[] {
   try {
-    const combined = [...ACTION_COMMANDS, ...getEmployeeCommands(), ...getCandidateCommands()];
+    const combined = [
+      ...getNavigationCommands(),
+      ...getEmployeeCommands(),
+      ...getCandidateCommands(),
+    ];
 
     const ranked = combined
       .map((item) => ({

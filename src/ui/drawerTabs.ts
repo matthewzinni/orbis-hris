@@ -2,6 +2,8 @@
  * Accessible drawer tab groups (WAI-ARIA tabs pattern).
  */
 
+import { stopMeetingDictation } from '../modules/dictation';
+
 type DrawerTabKind = 'employee' | 'candidate';
 
 type DrawerTabGroup = {
@@ -51,6 +53,10 @@ function shouldResetEntryTabForm(
 }
 
 function runEmployeeTabSideEffects(tabName: string): void {
+  if (tabName !== 'meetings') {
+    stopMeetingDictation();
+  }
+
   if (shouldResetEntryTabForm(tabName) && typeof window.resetDrawerEntryForms === 'function') {
     window.resetDrawerEntryForms();
   }

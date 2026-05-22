@@ -1,5 +1,7 @@
 // Reset drawer tab forms when opening/closing employee drawer
 
+import { stopMeetingDictation } from './dictation';
+
 function safeGet(id: string): HTMLElement | null {
   if (typeof window.safeGet === 'function') {
     return window.safeGet(id);
@@ -48,10 +50,12 @@ export function resetDrawerEntryForms(): void {
   setFieldValue('incidentDescription', '');
   setFieldValue('incidentFollowUp', '');
   setFieldValue('incidentStatus', 'Open');
+  stopMeetingDictation();
   setFieldValue('meetingDate', todayInputValue());
   setFieldValue('meetingType', '');
   setFieldValue('meetingSubject', '');
   setFieldValue('meetingNotes', '');
+  setFieldValue('meetingFollowUpDate', '');
   setFieldValue('reviewDate', todayInputValue());
   setFieldValue('reviewType', '');
   setFieldValue('reviewAttendance', '');

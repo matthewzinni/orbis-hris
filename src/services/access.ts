@@ -170,9 +170,6 @@ export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | 
 export function applyAdminDashboardView(): void {
   document.getElementById('supervisorBanner')?.remove();
 
-  const appTitle = document.querySelector('.app-title');
-  if (appTitle) appTitle.textContent = 'BTW Global Orbis';
-
   const dashboardTitle = safeGet('dashboardTitle');
   if (dashboardTitle) dashboardTitle.textContent = 'Dashboard';
 
@@ -241,7 +238,7 @@ export function applySupervisorDashboardView(): void {
   const name =
     currentUserAccess?.display_name || currentUserAccess?.supervisor_name || 'Supervisor';
 
-  const title = safeGet('dashboardTitle') || document.querySelector('h1');
+  const title = safeGet('dashboardTitle');
   if (title) title.textContent = `${name}'s Team Dashboard`;
 
   const rosterTitle =

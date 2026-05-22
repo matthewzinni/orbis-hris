@@ -1080,6 +1080,11 @@ export function closeCandidateDrawer(): void {
 }
 
 export function closeActiveDrawer(): void {
+  if (typeof window.isOperationsIssueDrawerOpen === 'function' && window.isOperationsIssueDrawerOpen()) {
+    window.closeOperationsIssueDrawer?.();
+    return;
+  }
+
   if (isCandidateDrawerOpen()) {
     closeCandidateDrawer();
     return;

@@ -24,12 +24,17 @@ import './ui/drawerUi';
 import './ui/drawerTabs';
 import './modules/drawer';
 import './modules/notes';
+import './ui/appSections';
 import './ui/navigation';
+import './ui/workspaceAlerts';
 import './ui/departmentSummary';
 import './modules/onboarding';
 import './modules/employees';
 import './modules/dashboardBoot';
+import './modules/reports';
+import './modules/settingsAdmin';
 import { initAppShell, showAuthenticatedOrbisView, showAuthView } from './app/appShell';
+import { initAppSections } from './ui/appSections';
 import './services/auditTrail';
 import './modules/employeeAdmin';
 import './modules/employeeFlags';
@@ -60,6 +65,7 @@ import {
   loadEmployeeMeetings,
   editMeetingRecord,
   deleteMeetingRecord,
+  cancelMeetingEdit,
 } from './modules/meetings';
 import './modules/stayInterviews';
 import './modules/emergencyContacts';
@@ -73,6 +79,21 @@ import {
   convertCandidateToEmployee,
 } from './modules/candidates';
 import './modules/candidateNotes';
+import {
+  applyOperationsCenterAccess,
+  cancelOperationsIssueEdit,
+  closeOperationsIssueDrawer,
+  deleteOperationsIssueById,
+  deleteOperationsIssueRecord,
+  isOperationsIssueDrawerOpen,
+  ensureOperationsIssuesLoaded,
+  exportOperationsIssuesCsv,
+  loadOperationsIssues,
+  openNewOperationsIssueForm,
+  openOperationsIssueDrawer,
+  openOperationsView,
+  saveOperationsIssueRecord,
+} from './modules/operationsIssues';
 import './ui/loadingUi';
 import './ui/dashboardRetry';
 import './ui/confirmModal';
@@ -96,19 +117,13 @@ bridge.showAuthView = showAuthView;
 bridge.bootstrapOrbisAfterAuth = initializeProtectedModules;
 
 function openCandidatesViewFallback(): void {
-  const candidatesCard = document.getElementById('candidatesCard');
-  const candidatePipeline = document.getElementById('candidatePipeline');
-  const candidatesSection = candidatesCard || candidatePipeline;
-
-  if (candidatesSection) {
-    candidatesSection.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    });
+  if (typeof bridge.switchMainView === 'function') {
+    bridge.switchMainView('candidatesView');
+    return;
   }
 
   if (typeof bridge.loadCandidates === 'function') {
-    bridge.loadCandidates();
+    void bridge.loadCandidates();
   }
 }
 
@@ -143,6 +158,7 @@ function registerLegacyBridges(): void {
   bridge.loadMeetingRecords = loadEmployeeMeetings;
   bridge.editMeetingRecord = editMeetingRecord;
   bridge.deleteMeetingRecord = deleteMeetingRecord;
+  bridge.cancelMeetingEdit = cancelMeetingEdit;
 
   bridge.loadCandidates = loadCandidates;
   bridge.refreshCandidatesView = loadCandidates;
@@ -152,6 +168,33 @@ function registerLegacyBridges(): void {
   bridge.deleteCandidateRecord = deleteCandidateRecord;
   bridge.moveCandidateToStage = moveCandidateToStage;
   bridge.convertCandidateToEmployee = convertCandidateToEmployee;
+
+  bridge.loadOperationsIssues = loadOperationsIssues;
+  bridge.ensureOperationsIssuesLoaded = ensureOperationsIssuesLoaded;
+  bridge.exportOperationsIssuesCsv = exportOperationsIssuesCsv;
+  bridge.openOperationsView = openOperationsView;
+  bridge.openNewOperationsIssueForm = openNewOperationsIssueForm;
+  bridge.openOperationsIssueDrawer = openOperationsIssueDrawer;
+  bridge.closeOperationsIssueDrawer = closeOperationsIssueDrawer;
+  bridge.saveOperationsIssueRecord = saveOperationsIssueRecord;
+  bridge.deleteOperationsIssueRecord = deleteOperationsIssueRecord;
+  bridge.deleteOperationsIssueById = deleteOperationsIssueById;
+  bridge.cancelOperationsIssueEdit = cancelOperationsIssueEdit;
+  bridge.applyOperationsCenterAccess = applyOperationsCenterAccess;
+
+  globalThis.loadOperationsIssues = loadOperationsIssues;
+  globalThis.ensureOperationsIssuesLoaded = ensureOperationsIssuesLoaded;
+  globalThis.exportOperationsIssuesCsv = exportOperationsIssuesCsv;
+  globalThis.openOperationsView = openOperationsView;
+  globalThis.openNewOperationsIssueForm = openNewOperationsIssueForm;
+  globalThis.openOperationsIssueDrawer = openOperationsIssueDrawer;
+  globalThis.closeOperationsIssueDrawer = closeOperationsIssueDrawer;
+  globalThis.saveOperationsIssueRecord = saveOperationsIssueRecord;
+  globalThis.deleteOperationsIssueRecord = deleteOperationsIssueRecord;
+  globalThis.deleteOperationsIssueById = deleteOperationsIssueById;
+  globalThis.cancelOperationsIssueEdit = cancelOperationsIssueEdit;
+  globalThis.isOperationsIssueDrawerOpen = isOperationsIssueDrawerOpen;
+  globalThis.applyOperationsCenterAccess = applyOperationsCenterAccess;
 }
 
 async function initializeProtectedModules(): Promise<void> {
@@ -164,7 +207,10 @@ async function initializeProtectedModules(): Promise<void> {
   }
 
   try {
-    if (typeof bridge.loadAllDashboardData === 'function') {
+    if (typeof bridge.loadDashboardOverview === 'function') {
+      console.log('Loading dashboard overview...');
+      await bridge.loadDashboardOverview();
+    } else if (typeof bridge.loadAllDashboardData === 'function') {
       console.log('Loading dashboard data...');
       await bridge.loadAllDashboardData();
     } else if (typeof bridge.loadEmployees === 'function') {
@@ -183,10 +229,14 @@ async function initializeProtectedModules(): Promise<void> {
 
     const employeeCount = Array.isArray(bridge.EMPLOYEES) ? bridge.EMPLOYEES.length : 0;
     console.log('Employees loaded:', employeeCount);
+
+    applyOperationsCenterAccess();
   } catch (err) {
     console.error('Employee module failed to load employees:', err);
   }
 }
+
+registerLegacyBridges();
 
 window.addEventListener('DOMContentLoaded', async () => {
   console.log('Orbis booted via main.ts');
@@ -214,6 +264,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   }
 
   await initializeProtectedModules();
+  initAppSections();
   markOrbisBootComplete();
 
   if (typeof window.hideDashboardLoadingSkeletons === 'function') {

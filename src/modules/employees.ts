@@ -158,6 +158,14 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
     window.renderBasicDashboardKpis();
   }
 
+  if (typeof window.applyOperationsCenterAccess === 'function') {
+    window.applyOperationsCenterAccess();
+  }
+
+  if (typeof window.ensureOperationsIssuesLoaded === 'function') {
+    window.ensureOperationsIssuesLoaded();
+  }
+
   return scoped;
 }
 

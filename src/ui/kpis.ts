@@ -83,6 +83,7 @@ declare global {
     refreshTurnoverKpisFromSupabase?: () => Promise<void>;
     buildKpiHoverDetails?: () => void;
     initKpiHoverUi?: () => void;
+    syncKpiCardTooltip?: (card: Element | null, text: string) => void;
     updateTurnoverRiskKpi?: (rate: number, subtext: string) => void;
     currentImpactPlayerRosterMap?: Record<string, ImpactPlayerMeta>;
     currentAtRiskRosterMap?: Record<string, AtRiskMeta>;
@@ -514,12 +515,40 @@ function pruneInactiveImpactMap(map: Record<string, ImpactPlayerMeta>): void {
   });
 }
 
-function applyTooltip(card: Element | null, text: string): void {
+export function syncKpiCardTooltip(card: Element | null, text: string): void {
   if (!card) return;
 
+  const normalized = String(text || '').trim();
   card.removeAttribute('title');
-  card.setAttribute('data-tooltip', text);
-  card.setAttribute('aria-label', text);
+  card.setAttribute('data-tooltip', normalized);
+  card.setAttribute('aria-label', normalized);
+
+  let popover = card.querySelector('.kpi-tooltip-popover') as HTMLElement | null;
+
+  if (!popover) {
+    popover = document.createElement('div');
+    popover.className = 'kpi-tooltip-popover';
+    popover.setAttribute('role', 'tooltip');
+    card.appendChild(popover);
+  }
+
+  const lines = normalized
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    popover.innerHTML = '<div class="kpi-tooltip-empty">No data available</div>';
+    return;
+  }
+
+  popover.innerHTML = `<ul class="kpi-tooltip-list">${lines
+    .map((line) => `<li>${escapeHtml(line)}</li>`)
+    .join('')}</ul>`;
+}
+
+function applyTooltip(card: Element | null, text: string): void {
+  syncKpiCardTooltip(card, text);
 }
 
 function setKpiCardTooltip(
@@ -922,21 +951,19 @@ export async function loadSummaryMetrics(): Promise<void> {
           })
           .filter(Boolean);
 
-        disciplineCard.setAttribute(
-          'data-tooltip',
+        syncKpiCardTooltip(
+          disciplineCard,
           openDisciplineNames.length
             ? openDisciplineNames.join('\n')
             : 'No open discipline cases'
         );
-        disciplineCard.removeAttribute('title');
       }
     } else {
       console.error(disciplineRes.error);
       setKpiText('kOpenDiscipline', '—');
       const disciplineCard = document.getElementById('cardOpenDiscipline');
       if (disciplineCard) {
-        disciplineCard.setAttribute('data-tooltip', 'Could not load discipline cases');
-        disciplineCard.removeAttribute('title');
+        syncKpiCardTooltip(disciplineCard, 'Could not load discipline cases');
       }
     }
 
@@ -1218,6 +1245,7 @@ window.renderBasicDashboardKpis = renderBasicDashboardKpis;
 window.refreshDashboardKpis = refreshDashboardKpis;
 window.buildKpiHoverDetails = buildKpiHoverDetails;
 window.initKpiHoverUi = initKpiHoverUi;
+window.syncKpiCardTooltip = syncKpiCardTooltip;
 window.renderKpiEmployeeMetrics = renderKpiEmployeeMetrics;
 window.loadSummaryMetrics = loadSummaryMetrics;
 window.refreshTurnoverKpisFromSupabase = refreshTurnoverKpisFromSupabase;

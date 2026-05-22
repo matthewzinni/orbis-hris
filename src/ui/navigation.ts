@@ -1,8 +1,4 @@
-interface NavigationSection {
-  id: string;
-  targetId: string;
-  aliases?: string[];
-}
+import { resolveAppSection, showAppSection } from './appSections';
 
 declare global {
   interface Window {
@@ -14,84 +10,8 @@ declare global {
   }
 }
 
-const NAVIGATION_SECTIONS: NavigationSection[] = [
-  {
-    id: 'dashboardView',
-    targetId: 'dashboardTop',
-    aliases: ['dashboard'],
-  },
-  {
-    id: 'employeesView',
-    targetId: 'employeeRosterCard',
-    aliases: ['employees', 'employeeRoster'],
-  },
-  {
-    id: 'candidatesView',
-    targetId: 'candidatesCard',
-    aliases: ['candidates', 'candidatePipeline'],
-  },
-  {
-    id: 'documentsView',
-    targetId: 'documentsPage',
-    aliases: ['documents'],
-  },
-];
-
-function resolveSection(sectionId: string): NavigationSection | null {
-  const normalized = String(sectionId || '').trim().toLowerCase();
-
-  return (
-    NAVIGATION_SECTIONS.find((section) => {
-      if (section.id.toLowerCase() === normalized) {
-        return true;
-      }
-
-      return (section.aliases || []).some((alias) => alias.toLowerCase() === normalized);
-    }) || null
-  );
-}
-
-function activateNavButtons(sectionId: string): void {
-  document.querySelectorAll('[data-nav-view]').forEach((button) => {
-    const target = String((button as HTMLElement).dataset.navView || '');
-    const match = resolveSection(target);
-
-    if (match?.id === sectionId) {
-      button.classList.add('active');
-      button.setAttribute('aria-current', 'page');
-    } else {
-      button.classList.remove('active');
-      button.removeAttribute('aria-current');
-    }
-  });
-}
-
 export function switchMainView(sectionId: string): void {
-  const section = resolveSection(sectionId);
-
-  if (!section) {
-    console.warn(`[Navigation] Unknown section: ${sectionId}`);
-    return;
-  }
-
-  const target = document.getElementById(section.targetId);
-
-  if (!target) {
-    console.warn(`[Navigation] Target not found: ${section.targetId}`);
-    return;
-  }
-
-  window.currentMainView = section.id;
-  activateNavButtons(section.id);
-
-  if (section.id === 'candidatesView' && typeof window.loadCandidates === 'function') {
-    void window.loadCandidates();
-  }
-
-  target.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  });
+  showAppSection(sectionId);
 }
 
 export function openCandidatesView(): void {
@@ -120,11 +40,22 @@ function bindNavigationEvents(): void {
 
     if (!navButton) return;
 
-    event.preventDefault();
-
     const sectionId = navButton.dataset.navView || '';
     if (!sectionId) return;
 
+    const section = resolveAppSection(sectionId);
+    if (!section) return;
+
+    const isPrimaryNav =
+      navButton.closest('.orbis-sidebar-nav') || navButton.closest('.orbis-app-nav');
+    const isOverflowNav = navButton.closest('#toolbarOverflowMenu');
+    const isQuickLink = navButton.closest('#dashboardQuickLinks');
+
+    if (!isPrimaryNav && !isOverflowNav && !isQuickLink) {
+      return;
+    }
+
+    event.preventDefault();
     switchMainView(sectionId);
   });
 }

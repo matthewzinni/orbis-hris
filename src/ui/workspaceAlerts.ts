@@ -1,0 +1,193 @@
+import { switchMainView } from './navigation';
+
+type WorkspaceAlert = {
+  id: string;
+  label: string;
+  detail: string;
+  count: number;
+  viewId?: string;
+};
+
+function parseCountFromElement(id: string): number {
+  const text = String(document.getElementById(id)?.textContent || '').trim();
+
+  if (!text || text === '—' || text === '-') {
+    return 0;
+  }
+
+  const match = text.match(/\d+/);
+  return match ? Number.parseInt(match[0], 10) : 0;
+}
+
+function collectWorkspaceAlerts(): WorkspaceAlert[] {
+  const alerts: WorkspaceAlert[] = [];
+
+  const reviewsDue = parseCountFromElement('kReviewsDue');
+  const overdueTable = parseCountFromElement('reviewDashboardOverdue');
+  const stayOverdue = Math.max(reviewsDue, overdueTable);
+
+  if (stayOverdue > 0) {
+    alerts.push({
+      id: 'stay-interviews-due',
+      label: 'Stay interviews due',
+      detail: `${stayOverdue} overdue stay interview${stayOverdue === 1 ? '' : 's'}`,
+      count: stayOverdue,
+      viewId: 'dashboardView',
+    });
+  }
+
+  const atRisk = parseCountFromElement('kAtRiskEmployees');
+  if (atRisk > 0) {
+    alerts.push({
+      id: 'at-risk',
+      label: 'At-risk employees',
+      detail: `${atRisk} employee${atRisk === 1 ? '' : 's'} flagged`,
+      count: atRisk,
+      viewId: 'dashboardView',
+    });
+  }
+
+  const discipline = parseCountFromElement('kOpenDiscipline');
+  if (discipline > 0) {
+    alerts.push({
+      id: 'open-discipline',
+      label: 'Open discipline cases',
+      detail: `${discipline} case${discipline === 1 ? '' : 's'} need follow-up`,
+      count: discipline,
+      viewId: 'dashboardView',
+    });
+  }
+
+  const dueSoon = parseCountFromElement('reviewDashboardDueSoon');
+  if (dueSoon > 0) {
+    alerts.push({
+      id: 'stay-interviews-due-soon',
+      label: 'Stay interviews due in 30 days',
+      detail: `${dueSoon} upcoming`,
+      count: dueSoon,
+      viewId: 'dashboardView',
+    });
+  }
+
+  return alerts;
+}
+
+function renderAlertsPanel(alerts: WorkspaceAlert[]): void {
+  const list = document.getElementById('orbisAlertsList');
+  const badge = document.getElementById('orbisAlertsBadge');
+
+  if (!list) return;
+
+  const total = alerts.reduce((sum, alert) => sum + alert.count, 0);
+
+  if (badge) {
+    if (total > 0) {
+      badge.textContent = total > 99 ? '99+' : String(total);
+      badge.classList.remove('hidden');
+    } else {
+      badge.textContent = '';
+      badge.classList.add('hidden');
+    }
+  }
+
+  const btn = document.getElementById('orbisAlertsBtn');
+  if (btn) {
+    btn.setAttribute('aria-label', total > 0 ? `${total} HR alerts` : 'No HR alerts');
+  }
+
+  if (!alerts.length) {
+    list.innerHTML =
+      '<div class="orbis-alerts-empty muted">No priority alerts right now.</div>';
+    return;
+  }
+
+  list.innerHTML = alerts
+    .map(
+      (alert) => `
+        <button
+          type="button"
+          class="orbis-alerts-item"
+          data-alert-id="${alert.id}"
+          data-nav-view="${alert.viewId || 'dashboardView'}"
+        >
+          <span class="orbis-alerts-item-count">${alert.count}</span>
+          <span class="orbis-alerts-item-copy">
+            <span class="orbis-alerts-item-label">${alert.label}</span>
+            <span class="orbis-alerts-item-detail">${alert.detail}</span>
+          </span>
+        </button>
+      `
+    )
+    .join('');
+}
+
+export function updateWorkspaceAlerts(): void {
+  renderAlertsPanel(collectWorkspaceAlerts());
+}
+
+function setAlertsPanelOpen(open: boolean): void {
+  const panel = document.getElementById('orbisAlertsPanel');
+  const btn = document.getElementById('orbisAlertsBtn');
+
+  if (!panel || !btn) return;
+
+  panel.classList.toggle('open', open);
+  panel.classList.toggle('hidden', !open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function bindWorkspaceAlerts(): void {
+  if ((window as { __workspaceAlertsBound?: boolean }).__workspaceAlertsBound) {
+    return;
+  }
+
+  (window as { __workspaceAlertsBound?: boolean }).__workspaceAlertsBound = true;
+
+  const btn = document.getElementById('orbisAlertsBtn');
+  const panel = document.getElementById('orbisAlertsPanel');
+  const list = document.getElementById('orbisAlertsList');
+
+  btn?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const isOpen = panel?.classList.contains('open') === true;
+    setAlertsPanelOpen(!isOpen);
+    if (!isOpen) {
+      updateWorkspaceAlerts();
+    }
+  });
+
+  list?.addEventListener('click', (event) => {
+    const item = (event.target as HTMLElement | null)?.closest(
+      '.orbis-alerts-item'
+    ) as HTMLElement | null;
+
+    if (!item) return;
+
+    const viewId = item.dataset.navView || 'dashboardView';
+    setAlertsPanelOpen(false);
+    switchMainView(viewId);
+  });
+
+  document.addEventListener('click', (event) => {
+    const target = event.target as Node | null;
+    if (!panel || !btn) return;
+    if (panel.contains(target as Node) || btn.contains(target as Node)) return;
+    setAlertsPanelOpen(false);
+  });
+
+  window.addEventListener('orbis:section-change', () => {
+    setAlertsPanelOpen(false);
+  });
+
+  updateWorkspaceAlerts();
+}
+
+bindWorkspaceAlerts();
+
+declare global {
+  interface Window {
+    updateWorkspaceAlerts?: () => void;
+  }
+}
+
+window.updateWorkspaceAlerts = updateWorkspaceAlerts;

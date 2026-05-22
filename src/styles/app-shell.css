@@ -32,6 +32,23 @@
   --orbis-muted: #64748b;
   --orbis-bg-soft: #f8fafc;
   --orbis-transition: 180ms ease;
+  --orbis-transition-smooth: 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  --orbis-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --space-page-y: 20px;
+  --space-page-x: 20px;
+  --space-section: 14px;
+  --space-stack: 14px;
+  --accent-blue: #3b82f6;
+  --accent-blue-soft: #eaf2ff;
+  --accent-risk: #c24159;
+  --accent-risk-soft: #fff0f3;
+  --accent-warn: #a16207;
+  --accent-warn-soft: #fff7db;
+  --accent-success: #0f8a63;
+  --accent-success-soft: #e8fbf3;
+  --accent-ops: #1f4f82;
+  --accent-ops-soft: #e8f0fa;
+  --sidebar-width: 236px;
 }
 
 * {
@@ -244,6 +261,11 @@ body {
   transform: none;
 }
 
+.button:active:not(:disabled),
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
 .button-row,
 .table-actions {
   display: inline-flex;
@@ -252,6 +274,456 @@ body {
   flex-wrap: wrap;
 }
 
+/* =========================
+   HRIS APP SHELL (sidebar + topbar)
+========================= */
+
+#appView:not(.hidden) {
+  min-height: 100vh;
+}
+
+.orbis-app-shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.orbis-sidebar {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px 24px;
+  color: rgba(255, 255, 255, 0.95);
+  background: linear-gradient(
+    180deg,
+    var(--navy) 0%,
+    var(--navy-2) 52%,
+    #163a5a 100%
+  );
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.08);
+}
+
+.orbis-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 6px 8px;
+}
+
+.orbis-sidebar-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: var(--navy);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+}
+
+.orbis-sidebar-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.orbis-sidebar-subtitle {
+  margin-top: 3px;
+  font-size: 0.72rem;
+  opacity: 0.78;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.orbis-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 20px;
+}
+
+.orbis-nav-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 14px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow: none;
+  transition:
+    background var(--orbis-transition-smooth),
+    border-color var(--orbis-transition-smooth),
+    color var(--orbis-transition-smooth),
+    transform var(--orbis-transition-smooth);
+}
+
+.orbis-nav-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
+  transform: translateX(2px);
+}
+
+.orbis-nav-item.active {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.orbis-workspace {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 18%, var(--bg-2) 100%);
+}
+
+.orbis-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+.orbis-topbar-left {
+  min-width: 0;
+}
+
+.orbis-page-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--navy);
+  line-height: 1.2;
+}
+
+.orbis-topbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.orbis-topbar-meta-item {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.orbis-topbar-meta-item strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.orbis-icon-btn {
+  min-width: auto;
+  padding: 8px 12px;
+}
+
+.orbis-icon-btn-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.orbis-workspace .orbis-app-main {
+  flex: 1;
+  min-height: 0;
+}
+
+.orbis-workspace .page {
+  max-width: none;
+  width: 100%;
+}
+
+.orbis-placeholder-card {
+  max-width: 720px;
+}
+
+.reports-metric-grid {
+  margin-bottom: var(--space-section);
+}
+
+.layout-reports,
+.layout-settings {
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: var(--space-stack);
+}
+
+.reports-er-card {
+  margin-top: var(--space-section);
+}
+
+.reports-er-summary {
+  margin-bottom: var(--space-stack);
+}
+
+.layout-reports-er {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-stack);
+}
+
+.reports-subsection + .reports-subsection {
+  margin-top: 14px;
+}
+
+.reports-subheading {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.reports-subheading-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 960px) {
+  .layout-reports-er {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reports-table-wrap {
+  max-height: 420px;
+}
+
+.reports-extra-metrics {
+  display: grid;
+  gap: 12px;
+}
+
+.reports-extra-metrics > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+}
+
+.reports-extra-metrics strong {
+  color: var(--navy);
+  font-size: 1rem;
+}
+
+.settings-inline-input,
+.settings-inline-select {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: #fff;
+}
+
+.settings-user-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-user-actions .button {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+@media print {
+  body.orbis-print-reports > *:not(#appView) {
+    display: none !important;
+  }
+
+  body.orbis-print-reports #appView .orbis-sidebar,
+  body.orbis-print-reports #appView .orbis-topbar,
+  body.orbis-print-reports .reports-toolbar {
+    display: none !important;
+  }
+
+  body.orbis-print-reports #orbisSectionReports {
+    display: block !important;
+  }
+
+  body.orbis-print-reports #orbisSectionReports.hidden {
+    display: block !important;
+  }
+
+  body.orbis-print-reports .reports-table-wrap {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+.dashboard-kpi-grid {
+  margin-bottom: var(--space-section);
+}
+
+.dashboard-quick-links {
+  margin-bottom: var(--space-section);
+}
+
+.dashboard-quick-links-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.orbis-alerts-wrap {
+  position: relative;
+}
+
+.orbis-icon-btn {
+  position: relative;
+  min-width: 42px;
+  padding: 8px 10px;
+}
+
+.orbis-alerts-icon {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.orbis-alerts-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--red);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(194, 65, 89, 0.35);
+}
+
+.orbis-alerts-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(320px, calc(100vw - 32px));
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+  overflow: hidden;
+}
+
+.orbis-alerts-panel.open {
+  display: block;
+}
+
+.orbis-alerts-panel-head {
+  padding: 12px 14px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%);
+}
+
+.orbis-alerts-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.orbis-alerts-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-bottom: 1px solid #edf2f7;
+  border-radius: 0;
+  background: #fff;
+  padding: 12px 14px;
+  cursor: pointer;
+  box-shadow: none;
+  min-height: auto;
+  transform: none;
+}
+
+.orbis-alerts-item:hover {
+  background: #f8fbff;
+  transform: none;
+}
+
+.orbis-alerts-item-count {
+  flex: 0 0 auto;
+  min-width: 28px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.orbis-alerts-item-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.orbis-alerts-item-label {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--navy);
+}
+
+.orbis-alerts-item-detail {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.orbis-alerts-empty {
+  padding: 16px 14px;
+  text-align: center;
+}
+
+/* Legacy horizontal header (unused after sidebar shell) */
 .app-header {
   position: relative;
   top: 0;
@@ -303,10 +775,71 @@ body {
   opacity: 0.85;
 }
 
+.orbis-app-nav {
+  max-width: 1440px;
+  margin: 14px auto 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.orbis-app-nav .orbis-nav-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.95);
+  box-shadow: none;
+  transition:
+    background var(--orbis-transition-smooth),
+    border-color var(--orbis-transition-smooth),
+    box-shadow var(--orbis-transition-smooth),
+    transform var(--orbis-transition-smooth),
+    color var(--orbis-transition-smooth);
+}
+
+.orbis-app-nav .orbis-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.34);
+  transform: translateY(-1px);
+}
+
+.orbis-app-nav .orbis-nav-btn.active {
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--navy);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+  font-weight: 800;
+}
+
+.orbis-app-main {
+  display: block;
+}
+
+.orbis-app-section {
+  display: none;
+}
+
+.orbis-app-section.active {
+  display: block;
+  animation: orbisSectionEnter 0.32s var(--orbis-ease-out) both;
+}
+
+@keyframes orbisSectionEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .page {
   max-width: 1480px;
   margin: 0 auto;
-  padding: 28px 24px 36px;
+  padding: var(--space-page-y) var(--space-page-x) calc(var(--space-page-y) + 8px);
 }
 
 .toolbar {
@@ -314,7 +847,7 @@ body {
   justify-content: space-between;
   gap: 14px;
   flex-wrap: wrap;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-section);
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(226, 232, 240, 0.9);
   border-radius: 20px;
@@ -350,10 +883,11 @@ body {
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: var(--space-section);
   position: relative;
   z-index: 20;
+  overflow: visible;
 }
 
 .kpi-card {
@@ -367,31 +901,68 @@ body {
   );
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 18px 18px 16px;
+  padding: 15px 16px 14px;
   border: 1px solid rgba(226, 232, 240, 0.95);
   border-left: 4px solid var(--blue);
   transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease;
+    transform var(--orbis-transition-smooth),
+    box-shadow var(--orbis-transition-smooth),
+    border-color var(--orbis-transition-smooth),
+    background var(--orbis-transition-smooth);
+}
+
+.kpi-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent 52%);
+  opacity: 0;
+  transition: opacity var(--orbis-transition-smooth);
 }
 
 .kpi-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
+  box-shadow: var(--orbis-shadow-hover);
   border-color: rgba(59, 130, 246, 0.22);
   z-index: 50;
 }
 
-.kpi-card[data-tooltip]:hover::after {
-  content: attr(data-tooltip);
+.kpi-card:hover::after {
+  opacity: 1;
+}
+
+#cardAtRiskEmployees,
+#cardTurnoverRisk,
+#cardOpenDiscipline {
+  border-left-color: var(--accent-risk);
+}
+
+#cardReviewsDue {
+  border-left-color: var(--accent-warn);
+}
+
+#cardImpactPlayers {
+  border-left-color: var(--accent-success);
+}
+
+#cardOpsOpenIssues,
+#cardOpsCritical {
+  border-left-color: var(--accent-ops);
+}
+
+.kpi-tooltip-popover {
+  display: none;
   position: absolute;
   left: 12px;
   top: calc(100% + 8px);
   z-index: 1000;
   min-width: 220px;
-  max-width: 340px;
-  white-space: pre-line;
+  max-width: min(360px, calc(100vw - 48px));
+  max-height: min(320px, 45vh);
+  overflow-x: hidden;
+  overflow-y: auto;
   background: #163a5a;
   color: #ffffff;
   border-radius: 12px;
@@ -400,7 +971,32 @@ body {
   font-size: 0.82rem;
   line-height: 1.35;
   font-weight: 600;
-  pointer-events: none;
+  pointer-events: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.kpi-card[data-tooltip]:hover .kpi-tooltip-popover,
+.kpi-card[data-tooltip]:focus-within .kpi-tooltip-popover {
+  display: block;
+}
+
+.kpi-tooltip-list {
+  margin: 0;
+  padding: 0 0 0 18px;
+}
+
+.kpi-tooltip-list li {
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+.kpi-tooltip-list li:last-child {
+  margin-bottom: 0;
+}
+
+.kpi-tooltip-empty {
+  margin: 0;
+  font-weight: 600;
 }
 
 .kpi-card.good {
@@ -440,13 +1036,25 @@ body {
 .layout {
   display: grid;
   grid-template-columns: 1.15fr 0.85fr;
-  gap: 20px;
+  gap: var(--space-stack);
+}
+
+.layout-dashboard-overview {
+  grid-template-columns: 1fr;
+  max-width: 100%;
+  gap: var(--space-stack);
+}
+
+@media (min-width: 1180px) {
+  .layout-dashboard-overview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .stack {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-stack);
 }
 
 .card {
@@ -459,6 +1067,16 @@ body {
   box-shadow: var(--shadow);
   overflow: hidden;
   border: 1px solid rgba(226, 232, 240, 0.96);
+  transition:
+    transform var(--orbis-transition-smooth),
+    box-shadow var(--orbis-transition-smooth),
+    border-color var(--orbis-transition-smooth);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--orbis-shadow-hover);
+  border-color: rgba(59, 130, 246, 0.18);
 }
 
 .card-header {
@@ -479,7 +1097,7 @@ body {
 }
 
 .card-body {
-  padding: 18px;
+  padding: 16px;
 }
 
 .table-wrap,
@@ -645,13 +1263,19 @@ tr:hover td {
   position: fixed;
   inset: 0;
   background: rgba(7, 18, 32, 0.42);
-  display: none;
+  display: block;
+  opacity: 0;
+  visibility: hidden;
   z-index: 80;
   pointer-events: none;
+  transition:
+    opacity var(--orbis-transition-smooth),
+    visibility var(--orbis-transition-smooth);
 }
 
 .drawer-backdrop.open {
-  display: block;
+  opacity: 1;
+  visibility: visible;
   pointer-events: auto;
 }
 
@@ -664,14 +1288,18 @@ tr:hover td {
   background: #ffffff;
   box-shadow: -16px 0 40px rgba(15, 23, 42, 0.18);
   z-index: 90;
-  transition: right 0.25s ease;
+  transition:
+    right var(--orbis-transition-smooth),
+    box-shadow var(--orbis-transition-smooth);
   display: flex;
   flex-direction: column;
   pointer-events: auto;
+  will-change: right;
 }
 
 .drawer.open {
   right: 0;
+  box-shadow: -20px 0 48px rgba(15, 23, 42, 0.16);
 }
 
 .drawer-header {
@@ -707,6 +1335,14 @@ tr:hover td {
   padding: 10px 12px;
   cursor: pointer;
   font-weight: 700;
+  transition:
+    background var(--orbis-transition),
+    transform var(--orbis-transition);
+}
+
+.drawer-close:active {
+  transform: scale(0.97);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .drawer-body {
@@ -1035,6 +1671,38 @@ tr:hover td {
   border-left-color: var(--red);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .orbis-app-section.active {
+    animation: none;
+  }
+
+  .kpi-card:hover,
+  .card:hover {
+    transform: none;
+  }
+
+  .button:hover:not(:disabled),
+  .button:active:not(:disabled),
+  .btn:hover:not(:disabled),
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
+
+  .orbis-nav-item:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .drawer,
+  .drawer-backdrop,
+  .drawer-close {
+    transition-duration: 0.01ms;
+  }
+
+  .kpi-card::after {
+    transition: none;
+  }
+}
+
 @media (max-width: 1180px) {
   .kpi-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1042,6 +1710,52 @@ tr:hover td {
 
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .layout-dashboard-overview {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .orbis-app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .orbis-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 12px 14px;
+    gap: 12px;
+  }
+
+  .orbis-sidebar-brand {
+    flex: 1 1 auto;
+    min-width: 140px;
+    padding-bottom: 0;
+  }
+
+  .orbis-sidebar-nav {
+    flex: 1 1 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 0;
+    gap: 6px;
+  }
+
+  .orbis-nav-item {
+    width: auto;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+  }
+
+  .orbis-nav-item:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .orbis-topbar-meta-item:nth-child(1) {
+    display: none;
   }
 }
 

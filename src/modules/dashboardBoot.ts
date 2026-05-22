@@ -1053,11 +1053,70 @@ export async function loadRecentHrActivity(): Promise<void> {
   }
 }
 
-export async function loadAllDashboardData(): Promise<void> {
+async function runDashboardOverviewLoads(): Promise<DashboardSyncStatus> {
+  let syncStatus: DashboardSyncStatus = 'success';
+
+  try {
+    await loadEmployees();
+
+    if (typeof window.renderRoster === 'function') {
+      window.renderRoster();
+    }
+  } catch (err) {
+    console.error('[Dashboard] Employee load failed:', err);
+    syncStatus = 'error';
+    showToast('Could not load employee roster.', 'error');
+  }
+
+  const sectionResults = await Promise.allSettled([
+    loadSummaryMetricsFallback(),
+    typeof window.loadRecentActivityFallback === 'function'
+      ? window.loadRecentActivityFallback()
+      : Promise.resolve(),
+    loadReviewDashboardFallback(),
+    loadExecutiveInsightFallback(),
+    loadRiskEmployeesFallback(),
+    loadImpactPlayersFallback(),
+  ]);
+
+  if (sectionResults.some((result) => result.status === 'rejected')) {
+    syncStatus = syncStatus === 'error' ? 'error' : 'partial';
+  }
+
+  return syncStatus;
+}
+
+function finalizeDashboardLoad(syncStatus: DashboardSyncStatus, syncedAt: Date): void {
+  refreshStayInterviewDashboardSummaryFromCache();
+
+  if (typeof window.renderBasicDashboardKpis === 'function') {
+    window.renderBasicDashboardKpis();
+  }
+
+  updateDashboardSyncStatus(syncStatus, syncedAt);
+
+  if (syncStatus === 'partial') {
+    showToast('Some dashboard sections could not be refreshed.', 'error');
+  }
+
+  if (typeof window.initKpiHoverUi === 'function') {
+    window.initKpiHoverUi();
+  }
+
+  if (typeof window.buildKpiHoverDetails === 'function') {
+    window.buildKpiHoverDetails();
+  }
+
+  if (typeof window.updateWorkspaceAlerts === 'function') {
+    window.updateWorkspaceAlerts();
+  }
+}
+
+/** Dashboard KPIs + overview panels only (no candidate pipeline). Used on initial boot. */
+export async function loadDashboardOverview(): Promise<void> {
   if (isLoadingDashboard) return;
   isLoadingDashboard = true;
 
-  let syncStatus: DashboardSyncStatus = 'success';
   const syncedAt = new Date();
 
   if (typeof window.showDashboardLoadingSkeletons === 'function') {
@@ -1065,45 +1124,8 @@ export async function loadAllDashboardData(): Promise<void> {
   }
 
   try {
-    try {
-      await loadEmployees();
-
-      if (typeof window.renderRoster === 'function') {
-        window.renderRoster();
-      }
-    } catch (err) {
-      console.error('[Dashboard] Employee load failed:', err);
-      syncStatus = 'error';
-      showToast('Could not load employee roster.', 'error');
-    }
-
-    const sectionResults = await Promise.allSettled([
-      loadCandidates(),
-      loadSummaryMetricsFallback(),
-      typeof window.loadRecentActivityFallback === 'function'
-        ? window.loadRecentActivityFallback()
-        : Promise.resolve(),
-      loadReviewDashboardFallback(),
-      loadExecutiveInsightFallback(),
-      loadRiskEmployeesFallback(),
-      loadImpactPlayersFallback(),
-    ]);
-
-    if (sectionResults.some((result) => result.status === 'rejected')) {
-      syncStatus = syncStatus === 'error' ? 'error' : 'partial';
-    }
-
-    refreshStayInterviewDashboardSummaryFromCache();
-
-    if (typeof window.renderBasicDashboardKpis === 'function') {
-      window.renderBasicDashboardKpis();
-    }
-
-    updateDashboardSyncStatus(syncStatus, syncedAt);
-
-    if (syncStatus === 'partial') {
-      showToast('Some dashboard sections could not be refreshed.', 'error');
-    }
+    const syncStatus = await runDashboardOverviewLoads();
+    finalizeDashboardLoad(syncStatus, syncedAt);
   } catch (err) {
     console.error(err);
     updateDashboardSyncStatus('error', syncedAt);
@@ -1119,19 +1141,124 @@ export async function loadAllDashboardData(): Promise<void> {
   if (typeof window.hideDashboardLoadingSkeletons === 'function') {
     window.hideDashboardLoadingSkeletons();
   }
+}
 
-  if (typeof window.initKpiHoverUi === 'function') {
-    window.initKpiHoverUi();
+/** Full workspace refresh: dashboard overview + candidate pipeline. */
+export async function loadAllDashboardData(): Promise<void> {
+  if (isLoadingDashboard) return;
+  isLoadingDashboard = true;
+
+  const syncedAt = new Date();
+
+  if (typeof window.showDashboardLoadingSkeletons === 'function') {
+    window.showDashboardLoadingSkeletons();
   }
 
-  if (typeof window.buildKpiHoverDetails === 'function') {
-    window.buildKpiHoverDetails();
+  try {
+    let syncStatus = await runDashboardOverviewLoads();
+
+    try {
+      await loadCandidates();
+    } catch (err) {
+      console.error('[Dashboard] Candidate load failed:', err);
+      syncStatus = syncStatus === 'error' ? 'error' : 'partial';
+    }
+
+    finalizeDashboardLoad(syncStatus, syncedAt);
+  } catch (err) {
+    console.error(err);
+    updateDashboardSyncStatus('error', syncedAt);
+    showToast('Could not refresh dashboard data.', 'error');
+  } finally {
+    if (typeof window.renderBasicDashboardKpis === 'function') {
+      window.renderBasicDashboardKpis();
+    }
+    refreshStayInterviewDashboardSummaryFromCache();
+    isLoadingDashboard = false;
+  }
+
+  if (typeof window.hideDashboardLoadingSkeletons === 'function') {
+    window.hideDashboardLoadingSkeletons();
+  }
+}
+
+export async function refreshOrbisWorkspace(): Promise<void> {
+  const view = String(window.currentMainView || 'dashboardView');
+
+  if (view === 'candidatesView') {
+    if (typeof window.loadAllDashboardData === 'function') {
+      await window.loadAllDashboardData();
+    }
+    return;
+  }
+
+  if (view === 'operationsView') {
+    if (typeof window.loadEmployees === 'function') {
+      await loadEmployees();
+    }
+    if (typeof window.ensureOperationsIssuesLoaded === 'function') {
+      window.ensureOperationsIssuesLoaded(true);
+    } else if (typeof window.loadOperationsIssues === 'function') {
+      await window.loadOperationsIssues();
+    }
+    if (typeof window.updateWorkspaceAlerts === 'function') {
+      window.updateWorkspaceAlerts();
+    }
+    return;
+  }
+
+  if (view === 'documentsView') {
+    if (typeof window.loadDocuments === 'function') {
+      await window.loadDocuments();
+    }
+    return;
+  }
+
+  if (view === 'reportsView') {
+    if (typeof window.loadReportsSection === 'function') {
+      await window.loadReportsSection(true);
+    }
+    return;
+  }
+
+  if (view === 'settingsView') {
+    if (typeof window.loadSettingsAdmin === 'function') {
+      await window.loadSettingsAdmin(true);
+    }
+    return;
+  }
+
+  if (view === 'employeesView') {
+    if (typeof window.loadEmployees === 'function') {
+      await loadEmployees();
+    }
+    if (typeof window.renderEmployeeRoster === 'function') {
+      window.renderEmployeeRoster();
+    }
+    if (typeof window.buildKpiHoverDetails === 'function') {
+      window.buildKpiHoverDetails();
+    }
+    if (typeof window.updateWorkspaceAlerts === 'function') {
+      window.updateWorkspaceAlerts();
+    }
+    return;
+  }
+
+  if (typeof window.loadDashboardOverview === 'function') {
+    await window.loadDashboardOverview();
+    return;
+  }
+
+  if (typeof window.loadAllDashboardData === 'function') {
+    await window.loadAllDashboardData();
   }
 }
 
 declare global {
   interface Window {
+    loadDashboardOverview?: () => Promise<void>;
     loadAllDashboardData?: () => Promise<void>;
+    refreshOrbisWorkspace?: () => Promise<void>;
     loadReviewDashboardFallback?: () => Promise<void>;
     loadReviewDashboard?: () => Promise<void>;
     loadExecutiveInsightFallback?: () => Promise<void>;
@@ -1155,10 +1282,13 @@ declare global {
     initKpiHoverUi?: () => void;
     buildKpiHoverDetails?: () => void;
     buildRiskPreview?: () => void;
+    updateWorkspaceAlerts?: () => void;
   }
 }
 
+window.loadDashboardOverview = loadDashboardOverview;
 window.loadAllDashboardData = loadAllDashboardData;
+window.refreshOrbisWorkspace = refreshOrbisWorkspace;
 window.loadReviewDashboardFallback = loadReviewDashboardFallback;
 window.loadReviewDashboard = loadReviewDashboardFallback;
 window.loadExecutiveInsightFallback = loadExecutiveInsightFallback;

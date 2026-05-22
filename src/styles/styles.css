@@ -587,6 +587,92 @@ input[type="search"] {
   min-height: 0;
 }
 
+/* Operations issue drawer — scrollable body + pinned save actions */
+#operationsIssueDrawer {
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+  max-height: 100dvh;
+}
+
+#operationsIssueDrawer.open {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+#operationsIssueDrawer .drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dictation-consent {
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  background: rgba(248, 250, 252, 0.95);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.dictation-consent-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.dictation-consent-check input {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.dictation-status.listening {
+  color: var(--navy, #102a43);
+  font-weight: 600;
+}
+
+.dictation-status.stopped {
+  color: #475569;
+}
+
+.dictation-status.unsupported {
+  color: #b45309;
+}
+
+.file-upload-row {
+  align-items: center;
+  gap: 12px;
+}
+
+.file-upload-row .file-upload-name {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+#operationsIssueDrawer .drawer-actions,
+#operationsIssueDrawer .drawer-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(226, 232, 240, 0.95);
+  background: #fff;
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+}
+
 .documents-toolbar {
   display: flex;
   gap: 12px;
@@ -703,14 +789,29 @@ input[type="search"] {
 
 .card-body .empty,
 .table-wrap .empty,
+.history-list > .empty,
 td.empty {
   color: #64748b;
   text-align: center;
-  padding: 20px 18px;
-  font-size: 0.9rem;
-  border-radius: 12px;
-  background: #f8fafc;
+  padding: 22px 18px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
   border: 1px dashed #cbd5e1;
+}
+
+.history-list > .empty::before {
+  content: '—';
+  display: block;
+  font-size: 1.1rem;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+#reviewDashboardCard .card-body > .detail-grid {
+  margin-bottom: 12px !important;
 }
 
 /* =========================
@@ -739,6 +840,15 @@ td.empty {
     transparent
   );
   animation: orbisSkeletonShimmer 1.2s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .loading-skeleton::after,
+  .skeleton-line::after,
+  .kpi-grid.is-loading .kpi-value::after {
+    animation: none;
+  }
 }
 
 /* =========================
@@ -869,8 +979,8 @@ body.orbis-drawer-open {
   }
 }
 
-[data-nav-view].active {
-  box-shadow: inset 0 0 0 2px rgba(31, 79, 130, 0.18);
+.orbis-sidebar-nav .orbis-nav-item.active {
+  box-shadow: inset 3px 0 0 var(--blue, #3b82f6);
 }
 
 /* =========================

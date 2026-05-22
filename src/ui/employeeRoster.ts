@@ -1263,9 +1263,13 @@ function bindAtRiskKpiHover() {
         text = 'No employees currently flagged at-risk.';
     }
 
-    riskCard.removeAttribute('title');
-    riskCard.setAttribute('data-tooltip', text);
-    riskCard.setAttribute('aria-label', text);
+    if (typeof window.syncKpiCardTooltip === 'function') {
+        window.syncKpiCardTooltip(riskCard, text);
+    } else {
+        riskCard.removeAttribute('title');
+        riskCard.setAttribute('data-tooltip', text);
+        riskCard.setAttribute('aria-label', text);
+    }
 
     document.getElementById('atRiskKpiTooltip')?.remove();
 }

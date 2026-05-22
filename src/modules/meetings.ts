@@ -1,4 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { initMeetingDictation, stopMeetingDictation } from './dictation';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
 interface MeetingRecord {
@@ -40,6 +41,7 @@ declare global {
     editMeetingRecord?: (record: MeetingRecord) => void;
 
     deleteMeetingRecord?: (recordId: string, employeeId: string) => Promise<void>;
+    cancelMeetingEdit?: () => void;
 
     showToast?: (message: string, type?: string) => void;
 
@@ -268,6 +270,34 @@ export function editMeetingRecord(record: MeetingRecord): void {
   showToast('Meeting record loaded for editing.');
 }
 
+export function cancelMeetingEdit(): void {
+  stopMeetingDictation();
+
+  currentMeetingId = null;
+  window.currentMeetingId = null;
+
+  setInputValue('meetingDate', todayInputValue());
+  setInputValue('meetingType', '');
+  setInputValue('meetingSubject', '');
+  setInputValue('meetingFollowUpDate', '');
+  setInputValue('meetingNotes', '');
+
+  const saveButton = safeGet('saveMeetingBtn');
+  if (saveButton) {
+    saveButton.textContent = 'Save Meeting';
+  }
+
+  safeGet('cancelMeetingEditBtn')?.classList.add('hidden');
+  safeGet('meetingEditStatus')?.classList.add('hidden');
+
+  const consentCheck = safeGet<HTMLInputElement>('meetingDictationConsentCheck');
+  if (consentCheck) {
+    consentCheck.checked = false;
+  }
+
+  showToast('Meeting edit cancelled.');
+}
+
 export async function deleteMeetingRecord(meetingId: string, employeeId: string): Promise<void> {
   if (!meetingId) return;
 
@@ -306,6 +336,8 @@ export async function deleteMeetingRecord(meetingId: string, employeeId: string)
 }
 
 export async function saveMeetingRecord(): Promise<void> {
+  stopMeetingDictation();
+
   const activeEmployee = getCurrentEmployee();
   const employeeId = getEmployeeId(activeEmployee);
 
@@ -383,9 +415,12 @@ export async function saveMeetingRecord(): Promise<void> {
   await refreshMeetingDependentUi(reloadEmployeeId);
 }
 
+initMeetingDictation();
+
 window.saveMeetingRecord = saveMeetingRecord;
 window.saveMeeting = saveMeetingRecord;
 window.loadEmployeeMeetings = loadEmployeeMeetings;
 window.loadMeetingRecords = loadEmployeeMeetings;
 window.editMeetingRecord = editMeetingRecord;
 window.deleteMeetingRecord = deleteMeetingRecord;
+window.cancelMeetingEdit = cancelMeetingEdit;
