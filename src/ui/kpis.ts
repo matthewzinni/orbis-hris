@@ -1163,8 +1163,32 @@ export async function loadSummaryMetrics(): Promise<void> {
       ...manualRiskEmployeeIds,
     ]);
     const atRiskEmployees = combinedRiskEmployeeIds.size;
-    const impactPlayers = Object.values(impactMap).filter((meta) => hasActiveImpactMeta(meta))
-      .length;
+    const impactRosterMap = window.currentImpactPlayerRosterMap || impactMap;
+    const impactPlayers = (Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : []).filter(
+      (employee) => {
+        if (typeof window.isEmployeeImpactPlayer === 'function') {
+          return window.isEmployeeImpactPlayer(employee as KpiEmployeeRecord);
+        }
+
+        const record = employee as KpiEmployeeRecord;
+        const keys = [record.id, record.employee_id, record.dbId, record.displayId]
+          .filter(Boolean)
+          .map(String);
+
+        if (
+          record.impact_player ||
+          record.is_impact_player ||
+          record.impactPlayer
+        ) {
+          return true;
+        }
+
+        return keys.some((key) => {
+          const meta = impactRosterMap[key];
+          return meta && hasActiveImpactMeta(meta);
+        });
+      }
+    ).length;
 
     const hasAnyData = !reviewsRes.error || !incidentsRes.error;
 
@@ -1198,6 +1222,14 @@ export async function loadSummaryMetrics(): Promise<void> {
 
     renderKpiEmployeeMetrics();
     hideKpiRetryBanner();
+
+    if (typeof window.loadRiskEmployeesFallback === 'function') {
+      await window.loadRiskEmployeesFallback();
+    }
+
+    if (typeof window.loadImpactPlayersFallback === 'function') {
+      await window.loadImpactPlayersFallback();
+    }
   } catch (err) {
     console.error(err);
     if (Array.isArray(window.EMPLOYEES) && window.EMPLOYEES.length && typeof window.renderRoster === 'function') {

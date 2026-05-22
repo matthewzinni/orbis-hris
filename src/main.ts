@@ -95,6 +95,21 @@ import {
   openOperationsView,
   saveOperationsIssueRecord,
 } from './modules/operationsIssues';
+import {
+  applyInvestigationsCenterAccess,
+  cancelInvestigationEdit,
+  closeInvestigationDrawer,
+  deleteInvestigationById,
+  deleteInvestigationRecord,
+  ensureInvestigationsLoaded,
+  exportInvestigationsCsv,
+  isInvestigationDrawerOpen,
+  loadInvestigations,
+  openInvestigationDrawer,
+  openInvestigationsView,
+  openNewInvestigationForm,
+  saveInvestigationRecord,
+} from './modules/investigations';
 import './ui/loadingUi';
 import './ui/dashboardRetry';
 import './ui/confirmModal';
@@ -190,6 +205,19 @@ function registerLegacyBridges(): void {
   bridge.cancelOperationsIssueEdit = cancelOperationsIssueEdit;
   bridge.applyOperationsCenterAccess = applyOperationsCenterAccess;
 
+  bridge.loadInvestigations = loadInvestigations;
+  bridge.ensureInvestigationsLoaded = ensureInvestigationsLoaded;
+  bridge.exportInvestigationsCsv = exportInvestigationsCsv;
+  bridge.openInvestigationsView = openInvestigationsView;
+  bridge.openNewInvestigationForm = openNewInvestigationForm;
+  bridge.openInvestigationDrawer = openInvestigationDrawer;
+  bridge.closeInvestigationDrawer = closeInvestigationDrawer;
+  bridge.saveInvestigationRecord = saveInvestigationRecord;
+  bridge.deleteInvestigationRecord = deleteInvestigationRecord;
+  bridge.deleteInvestigationById = deleteInvestigationById;
+  bridge.cancelInvestigationEdit = cancelInvestigationEdit;
+  bridge.applyInvestigationsCenterAccess = applyInvestigationsCenterAccess;
+
   globalThis.loadOperationsIssues = loadOperationsIssues;
   globalThis.ensureOperationsIssuesLoaded = ensureOperationsIssuesLoaded;
   globalThis.exportOperationsIssuesCsv = exportOperationsIssuesCsv;
@@ -203,6 +231,20 @@ function registerLegacyBridges(): void {
   globalThis.cancelOperationsIssueEdit = cancelOperationsIssueEdit;
   globalThis.isOperationsIssueDrawerOpen = isOperationsIssueDrawerOpen;
   globalThis.applyOperationsCenterAccess = applyOperationsCenterAccess;
+
+  globalThis.loadInvestigations = loadInvestigations;
+  globalThis.ensureInvestigationsLoaded = ensureInvestigationsLoaded;
+  globalThis.exportInvestigationsCsv = exportInvestigationsCsv;
+  globalThis.openInvestigationsView = openInvestigationsView;
+  globalThis.openNewInvestigationForm = openNewInvestigationForm;
+  globalThis.openInvestigationDrawer = openInvestigationDrawer;
+  globalThis.closeInvestigationDrawer = closeInvestigationDrawer;
+  globalThis.saveInvestigationRecord = saveInvestigationRecord;
+  globalThis.deleteInvestigationRecord = deleteInvestigationRecord;
+  globalThis.deleteInvestigationById = deleteInvestigationById;
+  globalThis.cancelInvestigationEdit = cancelInvestigationEdit;
+  globalThis.isInvestigationDrawerOpen = isInvestigationDrawerOpen;
+  globalThis.applyInvestigationsCenterAccess = applyInvestigationsCenterAccess;
 }
 
 async function initializeProtectedModules(): Promise<void> {
@@ -239,6 +281,7 @@ async function initializeProtectedModules(): Promise<void> {
     console.log('Employees loaded:', employeeCount);
 
     applyOperationsCenterAccess();
+    applyInvestigationsCenterAccess();
   } catch (err) {
     console.error('Employee module failed to load employees:', err);
   }

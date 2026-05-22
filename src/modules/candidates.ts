@@ -1180,6 +1180,11 @@ export function closeCandidateDrawer(): void {
 }
 
 export function closeActiveDrawer(): void {
+  if (typeof window.isInvestigationDrawerOpen === 'function' && window.isInvestigationDrawerOpen()) {
+    window.closeInvestigationDrawer?.();
+    return;
+  }
+
   if (typeof window.isOperationsIssueDrawerOpen === 'function' && window.isOperationsIssueDrawerOpen()) {
     window.closeOperationsIssueDrawer?.();
     return;

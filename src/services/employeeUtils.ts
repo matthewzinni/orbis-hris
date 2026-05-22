@@ -34,6 +34,52 @@ export function employeeDisplayName(employee: EmployeeLike | null | undefined): 
   return `${first} ${last}`.trim() || 'Employee';
 }
 
+/** Sort key for roster lists (last name, then first name). */
+export function employeeLastNameSortKey(employee: EmployeeLike | null | undefined): string {
+  if (!employee) return '';
+
+  const last = cleanEmployeeNameValue(employee.last || employee.last_name || '');
+  const first = cleanEmployeeNameValue(employee.first || employee.first_name || '');
+
+  if (last) {
+    return `${last}\u0000${first}`.toLowerCase();
+  }
+
+  const displayName = cleanEmployeeNameValue(employee.displayName || '');
+  if (displayName) {
+    const parts = displayName.split(/\s+/).filter(Boolean);
+    const inferredLast = parts.length > 1 ? parts[parts.length - 1] : displayName;
+    const inferredFirst = parts.length > 1 ? parts.slice(0, -1).join(' ') : '';
+    return `${inferredLast}\u0000${inferredFirst}`.toLowerCase();
+  }
+
+  return first.toLowerCase();
+}
+
+export function compareEmployeesByLastName(
+  left: EmployeeLike | null | undefined,
+  right: EmployeeLike | null | undefined
+): number {
+  const nameCompare = employeeLastNameSortKey(left).localeCompare(
+    employeeLastNameSortKey(right),
+    undefined,
+    { sensitivity: 'base' }
+  );
+
+  if (nameCompare !== 0) {
+    return nameCompare;
+  }
+
+  const leftId = String(
+    left?.displayId || left?.employee_id || left?.id || ''
+  ).trim();
+  const rightId = String(
+    right?.displayId || right?.employee_id || right?.id || ''
+  ).trim();
+
+  return leftId.localeCompare(rightId, undefined, { sensitivity: 'base' });
+}
+
 export function isActiveDashboardEmployee(employee: EmployeeLike | null | undefined): boolean {
   const status = String(employee?.status || employee?.displayStatus || '')
     .trim()

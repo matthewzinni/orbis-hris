@@ -72,6 +72,27 @@ const ACTION_COMMANDS: CommandItem[] = [
     run: () => switchMainView('operationsView'),
   },
   {
+    id: 'nav-investigations',
+    kind: 'action',
+    title: 'Go to HR Investigations',
+    subtitle: 'Navigation',
+    searchText: 'investigations harassment complaint workplace investigation case',
+    run: () => switchMainView('investigationsView'),
+  },
+  {
+    id: 'action-new-investigation',
+    kind: 'action',
+    title: 'Open new investigation case',
+    subtitle: 'Quick action',
+    searchText: 'investigation case harassment complaint hr interview',
+    run: async () => {
+      switchMainView('investigationsView');
+      if (typeof window.openNewInvestigationForm === 'function') {
+        window.openNewInvestigationForm();
+      }
+    },
+  },
+  {
     id: 'nav-reports',
     kind: 'action',
     title: 'Go to Reports',
@@ -401,7 +422,12 @@ async function refreshCandidateIndex(): Promise<void> {
 }
 
 function getNavigationCommands(): CommandItem[] {
-  const adminOnlyIds = new Set(['nav-reports', 'nav-settings']);
+  const adminOnlyIds = new Set([
+    'nav-investigations',
+    'action-new-investigation',
+    'nav-reports',
+    'nav-settings',
+  ]);
 
   if (isAdminUser()) {
     return ACTION_COMMANDS;

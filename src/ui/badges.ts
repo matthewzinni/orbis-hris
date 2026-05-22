@@ -27,6 +27,36 @@ function getImpactMap(): Record<string, FlagMeta> {
   return (window.currentImpactPlayerRosterMap || {}) as Record<string, FlagMeta>;
 }
 
+export function getEmployeeMapKeys(employee: EmployeeRow | null | undefined): string[] {
+  if (!employee) return [];
+
+  return [...new Set(
+    [employee.dbId, employee.id, employee.employee_id, employee.displayId]
+      .filter(Boolean)
+      .map((value) => String(value).trim())
+      .filter(Boolean)
+  )];
+}
+
+function resolveFlagMetaFromMap(
+  map: Record<string, FlagMeta>,
+  employee: EmployeeRow | null | undefined,
+  hasActive: (meta: FlagMeta | null | undefined) => boolean
+): FlagMeta | null {
+  for (const key of getEmployeeMapKeys(employee)) {
+    const meta = map[key];
+    if (hasActive(meta)) {
+      return meta;
+    }
+  }
+
+  return null;
+}
+
+function isTruthyFlag(value: unknown): boolean {
+  return value === true || String(value || '').toLowerCase() === 'true';
+}
+
 export function hasActiveRiskMeta(meta: FlagMeta | null | undefined): boolean {
   if (!meta) return false;
 
@@ -46,25 +76,41 @@ export function hasActiveImpactMeta(meta: FlagMeta | null | undefined): boolean 
 }
 
 export function getEmployeeRiskMeta(employee: EmployeeRow | null | undefined): FlagMeta | null {
-  const map = getRiskMap();
-  const meta =
-    map[String(employee?.dbId)] ||
-    map[String(employee?.id)] ||
-    map[String(employee?.employee_id)] ||
-    null;
+  if (!employee) return null;
 
-  return hasActiveRiskMeta(meta) ? meta : null;
+  if (isTruthyFlag(employee.at_risk) || isTruthyFlag(employee.atRisk)) {
+    return resolveFlagMetaFromMap(getRiskMap(), employee, hasActiveRiskMeta) || {
+      manualReason: String(employee.at_risk_reason || employee.risk_reason || '').trim(),
+    };
+  }
+
+  return resolveFlagMetaFromMap(getRiskMap(), employee, hasActiveRiskMeta);
 }
 
 export function getEmployeeImpactMeta(employee: EmployeeRow | null | undefined): FlagMeta | null {
-  const map = getImpactMap();
-  const meta =
-    map[String(employee?.dbId)] ||
-    map[String(employee?.id)] ||
-    map[String(employee?.employee_id)] ||
-    null;
+  if (!employee) return null;
 
-  return hasActiveImpactMeta(meta) ? meta : null;
+  if (
+    isTruthyFlag(employee.impact_player) ||
+    isTruthyFlag(employee.is_impact_player) ||
+    isTruthyFlag(employee.impactPlayer)
+  ) {
+    return (
+      resolveFlagMetaFromMap(getImpactMap(), employee, hasActiveImpactMeta) || {
+        manualReason: String(employee.impact_reason || '').trim(),
+      }
+    );
+  }
+
+  return resolveFlagMetaFromMap(getImpactMap(), employee, hasActiveImpactMeta);
+}
+
+export function isEmployeeAtRisk(employee: EmployeeRow | null | undefined): boolean {
+  return Boolean(getEmployeeRiskMeta(employee));
+}
+
+export function isEmployeeImpactPlayer(employee: EmployeeRow | null | undefined): boolean {
+  return Boolean(getEmployeeImpactMeta(employee));
 }
 
 export function buildRiskBadgeHtml(riskMeta: FlagMeta | null): string {
@@ -171,8 +217,11 @@ export function updateEmployeeRowBadges(): void {
 
 declare global {
   interface Window {
+    getEmployeeMapKeys?: (employee: EmployeeRow) => string[];
     getEmployeeRiskMeta?: (employee: EmployeeRow) => FlagMeta | null;
     getEmployeeImpactMeta?: (employee: EmployeeRow) => FlagMeta | null;
+    isEmployeeAtRisk?: (employee: EmployeeRow) => boolean;
+    isEmployeeImpactPlayer?: (employee: EmployeeRow) => boolean;
     hasActiveRiskMeta?: (meta: FlagMeta | null | undefined) => boolean;
     hasActiveImpactMeta?: (meta: FlagMeta | null | undefined) => boolean;
     buildRiskBadgeHtml?: (meta: FlagMeta | null) => string;
@@ -181,8 +230,11 @@ declare global {
   }
 }
 
+window.getEmployeeMapKeys = getEmployeeMapKeys;
 window.getEmployeeRiskMeta = getEmployeeRiskMeta;
 window.getEmployeeImpactMeta = getEmployeeImpactMeta;
+window.isEmployeeAtRisk = isEmployeeAtRisk;
+window.isEmployeeImpactPlayer = isEmployeeImpactPlayer;
 window.hasActiveRiskMeta = hasActiveRiskMeta;
 window.hasActiveImpactMeta = hasActiveImpactMeta;
 window.buildRiskBadgeHtml = buildRiskBadgeHtml;

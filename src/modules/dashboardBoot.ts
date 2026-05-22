@@ -7,6 +7,7 @@ import { showOrbisConfirm } from '../ui/confirmModal';
 import { loadEmployees } from './employees';
 import { loadCandidates } from './candidates';
 import {
+  compareEmployeesByLastName,
   daysUntilDate,
   employeeDisplayName,
   isActiveDashboardEmployee,
@@ -71,6 +72,72 @@ function fillEmptyKpiValue(id: string, fallbackValue = '0'): void {
 }
 
 let stayInterviewDashboardBound = false;
+let dashboardEmployeeLinksBound = false;
+
+function getEmployeeDrawerId(employee: EmployeeRow): string {
+  return String(
+    employee.dbId || employee.id || employee.employee_id || employee.displayId || ''
+  ).trim();
+}
+
+function renderDashboardEmployeeNameLink(
+  employee: EmployeeRow,
+  title = 'Open employee profile'
+): string {
+  const employeeId = getEmployeeDrawerId(employee);
+  const name = employeeDisplayName(employee);
+
+  if (!employeeId) {
+    return esc(name);
+  }
+
+  return `<button class="link-button" type="button" data-employee-id="${esc(employeeId)}" title="${esc(title)}">${esc(name)}</button>`;
+}
+
+async function openDashboardEmployeeDrawer(employeeId: string): Promise<void> {
+  if (!employeeId) {
+    return;
+  }
+
+  if (typeof window.openEmployeeDrawer === 'function') {
+    await window.openEmployeeDrawer(employeeId);
+  }
+}
+
+function ensureDashboardEmployeeLinkBindings(): void {
+  if (dashboardEmployeeLinksBound) {
+    return;
+  }
+
+  const riskEl = safeGet('riskEmployees');
+  const impactEl = safeGet('impactPlayers');
+
+  if (!riskEl && !impactEl) {
+    return;
+  }
+
+  dashboardEmployeeLinksBound = true;
+
+  const handleEmployeeLinkClick = (event: Event): void => {
+    const button = (event.target as Element | null)?.closest<HTMLElement>('[data-employee-id]');
+
+    if (!button) {
+      return;
+    }
+
+    const employeeId = button.dataset.employeeId || '';
+
+    if (!employeeId) {
+      return;
+    }
+
+    event.preventDefault();
+    void openDashboardEmployeeDrawer(employeeId);
+  };
+
+  riskEl?.addEventListener('click', handleEmployeeLinkClick);
+  impactEl?.addEventListener('click', handleEmployeeLinkClick);
+}
 
 async function openEmployeeStayInterviewTab(employeeId: string): Promise<void> {
   if (!employeeId) {
@@ -614,22 +681,20 @@ export async function loadExecutiveInsightFallback(): Promise<void> {
 
 export async function loadRiskEmployeesFallback(): Promise<void> {
   const employees = getDashboardEmployees().filter((e) => isActiveDashboardEmployee(e));
-  const riskMap = window.currentAtRiskRosterMap || {};
 
-  const riskEmployees = employees.filter((employee) => {
-    if (typeof window.getEmployeeRiskMeta === 'function') {
-      return Boolean(window.getEmployeeRiskMeta(employee));
-    }
+  const riskEmployees = employees
+    .filter((employee) => {
+      if (typeof window.isEmployeeAtRisk === 'function') {
+        return window.isEmployeeAtRisk(employee);
+      }
 
-    const key = String(employee.dbId || employee.id || employee.employee_id || '');
-    const meta = riskMap[key] as { manualReason?: string; lowReview?: boolean; openIncidentCount?: number } | undefined;
-    return Boolean(
-      meta &&
-        (meta.lowReview === true ||
-          (meta.openIncidentCount ?? 0) > 0 ||
-          String(meta.manualReason || '').trim() !== '')
-    );
-  });
+      if (typeof window.getEmployeeRiskMeta === 'function') {
+        return Boolean(window.getEmployeeRiskMeta(employee));
+      }
+
+      return false;
+    })
+    .sort(compareEmployeesByLastName);
 
   setText('kAtRiskEmployees', String(riskEmployees.length));
 
@@ -643,12 +708,14 @@ export async function loadRiskEmployeesFallback(): Promise<void> {
     return;
   }
 
+  ensureDashboardEmployeeLinkBindings();
+
   container.innerHTML = riskEmployees
     .slice(0, 8)
     .map(
       (employee) => `
         <div class="dashboard-list-item">
-            <strong>${esc(employeeDisplayName(employee))}</strong>
+            ${renderDashboardEmployeeNameLink(employee, 'Open at-risk employee')}
             <span>${esc(employee.department || employee.dept || '')}</span>
         </div>
     `
@@ -658,27 +725,20 @@ export async function loadRiskEmployeesFallback(): Promise<void> {
 
 export async function loadImpactPlayersFallback(): Promise<void> {
   const employees = getDashboardEmployees().filter((e) => isActiveDashboardEmployee(e));
-  const impactMap = window.currentImpactPlayerRosterMap || {};
 
-  const impactPlayers = employees.filter((employee) => {
-    const keys = [employee.dbId, employee.id, employee.employee_id, employee.displayId]
-      .filter(Boolean)
-      .map(String);
+  const impactPlayers = employees
+    .filter((employee) => {
+      if (typeof window.isEmployeeImpactPlayer === 'function') {
+        return window.isEmployeeImpactPlayer(employee);
+      }
 
-    const mapMeta = keys.map((key) => impactMap[key]).find(Boolean) as
-      | { manualReason?: string; highReview?: boolean; reviewScore?: number }
-      | undefined;
-    const manualImpact = mapMeta?.manualReason || employee.impact_reason;
-    const highReview = mapMeta?.highReview === true;
-    const flag = employee.impact_player || employee.is_impact_player || employee.impactPlayer;
+      if (typeof window.getEmployeeImpactMeta === 'function') {
+        return Boolean(window.getEmployeeImpactMeta(employee));
+      }
 
-    return (
-      Boolean(manualImpact) ||
-      highReview ||
-      flag === true ||
-      String(flag || '').toLowerCase() === 'true'
-    );
-  });
+      return false;
+    })
+    .sort(compareEmployeesByLastName);
 
   setText('kImpactPlayers', String(impactPlayers.length));
 
@@ -694,22 +754,23 @@ export async function loadImpactPlayersFallback(): Promise<void> {
     return;
   }
 
+  ensureDashboardEmployeeLinkBindings();
+
   container.innerHTML = impactPlayers
     .slice(0, 8)
     .map((employee) => {
-      const keys = [employee.dbId, employee.id, employee.employee_id, employee.displayId]
-        .filter(Boolean)
-        .map(String);
-      const mapMeta =
-        keys.map((key) => impactMap[key]).find(Boolean) ||
-        ({} as { reviewScore?: number });
-      const scoreText = mapMeta.reviewScore
-        ? `Review score: ${Number(mapMeta.reviewScore).toFixed(1)}`
-        : '';
+      const impactMeta =
+        typeof window.getEmployeeImpactMeta === 'function'
+          ? window.getEmployeeImpactMeta(employee)
+          : null;
+      const scoreText =
+        impactMeta?.reviewScore !== null && impactMeta?.reviewScore !== undefined
+          ? `Review score: ${Number(impactMeta.reviewScore).toFixed(1)}`
+          : '';
 
       return `
         <div class="dashboard-list-item">
-            <strong>${esc(employeeDisplayName(employee))}</strong>
+            ${renderDashboardEmployeeNameLink(employee, 'Open impact player')}
             <span>${esc(employee.department || employee.dept || '')}</span>
             ${scoreText ? `<small>${esc(scoreText)}</small>` : ''}
         </div>
@@ -1056,6 +1117,8 @@ export async function loadRecentHrActivity(): Promise<void> {
 async function runDashboardOverviewLoads(): Promise<DashboardSyncStatus> {
   let syncStatus: DashboardSyncStatus = 'success';
 
+  ensureDashboardEmployeeLinkBindings();
+
   try {
     await loadEmployees();
 
@@ -1068,8 +1131,9 @@ async function runDashboardOverviewLoads(): Promise<DashboardSyncStatus> {
     showToast('Could not load employee roster.', 'error');
   }
 
+  await loadSummaryMetricsFallback();
+
   const sectionResults = await Promise.allSettled([
-    loadSummaryMetricsFallback(),
     typeof window.loadRecentActivityFallback === 'function'
       ? window.loadRecentActivityFallback()
       : Promise.resolve(),

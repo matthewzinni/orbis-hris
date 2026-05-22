@@ -128,8 +128,8 @@ table thead th {
   position: sticky;
   top: 0;
   z-index: 5;
-  background: #ffffff;
-  box-shadow: 0 1px 0 #e5e7eb;
+  background: #f6f8fa;
+  box-shadow: 0 1px 0 var(--line, #d9e2ec);
 }
 
 table tbody tr {
@@ -139,7 +139,7 @@ table tbody tr {
 }
 
 table tbody tr:hover {
-  background: #f8fafc;
+  background: #f0f3f6;
 }
 
 /* =========================
@@ -981,9 +981,10 @@ body.orbis-drawer-open {
 
 .orbis-sidebar-nav .orbis-nav-item.active {
   background: rgba(255, 255, 255, 0.96);
-  color: var(--navy, #102a43);
+  color: var(--navy, #16324f);
   border-color: transparent;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+  border-left: 3px solid var(--blue, #2f6fed);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
 }
 
 /* =========================
@@ -998,7 +999,7 @@ body.orbis-drawer-open {
 
 .drawer-tablist .tab-btn[aria-selected='true'],
 .drawer-tablist .tab-btn.active {
-  background: linear-gradient(135deg, var(--blue, #3b82f6) 0%, var(--navy-2, #1f4f82) 100%);
+  background: linear-gradient(135deg, var(--blue, #2f6fed) 0%, var(--navy-2, #21466b) 100%);
   border-color: transparent;
   color: #fff;
 }

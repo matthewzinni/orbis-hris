@@ -162,8 +162,16 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
     window.applyOperationsCenterAccess();
   }
 
+  if (typeof window.applyInvestigationsCenterAccess === 'function') {
+    window.applyInvestigationsCenterAccess();
+  }
+
   if (typeof window.ensureOperationsIssuesLoaded === 'function') {
     window.ensureOperationsIssuesLoaded();
+  }
+
+  if (typeof window.ensureInvestigationsLoaded === 'function') {
+    window.ensureInvestigationsLoaded();
   }
 
   return scoped;

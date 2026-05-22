@@ -16,6 +16,8 @@ declare global {
   interface Window {
     currentMainView?: string;
     showAppSection?: (sectionId: string) => void;
+    ensureInvestigationsLoaded?: (force?: boolean) => void;
+    loadInvestigations?: () => Promise<void>;
   }
 }
 
@@ -57,6 +59,7 @@ const SECTION_LABELS: Record<string, string> = {
   candidatesView: 'Candidates',
   documentsView: 'Documents',
   operationsView: 'Operations',
+  investigationsView: 'Investigations',
   reportsView: 'Reports',
   settingsView: 'Admin & Settings',
 };
@@ -112,6 +115,19 @@ const APP_SECTIONS: AppSection[] = [
         window.ensureOperationsIssuesLoaded(true);
       } else if (typeof window.loadOperationsIssues === 'function') {
         void window.loadOperationsIssues();
+      }
+    },
+  },
+  {
+    id: 'investigationsView',
+    rootId: 'orbisSectionInvestigations',
+    targetId: 'investigationsCenterTop',
+    aliases: ['investigations', 'investigationCenter', 'hr investigations'],
+    onEnter: () => {
+      if (typeof window.ensureInvestigationsLoaded === 'function') {
+        window.ensureInvestigationsLoaded(true);
+      } else if (typeof window.loadInvestigations === 'function') {
+        void window.loadInvestigations();
       }
     },
   },
@@ -184,7 +200,7 @@ function activateNavButtons(sectionId: string): void {
   });
 }
 
-const ADMIN_ONLY_SECTIONS = new Set(['reportsView', 'settingsView']);
+const ADMIN_ONLY_SECTIONS = new Set(['investigationsView', 'reportsView', 'settingsView']);
 
 export function showAppSection(sectionId: string): boolean {
   let resolvedSectionId = String(sectionId || '').trim();

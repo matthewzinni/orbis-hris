@@ -1,36 +1,38 @@
 /* Orbis app shell — design tokens + layout (extracted from index.html) */
 
 :root {
-  --navy: #102a43;
-  --navy-2: #1f4f82;
-  --blue: #3b82f6;
+  --navy: #16324f;
+  --navy-2: #21466b;
+  --blue: #2f6fed;
   --blue-strong: #2563eb;
   --blue-light: #eaf2ff;
-  --bg: #f4f7fb;
-  --bg-2: #eef3f9;
+  --bg: #eef1f4;
+  --bg-2: #f3f5f7;
+  --bg-warm: #f4f2ee;
   --card: #ffffff;
-  --text: #0f172a;
-  --muted: #64748b;
-  --line: #e2e8f0;
-  --line-strong: #d7e1ec;
-  --green: #0f8a63;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --muted-soft: #94a3b8;
+  --line: #d9e2ec;
+  --line-strong: #cbd5e1;
+  --green: #2fbf71;
   --green-bg: #e8fbf3;
-  --red: #c24159;
+  --red: #e25b6a;
   --red-bg: #fff0f3;
-  --yellow: #a16207;
+  --yellow: #f0a43b;
   --yellow-bg: #fff7db;
-  --shadow: 0 10px 28px rgba(15, 23, 42, 0.07);
-  --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.12);
+  --shadow: 0 10px 32px rgba(22, 50, 79, 0.1);
+  --shadow-lg: 0 22px 52px rgba(22, 50, 79, 0.14);
   --radius: 22px;
   --radius-sm: 16px;
   --orbis-radius-sm: 8px;
   --orbis-radius-md: 12px;
   --orbis-radius-lg: 18px;
-  --orbis-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
-  --orbis-shadow-hover: 0 14px 34px rgba(15, 23, 42, 0.1);
-  --orbis-border: #e2e8f0;
-  --orbis-muted: #64748b;
-  --orbis-bg-soft: #f8fafc;
+  --orbis-shadow-soft: 0 6px 20px rgba(22, 50, 79, 0.08);
+  --orbis-shadow-hover: 0 18px 44px rgba(22, 50, 79, 0.16);
+  --orbis-border: #d9e2ec;
+  --orbis-muted: #6b7280;
+  --orbis-bg-soft: #f0f3f6;
   --orbis-transition: 180ms ease;
   --orbis-transition-smooth: 280ms cubic-bezier(0.22, 1, 0.36, 1);
   --orbis-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -38,15 +40,17 @@
   --space-page-x: 20px;
   --space-section: 14px;
   --space-stack: 14px;
-  --accent-blue: #3b82f6;
+  --accent-blue: #2f6fed;
   --accent-blue-soft: #eaf2ff;
-  --accent-risk: #c24159;
+  --accent-risk: #e25b6a;
   --accent-risk-soft: #fff0f3;
-  --accent-warn: #a16207;
+  --accent-warn: #f0a43b;
   --accent-warn-soft: #fff7db;
-  --accent-success: #0f8a63;
+  --accent-success: #2fbf71;
   --accent-success-soft: #e8fbf3;
-  --accent-ops: #1f4f82;
+  --accent-info: #4b8df8;
+  --accent-executive: #7b61ff;
+  --accent-ops: #21466b;
   --accent-ops-soft: #e8f0fa;
   --sidebar-width: 236px;
 }
@@ -59,9 +63,9 @@ body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(59, 130, 246, 0.08), transparent 24%),
-    radial-gradient(circle at 85% 10%, rgba(16, 42, 67, 0.06), transparent 22%),
-    linear-gradient(180deg, #f8fbff 0%, var(--bg) 28%, var(--bg-2) 100%);
+    radial-gradient(circle at 12% 0%, rgba(47, 111, 237, 0.05), transparent 30%),
+    radial-gradient(circle at 88% 6%, rgba(22, 50, 79, 0.04), transparent 26%),
+    linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 50%, #e9edf1 100%);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -209,7 +213,7 @@ body {
 
 .button.primary,
 .btn-primary {
-  background: linear-gradient(135deg, var(--blue) 0%, var(--navy-2) 100%);
+  background: linear-gradient(135deg, var(--blue) 0%, #255fd4 100%);
   color: white;
   border-color: transparent;
 }
@@ -311,14 +315,9 @@ body.authenticated #appView {
   flex-direction: column;
   padding: 20px 14px 24px;
   color: rgba(255, 255, 255, 0.95);
-  background: linear-gradient(
-    180deg,
-    var(--navy) 0%,
-    var(--navy-2) 52%,
-    #163a5a 100%
-  );
+  background: linear-gradient(180deg, var(--navy) 0%, #1a3d5c 55%, #132a42 100%);
   border-right: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.08);
+  box-shadow: 4px 0 24px rgba(15, 23, 42, 0.1);
 }
 
 .orbis-sidebar-brand {
@@ -388,8 +387,8 @@ body.authenticated #appView {
 }
 
 .orbis-nav-item:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: var(--navy-2);
+  border-color: rgba(255, 255, 255, 0.12);
   transform: translateX(2px);
 }
 
@@ -397,7 +396,8 @@ body.authenticated #appView {
   background: rgba(255, 255, 255, 0.96);
   color: var(--navy);
   border-color: transparent;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+  border-left: 3px solid var(--blue);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.14);
   font-weight: 800;
 }
 
@@ -406,7 +406,7 @@ body.authenticated #appView {
   flex-direction: column;
   min-width: 0;
   min-height: 100vh;
-  background: linear-gradient(180deg, #f8fbff 0%, var(--bg) 18%, var(--bg-2) 100%);
+  background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 52%, var(--bg-warm) 100%);
 }
 
 .orbis-topbar {
@@ -416,9 +416,9 @@ body.authenticated #appView {
   gap: 16px;
   flex-wrap: wrap;
   padding: 12px 20px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.9);
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 2px 12px rgba(22, 50, 79, 0.06);
   backdrop-filter: blur(10px);
   position: sticky;
   top: 0;
@@ -709,7 +709,7 @@ body.authenticated #appView {
   letter-spacing: 0.06em;
   color: var(--muted);
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, #f8fbff 0%, #f1f5f9 100%);
+  background: linear-gradient(180deg, #f6f8fa 0%, #eef1f4 100%);
 }
 
 .orbis-alerts-list {
@@ -737,7 +737,7 @@ body.authenticated #appView {
 }
 
 .orbis-alerts-item:hover {
-  background: #f8fbff;
+  background: var(--orbis-bg-soft);
   transform: none;
 }
 
@@ -947,15 +947,11 @@ body.authenticated #appView {
   position: relative;
   z-index: 1;
   overflow: visible;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.98) 0%,
-    rgba(248, 251, 255, 0.98) 100%
-  );
+  background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 15px 16px 14px;
-  border: 1px solid rgba(226, 232, 240, 0.95);
+  border: 1px solid var(--line);
   border-left: 4px solid var(--blue);
   transition:
     transform var(--orbis-transition-smooth),
@@ -970,7 +966,7 @@ body.authenticated #appView {
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), transparent 52%);
+  background: linear-gradient(135deg, rgba(47, 111, 237, 0.04), transparent 55%);
   opacity: 0;
   transition: opacity var(--orbis-transition-smooth);
 }
@@ -978,7 +974,7 @@ body.authenticated #appView {
 .kpi-card:hover {
   transform: translateY(-2px);
   box-shadow: var(--orbis-shadow-hover);
-  border-color: rgba(59, 130, 246, 0.22);
+  border-color: rgba(47, 111, 237, 0.22);
   z-index: 50;
 }
 
@@ -1111,15 +1107,11 @@ body.authenticated #appView {
 }
 
 .card {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.98) 0%,
-    rgba(252, 253, 255, 0.98) 100%
-  );
+  background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   overflow: hidden;
-  border: 1px solid rgba(226, 232, 240, 0.96);
+  border: 1px solid var(--line);
   transition:
     transform var(--orbis-transition-smooth),
     box-shadow var(--orbis-transition-smooth),
@@ -1129,15 +1121,11 @@ body.authenticated #appView {
 .card:hover {
   transform: translateY(-2px);
   box-shadow: var(--orbis-shadow-hover);
-  border-color: rgba(59, 130, 246, 0.18);
+  border-color: rgba(47, 111, 237, 0.2);
 }
 
 .card-header {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.98) 0%,
-    rgba(246, 249, 253, 0.98) 100%
-  );
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fb 100%);
   color: var(--navy);
   padding: 16px 18px;
   font-weight: 800;
@@ -1158,12 +1146,9 @@ body.authenticated #appView {
   border: 1px solid var(--line);
   border-radius: 16px;
   overflow: auto;
-  background: white;
+  background: var(--card);
   position: relative;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    0 1px 2px rgba(15, 23, 42, 0.03);
+  box-shadow: var(--orbis-shadow-soft);
 }
 
 .mini-table-wrap {
@@ -1180,7 +1165,7 @@ th {
   position: sticky;
   top: 0;
   z-index: 3;
-  background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+  background: linear-gradient(180deg, #f6f8fa 0%, #eef1f4 100%);
   color: var(--navy);
   text-align: left;
   font-size: 0.76rem;
@@ -1207,11 +1192,11 @@ td {
 }
 
 tr:nth-child(even) td {
-  background: #fbfcff;
+  background: #f8f9fb;
 }
 
 tr:hover td {
-  background: #f3f8ff;
+  background: #f0f3f6;
 }
 
 .link-button {
@@ -1403,7 +1388,7 @@ tr:hover td {
   padding-top: 24px;
   overflow: auto;
   flex: 1;
-  background: linear-gradient(180deg, #f8fbff 0%, #f5f8fc 100%);
+  background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
 }
 
 .tabs {
