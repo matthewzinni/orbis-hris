@@ -17,13 +17,31 @@ create policy orbis_user_access_select
     or lower(trim(email)) = public.orbis_auth_email()
   );
 
+grant select, insert, update, delete on table public.user_access to authenticated;
+
 drop policy if exists orbis_user_access_write_admin on public.user_access;
-create policy orbis_user_access_write_admin
+drop policy if exists orbis_user_access_insert_admin on public.user_access;
+drop policy if exists orbis_user_access_update_admin on public.user_access;
+drop policy if exists orbis_user_access_delete_admin on public.user_access;
+
+create policy orbis_user_access_insert_admin
   on public.user_access
-  for all
+  for insert
+  to authenticated
+  with check (public.orbis_is_admin());
+
+create policy orbis_user_access_update_admin
+  on public.user_access
+  for update
   to authenticated
   using (public.orbis_is_admin())
   with check (public.orbis_is_admin());
+
+create policy orbis_user_access_delete_admin
+  on public.user_access
+  for delete
+  to authenticated
+  using (public.orbis_is_admin());
 
 -- ---------------------------------------------------------------------------
 -- profiles

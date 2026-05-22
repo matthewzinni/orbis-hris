@@ -19,6 +19,22 @@ declare global {
   }
 }
 
+async function ensureCandidatesSectionReady(): Promise<void> {
+  const employees = (window as { EMPLOYEES?: unknown[] }).EMPLOYEES;
+
+  if ((!Array.isArray(employees) || !employees.length) && typeof window.loadEmployees === 'function') {
+    try {
+      await window.loadEmployees();
+    } catch (err) {
+      console.error('[AppSections] Employee preload for candidates failed:', err);
+    }
+  }
+
+  if (typeof window.loadCandidates === 'function') {
+    await window.loadCandidates();
+  }
+}
+
 async function ensureEmployeesSectionReady(): Promise<void> {
   const employees = (window as { EMPLOYEES?: unknown[] }).EMPLOYEES;
 
@@ -72,9 +88,7 @@ const APP_SECTIONS: AppSection[] = [
     targetId: 'candidatesCard',
     aliases: ['candidates', 'candidatePipeline'],
     onEnter: () => {
-      if (typeof window.loadCandidates === 'function') {
-        void window.loadCandidates();
-      }
+      void ensureCandidatesSectionReady();
     },
   },
   {
@@ -204,6 +218,7 @@ export function showAppSection(sectionId: string): boolean {
     el.classList.toggle('active', isActive);
     el.classList.toggle('hidden', !isActive);
     el.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    el.style.display = isActive ? '' : 'none';
   });
 
   window.currentMainView = section.id;

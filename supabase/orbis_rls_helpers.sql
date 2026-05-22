@@ -216,6 +216,42 @@ as $$
   select public.orbis_employee_key_visible(emp_id::text);
 $$;
 
+-- Candidates: admin all; supervisors only for departments on their team
+create or replace function public.orbis_candidate_department_visible(dept text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select
+    public.orbis_is_admin()
+    or (
+      public.orbis_is_supervisor()
+      and coalesce(trim(dept), '') <> ''
+      and exists (
+        select 1
+        from public.employees e
+        where public.orbis_supervisor_matches(
+          coalesce(e.supervisor, ''),
+          public.orbis_supervisor_scope_name()
+        )
+        and lower(trim(coalesce(e.department, ''))) = lower(trim(dept))
+        and coalesce(trim(e.department), '') <> ''
+      )
+    );
+$$;
+
+create or replace function public.orbis_candidate_row_visible(c public.candidates)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.orbis_candidate_department_visible(c.department);
+$$;
+
 -- Performance reviews: admin always; supervisors only for direct reports
 create or replace function public.orbis_performance_review_visible(emp_key text)
 returns boolean
@@ -245,3 +281,5 @@ grant execute on function public.orbis_employee_child_accessible(text) to authen
 grant execute on function public.orbis_employee_key_visible(text) to authenticated;
 grant execute on function public.orbis_employee_key_visible_uuid(uuid) to authenticated;
 grant execute on function public.orbis_performance_review_visible(text) to authenticated;
+grant execute on function public.orbis_candidate_department_visible(text) to authenticated;
+grant execute on function public.orbis_candidate_row_visible(public.candidates) to authenticated;

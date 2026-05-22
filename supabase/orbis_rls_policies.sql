@@ -18,13 +18,31 @@ create policy orbis_user_access_select
     or lower(trim(email)) = public.orbis_auth_email()
   );
 
+grant select, insert, update, delete on table public.user_access to authenticated;
+
 drop policy if exists orbis_user_access_write_admin on public.user_access;
-create policy orbis_user_access_write_admin
+drop policy if exists orbis_user_access_insert_admin on public.user_access;
+drop policy if exists orbis_user_access_update_admin on public.user_access;
+drop policy if exists orbis_user_access_delete_admin on public.user_access;
+
+create policy orbis_user_access_insert_admin
   on public.user_access
-  for all
+  for insert
+  to authenticated
+  with check (public.orbis_is_admin());
+
+create policy orbis_user_access_update_admin
+  on public.user_access
+  for update
   to authenticated
   using (public.orbis_is_admin())
   with check (public.orbis_is_admin());
+
+create policy orbis_user_access_delete_admin
+  on public.user_access
+  for delete
+  to authenticated
+  using (public.orbis_is_admin());
 
 -- ---------------------------------------------------------------------------
 -- profiles
@@ -237,25 +255,106 @@ create policy orbis_employee_reviews_delete
   using (public.orbis_performance_review_visible(employee_id::text));
 
 -- ---------------------------------------------------------------------------
--- Candidates (admin / HR only)
+-- Candidates (admin: all; supervisor: department scope)
 -- ---------------------------------------------------------------------------
 
 alter table if exists public.candidates enable row level security;
 
 drop policy if exists orbis_candidates_admin on public.candidates;
-create policy orbis_candidates_admin
+
+drop policy if exists orbis_candidates_select on public.candidates;
+create policy orbis_candidates_select
   on public.candidates
-  for all
+  for select
   to authenticated
-  using (public.orbis_is_admin())
-  with check (public.orbis_is_admin());
+  using (public.orbis_candidate_row_visible(candidates));
+
+drop policy if exists orbis_candidates_insert on public.candidates;
+create policy orbis_candidates_insert
+  on public.candidates
+  for insert
+  to authenticated
+  with check (public.orbis_candidate_department_visible(department));
+
+drop policy if exists orbis_candidates_update on public.candidates;
+create policy orbis_candidates_update
+  on public.candidates
+  for update
+  to authenticated
+  using (public.orbis_candidate_row_visible(candidates))
+  with check (public.orbis_candidate_department_visible(department));
+
+drop policy if exists orbis_candidates_delete on public.candidates;
+create policy orbis_candidates_delete
+  on public.candidates
+  for delete
+  to authenticated
+  using (public.orbis_candidate_row_visible(candidates));
 
 alter table if exists public.candidate_notes enable row level security;
 
 drop policy if exists orbis_candidate_notes_admin on public.candidate_notes;
-create policy orbis_candidate_notes_admin
+
+drop policy if exists orbis_candidate_notes_select on public.candidate_notes;
+create policy orbis_candidate_notes_select
   on public.candidate_notes
-  for all
+  for select
   to authenticated
-  using (public.orbis_is_admin())
-  with check (public.orbis_is_admin());
+  using (
+    exists (
+      select 1
+      from public.candidates c
+      where c.id = candidate_notes.candidate_id
+        and public.orbis_candidate_row_visible(c)
+    )
+  );
+
+drop policy if exists orbis_candidate_notes_insert on public.candidate_notes;
+create policy orbis_candidate_notes_insert
+  on public.candidate_notes
+  for insert
+  to authenticated
+  with check (
+    exists (
+      select 1
+      from public.candidates c
+      where c.id = candidate_notes.candidate_id
+        and public.orbis_candidate_row_visible(c)
+    )
+  );
+
+drop policy if exists orbis_candidate_notes_update on public.candidate_notes;
+create policy orbis_candidate_notes_update
+  on public.candidate_notes
+  for update
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.candidates c
+      where c.id = candidate_notes.candidate_id
+        and public.orbis_candidate_row_visible(c)
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.candidates c
+      where c.id = candidate_notes.candidate_id
+        and public.orbis_candidate_row_visible(c)
+    )
+  );
+
+drop policy if exists orbis_candidate_notes_delete on public.candidate_notes;
+create policy orbis_candidate_notes_delete
+  on public.candidate_notes
+  for delete
+  to authenticated
+  using (
+    exists (
+      select 1
+      from public.candidates c
+      where c.id = candidate_notes.candidate_id
+        and public.orbis_candidate_row_visible(c)
+    )
+  );

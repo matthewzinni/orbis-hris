@@ -1,5 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
-import { isAdminUser, type UserAccessRow } from '../services/access';
+import { getUserRole, isAdminUser, type UserAccessRow } from '../services/access';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
 const USER_ACCESS_ROLES = ['admin', 'supervisor', 'user'] as const;
@@ -7,6 +7,7 @@ const USER_ACCESS_ROLES = ['admin', 'supervisor', 'user'] as const;
 let cachedUserAccessRows: UserAccessRow[] = [];
 let editingUserEmail: string | null = null;
 let isAddingUserAccess = false;
+let isSavingUserAccess = false;
 
 type AuditLogRow = {
   id?: string;
@@ -194,12 +195,15 @@ function renderUserAccessTableBody(): void {
   body.innerHTML = parts.join('');
 }
 
-async function saveUserAccessRow(originalEmail: string, isNew: boolean): Promise<void> {
-  const body = document.getElementById('settingsUserAccessBody');
-  const editRow = body?.querySelector('tr[data-editing="true"]');
+async function saveUserAccessRow(
+  originalEmail: string,
+  isNew: boolean,
+  editRow: ParentNode
+): Promise<void> {
+  if (isSavingUserAccess) return;
 
-  if (!editRow) {
-    showToast('Could not find the user form row.', 'error');
+  if (!isAdminUser()) {
+    showToast('Admin access is required to manage user access.', 'error');
     return;
   }
 
@@ -209,48 +213,80 @@ async function saveUserAccessRow(originalEmail: string, isNew: boolean): Promise
     return;
   }
 
-  if (isNew) {
-    const exists = cachedUserAccessRows.some(
-      (row) => normalizeUserEmail(String(row.email || '')) === payload.email
-    );
+  const lookupEmail = normalizeUserEmail(isNew ? payload.email : originalEmail || payload.email);
 
-    if (exists) {
-      showToast('A user with that email already exists.', 'error');
-      return;
-    }
-
-    const { error } = await supabaseClient.from('user_access').insert(payload);
-
-    if (error) {
-      console.error('[Settings] user_access insert failed:', error);
-      showToast(error.message || 'Could not add user access.', 'error');
-      return;
-    }
-
-    showToast('User access added.');
-  } else {
-    const { error } = await supabaseClient
-      .from('user_access')
-      .update({
-        display_name: payload.display_name,
-        role: payload.role,
-        supervisor_name: payload.supervisor_name,
-        can_delete: payload.can_delete,
-      })
-      .eq('email', normalizeUserEmail(originalEmail));
-
-    if (error) {
-      console.error('[Settings] user_access update failed:', error);
-      showToast(error.message || 'Could not update user access.', 'error');
-      return;
-    }
-
-    showToast('User access updated.');
+  if (!lookupEmail) {
+    showToast('Email is required.', 'error');
+    return;
   }
 
-  editingUserEmail = null;
-  isAddingUserAccess = false;
-  await loadUserAccessTable();
+  isSavingUserAccess = true;
+
+  try {
+    if (isNew) {
+      const exists = cachedUserAccessRows.some(
+        (row) => normalizeUserEmail(String(row.email || '')) === payload.email
+      );
+
+      if (exists) {
+        showToast('A user with that email already exists.', 'error');
+        return;
+      }
+
+      const { data, error } = await supabaseClient
+        .from('user_access')
+        .insert(payload)
+        .select('email')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[Settings] user_access insert failed:', error);
+        showToast(error.message || 'Could not add user access.', 'error');
+        return;
+      }
+
+      if (!data?.email) {
+        showToast('User access was not created. Check database permissions (admin RLS).', 'error');
+        return;
+      }
+
+      showToast('User access added.');
+    } else {
+      const { data, error } = await supabaseClient
+        .from('user_access')
+        .update({
+          display_name: payload.display_name,
+          role: payload.role,
+          supervisor_name: payload.supervisor_name,
+          can_delete: payload.can_delete,
+        })
+        .eq('email', lookupEmail)
+        .select('email');
+
+      if (error) {
+        console.error('[Settings] user_access update failed:', error);
+        showToast(error.message || 'Could not update user access.', 'error');
+        return;
+      }
+
+      if (!data?.length) {
+        showToast(
+          'No user was updated. The email may not exist, or you may lack admin write permission.',
+          'error'
+        );
+        return;
+      }
+
+      showToast('User access updated.');
+    }
+
+    editingUserEmail = null;
+    isAddingUserAccess = false;
+    await loadUserAccessTable();
+    await getUserRole();
+  } finally {
+    isSavingUserAccess = false;
+  }
 }
 
 async function deleteUserAccessRow(email: string): Promise<void> {
@@ -280,17 +316,44 @@ async function deleteUserAccessRow(email: string): Promise<void> {
   await loadUserAccessTable();
 }
 
+function focusUserAccessEditRow(row: ParentNode | null): void {
+  if (!row) return;
+
+  const focusTarget =
+    row.querySelector<HTMLElement>('[data-field="display_name"]') ||
+    row.querySelector<HTMLElement>('[data-field="email"]') ||
+    row.querySelector<HTMLElement>('input, select');
+
+  focusTarget?.focus();
+}
+
 function handleUserAccessTableClick(event: Event): void {
   const target = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-action]');
 
   if (!target) return;
 
+  if (!target.closest('#settingsUserAccessBody')) return;
+
   const action = target.getAttribute('data-action');
 
+  event.preventDefault();
+  event.stopPropagation();
+
   if (action === 'edit-user') {
+    if (!isAdminUser()) {
+      showToast('Admin access is required to edit users.', 'error');
+      return;
+    }
+
     editingUserEmail = normalizeUserEmail(target.getAttribute('data-email') || '');
     isAddingUserAccess = false;
     renderUserAccessTableBody();
+
+    const editRow = document
+      .getElementById('settingsUserAccessBody')
+      ?.querySelector('tr[data-editing="true"]');
+
+    focusUserAccessEditRow(editRow);
     return;
   }
 
@@ -302,9 +365,19 @@ function handleUserAccessTableClick(event: Event): void {
   }
 
   if (action === 'save-user') {
-    const originalEmail = target.getAttribute('data-email') || '';
+    const editRow = target.closest('tr[data-editing="true"]');
+
+    if (!editRow) {
+      showToast('Could not find the user form row.', 'error');
+      return;
+    }
+
+    const originalEmail =
+      target.getAttribute('data-email') ||
+      editRow.getAttribute('data-user-email') ||
+      '';
     const isNew = target.getAttribute('data-is-new') === '1';
-    void saveUserAccessRow(originalEmail, isNew);
+    void saveUserAccessRow(originalEmail, isNew, editRow);
     return;
   }
 
@@ -486,6 +559,7 @@ function renderSettingsAccessGate(): void {
 }
 
 export async function loadSettingsAdmin(force = false): Promise<void> {
+  initSettingsAdminModule();
   renderSettingsAccessGate();
 
   if (!isAdminUser()) {
@@ -501,30 +575,51 @@ export async function loadSettingsAdmin(force = false): Promise<void> {
 }
 
 function bindSettingsEvents(): void {
-  if ((window as { __settingsEventsBound?: boolean }).__settingsEventsBound) {
+  const root = document.getElementById('settingsAdminContent');
+
+  if (!root) {
     return;
   }
 
-  (window as { __settingsEventsBound?: boolean }).__settingsEventsBound = true;
+  if (!(root as { __settingsEventsBound?: boolean }).__settingsEventsBound) {
+    (root as { __settingsEventsBound?: boolean }).__settingsEventsBound = true;
 
-  document.getElementById('settingsRefreshBtn')?.addEventListener('click', () => {
-    editingUserEmail = null;
-    isAddingUserAccess = false;
-    void loadSettingsAdmin(true);
-  });
+    root.addEventListener('click', handleUserAccessTableClick);
 
-  document.getElementById('settingsAddUserBtn')?.addEventListener('click', () => {
-    editingUserEmail = null;
-    isAddingUserAccess = true;
-    renderUserAccessTableBody();
-  });
+    document.getElementById('settingsRefreshBtn')?.addEventListener('click', () => {
+      editingUserEmail = null;
+      isAddingUserAccess = false;
+      void loadSettingsAdmin(true);
+    });
 
-  document
-    .getElementById('settingsUserAccessBody')
-    ?.addEventListener('click', handleUserAccessTableClick);
+    document.getElementById('settingsAddUserBtn')?.addEventListener('click', () => {
+      if (!isAdminUser()) {
+        showToast('Admin access is required to add users.', 'error');
+        return;
+      }
+
+      editingUserEmail = null;
+      isAddingUserAccess = true;
+      renderUserAccessTableBody();
+
+      const editRow = document
+        .getElementById('settingsUserAccessBody')
+        ?.querySelector('tr[data-editing="true"]');
+
+      focusUserAccessEditRow(editRow);
+    });
+  }
 }
 
-bindSettingsEvents();
+function initSettingsAdminModule(): void {
+  bindSettingsEvents();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSettingsAdminModule);
+} else {
+  initSettingsAdminModule();
+}
 
 declare global {
   interface Window {

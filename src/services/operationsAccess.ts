@@ -1,34 +1,16 @@
 import {
   getCurrentUserAccess,
+  getSupervisorDepartmentScope,
   isAdminUser,
   isSupervisorUser,
 } from './access';
+
+export { getSupervisorDepartmentScope };
 import { supabaseClient } from './supabaseClient';
 import type { OperationsIssue } from '../types/operationsTypes';
 
 export function canAccessOperationsCenter(): boolean {
   return isAdminUser() || isSupervisorUser();
-}
-
-export function getSupervisorDepartmentScope(): string[] {
-  if (!isSupervisorUser()) return [];
-
-  const employees = Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : [];
-  const departments = new Set<string>();
-
-  employees.forEach((employee) => {
-    const dept = String(
-      (employee as Record<string, unknown>).department ||
-        (employee as Record<string, unknown>).dept ||
-        ''
-    )
-      .trim()
-      .toLowerCase();
-
-    if (dept) departments.add(dept);
-  });
-
-  return Array.from(departments);
 }
 
 export function canViewOperationsIssue(issue: OperationsIssue | null | undefined): boolean {

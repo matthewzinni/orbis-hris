@@ -34,7 +34,8 @@ import './modules/dashboardBoot';
 import './modules/reports';
 import './modules/settingsAdmin';
 import { initAppShell, showAuthenticatedOrbisView, showAuthView } from './app/appShell';
-import { initAppSections } from './ui/appSections';
+import { initAppSections, showAppSection } from './ui/appSections';
+import { switchMainView } from './ui/navigation';
 import './services/auditTrail';
 import './modules/employeeAdmin';
 import './modules/employeeFlags';
@@ -114,7 +115,14 @@ bridge.signIn = signIn;
 bridge.signOut = signOut;
 bridge.showAuthenticatedOrbisView = showAuthenticatedOrbisView;
 bridge.showAuthView = showAuthView;
-bridge.bootstrapOrbisAfterAuth = initializeProtectedModules;
+bridge.bootstrapOrbisAfterAuth = async () => {
+  await initializeProtectedModules();
+  initAppSections();
+};
+
+// Always use the section router from appSections (not legacy scroll-into-view navigation).
+bridge.showAppSection = showAppSection;
+bridge.switchMainView = switchMainView;
 
 function openCandidatesViewFallback(): void {
   if (typeof bridge.switchMainView === 'function') {

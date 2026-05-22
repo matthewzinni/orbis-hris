@@ -1,4 +1,9 @@
 import { supabaseClient } from '../services/supabaseClient';
+import {
+  getSupervisorDepartmentScope,
+  isAdminUser,
+  isSupervisorUser,
+} from '../services/access';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
 import { renderDashboardRetryState } from '../ui/dashboardRetry';
 import { showOrbisConfirm } from '../ui/confirmModal';
@@ -104,6 +109,65 @@ function nl2br(value: unknown): string {
   return escapeHtml(value).replace(/\n/g, '<br>');
 }
 
+function normalizeDepartment(value: unknown): string {
+  return String(value || '').trim().toLowerCase();
+}
+
+function canAccessCandidate(candidate: CandidateRecord | null | undefined): boolean {
+  if (!candidate) return false;
+  if (isAdminUser()) return true;
+  if (!isSupervisorUser()) return false;
+
+  const department = normalizeDepartment(candidate.department);
+
+  if (!department) return false;
+
+  return getSupervisorDepartmentScope().includes(department);
+}
+
+function filterCandidatesForCurrentAccess(rows: CandidateRecord[]): CandidateRecord[] {
+  if (isAdminUser()) return rows;
+  if (!isSupervisorUser()) return [];
+
+  return rows.filter((row) => canAccessCandidate(row));
+}
+
+function resolveCandidateDepartmentForSave(rawDepartment: unknown): string {
+  return String(rawDepartment || '').trim();
+}
+
+function validateCandidateDepartmentForSave(department: string): boolean {
+  const normalized = normalizeDepartment(department);
+
+  if (isAdminUser()) {
+    return true;
+  }
+
+  if (!isSupervisorUser()) {
+    showToast('You do not have permission to manage candidates.', 'error');
+    return false;
+  }
+
+  if (!normalized) {
+    showToast('Department is required for candidates in your scope.', 'error');
+    return false;
+  }
+
+  const scope = getSupervisorDepartmentScope();
+
+  if (!scope.length) {
+    showToast('No departments are assigned to your team yet.', 'error');
+    return false;
+  }
+
+  if (!scope.includes(normalized)) {
+    showToast('Candidates must belong to one of your team departments.', 'error');
+    return false;
+  }
+
+  return true;
+}
+
 function getNextCandidateStage(currentStage: unknown): string {
   const stage = String(currentStage || 'Applied').trim();
 
@@ -195,6 +259,10 @@ function getCandidateDrawerValues(): CandidateRecord {
     email: fields[2]?.value?.trim() || '',
     phone: fields[3]?.value?.trim() || '',
     position: fields[4]?.value?.trim() || '',
+    department:
+      getInputValue('candidateDepartmentInput', 'candidateDepartment') ||
+      fields[5]?.value?.trim() ||
+      '',
     stage: fields[6]?.value?.trim() || fields[5]?.value?.trim() || 'Applied',
     source: fields[7]?.value?.trim() || '',
     applied_date: fields[8]?.value?.trim() || '',
@@ -306,16 +374,20 @@ export async function loadCandidates(): Promise<void> {
       return;
     }
 
-    const rows = ((data || []) as CandidateRecord[]).sort((a, b) => {
-      const dateA = String(a.created_at || '');
-
-      const dateB = String(b.created_at || '');
-
-      return dateB.localeCompare(dateA);
-    });
+    const rows = filterCandidatesForCurrentAccess((data || []) as CandidateRecord[]).sort(
+      (a, b) => {
+        const dateA = String(a.created_at || '');
+        const dateB = String(b.created_at || '');
+        return dateB.localeCompare(dateA);
+      }
+    );
 
     if (!rows.length) {
-      target.innerHTML = '<div class="empty">No candidates found.</div>';
+      const emptyMessage = isSupervisorUser()
+        ? 'No candidates found for your department scope.'
+        : 'No candidates found.';
+
+      target.innerHTML = `<div class="empty">${escapeHtml(emptyMessage)}</div>`;
 
       return;
     }
@@ -331,6 +403,7 @@ export async function loadCandidates(): Promise<void> {
                 </button>
               </td>
               <td>${escapeHtml(row.position || '')}</td>
+              <td>${escapeHtml(row.department || '')}</td>
               <td>${escapeHtml(row.stage || '')}</td>
               <td>${escapeHtml(row.source || '')}</td>
               <td>${escapeHtml(row.applied_date || '')}</td>
@@ -434,7 +507,7 @@ export async function loadCandidates(): Promise<void> {
 }
 
 export function editCandidateRecord(record: CandidateRecord): void {
-  if (!record?.id) {
+  if (!record?.id || !canAccessCandidate(record)) {
     showToast('Candidate not found.', 'error');
     return;
   }
@@ -519,6 +592,13 @@ export async function deleteCandidateRecord(candidateId?: string): Promise<void>
     return;
   }
 
+  const candidateToDelete = await fetchCandidateById(idToDelete);
+
+  if (!candidateToDelete || !canAccessCandidate(candidateToDelete)) {
+    showToast('Candidate not found.', 'error');
+    return;
+  }
+
   if (
     !(await showOrbisConfirm('Delete this candidate?', {
       title: 'Delete candidate',
@@ -599,6 +679,10 @@ export async function saveCandidateRecord(): Promise<void> {
         getInputValue('candidatePositionInput', 'candidatePosition', 'newCandidatePosition', 'position') ||
         drawerValues.position ||
         '',
+      department:
+        resolveCandidateDepartmentForSave(
+          getInputValue('candidateDepartmentInput', 'candidateDepartment') || drawerValues.department
+        ),
       stage:
         getInputValue('candidateStageInput', 'candidateStage', 'newCandidateStage', 'stage') ||
         drawerValues.stage ||
@@ -627,6 +711,10 @@ export async function saveCandidateRecord(): Promise<void> {
 
     if (!candidatePayload.first_name && !candidatePayload.last_name) {
       showToast('Enter candidate information before saving.', 'error');
+      return;
+    }
+
+    if (!validateCandidateDepartmentForSave(String(candidatePayload.department || ''))) {
       return;
     }
     const existingRows = Array.from(document.querySelectorAll('[data-candidate-id]'));
@@ -758,6 +846,13 @@ export async function saveCandidateRecord(): Promise<void> {
 }
 
 export async function moveCandidateToStage(candidateId: string, newStage: string): Promise<void> {
+  const candidate = await fetchCandidateById(candidateId);
+
+  if (!candidate || !canAccessCandidate(candidate)) {
+    showToast('Candidate not found.', 'error');
+    return;
+  }
+
   if (newStage === 'Hired') {
     await convertCandidateToEmployee(candidateId);
     return;
@@ -795,6 +890,11 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
 
     showToast('Could not load candidate.', 'error');
 
+    return false;
+  }
+
+  if (!canAccessCandidate(data as CandidateRecord)) {
+    showToast('Candidate not found.', 'error');
     return false;
   }
 
@@ -1141,7 +1241,7 @@ function fillCandidateDrawerFields(candidate: CandidateRecord): void {
 export async function openCandidateDrawer(candidateId: string): Promise<void> {
   const candidate = await fetchCandidateById(candidateId);
 
-  if (!candidate?.id) {
+  if (!candidate?.id || !canAccessCandidate(candidate)) {
     showToast('Candidate not found.', 'error');
     return;
   }
@@ -1193,9 +1293,14 @@ export function openNewCandidateForm(): void {
 
   restoreDrawerTabPlacement('candidateDrawer');
 
+  const scopedDepartments = getSupervisorDepartmentScope();
+  const defaultDepartment =
+    isSupervisorUser() && scopedDepartments.length === 1 ? scopedDepartments[0] : '';
+
   fillCandidateDrawerFields({
     stage: 'Applied',
     applied_date: todayInputValue(),
+    department: defaultDepartment,
   });
 
   switchCandidateTab('profile');

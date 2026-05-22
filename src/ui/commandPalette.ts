@@ -694,7 +694,12 @@ function bindCommandPaletteEvents(): void {
   });
 
   document.addEventListener('keydown', (event) => {
-    const key = event.key.toLowerCase();
+    const key = String(event.key || '').toLowerCase();
+
+    if (!key) {
+      return;
+    }
+
     const modifier = isMacPlatform() ? event.metaKey : event.ctrlKey;
 
     if (modifier && key === 'k') {

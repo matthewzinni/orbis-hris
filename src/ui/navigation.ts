@@ -11,7 +11,15 @@ declare global {
 }
 
 export function switchMainView(sectionId: string): void {
-  showAppSection(sectionId);
+  const switched = showAppSection(sectionId);
+  if (!switched) return;
+
+  const section = resolveAppSection(sectionId);
+  const hash = (section?.aliases?.[0] || sectionId.replace(/View$/i, '') || 'dashboard').toLowerCase();
+  const nextUrl = `${window.location.pathname}${window.location.search}#${hash}`;
+  if (`#${hash}` !== window.location.hash) {
+    history.replaceState(null, '', nextUrl);
+  }
 }
 
 export function openCandidatesView(): void {

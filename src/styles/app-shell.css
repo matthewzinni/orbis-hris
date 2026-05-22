@@ -278,7 +278,25 @@ body {
    HRIS APP SHELL (sidebar + topbar)
 ========================= */
 
+body.auth-only #appView {
+  display: none !important;
+}
+
+body.authenticated #authView {
+  display: none !important;
+}
+
 #appView:not(.hidden) {
+  display: block;
+  min-height: 100vh;
+}
+
+body.authenticated {
+  overflow-x: hidden;
+}
+
+body.authenticated #appView {
+  display: block !important;
   min-height: 100vh;
 }
 
@@ -376,10 +394,11 @@ body {
 }
 
 .orbis-nav-item.active {
-  background: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: inset 3px 0 0 var(--blue);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--navy);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+  font-weight: 800;
 }
 
 .orbis-workspace {
@@ -547,6 +566,34 @@ body {
   border-radius: 8px;
   font-size: 0.875rem;
   background: #fff;
+  pointer-events: auto;
+  position: relative;
+  z-index: 2;
+}
+
+.settings-inline-input[readonly] {
+  background: #f1f5f9;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.settings-user-edit-row .settings-inline-input:not([readonly]),
+.settings-user-edit-row .settings-inline-select {
+  background: #fff;
+  color: var(--text);
+}
+
+.settings-user-edit-row .settings-delete-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.settings-user-edit-row .settings-delete-check input {
+  pointer-events: auto;
 }
 
 .settings-user-actions {
@@ -587,6 +634,12 @@ body {
 
 .dashboard-kpi-grid {
   margin-bottom: var(--space-section);
+}
+
+@media (min-width: 1280px) {
+  .dashboard-kpi-grid.kpi-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 .dashboard-quick-links {

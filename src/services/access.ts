@@ -117,6 +117,24 @@ export function isSupervisorUser(): boolean {
   return String(currentUserRole || '').toLowerCase() === 'supervisor';
 }
 
+/** Departments derived from employees visible to the current supervisor. */
+export function getSupervisorDepartmentScope(): string[] {
+  if (!isSupervisorUser()) return [];
+
+  const employees = Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : [];
+  const departments = new Set<string>();
+
+  employees.forEach((employee) => {
+    const dept = String(employee.department || employee.dept || '')
+      .trim()
+      .toLowerCase();
+
+    if (dept) departments.add(dept);
+  });
+
+  return Array.from(departments);
+}
+
 /** Performance reviews: admins always; supervisors only for their direct reports. */
 export function canAccessPerformanceReviews(employee?: EmployeeLike | null): boolean {
   if (Boolean(window.isCreatingEmployee)) return false;
@@ -170,8 +188,11 @@ export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | 
 export function applyAdminDashboardView(): void {
   document.getElementById('supervisorBanner')?.remove();
 
+  const currentView = String(window.currentMainView || 'dashboardView');
   const dashboardTitle = safeGet('dashboardTitle');
-  if (dashboardTitle) dashboardTitle.textContent = 'Dashboard';
+  if (dashboardTitle && currentView === 'dashboardView') {
+    dashboardTitle.textContent = 'Dashboard';
+  }
 
   const rosterHeader = document.querySelector('#employeeRosterCard .card-header > span');
   if (rosterHeader) rosterHeader.textContent = 'Employee Roster';
@@ -238,8 +259,11 @@ export function applySupervisorDashboardView(): void {
   const name =
     currentUserAccess?.display_name || currentUserAccess?.supervisor_name || 'Supervisor';
 
+  const currentView = String(window.currentMainView || 'dashboardView');
   const title = safeGet('dashboardTitle');
-  if (title) title.textContent = `${name}'s Team Dashboard`;
+  if (title && currentView === 'dashboardView') {
+    title.textContent = `${name}'s Team Dashboard`;
+  }
 
   const rosterTitle =
     safeGet('rosterTitle') ||

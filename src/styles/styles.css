@@ -980,7 +980,10 @@ body.orbis-drawer-open {
 }
 
 .orbis-sidebar-nav .orbis-nav-item.active {
-  box-shadow: inset 3px 0 0 var(--blue, #3b82f6);
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--navy, #102a43);
+  border-color: transparent;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
 }
 
 /* =========================

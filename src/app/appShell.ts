@@ -161,39 +161,36 @@ window.getCurrentEmployeeForOrbis = getCurrentEmployeeForOrbis;
 window.setCurrentEmployeeForOrbis = setCurrentEmployeeForOrbis;
 window.ensureDrawerTabFallbacks = ensureDrawerTabFallbacks;
 
+function setRootViewVisibility(view: 'auth' | 'app'): void {
+  const authView = document.getElementById('authView');
+  const appView = document.getElementById('appView');
+
+  if (authView) {
+    authView.classList.toggle('hidden', view !== 'auth');
+    authView.style.display = view === 'auth' ? '' : 'none';
+  }
+
+  if (appView) {
+    appView.classList.toggle('hidden', view !== 'app');
+    appView.style.display = view === 'app' ? '' : 'none';
+  }
+
+  document.body.classList.toggle('authenticated', view === 'app');
+  document.body.classList.toggle('auth-only', view === 'auth');
+}
+
 export function showAuthView(): void {
   const loginError = document.getElementById('loginError');
   if (loginError) {
     loginError.textContent = '';
     loginError.classList.add('hidden');
   }
-  document.querySelectorAll('#authView, #loginView, .auth-shell, .login-shell').forEach((el) => {
-    el.classList.remove('hidden');
-    (el as HTMLElement).style.display = '';
-  });
-  document
-    .querySelectorAll('#appView, #dashboardView, #mainApp, .app-shell, .dashboard-shell, main')
-    .forEach((el) => {
-      el.classList.add('hidden');
-      (el as HTMLElement).style.display = 'none';
-    });
-  document.body.classList.remove('authenticated');
-  document.body.classList.add('auth-only');
+
+  setRootViewVisibility('auth');
 }
 
 export function showAuthenticatedOrbisView(): void {
-  document.querySelectorAll('#authView, #loginView, .auth-shell, .login-shell').forEach((el) => {
-    el.classList.add('hidden');
-    (el as HTMLElement).style.display = 'none';
-  });
-  document
-    .querySelectorAll('#appView, #dashboardView, #mainApp, .app-shell, .dashboard-shell, main')
-    .forEach((el) => {
-      el.classList.remove('hidden');
-      (el as HTMLElement).style.display = '';
-    });
-  document.body.classList.add('authenticated');
-  document.body.classList.remove('auth-only');
+  setRootViewVisibility('app');
 }
 
 function bindRosterSortHeaders(): void {
