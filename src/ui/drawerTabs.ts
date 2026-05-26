@@ -99,6 +99,24 @@ function runEmployeeTabSideEffects(tabName: string): void {
     window.initReviewSignaturePads();
   }
 
+  if (tabName === 'care-support') {
+    const employee =
+      typeof window.getCurrentEmployeeForOrbis === 'function'
+        ? window.getCurrentEmployeeForOrbis()
+        : window.currentEmployee;
+
+    const employeeId = String(
+      (employee as { employee_id?: string; id?: string; dbId?: string })?.employee_id
+        || (employee as { id?: string })?.id
+        || (employee as { dbId?: string })?.dbId
+        || ''
+    ).trim();
+
+    if (employeeId && typeof window.loadEmployeeCareSupport === 'function') {
+      void window.loadEmployeeCareSupport(employeeId);
+    }
+  }
+
   const isEmployeeAdminTab =
     tabName === 'employee' || tabName === 'admin' || tabName === 'employeeAdmin';
 

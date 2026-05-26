@@ -1,5 +1,6 @@
 import './styles/app-shell.css';
 import './styles/styles.css';
+import './styles/care-engagement.css';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
 import {
@@ -95,6 +96,14 @@ import {
   openOperationsView,
   saveOperationsIssueRecord,
 } from './modules/operationsIssues';
+import {
+  applyCareEngagementCenterAccess,
+  ensureCareEngagementLoaded,
+  loadCareEngagement,
+  openCareEngagementView,
+} from './modules/careEngagement';
+import './modules/careEngagementEditor';
+import './modules/employeeCareSupport';
 import {
   applyInvestigationsCenterAccess,
   cancelInvestigationEdit,
@@ -218,6 +227,11 @@ function registerLegacyBridges(): void {
   bridge.cancelInvestigationEdit = cancelInvestigationEdit;
   bridge.applyInvestigationsCenterAccess = applyInvestigationsCenterAccess;
 
+  bridge.loadCareEngagement = loadCareEngagement;
+  bridge.ensureCareEngagementLoaded = ensureCareEngagementLoaded;
+  bridge.openCareEngagementView = openCareEngagementView;
+  bridge.applyCareEngagementCenterAccess = applyCareEngagementCenterAccess;
+
   globalThis.loadOperationsIssues = loadOperationsIssues;
   globalThis.ensureOperationsIssuesLoaded = ensureOperationsIssuesLoaded;
   globalThis.exportOperationsIssuesCsv = exportOperationsIssuesCsv;
@@ -245,6 +259,11 @@ function registerLegacyBridges(): void {
   globalThis.cancelInvestigationEdit = cancelInvestigationEdit;
   globalThis.isInvestigationDrawerOpen = isInvestigationDrawerOpen;
   globalThis.applyInvestigationsCenterAccess = applyInvestigationsCenterAccess;
+
+  globalThis.loadCareEngagement = loadCareEngagement;
+  globalThis.ensureCareEngagementLoaded = ensureCareEngagementLoaded;
+  globalThis.openCareEngagementView = openCareEngagementView;
+  globalThis.applyCareEngagementCenterAccess = applyCareEngagementCenterAccess;
 }
 
 async function initializeProtectedModules(): Promise<void> {
@@ -281,6 +300,7 @@ async function initializeProtectedModules(): Promise<void> {
     console.log('Employees loaded:', employeeCount);
 
     applyOperationsCenterAccess();
+    applyCareEngagementCenterAccess();
     applyInvestigationsCenterAccess();
   } catch (err) {
     console.error('Employee module failed to load employees:', err);

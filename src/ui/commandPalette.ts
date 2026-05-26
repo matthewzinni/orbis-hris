@@ -72,6 +72,14 @@ const ACTION_COMMANDS: CommandItem[] = [
     run: () => switchMainView('operationsView'),
   },
   {
+    id: 'nav-care-engagement',
+    kind: 'action',
+    title: 'Go to Care & Engagement',
+    subtitle: 'Navigation',
+    searchText: 'care engagement culture support recognition wellness matrix retention',
+    run: () => switchMainView('careEngagementView'),
+  },
+  {
     id: 'nav-investigations',
     kind: 'action',
     title: 'Go to HR Investigations',
@@ -423,6 +431,7 @@ async function refreshCandidateIndex(): Promise<void> {
 
 function getNavigationCommands(): CommandItem[] {
   const adminOnlyIds = new Set([
+    'nav-care-engagement',
     'nav-investigations',
     'action-new-investigation',
     'nav-reports',

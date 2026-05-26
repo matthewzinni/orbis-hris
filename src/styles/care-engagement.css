@@ -1,0 +1,318 @@
+/* Care & Engagement — warm, professional HR module styling */
+
+.care-engagement-page {
+  --care-bg: #f4f1eb;
+  --care-surface: #faf8f4;
+  --care-border: rgba(120, 98, 72, 0.14);
+  --care-accent: #c4783a;
+  --care-accent-soft: rgba(196, 120, 58, 0.12);
+  --care-accent-2: #8b6f4e;
+  --care-text-muted: #6b6358;
+  animation: carePageEnter 0.42s var(--orbis-ease-out, ease-out) both;
+}
+
+@keyframes carePageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.care-engagement-page .page-header h1 {
+  letter-spacing: -0.02em;
+}
+
+.care-engagement-page .page-header p {
+  color: var(--care-text-muted);
+  max-width: 52rem;
+}
+
+.care-kpi-grid .kpi-card {
+  background: linear-gradient(165deg, var(--care-surface) 0%, #f0ebe3 100%);
+  border-color: var(--care-border);
+  transition:
+    transform 0.22s var(--orbis-ease-out, ease-out),
+    box-shadow 0.22s var(--orbis-ease-out, ease-out),
+    border-color 0.22s ease;
+}
+
+.care-kpi-grid .kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(80, 62, 40, 0.08);
+  border-color: rgba(196, 120, 58, 0.28);
+}
+
+.care-kpi-grid .kpi-card.warm-accent .kpi-label {
+  color: var(--care-accent-2);
+}
+
+.care-kpi-grid .kpi-card.warm-accent .kpi-value {
+  color: #5c4228;
+}
+
+.care-matrix-card,
+.care-tracker-card,
+.care-recognition-card,
+.care-pulse-card {
+  background: var(--care-surface);
+  border-color: var(--care-border);
+}
+
+.care-matrix-wrap {
+  overflow-x: auto;
+  margin-top: 4px;
+}
+
+.care-matrix-table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.care-matrix-table th,
+.care-matrix-table td {
+  border: 1px solid var(--care-border);
+  vertical-align: top;
+  padding: 0;
+}
+
+.care-matrix-table th {
+  background: #ebe4d8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5a4f42;
+  padding: 10px 12px;
+}
+
+.care-matrix-row-label {
+  width: 168px;
+  background: #f0ebe3;
+  font-weight: 600;
+  color: #4a4036;
+  padding: 12px !important;
+}
+
+.care-matrix-cell {
+  min-height: 120px;
+  padding: 10px 12px !important;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.care-matrix-cell:hover,
+.care-matrix-cell:focus-visible {
+  background: var(--care-accent-soft);
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(196, 120, 58, 0.35);
+}
+
+.care-matrix-cell-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: #4f483f;
+}
+
+.care-matrix-cell-owner {
+  font-size: 0.75rem;
+  color: var(--care-text-muted);
+}
+
+.care-status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+.care-status-chip.current {
+  background: #e8f0ea;
+  color: #2f5c3a;
+  border-color: #c5dcc9;
+}
+
+.care-status-chip.gap {
+  background: #fdeee8;
+  color: #8b3d28;
+  border-color: #f5cfc4;
+}
+
+.care-status-chip.proposed {
+  background: #eef2fb;
+  color: #2f4578;
+  border-color: #cdd8f0;
+}
+
+.care-status-chip.in_progress {
+  background: #fff6e8;
+  color: #7a5520;
+  border-color: #f0ddb8;
+}
+
+.care-status-chip.complete {
+  background: #ebeae6;
+  color: #4f4a42;
+  border-color: #d8d4cb;
+}
+
+.care-item-row {
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+
+.care-item-row:hover {
+  background: var(--care-accent-soft);
+}
+
+.care-pulse-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+
+.care-pulse-metric {
+  background: #fff;
+  border: 1px solid var(--care-border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  animation: carePulseMetricEnter 0.5s var(--orbis-ease-out, ease-out) both;
+}
+
+.care-pulse-metric:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.care-pulse-metric:nth-child(3) {
+  animation-delay: 0.1s;
+}
+.care-pulse-metric:nth-child(4) {
+  animation-delay: 0.15s;
+}
+.care-pulse-metric:nth-child(5) {
+  animation-delay: 0.2s;
+}
+
+@keyframes carePulseMetricEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.care-pulse-score {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #5c4228;
+}
+
+.care-pulse-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #e8e2d8;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.care-pulse-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #c4783a, #d9a066);
+  border-radius: inherit;
+  transition: width 0.6s var(--orbis-ease-out, ease-out);
+}
+
+.care-detail-panel {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--care-border);
+  background: #fff;
+  animation: careDetailEnter 0.28s var(--orbis-ease-out, ease-out) both;
+}
+
+@keyframes careDetailEnter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.care-recognition-list .history-item {
+  border-left: 3px solid var(--care-accent);
+}
+
+.care-drawer-section {
+  margin-bottom: 16px;
+}
+
+.care-drawer-section h4 {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+  color: var(--care-accent-2, #8b6f4e);
+}
+
+.care-confidentiality-pill {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f3ebe3;
+  color: #6b5340;
+}
+
+.care-confidentiality-pill.hr_only {
+  background: #fdeee8;
+  color: #8b3d28;
+}
+
+.care-confidentiality-pill.restricted {
+  background: #eef2fb;
+  color: #2f4578;
+}
+
+#careEngagementDrawer.drawer:not(.hidden) {
+  animation: careDetailEnter 0.28s var(--orbis-ease-out, ease-out) both;
+}
+
+#careEngagementDrawer .drawer-footer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-top: 1px solid var(--care-border, rgba(120, 98, 72, 0.14));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .care-engagement-page,
+  .care-pulse-metric,
+  .care-detail-panel {
+    animation: none;
+  }
+
+  .care-kpi-grid .kpi-card:hover {
+    transform: none;
+  }
+}

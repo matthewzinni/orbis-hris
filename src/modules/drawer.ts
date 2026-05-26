@@ -81,6 +81,7 @@ declare global {
     loadStayInterviews?: (employeeId: string) => Promise<void>;
     loadEmergencyContacts?: (employeeId: string) => Promise<void>;
     loadEmployeeDocuments?: (employeeId: string) => Promise<void>;
+    loadEmployeeCareSupport?: (employeeId: string) => Promise<void>;
 
     openDrawer?: (employee: DrawerEmployeeRecord) => void;
     switchTab?: (tabName: string) => void;
@@ -466,6 +467,7 @@ async function loadDrawerTabData(employeeId: string): Promise<void> {
     window.loadStayInterviews?.(recordId),
     window.loadEmergencyContacts?.(recordId),
     window.loadEmployeeDocuments?.(recordId),
+    window.loadEmployeeCareSupport?.(recordId),
   ]);
 }
 
@@ -568,6 +570,7 @@ function normalizeDrawerTabName(tabName: string): string {
   if (raw.includes('history')) return 'history';
   if (raw.includes('notes')) return 'notes';
   if (raw.includes('profile')) return 'profile';
+  if (raw.includes('caresupport') || raw.includes('careengagement')) return 'caresupport';
 
   const tabMap: Record<string, string> = {
     profile: 'profile',
@@ -585,6 +588,7 @@ function normalizeDrawerTabName(tabName: string): string {
     documents: 'documents',
     history: 'history',
     employeeadmin: 'employeeadmin',
+    caresupport: 'caresupport',
   };
 
   return tabMap[raw] || raw;
@@ -594,6 +598,7 @@ function getSwitchTabName(normalizedTab: string): string {
   if (normalizedTab === 'stayinterviews') return 'stay-interviews';
   if (normalizedTab === 'incidentreports') return 'incidents';
   if (normalizedTab === 'employeeadmin') return 'employee';
+  if (normalizedTab === 'caresupport') return 'care-support';
 
   return normalizedTab;
 }
@@ -652,6 +657,10 @@ export function switchDrawerTab(tabName: string): void {
 
   if (normalizedTab === 'onboarding') {
     void window.loadOnboardingTasks?.(employeeId);
+  }
+
+  if (normalizedTab === 'caresupport') {
+    void window.loadEmployeeCareSupport?.(employeeId);
   }
 }
 

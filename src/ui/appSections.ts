@@ -18,6 +18,8 @@ declare global {
     showAppSection?: (sectionId: string) => void;
     ensureInvestigationsLoaded?: (force?: boolean) => void;
     loadInvestigations?: () => Promise<void>;
+    ensureCareEngagementLoaded?: (force?: boolean) => void;
+    loadCareEngagement?: () => Promise<void>;
   }
 }
 
@@ -59,6 +61,7 @@ const SECTION_LABELS: Record<string, string> = {
   candidatesView: 'Candidates',
   documentsView: 'Documents',
   operationsView: 'Operations',
+  careEngagementView: 'Care & Engagement',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
   settingsView: 'Admin & Settings',
@@ -115,6 +118,19 @@ const APP_SECTIONS: AppSection[] = [
         window.ensureOperationsIssuesLoaded(true);
       } else if (typeof window.loadOperationsIssues === 'function') {
         void window.loadOperationsIssues();
+      }
+    },
+  },
+  {
+    id: 'careEngagementView',
+    rootId: 'orbisSectionCareEngagement',
+    targetId: 'careEngagementCenterTop',
+    aliases: ['care', 'care engagement', 'engagement', 'culture', 'support'],
+    onEnter: () => {
+      if (typeof window.ensureCareEngagementLoaded === 'function') {
+        window.ensureCareEngagementLoaded(true);
+      } else if (typeof window.loadCareEngagement === 'function') {
+        void window.loadCareEngagement();
       }
     },
   },
@@ -200,7 +216,12 @@ function activateNavButtons(sectionId: string): void {
   });
 }
 
-const ADMIN_ONLY_SECTIONS = new Set(['investigationsView', 'reportsView', 'settingsView']);
+const ADMIN_ONLY_SECTIONS = new Set([
+  'careEngagementView',
+  'investigationsView',
+  'reportsView',
+  'settingsView',
+]);
 
 export function showAppSection(sectionId: string): boolean {
   let resolvedSectionId = String(sectionId || '').trim();

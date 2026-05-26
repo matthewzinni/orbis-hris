@@ -93,6 +93,15 @@
             <button
               class="orbis-nav-item admin-only hidden"
               type="button"
+              data-nav-view="careEngagementView"
+              data-care-engagement-access
+              data-admin-only
+            >
+              Care & Engagement
+            </button>
+            <button
+              class="orbis-nav-item admin-only hidden"
+              type="button"
               data-nav-view="investigationsView"
               data-investigations-access
               data-admin-only
@@ -802,6 +811,180 @@
                   <div id="investigationsCategoryBreakdown" class="history-list">
                     <div class="empty">Loading category breakdown...</div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        </section>
+
+        <section
+          id="orbisSectionCareEngagement"
+          class="orbis-app-section hidden admin-only"
+          data-section="careEngagementView"
+          aria-hidden="true"
+          data-care-engagement-access
+          data-admin-only
+        >
+        <section
+          id="careEngagementCenterTop"
+          class="page care-engagement-page"
+          data-care-engagement-access
+        >
+          <div class="page-header">
+            <div>
+              <h1>Care & Engagement</h1>
+              <p>
+                Track employee support, recognition, wellness trends, care gaps, and culture
+                initiatives.
+              </p>
+            </div>
+            <button class="button soft" id="refreshCareEngagementBtn" type="button">
+              Refresh
+            </button>
+            <button class="button soft" id="newCareItemBtn" type="button">＋ New Care Item</button>
+            <button class="button primary" id="logCareRecognitionBtn" type="button">
+              ＋ Log Recognition
+            </button>
+          </div>
+
+          <div class="kpi-grid care-kpi-grid" id="careEngagementKpiGrid">
+            <div class="kpi-card warm-accent" id="cardCareOpenItems">
+              <div class="kpi-label">Open Care Items</div>
+              <div class="kpi-value" id="kCareOpenItems">—</div>
+              <div class="kpi-sub">Active support cases</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareFollowUp">
+              <div class="kpi-label">Employees Needing Follow-Up</div>
+              <div class="kpi-value" id="kCareFollowUp">—</div>
+              <div class="kpi-sub">Scheduled or overdue touchpoints</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareRecognitionMonth">
+              <div class="kpi-label">Recognition This Month</div>
+              <div class="kpi-value" id="kCareRecognitionMonth">—</div>
+              <div class="kpi-sub">Kudos, milestones, and nominations</div>
+            </div>
+            <div class="kpi-card warn warm-accent" id="cardCareGaps">
+              <div class="kpi-label">Care Gaps Identified</div>
+              <div class="kpi-value" id="kCareGaps">—</div>
+              <div class="kpi-sub">Matrix gaps and open needs</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareInitiatives">
+              <div class="kpi-label">Active Support Initiatives</div>
+              <div class="kpi-value" id="kCareInitiatives">—</div>
+              <div class="kpi-sub">Current or in-progress programs</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareCheckIns">
+              <div class="kpi-label">Upcoming Check-Ins</div>
+              <div class="kpi-value" id="kCareCheckIns">—</div>
+              <div class="kpi-sub">Next 14 days</div>
+            </div>
+          </div>
+
+          <div class="card care-matrix-card" id="careMatrixCard">
+            <div class="card-header">Care Matrix</div>
+            <div class="card-body">
+              <p class="muted" style="margin: 0 0 12px">
+                Map support across stakeholder groups and care dimensions. Click a cell for
+                initiatives, gaps, and ownership.
+              </p>
+              <div class="care-matrix-wrap">
+                <table class="care-matrix-table" aria-label="Care matrix">
+                  <thead>
+                    <tr>
+                      <th scope="col">Stakeholder</th>
+                      <th scope="col">Physical</th>
+                      <th scope="col">Emotional</th>
+                      <th scope="col">Spiritual / Values-Based</th>
+                    </tr>
+                  </thead>
+                  <tbody id="careMatrixBody">
+                    <tr>
+                      <td colspan="4" class="empty">Loading care matrix...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div id="careMatrixDetailPanel" class="hidden" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <div class="layout" style="margin-top: 18px">
+            <div class="stack">
+              <div class="card care-tracker-card" id="careTrackerCard">
+                <div class="card-header">
+                  <span>Care Item Tracker</span>
+                  <span class="muted" id="careTrackerCount">Loading items...</span>
+                </div>
+                <div class="card-body">
+                  <div class="toolbar" style="margin-bottom: 12px">
+                    <input
+                      class="input"
+                      id="careSearchInput"
+                      type="search"
+                      placeholder="Search care items..."
+                    />
+                  </div>
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>Department</th>
+                          <th>Type</th>
+                          <th>Need or Concern</th>
+                          <th>Action Taken</th>
+                          <th>Owner</th>
+                          <th>Follow-Up</th>
+                          <th>Status</th>
+                          <th>Confidentiality</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="careTrackerBody">
+                        <tr>
+                          <td colspan="10" class="empty">Loading care items...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div id="careItemDetailPanel" class="hidden" aria-live="polite"></div>
+                </div>
+              </div>
+            </div>
+            <div class="stack">
+              <div class="card care-recognition-card">
+                <div class="card-header">Recognition</div>
+                <div class="card-body care-recognition-list">
+                  <p class="muted" style="margin: 0 0 10px">
+                    Kudos, Iron Shift nominations, anniversaries, above-and-beyond moments, and peer
+                    recognition.
+                  </p>
+                  <div id="careRecognitionList" class="history-list">
+                    <div class="empty">Loading recognition...</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card care-pulse-card">
+                <div class="card-header">Pulse Surveys (Preview)</div>
+                <div class="card-body">
+                  <p class="muted" style="margin: 0 0 10px">
+                    <span id="carePulsePeriod">—</span> · <span id="carePulseResponses">—</span>
+                  </p>
+                  <div class="care-pulse-grid" id="carePulseGrid">
+                    <div id="carePulseOverall"></div>
+                    <div id="carePulseWorkload"></div>
+                    <div id="carePulseCommunication"></div>
+                    <div id="carePulseRecognition"></div>
+                    <div id="carePulseBelonging"></div>
+                  </div>
+                  <div class="field" style="margin-top: 14px">
+                    <label>Open comments summary</label>
+                    <p id="carePulseComments" class="muted" style="margin: 6px 0 0">—</p>
+                  </div>
+                  <p class="muted" style="margin: 12px 0 0; font-size: 0.8rem">
+                    Demo scores — wire anonymous pulse surveys to Supabase when ready.
+                  </p>
                 </div>
               </div>
             </div>
@@ -1785,6 +1968,235 @@
             </button>
           </div>
         </aside>
+        <aside class="drawer hidden" id="careEngagementDrawer" aria-hidden="true">
+          <div class="drawer-header">
+            <div>
+              <h2 class="drawer-title" id="careEngagementDrawerTitle">Care Record</h2>
+              <div class="drawer-sub" id="careEngagementDrawerSub">Care & Engagement</div>
+            </div>
+            <button class="drawer-close" type="button" id="careEngagementDrawerClose">Close</button>
+          </div>
+          <div class="drawer-body">
+            <div class="card">
+              <div class="card-header" id="careEditorCardTitle">Edit</div>
+              <div class="card-body">
+                <div id="careEditorMatrixFields" class="hidden">
+                  <div class="field">
+                    <label for="careMatrixInitiativesInput">Current initiatives</label>
+                    <textarea id="careMatrixInitiativesInput" rows="3"></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="careMatrixGapsInput">Identified gaps</label>
+                    <textarea id="careMatrixGapsInput" rows="2"></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="careMatrixActionsInput">Proposed actions</label>
+                    <textarea id="careMatrixActionsInput" rows="2"></textarea>
+                  </div>
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="careMatrixOwnerInput">Owner</label>
+                      <input id="careMatrixOwnerInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careMatrixDueInput">Due date</label>
+                      <input id="careMatrixDueInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="careMatrixStatusInput">Status</label>
+                      <select id="careMatrixStatusInput">
+                        <option value="current">Current</option>
+                        <option value="gap">Gap</option>
+                        <option value="proposed">Proposed</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="complete">Complete</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div id="careEditorItemFields" class="hidden">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="careItemEmployeeInput">Employee</label>
+                      <input id="careItemEmployeeInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careItemDepartmentInput">Department</label>
+                      <input id="careItemDepartmentInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careItemTypeInput">Type</label>
+                      <select id="careItemTypeInput">
+                        <option value="physical">Physical</option>
+                        <option value="emotional">Emotional</option>
+                        <option value="spiritual">Spiritual / Values-Based</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="careItemStatusInput">Status</label>
+                      <select id="careItemStatusInput">
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="follow_up">Follow Up</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="careItemOwnerInput">Owner</label>
+                      <input id="careItemOwnerInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careItemFollowUpInput">Follow-up date</label>
+                      <input id="careItemFollowUpInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="careItemConfidentialityInput">Confidentiality</label>
+                      <select id="careItemConfidentialityInput">
+                        <option value="standard">Standard</option>
+                        <option value="restricted">Restricted</option>
+                        <option value="hr_only">HR Only</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="careItemNeedInput">Need or concern</label>
+                    <textarea id="careItemNeedInput" rows="3"></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="careItemActionInput">Action taken</label>
+                    <textarea id="careItemActionInput" rows="3"></textarea>
+                  </div>
+                </div>
+                <div id="careEditorRecognitionFields" class="hidden">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="careRecEmployeeInput">Employee</label>
+                      <input id="careRecEmployeeInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careRecDepartmentInput">Department</label>
+                      <input id="careRecDepartmentInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careRecTypeInput">Type</label>
+                      <select id="careRecTypeInput">
+                        <option value="kudos">Kudos</option>
+                        <option value="iron_shift">Iron Shift Nomination</option>
+                        <option value="work_anniversary">Work Anniversary</option>
+                        <option value="above_and_beyond">Above & Beyond</option>
+                        <option value="peer_recognition">Peer Recognition</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="careRecDateInput">Recognized on</label>
+                      <input id="careRecDateInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="careRecByInput">Recognized by</label>
+                      <input id="careRecByInput" type="text" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="careRecSummaryInput">Summary</label>
+                    <textarea id="careRecSummaryInput" rows="3"></textarea>
+                  </div>
+                </div>
+                <div id="careEditorNoteFields" class="hidden">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="careNoteDateInput">Date</label>
+                      <input id="careNoteDateInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="careNoteAuthorInput">Author</label>
+                      <input id="careNoteAuthorInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careNoteConfidentialityInput">Confidentiality</label>
+                      <select id="careNoteConfidentialityInput">
+                        <option value="standard">Standard</option>
+                        <option value="restricted">Restricted</option>
+                        <option value="hr_only">HR Only</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="careNoteSummaryInput">Summary</label>
+                    <textarea id="careNoteSummaryInput" rows="3"></textarea>
+                  </div>
+                </div>
+                <div id="careEditorFollowUpFields" class="hidden">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="careFollowUpTitleInput">Title</label>
+                      <input id="careFollowUpTitleInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careFollowUpDueInput">Due date</label>
+                      <input id="careFollowUpDueInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="careFollowUpOwnerInput">Owner</label>
+                      <input id="careFollowUpOwnerInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careFollowUpStatusInput">Status</label>
+                      <select id="careFollowUpStatusInput">
+                        <option value="open">Open</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="follow_up">Follow Up</option>
+                        <option value="resolved">Resolved</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <div id="careEditorResourceFields" class="hidden">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="careResourceNameInput">Resource name</label>
+                      <input id="careResourceNameInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careResourceDateInput">Shared on</label>
+                      <input id="careResourceDateInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="careResourceByInput">Shared by</label>
+                      <input id="careResourceByInput" type="text" />
+                    </div>
+                  </div>
+                </div>
+                <div id="careEditorWellnessFields" class="hidden">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="careWellnessTypeInput">Check-in type</label>
+                      <input id="careWellnessTypeInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="careWellnessDateInput">Date</label>
+                      <input id="careWellnessDateInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="careWellnessOwnerInput">Owner</label>
+                      <input id="careWellnessOwnerInput" type="text" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="careWellnessNotesInput">Notes</label>
+                    <textarea id="careWellnessNotesInput" rows="3"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="drawer-footer">
+            <button class="button primary" id="saveCareEngagementBtn" type="button">Save</button>
+            <button class="button soft" id="cancelCareEngagementBtn" type="button">Cancel</button>
+            <button class="button danger hidden" id="deleteCareEngagementBtn" type="button">Delete</button>
+          </div>
+        </aside>
         <aside
           class="drawer"
           id="employeeDrawer"
@@ -1849,6 +2261,15 @@
                 type="button"
               >
                 Performance Review
+              </button>
+              <button
+                class="tab-btn admin-only hidden"
+                data-tab="care-support"
+                type="button"
+                data-care-engagement-access
+                data-admin-only
+              >
+                Care & Support
               </button>
               <button
                 class="tab-btn"
@@ -3076,6 +3497,67 @@
                   </div>
                 </div>
               </div>
+            </section>
+            <section
+              class="tab-panel admin-only hidden"
+              id="tab-care-support"
+              data-care-engagement-access
+              data-admin-only
+            >
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Care Notes</div>
+                  <div class="card-body">
+                    <div id="employeeCareNotesList" class="history-list">
+                      <div class="empty">Open an employee to view care notes.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Follow-Up Items</div>
+                  <div class="card-body">
+                    <div id="employeeCareFollowUpsList" class="history-list">
+                      <div class="empty">No follow-up items.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Recognition History</div>
+                  <div class="card-body">
+                    <div id="employeeCareRecognitionList" class="history-list">
+                      <div class="empty">No recognition history.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Support Resources Shared</div>
+                  <div class="card-body">
+                    <div id="employeeCareResourcesList" class="history-list">
+                      <div class="empty">No resources shared.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Wellness & Check-In History</div>
+                  <div class="card-body">
+                    <div id="employeeCareWellnessList" class="history-list">
+                      <div class="empty">No check-in history.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p class="muted" style="font-size: 0.8rem; margin: 0">
+                HR/admin only · Demo data until <code>care_notes</code> and related tables are
+                connected in Supabase.
+              </p>
             </section>
             <section class="tab-panel" id="tab-employee">
               <div class="card">
