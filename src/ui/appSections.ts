@@ -132,6 +132,10 @@ const APP_SECTIONS: AppSection[] = [
       } else if (typeof window.loadCareEngagement === 'function') {
         void window.loadCareEngagement();
       }
+
+      if (typeof window.updateWorkspaceAlerts === 'function') {
+        window.updateWorkspaceAlerts();
+      }
     },
   },
   {
@@ -144,6 +148,10 @@ const APP_SECTIONS: AppSection[] = [
         window.ensureInvestigationsLoaded(true);
       } else if (typeof window.loadInvestigations === 'function') {
         void window.loadInvestigations();
+      }
+
+      if (typeof window.updateWorkspaceAlerts === 'function') {
+        window.updateWorkspaceAlerts();
       }
     },
   },

@@ -1,4 +1,4 @@
-// Employee drawer — Care & Support tab (HR/admin, demo data until Supabase)
+// Employee drawer — Care & Support tab (HR/admin, Supabase-backed)
 
 import {
   deleteEmployeeCareNote,
@@ -6,8 +6,12 @@ import {
   deleteEmployeeResource,
   deleteWellnessCheckIn,
   fetchCareEngagementDataset,
-  getCareEngagementDataset,
+  invalidateCareEngagementCache,
 } from '../data/careEngagementStore';
+import {
+  findCareEmployeeById,
+  resolveCareEmployeeId,
+} from '../services/careEmployeePicker';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import {
   bindCareEngagementEditorEvents,
@@ -23,7 +27,6 @@ import type { CareEngagementDataset } from '../types/careEngagementTypes';
 
 type EmployeeLike = Record<string, unknown>;
 
-let drawerDatasetCache: CareEngagementDataset | null = null;
 let drawerEventsBound = false;
 
 function esc(value: unknown): string {
@@ -56,9 +59,17 @@ function resolveEmployeeId(employee: EmployeeLike): string {
 }
 
 function itemMatchesEmployee(itemEmployeeId: string, employee: EmployeeLike): boolean {
-  const keys = resolveEmployeeKeys(employee);
+  const targetId = resolveCareEmployeeId(employee);
+  if (!targetId) return false;
+
+  const storedEmployee = findCareEmployeeById(itemEmployeeId);
+  if (storedEmployee) {
+    return resolveCareEmployeeId(storedEmployee) === targetId;
+  }
+
+  const keys = resolveEmployeeKeys(employee).map(String);
   const id = String(itemEmployeeId || '').trim();
-  return keys.includes(id) || keys.some((key) => id.includes(key) || key.includes(id));
+  return keys.includes(id);
 }
 
 const RECOGNITION_LABELS: Record<string, string> = {
@@ -84,16 +95,8 @@ function actionButtons(editAttr: string, editId: string, deleteAttr: string): st
   `;
 }
 
-async function ensureDrawerDataset(): Promise<CareEngagementDataset> {
-  if (!drawerDatasetCache) {
-    await fetchCareEngagementDataset();
-    drawerDatasetCache = getCareEngagementDataset();
-  }
-  return drawerDatasetCache;
-}
-
 export function invalidateEmployeeCareSupportCache(): void {
-  drawerDatasetCache = null;
+  invalidateCareEngagementCache();
 }
 
 function bindDrawerCareEvents(employeeId: string): void {
@@ -110,6 +113,11 @@ function bindDrawerCareEvents(employeeId: string): void {
   if (!panel) return;
 
   panel.addEventListener('click', (event) => {
+    void handleCareSupportPanelClick(event);
+  });
+}
+
+async function handleCareSupportPanelClick(event: Event): Promise<void> {
     const target = event.target as Element | null;
     if (!target) return;
 
@@ -121,7 +129,7 @@ function bindDrawerCareEvents(employeeId: string): void {
     if (!employee) return;
 
     const recordId = resolveEmployeeId(employee);
-    const dataset = getCareEngagementDataset();
+    const dataset = await fetchCareEngagementDataset(true);
 
     if (target.closest('[data-add-care-note]')) {
       openEmployeeCareNoteEditor(recordId, null);
@@ -151,7 +159,11 @@ function bindDrawerCareEvents(employeeId: string): void {
       .closest('[data-delete-care-note]')
       ?.getAttribute('data-delete-care-note');
     if (deleteNoteId) {
-      void confirmDeleteDrawerRecord('care note', () => deleteEmployeeCareNote(deleteNoteId), recordId);
+      void confirmDeleteDrawerRecord(
+        'care note',
+        async () => deleteEmployeeCareNote(deleteNoteId),
+        recordId
+      );
       return;
     }
 
@@ -168,7 +180,11 @@ function bindDrawerCareEvents(employeeId: string): void {
       .closest('[data-delete-care-follow-up]')
       ?.getAttribute('data-delete-care-follow-up');
     if (deleteFuId) {
-      void confirmDeleteDrawerRecord('follow-up', () => deleteEmployeeFollowUp(deleteFuId), recordId);
+      void confirmDeleteDrawerRecord(
+        'follow-up',
+        async () => deleteEmployeeFollowUp(deleteFuId),
+        recordId
+      );
       return;
     }
 
@@ -185,7 +201,11 @@ function bindDrawerCareEvents(employeeId: string): void {
       .closest('[data-delete-care-resource]')
       ?.getAttribute('data-delete-care-resource');
     if (deleteResId) {
-      void confirmDeleteDrawerRecord('resource', () => deleteEmployeeResource(deleteResId), recordId);
+      void confirmDeleteDrawerRecord(
+        'resource',
+        async () => deleteEmployeeResource(deleteResId),
+        recordId
+      );
       return;
     }
 
@@ -204,16 +224,15 @@ function bindDrawerCareEvents(employeeId: string): void {
     if (deleteWcId) {
       void confirmDeleteDrawerRecord(
         'check-in',
-        () => deleteWellnessCheckIn(deleteWcId),
+        async () => deleteWellnessCheckIn(deleteWcId),
         recordId
       );
     }
-  });
 }
 
 async function confirmDeleteDrawerRecord(
   label: string,
-  onDelete: () => void,
+  onDelete: () => void | Promise<void>,
   employeeId: string
 ): Promise<void> {
   const confirmed = await showOrbisConfirm(`Delete this ${label}?`, `Delete ${label}`, {
@@ -221,7 +240,7 @@ async function confirmDeleteDrawerRecord(
     confirmLabel: 'Delete',
   });
   if (!confirmed) return;
-  onDelete();
+  await onDelete();
   invalidateEmployeeCareSupportCache();
   if (typeof window.ensureCareEngagementLoaded === 'function') {
     window.ensureCareEngagementLoaded(true);
@@ -261,8 +280,7 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
   notesEl.innerHTML = '<div class="empty">Loading care & support...</div>';
 
   try {
-    drawerDatasetCache = null;
-    const dataset = await ensureDrawerDataset();
+    const dataset = await fetchCareEngagementDataset(true);
 
     const notes = dataset.employeeNotes.filter((n) => itemMatchesEmployee(n.employeeId, employee));
     const followUps = dataset.followUps.filter((f) => itemMatchesEmployee(f.employeeId, employee));

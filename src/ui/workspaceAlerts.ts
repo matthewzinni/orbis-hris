@@ -1,3 +1,4 @@
+import { isAdminUser, isSupervisorUser } from '../services/access';
 import { switchMainView } from './navigation';
 
 type WorkspaceAlert = {
@@ -67,6 +68,65 @@ function collectWorkspaceAlerts(): WorkspaceAlert[] {
       count: dueSoon,
       viewId: 'dashboardView',
     });
+  }
+
+  if (isAdminUser() || isSupervisorUser()) {
+    const careOpen = parseCountFromElement('kCareOpenItems');
+    if (careOpen > 0) {
+      alerts.push({
+        id: 'care-open-items',
+        label: 'Open care items',
+        detail: `${careOpen} active support case${careOpen === 1 ? '' : 's'}`,
+        count: careOpen,
+        viewId: 'careEngagementView',
+      });
+    }
+
+    const careFollowUp = parseCountFromElement('kCareFollowUp');
+    if (careFollowUp > 0) {
+      alerts.push({
+        id: 'care-follow-ups',
+        label: 'Care follow-ups',
+        detail: `${careFollowUp} employee${careFollowUp === 1 ? '' : 's'} need touchpoints`,
+        count: careFollowUp,
+        viewId: 'careEngagementView',
+      });
+    }
+
+    const careCheckIns = parseCountFromElement('kCareCheckIns');
+    if (careCheckIns > 0) {
+      alerts.push({
+        id: 'care-check-ins',
+        label: 'Upcoming care check-ins',
+        detail: `${careCheckIns} in the next 14 days`,
+        count: careCheckIns,
+        viewId: 'careEngagementView',
+      });
+    }
+  }
+
+  if (isAdminUser()) {
+    const invOverdue = parseCountFromElement('kInvOverdue');
+    if (invOverdue > 0) {
+      alerts.push({
+        id: 'investigations-overdue',
+        label: 'Overdue investigations',
+        detail: `${invOverdue} case${invOverdue === 1 ? '' : 's'} past target date`,
+        count: invOverdue,
+        viewId: 'investigationsView',
+      });
+    }
+
+    const invHigh = parseCountFromElement('kInvHighSeverity');
+    if (invHigh > 0) {
+      alerts.push({
+        id: 'investigations-high-severity',
+        label: 'High-severity investigations',
+        detail: `${invHigh} open case${invHigh === 1 ? '' : 's'}`,
+        count: invHigh,
+        viewId: 'investigationsView',
+      });
+    }
   }
 
   return alerts;

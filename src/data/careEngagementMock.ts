@@ -212,6 +212,19 @@ export const CARE_ENGAGEMENT_MOCK: CareEngagementDataset = {
     periodLabel: 'Q2 Pulse (Demo)',
     responseCount: 47,
   },
+  pulseSnapshots: [
+    {
+      overallSupport: 4.2,
+      workloadStress: 3.4,
+      communication: 4.0,
+      recognition: 3.8,
+      belonging: 4.1,
+      commentsSummary:
+        'Teams value manager visibility and EAP awareness. Top themes: workload during peak season, desire for more peer recognition, and clearer escalation paths for caregiver flexibility.',
+      periodLabel: 'Q2 Pulse (Demo)',
+      responseCount: 47,
+    },
+  ],
   employeeNotes: [
     {
       id: 'note-1',

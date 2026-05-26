@@ -91,11 +91,10 @@
               Operations
             </button>
             <button
-              class="orbis-nav-item admin-only hidden"
+              class="orbis-nav-item hidden"
               type="button"
               data-nav-view="careEngagementView"
               data-care-engagement-access
-              data-admin-only
             >
               Care & Engagement
             </button>
@@ -777,7 +776,7 @@
                         <tr>
                           <th>Case #</th>
                           <th>Title</th>
-                          <th>Targeted IDs</th>
+                          <th>Targeted Employee(s)</th>
                           <th>Category</th>
                           <th>Severity</th>
                           <th>Status</th>
@@ -820,11 +819,10 @@
 
         <section
           id="orbisSectionCareEngagement"
-          class="orbis-app-section hidden admin-only"
+          class="orbis-app-section hidden"
           data-section="careEngagementView"
           aria-hidden="true"
           data-care-engagement-access
-          data-admin-only
         >
         <section
           id="careEngagementCenterTop"
@@ -842,11 +840,22 @@
             <button class="button soft" id="refreshCareEngagementBtn" type="button">
               Refresh
             </button>
-            <button class="button soft" id="newCareItemBtn" type="button">＋ New Care Item</button>
-            <button class="button primary" id="logCareRecognitionBtn" type="button">
+            <button class="button soft" id="newCareItemBtn" type="button" data-care-engagement-manage>
+              ＋ New Care Item
+            </button>
+            <button class="button primary" id="logCareRecognitionBtn" type="button" data-care-engagement-manage>
               ＋ Log Recognition
             </button>
           </div>
+
+          <p
+            id="careEngagementReadOnlyBanner"
+            class="care-read-only-banner hidden"
+            role="note"
+          >
+            View-only: you can review organization care metrics and trends here. Adding or editing
+            records requires HR admin access.
+          </p>
 
           <div class="kpi-grid care-kpi-grid" id="careEngagementKpiGrid">
             <div class="kpi-card warm-accent" id="cardCareOpenItems">
@@ -884,9 +893,9 @@
           <div class="card care-matrix-card" id="careMatrixCard">
             <div class="card-header">Care Matrix</div>
             <div class="card-body">
-              <p class="muted" style="margin: 0 0 12px">
-                Map support across stakeholder groups and care dimensions. Click a cell for
-                initiatives, gaps, and ownership.
+              <p class="muted" id="careMatrixHelpText" style="margin: 0 0 12px">
+                Map support across stakeholder groups and care dimensions. Click a cell for details;
+                double-click to edit, or use Edit in the detail panel below.
               </p>
               <div class="care-matrix-wrap">
                 <table class="care-matrix-table" aria-label="Care matrix">
@@ -965,9 +974,35 @@
                   </div>
                 </div>
               </div>
-              <div class="card care-pulse-card">
-                <div class="card-header">Pulse Surveys (Preview)</div>
+              <div class="card care-pulse-card" id="carePulseCard">
+                <div class="card-header care-pulse-card-header">
+                  <span>Pulse Surveys</span>
+                  <button
+                    class="button soft sm"
+                    id="recordCarePulseBtn"
+                    type="button"
+                    data-care-engagement-manage
+                  >
+                    ＋ Record results
+                  </button>
+                </div>
                 <div class="card-body">
+                  <div
+                    id="carePulseDemoBanner"
+                    class="care-pulse-demo-banner hidden"
+                    role="status"
+                  >
+                    <strong>Demo snapshot</strong> — sample scores from seed data. Record a new pulse
+                    period below to replace this on the dashboard.
+                  </div>
+                  <div
+                    id="carePulseLiveBanner"
+                    class="care-pulse-live-banner hidden"
+                    role="status"
+                  >
+                    <strong>Latest pulse period</strong> — aggregate scores HR entered from your survey
+                    tool (not individual anonymous responses in Orbis).
+                  </div>
                   <p class="muted" style="margin: 0 0 10px">
                     <span id="carePulsePeriod">—</span> · <span id="carePulseResponses">—</span>
                   </p>
@@ -982,8 +1017,15 @@
                     <label>Open comments summary</label>
                     <p id="carePulseComments" class="muted" style="margin: 6px 0 0">—</p>
                   </div>
+                  <div class="field" style="margin-top: 16px">
+                    <label>Pulse history</label>
+                    <div id="carePulseHistoryList" class="history-list">
+                      <div class="empty">Loading pulse history...</div>
+                    </div>
+                  </div>
                   <p class="muted" style="margin: 12px 0 0; font-size: 0.8rem">
-                    Demo scores — wire anonymous pulse surveys to Supabase when ready.
+                    Enter rolled-up scores after each pulse (Microsoft Forms, Culture Amp, etc.). Orbis
+                    stores period averages and themes — not raw employee submissions.
                   </p>
                 </div>
               </div>
@@ -2018,7 +2060,9 @@
                   <div class="two-col">
                     <div class="field">
                       <label for="careItemEmployeeInput">Employee</label>
-                      <input id="careItemEmployeeInput" type="text" />
+                      <select id="careItemEmployeeInput">
+                        <option value="">Select employee</option>
+                      </select>
                     </div>
                     <div class="field">
                       <label for="careItemDepartmentInput">Department</label>
@@ -2072,7 +2116,9 @@
                   <div class="two-col">
                     <div class="field">
                       <label for="careRecEmployeeInput">Employee</label>
-                      <input id="careRecEmployeeInput" type="text" />
+                      <select id="careRecEmployeeInput">
+                        <option value="">Select employee</option>
+                      </select>
                     </div>
                     <div class="field">
                       <label for="careRecDepartmentInput">Department</label>
@@ -2100,6 +2146,62 @@
                   <div class="field">
                     <label for="careRecSummaryInput">Summary</label>
                     <textarea id="careRecSummaryInput" rows="3"></textarea>
+                  </div>
+                </div>
+                <div id="careEditorPulseFields" class="hidden">
+                  <p class="muted" style="margin: 0 0 12px">
+                    Enter rolled-up averages from your pulse survey (1.0–5.0). Individual responses stay
+                    in your survey tool.
+                  </p>
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="carePulsePeriodInput">Period label</label>
+                      <input
+                        id="carePulsePeriodInput"
+                        type="text"
+                        placeholder="e.g. Q3 2026 Pulse"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="carePulseResponseCountInput">Response count</label>
+                      <input id="carePulseResponseCountInput" type="number" min="0" step="1" />
+                    </div>
+                    <div class="field">
+                      <label for="carePulseOverallInput">Overall support (1–5)</label>
+                      <input id="carePulseOverallInput" type="number" min="0" max="5" step="0.1" />
+                    </div>
+                    <div class="field">
+                      <label for="carePulseWorkloadInput">Workload stress (1–5)</label>
+                      <input id="carePulseWorkloadInput" type="number" min="0" max="5" step="0.1" />
+                    </div>
+                    <div class="field">
+                      <label for="carePulseCommunicationInput">Communication (1–5)</label>
+                      <input
+                        id="carePulseCommunicationInput"
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="carePulseRecognitionInput">Recognition (1–5)</label>
+                      <input
+                        id="carePulseRecognitionInput"
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="carePulseBelongingInput">Belonging (1–5)</label>
+                      <input id="carePulseBelongingInput" type="number" min="0" max="5" step="0.1" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="carePulseCommentsInput">Themes / open comments summary</label>
+                    <textarea id="carePulseCommentsInput" rows="4"></textarea>
                   </div>
                 </div>
                 <div id="careEditorNoteFields" class="hidden">
@@ -2262,13 +2364,7 @@
               >
                 Performance Review
               </button>
-              <button
-                class="tab-btn admin-only hidden"
-                data-tab="care-support"
-                type="button"
-                data-care-engagement-access
-                data-admin-only
-              >
+              <button class="tab-btn admin-only hidden" data-tab="care-support" type="button">
                 Care & Support
               </button>
               <button
@@ -3498,12 +3594,7 @@
                 </div>
               </div>
             </section>
-            <section
-              class="tab-panel admin-only hidden"
-              id="tab-care-support"
-              data-care-engagement-access
-              data-admin-only
-            >
+            <section class="tab-panel admin-only hidden" id="tab-care-support">
               <div class="care-drawer-section">
                 <div class="card">
                   <div class="card-header">Care Notes</div>

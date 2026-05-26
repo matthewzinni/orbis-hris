@@ -70,6 +70,7 @@ export interface CareRecognitionEntry {
 }
 
 export interface CarePulseSurveySnapshot {
+  id?: string;
   overallSupport: number;
   workloadStress: number;
   communication: number;
@@ -78,6 +79,7 @@ export interface CarePulseSurveySnapshot {
   commentsSummary: string;
   periodLabel: string;
   responseCount: number;
+  createdAt?: string;
 }
 
 export interface EmployeeCareNote {
@@ -120,6 +122,7 @@ export interface CareEngagementDataset {
   careItems: CareTrackerItem[];
   recognition: CareRecognitionEntry[];
   pulse: CarePulseSurveySnapshot;
+  pulseSnapshots: CarePulseSurveySnapshot[];
   employeeNotes: EmployeeCareNote[];
   followUps: EmployeeCareFollowUp[];
   resources: EmployeeCareResource[];

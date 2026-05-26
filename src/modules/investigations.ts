@@ -171,7 +171,9 @@ function getSortedEmployeeRoster(): Record<string, unknown>[] {
 }
 
 function getEmployeeId(employee: Record<string, unknown>): string {
-  return String(employee.displayId || employee.employee_id || employee.id || '').trim();
+  return String(
+    employee.dbId || employee.id || employee.employee_id || employee.displayId || ''
+  ).trim();
 }
 
 function findEmployeeById(employeeId: string): Record<string, unknown> | null {
@@ -179,8 +181,21 @@ function findEmployeeById(employeeId: string): Record<string, unknown> | null {
   if (!id) return null;
 
   return (
-    getEmployeeRoster().find((employee) => getEmployeeId(employee) === id) || null
+    getEmployeeRoster().find((employee) => {
+      const keys = [employee.dbId, employee.id, employee.employee_id, employee.displayId]
+        .filter(Boolean)
+        .map(String);
+      return keys.some((key) => key === id);
+    }) || null
   );
+}
+
+async function ensureInvestigationsEmployeeRosterLoaded(): Promise<void> {
+  if (getEmployeeRoster().length) return;
+
+  if (typeof window.loadEmployees === 'function') {
+    await window.loadEmployees();
+  }
 }
 
 function getEmployeeLabel(employeeId: string): string {
@@ -302,16 +317,73 @@ function getTargetedEmployeeIdsFromInvestigation(investigation: Investigation | 
   return legacyColumn ? [legacyColumn] : [];
 }
 
-function formatTargetedIdsForTable(investigation: Investigation): string {
-  const ids = getTargetedEmployeeIdsFromInvestigation(investigation)
-    .sort((leftId, rightId) =>
-      compareEmployeesByLastName(
-        findEmployeeById(leftId) as Parameters<typeof compareEmployeesByLastName>[0],
-        findEmployeeById(rightId) as Parameters<typeof compareEmployeesByLastName>[1]
-      )
-    );
+function sortEmployeeIdsByLastName(employeeIds: string[]): string[] {
+  return [...employeeIds].sort((leftId, rightId) =>
+    compareEmployeesByLastName(
+      findEmployeeById(leftId) as Parameters<typeof compareEmployeesByLastName>[0],
+      findEmployeeById(rightId) as Parameters<typeof compareEmployeesByLastName>[1]
+    )
+  );
+}
 
-  return ids.length ? ids.join(', ') : '—';
+function formatEmployeeNamesForTable(employeeIds: string[]): string {
+  const ids = sortEmployeeIdsByLastName(employeeIds);
+  if (!ids.length) return '—';
+
+  return ids
+    .map((id) => {
+      const employee = findEmployeeById(id);
+      const drawerId = employee ? getEmployeeId(employee) : id;
+      const name = employee
+        ? employeeDisplayName(employee as Parameters<typeof employeeDisplayName>[0])
+        : id;
+
+      if (employee && typeof window.openEmployeeDrawer === 'function' && drawerId) {
+        return `<button type="button" class="link-button" data-open-inv-employee="${escapeHtml(drawerId)}">${escapeHtml(name)}</button>`;
+      }
+
+      return escapeHtml(name);
+    })
+    .join(', ');
+}
+
+function formatTargetedEmployeesForTable(investigation: Investigation): string {
+  return formatEmployeeNamesForTable(getTargetedEmployeeIdsFromInvestigation(investigation));
+}
+
+function formatEmployeeNamesForExport(employeeIds: string[]): string {
+  const ids = sortEmployeeIdsByLastName(employeeIds);
+  if (!ids.length) return '';
+
+  return ids
+    .map((id) => {
+      const employee = findEmployeeById(id);
+      if (!employee) return id;
+      const name = employeeDisplayName(employee as Parameters<typeof employeeDisplayName>[0]);
+      const employeeNumber = getEmployeeId(employee);
+      return employeeNumber ? `${name} (${employeeNumber})` : name;
+    })
+    .join('; ');
+}
+
+function buildInvestigationEmployeeSearchText(investigation: Investigation): string {
+  const employeeIds = new Set<string>([
+    ...getTargetedEmployeeIdsFromInvestigation(investigation),
+    ...getFocusEmployeeIdsFromInvestigation(investigation),
+    String(investigation.reported_by_employee_id || '').trim(),
+    String(investigation.targeted_employee_id || '').trim(),
+    String(investigation.primary_employee_id || '').trim(),
+  ].filter(Boolean));
+
+  return [...employeeIds]
+    .map((id) => {
+      const employee = findEmployeeById(id);
+      if (!employee) return id;
+      const name = employeeDisplayName(employee as Parameters<typeof employeeDisplayName>[0]);
+      return `${name} ${getEmployeeId(employee)}`.trim();
+    })
+    .join(' ')
+    .toLowerCase();
 }
 
 async function syncTargetedSubjects(
@@ -472,14 +544,15 @@ function filterInvestigations(rows: Investigation[]): Investigation[] {
 
     if (!search) return true;
 
-    const targetedIds = getTargetedEmployeeIdsFromInvestigation(row);
     const haystack = [
       row.case_number,
       row.title,
       row.allegation_summary,
       row.assigned_investigator_email,
+      row.assigned_investigator_name,
       row.reported_by_employee_id,
-      ...targetedIds,
+      row.reported_by_name,
+      buildInvestigationEmployeeSearchText(row),
     ]
       .map((value) => String(value || '').toLowerCase())
       .join(' ');
@@ -521,7 +594,7 @@ function renderInvestigationsTable(rows: Investigation[]): void {
             </button>
           </td>
           <td>${escapeHtml(row.title || '')}</td>
-          <td>${escapeHtml(formatTargetedIdsForTable(row))}</td>
+          <td>${formatTargetedEmployeesForTable(row)}</td>
           <td>${escapeHtml(formatInvestigationLabel(String(row.category || '')))}</td>
           <td>${escapeHtml(severity)}</td>
           <td>${escapeHtml(status)}</td>
@@ -626,11 +699,16 @@ export async function loadInvestigations(): Promise<void> {
   }
 
   try {
+    await ensureInvestigationsEmployeeRosterLoaded();
     cachedInvestigations = await fetchAllInvestigations();
     populateFilterSelects();
     renderInvestigationsTable(cachedInvestigations);
     loadInvestigationsDashboardMetrics(cachedInvestigations);
     investigationsHydrated = true;
+
+    if (typeof window.updateWorkspaceAlerts === 'function') {
+      window.updateWorkspaceAlerts();
+    }
   } catch (error) {
     console.error('[Investigations] Failed to load cases:', error);
     const message =
@@ -1386,6 +1464,8 @@ export function exportInvestigationsCsv(): void {
   const headers = [
     'Case Number',
     'Title',
+    'Targeted Employee(s)',
+    'Reported By',
     'Category',
     'Status',
     'Severity',
@@ -1396,18 +1476,27 @@ export function exportInvestigationsCsv(): void {
     'Allegation Summary',
   ];
 
-  const csvRows = rows.map((row) => [
-    row.case_number,
-    row.title,
-    formatInvestigationLabel(String(row.category || '')),
-    formatInvestigationLabel(normalizeInvestigationStatus(row.status)),
-    formatInvestigationLabel(String(row.severity || '')),
-    row.assigned_investigator_name || row.assigned_investigator_email,
-    row.opened_at,
-    row.target_completion_date,
-    row.outcome ? formatInvestigationLabel(String(row.outcome)) : '',
-    row.allegation_summary,
-  ]);
+  const csvRows = rows.map((row) => {
+    const reportedById = String(row.reported_by_employee_id || '').trim();
+    const reportedByName = reportedById
+      ? formatEmployeeNamesForExport([reportedById])
+      : String(row.reported_by_name || '');
+
+    return [
+      row.case_number,
+      row.title,
+      formatEmployeeNamesForExport(getTargetedEmployeeIdsFromInvestigation(row)),
+      reportedByName,
+      formatInvestigationLabel(String(row.category || '')),
+      formatInvestigationLabel(normalizeInvestigationStatus(row.status)),
+      formatInvestigationLabel(String(row.severity || '')),
+      row.assigned_investigator_name || row.assigned_investigator_email,
+      row.opened_at,
+      row.target_completion_date,
+      row.outcome ? formatInvestigationLabel(String(row.outcome)) : '',
+      row.allegation_summary,
+    ];
+  });
 
   const csv = [headers, ...csvRows]
     .map((line) => line.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
@@ -1490,6 +1579,16 @@ function bindInvestigationsEvents(): void {
     const element = safeGet(id);
     element?.addEventListener('input', () => renderInvestigationsTable(cachedInvestigations));
     element?.addEventListener('change', () => renderInvestigationsTable(cachedInvestigations));
+  });
+
+  safeGet('investigationsTableBody')?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    const button = target?.closest('[data-open-inv-employee]') as HTMLElement | null;
+    const employeeId = button?.getAttribute('data-open-inv-employee');
+    if (!employeeId || typeof window.openEmployeeDrawer !== 'function') return;
+    event.preventDefault();
+    event.stopPropagation();
+    void window.openEmployeeDrawer(employeeId);
   });
 
   safeGet('newInvestigationBtn')?.addEventListener('click', (event) => {

@@ -9,6 +9,6 @@ alter table public.investigation_subjects
 alter table public.investigation_subjects
   add constraint investigation_subjects_role_check check (
     subject_role in (
-      'complainant', 'respondent', 'witness', 'supervisor', 'other', 'focus'
+      'complainant', 'respondent', 'witness', 'supervisor', 'other', 'focus', 'targeted'
     )
   );

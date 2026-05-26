@@ -65,6 +65,13 @@ npm run db:status
 | `20250520120000_candidate_notes.sql` | `candidate_notes` table |
 | `20250520120001_orbis_rls_helpers.sql` | Role + supervisor helper functions |
 | `20250520120002_orbis_rls_policies.sql` | RLS policies on Orbis tables |
+| `20250520120003`–`07` | ER signatures, operations issues, candidate RLS |
+| `20250522120008_user_access_admin_write.sql` | Admin write on `user_access` |
+| `20250523120009`–`12` | Investigations schema + focus/targeted roles |
+| `20250524120000_care_engagement.sql` | Care & Engagement tables + admin RLS |
+| `20260527120000_care_engagement_supervisor_read.sql` | Supervisors can SELECT Care program tables (org overview); writes stay admin-only |
+
+If `db:push` fails with **remote migration versions not found**, run the repair command the CLI prints, then push again. Orphan `202605*` versions on remote were applied outside this repo and should be marked reverted before syncing local `202505*` migrations.
 
 The standalone files `candidate_notes.sql`, `orbis_rls_helpers.sql`, and `orbis_rls_policies.sql` in this folder are copies of the migrations (for quick reference in the SQL editor). **Prefer `npm run db:push` for applying changes.**
 
@@ -77,6 +84,8 @@ The standalone files `candidate_notes.sql`, `orbis_rls_helpers.sql`, and `orbis_
 | **user** | Read-only directory | No access | No access | No access |
 
 Supervisor matching mirrors `employeeMatchesSupervisorAccess()` in `src/services/access.ts`.
+
+**Care & Engagement:** Supervisors can open the org-level Care center (read-only KPIs, matrix, tracker, recognition, pulse). The employee drawer **Care & Support** tab remains HR/admin-only (`canViewCareEngagementDetails`).
 
 ## Optional: local Supabase (Docker)
 

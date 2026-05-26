@@ -1,10 +1,11 @@
-import { isAdminUser } from './access';
+import { isAdminUser, isSupervisorUser } from './access';
 
-/** Care & Engagement center and drawer tab are HR/admin only by default. */
+/** Care & Engagement center: admins (full) and supervisors (read-only overview). */
 export function canAccessCareEngagementCenter(): boolean {
-  return isAdminUser();
+  return isAdminUser() || isSupervisorUser();
 }
 
+/** Employee drawer Care & Support tab — HR/admin only (sensitive notes). */
 export function canViewCareEngagementDetails(): boolean {
   return isAdminUser();
 }

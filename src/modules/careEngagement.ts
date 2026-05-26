@@ -5,18 +5,29 @@
 import {
   clearMatrixCell,
   deleteCareItem,
+  deletePulseSnapshot,
   deleteRecognition,
   fetchCareEngagementDataset,
-  getCareEngagementDataset,
+  invalidateCareEngagementCache,
 } from '../data/careEngagementStore';
 import {
   bindCareEngagementEditorEvents,
   openCareItemEditor,
   openCareMatrixEditor,
   openCareRecognitionEditor,
+  openPulseSnapshotEditor,
   setCareEditorOnSaved,
 } from './careEngagementEditor';
-import { canAccessCareEngagementCenter } from '../services/careEngagementAccess';
+import { isPulseDemoSnapshot } from '../services/carePulseUtils';
+import {
+  ensureCareEmployeeRosterLoaded,
+  renderCareEmployeeNameLink,
+} from '../services/careEmployeePicker';
+import { recordCareProgramAudit } from '../services/careEngagementAudit';
+import {
+  canAccessCareEngagementCenter,
+  canManageCareEngagementRecords,
+} from '../services/careEngagementAccess';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { switchMainView } from '../ui/navigation';
 import {
@@ -30,6 +41,7 @@ import type {
   CareMatrixCellEntry,
   CareMatrixColumnKey,
   CareMatrixRowKey,
+  CarePulseSurveySnapshot,
   CareTrackerItem,
 } from '../types/careEngagementTypes';
 
@@ -46,6 +58,11 @@ const MATRIX_COLUMNS: { key: CareMatrixColumnKey; label: string }[] = [
   { key: 'emotional', label: 'Emotional' },
   { key: 'spiritual', label: 'Spiritual / Values-Based' },
 ];
+
+const CARE_MATRIX_HELP_MANAGE =
+  'Map support across stakeholder groups and care dimensions. Click a cell for details; double-click to edit, or use Edit in the detail panel below.';
+const CARE_MATRIX_HELP_VIEW =
+  'Map support across stakeholder groups and care dimensions. Click a cell for details. Editing matrix cells requires HR admin access.';
 
 const CELL_STATUS_LABELS: Record<CareCellStatus, string> = {
   current: 'Current',
@@ -168,6 +185,15 @@ function renderMatrixDetail(cell: CareMatrixCellEntry | null): void {
   }
 
   panel.classList.remove('hidden');
+  const canManage = canManageCareEngagementRecords();
+  const actionsToolbar = canManage
+    ? `
+      <div class="toolbar" style="margin-top:12px;gap:8px;">
+        <button type="button" class="button soft sm" data-edit-care-matrix="${esc(cell.id)}">Edit</button>
+        <button type="button" class="button danger sm" data-delete-care-matrix="${esc(cell.id)}">Clear cell</button>
+      </div>`
+    : '';
+
   panel.innerHTML = `
     <div class="care-detail-panel">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
@@ -183,11 +209,8 @@ function renderMatrixDetail(cell: CareMatrixCellEntry | null): void {
         <div><span class="muted">Owner</span><div>${esc(cell.owner || '—')}</div></div>
         <div><span class="muted">Due date</span><div>${esc(formatDate(cell.dueDate))}</div></div>
       </div>
-      <div class="toolbar" style="margin-top:12px;gap:8px;">
-        <button type="button" class="button soft sm" data-edit-care-matrix="${esc(cell.id)}">Edit</button>
-        <button type="button" class="button danger sm" data-delete-care-matrix="${esc(cell.id)}">Clear cell</button>
-      </div>
-      <p class="muted" style="margin:12px 0 0;font-size:0.8rem;">In-memory demo — wire to <code>care_matrix_cells</code> in Supabase later.</p>
+      ${actionsToolbar}
+      <p class="muted" style="margin:12px 0 0;font-size:0.8rem;">Saved to Supabase <code>care_matrix_cells</code>.</p>
     </div>
   `;
 }
@@ -207,21 +230,31 @@ function renderCareTrackerTable(dataset: CareEngagementDataset): void {
   if (!body) return;
 
   const items = [...dataset.careItems];
+  const canManage = canManageCareEngagementRecords();
+  const colspan = canManage ? 10 : 9;
 
   if (count) {
     count.textContent = `${items.length} care item${items.length === 1 ? '' : 's'}`;
   }
 
   if (!items.length) {
-    body.innerHTML = '<tr><td colspan="10" class="empty">No care items logged.</td></tr>';
+    body.innerHTML = `<tr><td colspan="${colspan}" class="empty">No care items logged.</td></tr>`;
     return;
   }
 
   body.innerHTML = items
-    .map(
-      (item) => `
+    .map((item) => {
+      const nameCell = renderCareEmployeeNameLink(item.employeeId, item.employeeName);
+      const actionsCell = canManage
+        ? `<td>
+          <button type="button" class="button soft sm" data-edit-care-item="${esc(item.id)}">Edit</button>
+          <button type="button" class="button danger sm" data-delete-care-item="${esc(item.id)}">Delete</button>
+        </td>`
+        : '';
+
+      return `
       <tr class="care-item-row" data-care-item-id="${esc(item.id)}" tabindex="0">
-        <td>${esc(item.employeeName)}</td>
+        <td>${nameCell}</td>
         <td>${esc(item.department)}</td>
         <td>${esc(careTypeLabel(item.type))}</td>
         <td>${esc(item.needOrConcern)}</td>
@@ -230,13 +263,10 @@ function renderCareTrackerTable(dataset: CareEngagementDataset): void {
         <td>${esc(formatDate(item.followUpDate))}</td>
         <td>${esc(careItemStatusLabel(item.status))}</td>
         <td><span class="care-confidentiality-pill ${esc(item.confidentiality)}">${esc(item.confidentiality.replace(/_/g, ' '))}</span></td>
-        <td>
-          <button type="button" class="button soft sm" data-edit-care-item="${esc(item.id)}">Edit</button>
-          <button type="button" class="button danger sm" data-delete-care-item="${esc(item.id)}">Delete</button>
-        </td>
+        ${actionsCell}
       </tr>
-    `
-    )
+    `;
+    })
     .join('');
 }
 
@@ -251,6 +281,15 @@ function renderCareItemDetail(item: CareTrackerItem | null): void {
   }
 
   panel.classList.remove('hidden');
+  const canManage = canManageCareEngagementRecords();
+  const actionsToolbar = canManage
+    ? `
+      <div class="toolbar" style="margin-top:12px;gap:8px;">
+        <button type="button" class="button soft sm" data-edit-care-item="${esc(item.id)}">Edit</button>
+        <button type="button" class="button danger sm" data-delete-care-item="${esc(item.id)}">Delete</button>
+      </div>`
+    : '';
+
   panel.innerHTML = `
     <div class="care-detail-panel">
       <strong>${esc(item.employeeName)}</strong>
@@ -263,10 +302,7 @@ function renderCareItemDetail(item: CareTrackerItem | null): void {
         <div><span class="muted">Follow-up</span><div>${esc(formatDate(item.followUpDate))}</div></div>
         <div><span class="muted">Status</span><div>${esc(careItemStatusLabel(item.status))}</div></div>
       </div>
-      <div class="toolbar" style="margin-top:12px;gap:8px;">
-        <button type="button" class="button soft sm" data-edit-care-item="${esc(item.id)}">Edit</button>
-        <button type="button" class="button danger sm" data-delete-care-item="${esc(item.id)}">Delete</button>
-      </div>
+      ${actionsToolbar}
     </div>
   `;
 }
@@ -283,6 +319,8 @@ function renderRecognitionPanel(dataset: CareEngagementDataset): void {
   const list = document.getElementById('careRecognitionList');
   if (!list) return;
 
+  const canManage = canManageCareEngagementRecords();
+
   if (!dataset.recognition.length) {
     list.innerHTML = '<div class="empty">No recognition logged this period.</div>';
     return;
@@ -292,21 +330,77 @@ function renderRecognitionPanel(dataset: CareEngagementDataset): void {
     .map(
       (entry) => `
       <div class="history-item" data-care-recognition-id="${esc(entry.id)}">
-        <div class="history-title">${esc(RECOGNITION_LABELS[entry.type] || entry.type)} · ${esc(entry.employeeName)}</div>
+        <div class="history-title">${esc(RECOGNITION_LABELS[entry.type] || entry.type)} · ${renderCareEmployeeNameLink(entry.employeeId, entry.employeeName)}</div>
         <div class="history-body">${esc(entry.summary)}</div>
         <small class="muted">${esc(entry.department)} · ${esc(formatDate(entry.recognizedOn))} · ${esc(entry.recognizedBy)}</small>
-        <div class="toolbar" style="margin-top:8px;gap:8px;">
+        ${
+          canManage
+            ? `<div class="toolbar" style="margin-top:8px;gap:8px;">
           <button type="button" class="button soft sm" data-edit-care-recognition="${esc(entry.id)}">Edit</button>
           <button type="button" class="button danger sm" data-delete-care-recognition="${esc(entry.id)}">Delete</button>
-        </div>
+        </div>`
+            : ''
+        }
       </div>
     `
     )
     .join('');
 }
 
+function formatPulseRecordedOn(value: string): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString();
+}
+
+function renderPulseHistory(snapshots: CarePulseSurveySnapshot[]): void {
+  const list = document.getElementById('carePulseHistoryList');
+  if (!list) return;
+
+  const canManage = canManageCareEngagementRecords();
+
+  if (!snapshots.length) {
+    list.innerHTML = '<div class="empty">No pulse snapshots recorded yet.</div>';
+    return;
+  }
+
+  list.innerHTML = snapshots
+    .map((snapshot) => {
+      const demo = isPulseDemoSnapshot(snapshot);
+      const recorded = formatPulseRecordedOn(snapshot.createdAt || '');
+      const actions = canManage
+        ? `<div class="toolbar" style="margin-top:8px;gap:8px;">
+            <button type="button" class="button soft sm" data-edit-care-pulse="${esc(snapshot.id || '')}">Edit</button>
+            <button type="button" class="button danger sm" data-delete-care-pulse="${esc(snapshot.id || '')}">Delete</button>
+          </div>`
+        : '';
+      return `
+        <div class="history-item care-pulse-history-item" data-care-pulse-id="${esc(snapshot.id || '')}">
+          <div class="history-title">
+            ${esc(snapshot.periodLabel)}
+            ${demo ? '<span class="care-pulse-demo-tag">Demo</span>' : ''}
+          </div>
+          <div class="history-body muted">
+            ${esc(snapshot.responseCount)} responses · Support ${snapshot.overallSupport.toFixed(1)} · Stress ${snapshot.workloadStress.toFixed(1)}
+            ${recorded ? ` · Saved ${esc(recorded)}` : ''}
+          </div>
+          ${actions}
+        </div>
+      `;
+    })
+    .join('');
+}
+
 function renderPulseSection(dataset: CareEngagementDataset): void {
   const pulse = dataset.pulse;
+  const isDemo = isPulseDemoSnapshot(pulse);
+  const card = document.getElementById('carePulseCard') || document.querySelector('.care-pulse-card');
+
+  if (card) {
+    card.classList.toggle('care-pulse-card--demo', isDemo);
+  }
+
   const metrics: { key: string; label: string; value: number }[] = [
     { key: 'carePulseOverall', label: 'Overall support', value: pulse.overallSupport },
     { key: 'carePulseWorkload', label: 'Workload stress', value: pulse.workloadStress },
@@ -328,9 +422,32 @@ function renderPulseSection(dataset: CareEngagementDataset): void {
     `;
   });
 
-  setText('carePulsePeriod', pulse.periodLabel);
-  setText('carePulseResponses', `${pulse.responseCount} responses (anonymous demo)`);
-  setText('carePulseComments', pulse.commentsSummary);
+  const periodEl = document.getElementById('carePulsePeriod');
+  if (periodEl) {
+    periodEl.textContent = pulse.periodLabel;
+  }
+
+  const responsesEl = document.getElementById('carePulseResponses');
+  if (responsesEl) {
+    responsesEl.textContent = `${pulse.responseCount} responses`;
+  }
+
+  const commentsEl = document.getElementById('carePulseComments');
+  if (commentsEl) {
+    commentsEl.textContent = pulse.commentsSummary;
+  }
+
+  const banner = document.getElementById('carePulseDemoBanner');
+  if (banner) {
+    banner.classList.toggle('hidden', !isDemo);
+  }
+
+  const liveBanner = document.getElementById('carePulseLiveBanner');
+  if (liveBanner) {
+    liveBanner.classList.toggle('hidden', isDemo);
+  }
+
+  renderPulseHistory(dataset.pulseSnapshots || []);
 }
 
 function renderCareEngagementPage(dataset: CareEngagementDataset): void {
@@ -359,6 +476,25 @@ export function applyCareEngagementCenterAccess(): void {
   document.querySelectorAll('[data-care-engagement-access]').forEach((element) => {
     element.classList.toggle('hidden', !allowed);
   });
+
+  const canManage = canManageCareEngagementRecords();
+  document.querySelectorAll('[data-care-engagement-manage]').forEach((element) => {
+    element.classList.toggle('hidden', !canManage);
+  });
+
+  document.querySelectorAll('#careTrackerCard thead th:last-child').forEach((cell) => {
+    cell.classList.toggle('hidden', !canManage);
+  });
+
+  const readOnlyBanner = document.getElementById('careEngagementReadOnlyBanner');
+  if (readOnlyBanner) {
+    readOnlyBanner.classList.toggle('hidden', !allowed || canManage);
+  }
+
+  const matrixHelp = document.getElementById('careMatrixHelpText');
+  if (matrixHelp) {
+    matrixHelp.textContent = canManage ? CARE_MATRIX_HELP_MANAGE : CARE_MATRIX_HELP_VIEW;
+  }
 }
 
 export async function loadCareEngagement(): Promise<void> {
@@ -370,10 +506,14 @@ export async function loadCareEngagement(): Promise<void> {
   applyCareEngagementCenterAccess();
 
   try {
-    await fetchCareEngagementDataset();
-    cachedDataset = getCareEngagementDataset();
+    await ensureCareEmployeeRosterLoaded();
+    cachedDataset = await fetchCareEngagementDataset(true);
     renderCareEngagementPage(cachedDataset);
     careEngagementHydrated = true;
+
+    if (typeof window.updateWorkspaceAlerts === 'function') {
+      window.updateWorkspaceAlerts();
+    }
   } catch (err) {
     console.error('[CareEngagement] Load failed:', err);
     showToast('Could not load Care & Engagement data.', 'error');
@@ -398,29 +538,75 @@ export function openCareEngagementView(): void {
 }
 
 async function confirmDeleteCareItem(itemId: string): Promise<void> {
+  if (!canManageCareEngagementRecords()) {
+    showToast('HR admin access is required to delete care items.', 'error');
+    return;
+  }
   const confirmed = await showOrbisConfirm('Delete this care item?', 'Delete care item', {
     danger: true,
     confirmLabel: 'Delete',
   });
   if (!confirmed) return;
-  deleteCareItem(itemId);
-  selectedCareItemId = null;
-  showToast('Care item deleted.');
-  refreshCareEngagementView();
+  try {
+    await deleteCareItem(itemId);
+    selectedCareItemId = null;
+    showToast('Care item deleted.');
+    await refreshCareEngagementView();
+  } catch (err) {
+    console.error('[CareEngagement] Delete care item failed:', err);
+    showToast('Could not delete care item.', 'error');
+  }
+}
+
+async function confirmDeletePulseSnapshot(snapshotId: string): Promise<void> {
+  if (!canManageCareEngagementRecords()) {
+    showToast('HR admin access is required to delete pulse snapshots.', 'error');
+    return;
+  }
+  const snapshot = cachedDataset?.pulseSnapshots.find((row) => row.id === snapshotId);
+  const confirmed = await showOrbisConfirm(
+    `Delete pulse snapshot${snapshot?.periodLabel ? ` "${snapshot.periodLabel}"` : ''}?`,
+    'Delete pulse snapshot',
+    { danger: true, confirmLabel: 'Delete' }
+  );
+  if (!confirmed || !snapshot?.id) return;
+
+  try {
+    await deletePulseSnapshot(snapshot.id);
+    await recordCareProgramAudit('Pulse Snapshot Deleted', snapshot.periodLabel);
+    showToast('Pulse snapshot deleted.');
+    await refreshCareEngagementView();
+  } catch (err) {
+    console.error('[CareEngagement] Delete pulse snapshot failed:', err);
+    showToast('Could not delete pulse snapshot.', 'error');
+  }
 }
 
 async function confirmDeleteRecognition(entryId: string): Promise<void> {
+  if (!canManageCareEngagementRecords()) {
+    showToast('HR admin access is required to delete recognition entries.', 'error');
+    return;
+  }
   const confirmed = await showOrbisConfirm('Delete this recognition entry?', 'Delete recognition', {
     danger: true,
     confirmLabel: 'Delete',
   });
   if (!confirmed) return;
-  deleteRecognition(entryId);
-  showToast('Recognition deleted.');
-  refreshCareEngagementView();
+  try {
+    await deleteRecognition(entryId);
+    showToast('Recognition deleted.');
+    await refreshCareEngagementView();
+  } catch (err) {
+    console.error('[CareEngagement] Delete recognition failed:', err);
+    showToast('Could not delete recognition.', 'error');
+  }
 }
 
 async function editorDeleteMatrix(cell: CareMatrixCellEntry): Promise<void> {
+  if (!canManageCareEngagementRecords()) {
+    showToast('HR admin access is required to clear matrix cells.', 'error');
+    return;
+  }
   const confirmed = await showOrbisConfirm(
     'Clear this matrix cell? Initiatives and gaps will be removed.',
     'Clear matrix cell',
@@ -428,18 +614,20 @@ async function editorDeleteMatrix(cell: CareMatrixCellEntry): Promise<void> {
   );
   if (!confirmed) return;
 
-  if (cachedDataset?.matrixCells.some((entry) => entry.id === cell.id)) {
-    clearMatrixCell(cell.id);
+  try {
+    await clearMatrixCell(cell.id, cell.row, cell.column);
+    await recordCareProgramAudit('Care Matrix Cleared', `${cell.row} · ${cell.column}`);
+    selectedMatrixCellId = null;
+    showToast('Matrix cell cleared.');
+    await refreshCareEngagementView();
+  } catch (err) {
+    console.error('[CareEngagement] Clear matrix cell failed:', err);
+    showToast('Could not clear matrix cell.', 'error');
   }
-
-  selectedMatrixCellId = null;
-  showToast('Matrix cell cleared.');
-  refreshCareEngagementView();
 }
 
-function refreshCareEngagementView(): void {
-  cachedDataset = getCareEngagementDataset();
-  if (!cachedDataset) return;
+async function refreshCareEngagementView(): Promise<void> {
+  cachedDataset = await fetchCareEngagementDataset(true);
   renderCareEngagementPage(cachedDataset);
 }
 
@@ -468,7 +656,9 @@ function resolveMatrixCell(cellId: string): CareMatrixCellEntry | null {
 }
 
 function bindCareEngagementEvents(): void {
-  setCareEditorOnSaved(() => refreshCareEngagementView());
+  setCareEditorOnSaved(() => {
+    void refreshCareEngagementView();
+  });
   bindCareEngagementEditorEvents();
 
   document.getElementById('refreshCareEngagementBtn')?.addEventListener('click', () => {
@@ -477,11 +667,18 @@ function bindCareEngagementEvents(): void {
   });
 
   document.getElementById('newCareItemBtn')?.addEventListener('click', () => {
-    openCareItemEditor(null);
+    if (!canManageCareEngagementRecords()) return;
+    void openCareItemEditor(null);
   });
 
   document.getElementById('logCareRecognitionBtn')?.addEventListener('click', () => {
-    openCareRecognitionEditor(null);
+    if (!canManageCareEngagementRecords()) return;
+    void openCareRecognitionEditor(null);
+  });
+
+  document.getElementById('recordCarePulseBtn')?.addEventListener('click', () => {
+    if (!canManageCareEngagementRecords()) return;
+    openPulseSnapshotEditor(null);
   });
 
   document.getElementById('careEngagementCenterTop')?.addEventListener('click', (event) => {
@@ -490,6 +687,7 @@ function bindCareEngagementEvents(): void {
 
     if (target.closest('[data-edit-care-matrix]')) {
       event.preventDefault();
+      if (!canManageCareEngagementRecords()) return;
       const id = target.closest('[data-edit-care-matrix]')?.getAttribute('data-edit-care-matrix');
       const cell = id ? resolveMatrixCell(id) : null;
       if (cell) openCareMatrixEditor(cell);
@@ -498,6 +696,7 @@ function bindCareEngagementEvents(): void {
 
     if (target.closest('[data-delete-care-matrix]')) {
       event.preventDefault();
+      if (!canManageCareEngagementRecords()) return;
       const id = target.closest('[data-delete-care-matrix]')?.getAttribute('data-delete-care-matrix');
       const cell = id ? resolveMatrixCell(id) : null;
       if (cell) {
@@ -507,16 +706,29 @@ function bindCareEngagementEvents(): void {
       return;
     }
 
+    if (target.closest('[data-open-care-employee]')) {
+      event.preventDefault();
+      const employeeId = target
+        .closest('[data-open-care-employee]')
+        ?.getAttribute('data-open-care-employee');
+      if (employeeId && typeof window.openEmployeeDrawer === 'function') {
+        void window.openEmployeeDrawer(employeeId);
+      }
+      return;
+    }
+
     if (target.closest('[data-edit-care-item]')) {
       event.preventDefault();
+      if (!canManageCareEngagementRecords()) return;
       const id = target.closest('[data-edit-care-item]')?.getAttribute('data-edit-care-item');
       const item = cachedDataset.careItems.find((row) => row.id === id);
-      if (item) openCareItemEditor(item);
+      if (item) void openCareItemEditor(item);
       return;
     }
 
     if (target.closest('[data-delete-care-item]')) {
       event.preventDefault();
+      if (!canManageCareEngagementRecords()) return;
       const id = target.closest('[data-delete-care-item]')?.getAttribute('data-delete-care-item');
       if (id) void confirmDeleteCareItem(id);
       return;
@@ -524,16 +736,35 @@ function bindCareEngagementEvents(): void {
 
     if (target.closest('[data-edit-care-recognition]')) {
       event.preventDefault();
+      if (!canManageCareEngagementRecords()) return;
       const id = target.closest('[data-edit-care-recognition]')?.getAttribute('data-edit-care-recognition');
       const entry = cachedDataset.recognition.find((row) => row.id === id);
-      if (entry) openCareRecognitionEditor(entry);
+      if (entry) void openCareRecognitionEditor(entry);
       return;
     }
 
     if (target.closest('[data-delete-care-recognition]')) {
       event.preventDefault();
+      if (!canManageCareEngagementRecords()) return;
       const id = target.closest('[data-delete-care-recognition]')?.getAttribute('data-delete-care-recognition');
       if (id) void confirmDeleteRecognition(id);
+      return;
+    }
+
+    if (target.closest('[data-edit-care-pulse]')) {
+      event.preventDefault();
+      if (!canManageCareEngagementRecords()) return;
+      const id = target.closest('[data-edit-care-pulse]')?.getAttribute('data-edit-care-pulse');
+      const snapshot = cachedDataset.pulseSnapshots.find((row) => row.id === id);
+      if (snapshot) openPulseSnapshotEditor(snapshot);
+      return;
+    }
+
+    if (target.closest('[data-delete-care-pulse]')) {
+      event.preventDefault();
+      if (!canManageCareEngagementRecords()) return;
+      const id = target.closest('[data-delete-care-pulse]')?.getAttribute('data-delete-care-pulse');
+      if (id) void confirmDeletePulseSnapshot(id);
     }
   });
 
@@ -546,6 +777,10 @@ function bindCareEngagementEvents(): void {
     selectedMatrixCellId = cellTarget.getAttribute('data-care-matrix-cell');
     const cell = selectedMatrixCellId ? resolveMatrixCell(selectedMatrixCellId) : null;
     renderMatrixDetail(cell);
+
+    if (cell && event.detail === 2 && canManageCareEngagementRecords()) {
+      openCareMatrixEditor(cell);
+    }
   });
 
   document.getElementById('careMatrixBody')?.addEventListener('keydown', (event) => {

@@ -18,6 +18,17 @@ interface StayInterviewRecord {
   [key: string]: unknown;
 }
 
+/** Wording matches `index.html` stay interview tab (questionnaire + print view). */
+const STAY_INTERVIEW_QUESTION_LABELS: readonly string[] = [
+  'What do you look forward to when you come to work each day?',
+  'What is going well in your role right now?',
+  'What frustrations, obstacles, or stress points are you experiencing?',
+  'What would make your job more satisfying or easier?',
+  'Do you feel supported by your supervisor and team? Why or why not?',
+  'What might cause you to consider leaving BTW Global?',
+  'What can we do to help you stay and succeed here?',
+];
+
 interface StayInterviewEmployee {
   id?: string;
   dbId?: string;
@@ -201,19 +212,19 @@ export async function loadStayInterviews(employeeId: string): Promise<void> {
               </div>
             </div>
             <div class="history-body">
-              <strong>What do you look forward to each day?</strong><br>
+              <strong>${escapeHtml(STAY_INTERVIEW_QUESTION_LABELS[0])}</strong><br>
               ${nl2br(row.q1 || '—')}<br><br>
-              <strong>What is going well right now?</strong><br>
+              <strong>${escapeHtml(STAY_INTERVIEW_QUESTION_LABELS[1])}</strong><br>
               ${nl2br(row.q2 || '—')}<br><br>
-              <strong>Frustrations, obstacles, or stress points</strong><br>
+              <strong>${escapeHtml(STAY_INTERVIEW_QUESTION_LABELS[2])}</strong><br>
               ${nl2br(row.q3 || '—')}<br><br>
-              <strong>What would make the job easier or more satisfying?</strong><br>
+              <strong>${escapeHtml(STAY_INTERVIEW_QUESTION_LABELS[3])}</strong><br>
               ${nl2br(row.q4 || '—')}<br><br>
-              <strong>Support from supervisor and team</strong><br>
+              <strong>${escapeHtml(STAY_INTERVIEW_QUESTION_LABELS[4])}</strong><br>
               ${nl2br(row.q5 || '—')}<br><br>
-              <strong>What might cause them to leave?</strong><br>
+              <strong>${escapeHtml(STAY_INTERVIEW_QUESTION_LABELS[5])}</strong><br>
               ${nl2br(row.q6 || '—')}<br><br>
-              <strong>What can we do to help them stay and succeed?</strong><br>
+              <strong>${escapeHtml(STAY_INTERVIEW_QUESTION_LABELS[6])}</strong><br>
               ${nl2br(row.q7 || '—')}<br><br>
               <strong>HR / Manager Summary</strong><br>
               ${nl2br(row.manager_summary || '—')}

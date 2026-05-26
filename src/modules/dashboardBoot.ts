@@ -442,13 +442,21 @@ function setDashboardMetricByLabel(labelText: string, value: unknown): void {
 }
 
 async function loadSummaryMetricsFallback(): Promise<void> {
-  if (typeof window.loadSummaryMetrics === 'function') {
-    await window.loadSummaryMetrics();
-    return;
-  }
+  try {
+    if (typeof window.loadSummaryMetrics === 'function') {
+      await window.loadSummaryMetrics();
+      return;
+    }
 
-  if (typeof window.renderBasicDashboardKpis === 'function') {
-    window.renderBasicDashboardKpis();
+    if (typeof window.renderBasicDashboardKpis === 'function') {
+      window.renderBasicDashboardKpis();
+    }
+  } catch (err) {
+    console.error('[Dashboard] KPI summary load failed:', err);
+
+    if (typeof window.renderBasicDashboardKpis === 'function') {
+      window.renderBasicDashboardKpis();
+    }
   }
 }
 

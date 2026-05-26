@@ -1,5 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
-import { isAdminUser } from '../services/access';
+import { isAdminUser, isSupervisorUser } from '../services/access';
 import { employeeDisplayName, type EmployeeLike } from '../services/employeeUtils';
 import { switchMainView } from './navigation';
 
@@ -430,8 +430,7 @@ async function refreshCandidateIndex(): Promise<void> {
 }
 
 function getNavigationCommands(): CommandItem[] {
-  const adminOnlyIds = new Set([
-    'nav-care-engagement',
+  const strictAdminIds = new Set([
     'nav-investigations',
     'action-new-investigation',
     'nav-reports',
@@ -442,7 +441,11 @@ function getNavigationCommands(): CommandItem[] {
     return ACTION_COMMANDS;
   }
 
-  return ACTION_COMMANDS.filter((command) => !adminOnlyIds.has(command.id));
+  return ACTION_COMMANDS.filter((command) => {
+    if (strictAdminIds.has(command.id)) return false;
+    if (command.id === 'nav-care-engagement') return isSupervisorUser();
+    return true;
+  });
 }
 
 function buildCommandList(query: string): CommandItem[] {

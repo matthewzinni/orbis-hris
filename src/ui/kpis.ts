@@ -1,3 +1,4 @@
+import { getEmployeeById, loadEmployees } from '../modules/employees';
 import { supabaseClient } from '../services/supabaseClient';
 import { hideKpiRetryBanner, showKpiRetryBanner } from './dashboardRetry';
 import {
@@ -891,18 +892,38 @@ export function renderKpiEmployeeMetrics(): void {
   buildKpiHoverDetails();
 }
 
+function isOpenDisciplineReport(status: unknown): boolean {
+  const normalized = String(status || 'open').trim().toLowerCase();
+  return normalized !== 'closed';
+}
+
+async function ensureKpiEmployeeRoster(): Promise<void> {
+  if (getDashboardKpiEmployees().length) {
+    return;
+  }
+
+  try {
+    await loadEmployees();
+  } catch (err) {
+    console.warn('[KPIs] Could not preload employee roster for KPI labels:', err);
+  }
+}
+
 export async function loadSummaryMetrics(): Promise<void> {
   const atRiskMap = window.currentAtRiskRosterMap || {};
   const impactMap = window.currentImpactPlayerRosterMap || {};
+  const failedMetrics: string[] = [];
 
   hideKpiRetryBanner();
+
+  await ensureKpiEmployeeRoster();
 
   try {
     const [disciplineRes, reviewsRes, incidentsRes, manualRiskRes, impactPlayerRes] =
       await Promise.all([
         supabaseClient
           .from('discipline_reports')
-          .select('id, employee_id, issue_type, report_status, employees(first_name, last_name)'),
+          .select('id, employee_id, issue_type, report_status'),
         supabaseClient
           .from('employee_reviews')
           .select(
@@ -922,11 +943,8 @@ export async function loadSummaryMetrics(): Promise<void> {
       ]);
 
     if (!disciplineRes.error) {
-      const openDisciplineCases = (disciplineRes.data || []).filter(
-        (row) =>
-          String((row as { report_status?: string }).report_status || '')
-            .trim()
-            .toLowerCase() !== 'closed'
+      const openDisciplineCases = (disciplineRes.data || []).filter((row) =>
+        isOpenDisciplineReport((row as { report_status?: string }).report_status)
       );
       const openCount = openDisciplineCases.length;
       setKpiText('kOpenDiscipline', openCount);
@@ -936,13 +954,12 @@ export async function loadSummaryMetrics(): Promise<void> {
         const openDisciplineNames = openDisciplineCases
           .map((row) => {
             const record = row as {
-              employees?: { first_name?: string; last_name?: string } | null;
+              employee_id?: string;
               issue_type?: string;
             };
-            const employee = record.employees || null;
-            const first = String(employee?.first_name || '').trim();
-            const last = String(employee?.last_name || '').trim();
-            const fullName = `${first} ${last}`.trim();
+            const employeeId = String(record.employee_id || '').trim();
+            const rosterEmployee = employeeId ? getEmployeeById(employeeId) : undefined;
+            const fullName = rosterEmployee ? employeeDisplayName(rosterEmployee) : '';
             const issueType = String(record.issue_type || '').trim();
             if (fullName && issueType) return `${fullName} (${issueType})`;
             if (fullName) return fullName;
@@ -960,6 +977,7 @@ export async function loadSummaryMetrics(): Promise<void> {
       }
     } else {
       console.error(disciplineRes.error);
+      failedMetrics.push('open discipline');
       setKpiText('kOpenDiscipline', '—');
       const disciplineCard = document.getElementById('cardOpenDiscipline');
       if (disciplineCard) {
@@ -1015,6 +1033,7 @@ export async function loadSummaryMetrics(): Promise<void> {
       });
     } else {
       console.error(reviewsRes.error);
+      failedMetrics.push('review scores');
     }
 
     const latestManualRiskByEmployee: Record<string, Record<string, unknown>> = {};
@@ -1036,6 +1055,7 @@ export async function loadSummaryMetrics(): Promise<void> {
       });
     } else {
       console.error(manualRiskRes.error);
+      failedMetrics.push('at-risk flags');
     }
 
     reviewRiskEmployeeIds.forEach((employeeId) => {
@@ -1055,6 +1075,7 @@ export async function loadSummaryMetrics(): Promise<void> {
       });
     } else {
       console.error(incidentsRes.error);
+      failedMetrics.push('open incidents');
     }
 
     if (!manualRiskRes.error) {
@@ -1143,6 +1164,7 @@ export async function loadSummaryMetrics(): Promise<void> {
       });
     } else {
       console.error(impactPlayerRes.error);
+      failedMetrics.push('impact player flags');
     }
 
     if (manualSuppressedImpactIds.size) {
@@ -1201,6 +1223,7 @@ export async function loadSummaryMetrics(): Promise<void> {
           : `${atRiskEmployees} employee${atRiskEmployees === 1 ? '' : 's'} currently flagged by review score or incident activity`
       );
     } else {
+      failedMetrics.push('at-risk summary');
       setKpiText('kAtRiskEmployees', '—');
       setKpiText('kAtRiskEmployeesSub', 'Could not load review score data');
     }
@@ -1221,7 +1244,6 @@ export async function loadSummaryMetrics(): Promise<void> {
     }
 
     renderKpiEmployeeMetrics();
-    hideKpiRetryBanner();
 
     if (typeof window.loadRiskEmployeesFallback === 'function') {
       await window.loadRiskEmployeesFallback();
@@ -1230,22 +1252,39 @@ export async function loadSummaryMetrics(): Promise<void> {
     if (typeof window.loadImpactPlayersFallback === 'function') {
       await window.loadImpactPlayersFallback();
     }
+
+    const uniqueFailures = [...new Set(failedMetrics)];
+
+    if (uniqueFailures.length) {
+      showKpiRetryBanner(
+        `Some KPI metrics could not load (${uniqueFailures.join(', ')}).`,
+        () => loadSummaryMetrics()
+      );
+    } else {
+      hideKpiRetryBanner();
+    }
   } catch (err) {
-    console.error(err);
+    console.error('[KPIs] loadSummaryMetrics failed:', err);
+
     if (Array.isArray(window.EMPLOYEES) && window.EMPLOYEES.length && typeof window.renderRoster === 'function') {
       window.renderRoster();
     }
+
     setKpiText('kOpenDiscipline', '—');
     setKpiText('kAtRiskEmployees', '—');
     setKpiText('kAtRiskEmployeesSub', 'Could not load review score data');
     setKpiText('kImpactPlayers', '—');
+
     const impactSubEl = safeGet('kImpactPlayersSub');
     if (impactSubEl) {
       impactSubEl.textContent = 'Could not load impact player data';
     }
 
+    if (typeof window.renderKpiEmployeeMetrics === 'function') {
+      window.renderKpiEmployeeMetrics();
+    }
+
     showKpiRetryBanner('Some KPI metrics could not be loaded from Supabase.', () => loadSummaryMetrics());
-    throw err;
   }
 }
 
