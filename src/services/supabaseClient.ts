@@ -14,7 +14,7 @@ if (!isSupabaseConfigured) {
   );
 }
 
-// Never throw at module load: HTML login uses onclick="signIn()" and auth must register on window.
+// Never throw at module load: auth must register signIn on window before the login form is used.
 const fallbackUrl = 'https://orbis-config-missing.invalid';
 const fallbackKey =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.orbis-placeholder-not-a-real-key';

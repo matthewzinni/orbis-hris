@@ -2,6 +2,7 @@
 // EMPLOYEE ROSTER MODULE (TypeScript)
 // =========================
 
+import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from './confirmModal';
 
 type RosterEmployee = Record<string, unknown> & {
@@ -522,20 +523,8 @@ async function writeEmployeeAuditLogToSupabase(auditEntry) {
         metadata: auditEntry
     };
     try {
-        if (window.supabaseClient?.from) {
-            return await window.supabaseClient
-                .from('employee_audit_logs')
-                .insert([payload]);
-        }
-        if (window.supabase?.from) {
-            return await window.supabase
-                .from('employee_audit_logs')
-                .insert([payload]);
-        }
-        if (typeof supabaseClient !== 'undefined' && supabaseClient?.from) {
-            return await supabaseClient
-                .from('employee_audit_logs')
-                .insert([payload]);
+        if (supabaseClient?.from) {
+            return await supabaseClient.from('employee_audit_logs').insert([payload]);
         }
         return { error: new Error('Supabase client not available') };
     } catch (error) {

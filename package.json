@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run build",
     "db:login": "supabase login",
     "db:link": "supabase link",
     "db:push": "supabase db push",

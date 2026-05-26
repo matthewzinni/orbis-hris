@@ -3,6 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="BTW Global Orbis — HR intelligence, employee records, care & engagement, and operations."
+    />
     <title>BTW Global Orbis</title>
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="/src/styles/app-shell.css" />
@@ -24,7 +28,6 @@
               type="email"
               placeholder="you@company.com"
               autocomplete="username"
-              onkeydown="if (event.key === 'Enter') signIn();"
             />
           </div>
           <div class="field">
@@ -34,7 +37,6 @@
               type="password"
               placeholder="Password"
               autocomplete="current-password"
-              onkeydown="if (event.key === 'Enter') signIn();"
             />
           </div>
           <div
@@ -44,7 +46,7 @@
             aria-live="polite"
           ></div>
           <div style="display: flex; gap: 10px; margin-top: 18px">
-            <button class="button primary" id="loginBtn" type="button" onclick="signIn()">
+            <button class="button primary" id="loginBtn" type="button">
               Sign In
             </button>
           </div>
@@ -171,7 +173,7 @@
               >
                 Refresh
               </button>
-              <button type="button" class="button danger" id="logoutBtn" onclick="signOut()">
+              <button type="button" class="button danger" id="logoutBtn">
                 Log out
               </button>
             </div>

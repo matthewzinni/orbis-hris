@@ -8,7 +8,9 @@ import {
   signOut,
   watchAuthState,
   getCurrentSession,
+  initAuthBindings,
 } from './modules/auth';
+import { devLog } from './utils/devLog';
 import {
   markOrbisBootComplete,
   markOrbisMainBoot,
@@ -127,7 +129,7 @@ import './ui/signaturePads';
 import './ui/kpis';
 import './ui/employeeRoster';
 
-console.log('Orbis main.ts loaded');
+devLog('Orbis main.ts loaded');
 
 markOrbisMainBoot();
 
@@ -268,22 +270,22 @@ function registerLegacyBridges(): void {
 
 async function initializeProtectedModules(): Promise<void> {
   try {
-    console.log('Initializing Documents Library...');
+    devLog('Initializing Documents Library...');
     await initializeDocumentsLibrary();
-    console.log('Documents Library initialized successfully');
+    devLog('Documents Library initialized successfully');
   } catch (err) {
     console.error('Documents Library failed to initialize:', err);
   }
 
   try {
     if (typeof bridge.loadDashboardOverview === 'function') {
-      console.log('Loading dashboard overview...');
+      devLog('Loading dashboard overview...');
       await bridge.loadDashboardOverview();
     } else if (typeof bridge.loadAllDashboardData === 'function') {
-      console.log('Loading dashboard data...');
+      devLog('Loading dashboard data...');
       await bridge.loadAllDashboardData();
     } else if (typeof bridge.loadEmployees === 'function') {
-      console.log('Loading employees...');
+      devLog('Loading employees...');
       await bridge.loadEmployees();
 
       if (typeof bridge.renderEmployeeRoster === 'function') {
@@ -297,7 +299,7 @@ async function initializeProtectedModules(): Promise<void> {
     syncEmployeeStateFromWindow();
 
     const employeeCount = Array.isArray(bridge.EMPLOYEES) ? bridge.EMPLOYEES.length : 0;
-    console.log('Employees loaded:', employeeCount);
+    devLog('Employees loaded:', employeeCount);
 
     applyOperationsCenterAccess();
     applyCareEngagementCenterAccess();
@@ -310,20 +312,21 @@ async function initializeProtectedModules(): Promise<void> {
 registerLegacyBridges();
 
 window.addEventListener('DOMContentLoaded', async () => {
-  console.log('Orbis booted via main.ts');
+  devLog('Orbis booted via main.ts');
 
+  initAuthBindings();
   initAppShell();
   registerLegacyBridges();
 
   const session = await getCurrentSession();
-  console.log('Current session:', session);
+  devLog('Current session:', session);
 
   watchAuthState((event, sessionData) => {
-    console.log('Auth event:', event, sessionData);
+    devLog('Auth event:', event, sessionData);
   });
 
   if (!session) {
-    console.log('No active session detected. Waiting for sign in...');
+    devLog('No active session detected. Waiting for sign in...');
     showAuthView();
     return;
   }

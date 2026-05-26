@@ -1,4 +1,5 @@
 import { isSupabaseConfigured, supabaseClient as supabase } from '../services/supabaseClient';
+import { devLog } from '../utils/devLog';
 
 function showToast(message: string, type: 'success' | 'error' = 'success'): void {
   if (typeof window.showToast === 'function') {
@@ -154,9 +155,47 @@ export function watchAuthState(callback: (event: string, session: unknown) => vo
   }
 
   return supabase.auth.onAuthStateChange((event, session) => {
-    console.log('Auth state changed:', event);
+    devLog('Auth state changed:', event);
     callback(event, session);
   });
+}
+
+/** Wire login / logout without inline HTML handlers. */
+export function initAuthBindings(): void {
+  const loginBtn = document.getElementById('loginBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const email = document.getElementById('loginEmail');
+  const password = document.getElementById('loginPassword');
+
+  if (loginBtn && loginBtn.getAttribute('data-auth-bound') !== '1') {
+    loginBtn.setAttribute('data-auth-bound', '1');
+    loginBtn.addEventListener('click', () => {
+      void signIn();
+    });
+  }
+
+  const onEnter = (event: KeyboardEvent) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    void signIn();
+  };
+
+  if (email && email.getAttribute('data-auth-bound') !== '1') {
+    email.setAttribute('data-auth-bound', '1');
+    email.addEventListener('keydown', onEnter);
+  }
+
+  if (password && password.getAttribute('data-auth-bound') !== '1') {
+    password.setAttribute('data-auth-bound', '1');
+    password.addEventListener('keydown', onEnter);
+  }
+
+  if (logoutBtn && logoutBtn.getAttribute('data-auth-bound') !== '1') {
+    logoutBtn.setAttribute('data-auth-bound', '1');
+    logoutBtn.addEventListener('click', () => {
+      void signOut();
+    });
+  }
 }
 
 declare global {
@@ -172,3 +211,9 @@ declare global {
 
 window.signIn = signIn;
 window.signOut = signOut;
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAuthBindings);
+} else {
+  initAuthBindings();
+}
