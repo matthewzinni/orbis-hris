@@ -2,6 +2,9 @@ hr_audit.py
 .env.python
 tools/.env.python
 
+# Dependencies (never commit)
+node_modules/
+
 # Local secrets & Supabase CLI
 .env
 .env.local
@@ -12,3 +15,4 @@ supabase/.temp
 
 # Vite build output (Vercel builds on deploy)
 dist/
+.vercel

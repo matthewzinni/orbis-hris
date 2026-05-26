@@ -10,9 +10,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 export const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 export const supabase = supabaseClient;
 
-((window as any).supabaseClient = supabaseClient);
-(window as any).supabase = supabaseClient;
+declare global {
+  interface Window {
+    supabaseClient: typeof supabaseClient;
+    supabase: typeof supabase;
+  }
+}
 
-console.log('Supabase client initialized');
+window.supabaseClient = supabaseClient;
+window.supabase = supabaseClient;
 
 export default supabaseClient;
