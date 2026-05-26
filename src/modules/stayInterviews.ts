@@ -1,4 +1,15 @@
 import { supabaseClient } from '../services/supabaseClient';
+import { employeeDisplayName } from '../services/employeeUtils';
+import {
+  requestStayInterviewAiSummary,
+  StayInterviewAiError,
+} from '../services/stayInterviewAiSummary';
+import {
+  buildStayInterviewManagerSummary,
+  collectStayInterviewSummaryContext,
+  STAY_INTERVIEW_FIELD_IDS,
+  STAY_INTERVIEW_QUESTION_LABELS,
+} from '../services/stayInterviewSummary';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
 interface StayInterviewRecord {
@@ -18,17 +29,6 @@ interface StayInterviewRecord {
   [key: string]: unknown;
 }
 
-/** Wording matches `index.html` stay interview tab (questionnaire + print view). */
-const STAY_INTERVIEW_QUESTION_LABELS: readonly string[] = [
-  'What do you look forward to when you come to work each day?',
-  'What is going well in your role right now?',
-  'What frustrations, obstacles, or stress points are you experiencing?',
-  'What would make your job more satisfying or easier?',
-  'Do you feel supported by your supervisor and team? Why or why not?',
-  'What might cause you to consider leaving BTW Global?',
-  'What can we do to help you stay and succeed here?',
-];
-
 interface StayInterviewEmployee {
   id?: string;
   dbId?: string;
@@ -47,6 +47,7 @@ declare global {
     editStayInterview?: (stayInterviewId: string) => Promise<void>;
     deleteStayInterview?: (stayInterviewId: string) => Promise<void>;
     cancelStayInterviewEdit?: () => void;
+    generateStayInterviewSummary?: () => Promise<void>;
 
     showToast?: (message: string, type?: string) => void;
     safeGet?: (id: string) => HTMLElement | null;
@@ -57,6 +58,7 @@ declare global {
 }
 
 let currentStayInterviewId: string | null = null;
+let stayInterviewUiBound = false;
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -132,6 +134,101 @@ function setInputValue(id: string, value: unknown): void {
   if (!input) return;
 
   input.value = String(value ?? '');
+}
+
+function readStayInterviewField(id: (typeof STAY_INTERVIEW_FIELD_IDS)[number]): string {
+  return safeGet<HTMLTextAreaElement>(id)?.value || '';
+}
+
+export async function generateStayInterviewSummary(): Promise<void> {
+  const summaryEl = safeGet<HTMLTextAreaElement>('stayManagerSummary');
+  const generateBtn = document.getElementById(
+    'generateStayInterviewSummaryBtn'
+  ) as HTMLButtonElement | null;
+
+  if (!summaryEl) {
+    showToast('Summary field not found.', 'error');
+    return;
+  }
+
+  const employee = getCurrentEmployee();
+  const context = collectStayInterviewSummaryContext(readStayInterviewField, {
+    employeeName: employeeDisplayName(employee),
+    interviewType: safeGet<HTMLSelectElement>('stayInterviewType')?.value || undefined,
+    interviewDate: safeGet<HTMLInputElement>('stayInterviewDate')?.value || undefined,
+  });
+  const templateDraft = buildStayInterviewManagerSummary(readStayInterviewField);
+
+  if (!context && !templateDraft) {
+    showToast('Add at least one employee response above before generating a summary.', 'error');
+    return;
+  }
+
+  const existing = String(summaryEl.value || '').trim();
+  if (existing) {
+    const confirmed = await showOrbisConfirm(
+      'Replace the current HR / Manager Summary with a new AI draft from the responses above?',
+      {
+        title: 'Regenerate summary',
+        confirmLabel: 'Replace',
+      }
+    );
+    if (!confirmed) return;
+  }
+
+  const originalBtnLabel = generateBtn?.textContent || 'Generate AI summary';
+  if (generateBtn) {
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating…';
+  }
+
+  let draft = '';
+
+  try {
+    if (context) {
+      try {
+        draft = await requestStayInterviewAiSummary(context);
+        showToast('AI summary drafted. Review and edit before saving.');
+      } catch (err) {
+        const reason =
+          err instanceof StayInterviewAiError
+            ? err.message
+            : 'AI summary is unavailable.';
+        console.warn('[StayInterviews] AI summary failed, using template:', err);
+
+        if (!templateDraft) {
+          showToast(reason, 'error');
+          return;
+        }
+
+        draft = templateDraft;
+        showToast(
+          `${reason} A structured draft was used instead — review before saving.`
+        );
+      }
+    } else {
+      draft = templateDraft;
+      showToast('Summary drafted from responses. Review and edit before saving.');
+    }
+
+    summaryEl.value = draft;
+    summaryEl.dispatchEvent(new Event('input', { bubbles: true }));
+    summaryEl.focus();
+  } finally {
+    if (generateBtn) {
+      generateBtn.disabled = false;
+      generateBtn.textContent = originalBtnLabel;
+    }
+  }
+}
+
+function bindStayInterviewUi(): void {
+  if (stayInterviewUiBound) return;
+  stayInterviewUiBound = true;
+
+  document.getElementById('generateStayInterviewSummaryBtn')?.addEventListener('click', () => {
+    void generateStayInterviewSummary();
+  });
 }
 
 function resetStayInterviewForm(): void {
@@ -401,8 +498,11 @@ export function cancelStayInterviewEdit(): void {
   showToast('Stay interview edit cancelled.');
 }
 
+bindStayInterviewUi();
+
 window.loadStayInterviews = loadStayInterviews;
 window.saveStayInterview = saveStayInterview;
 window.editStayInterview = editStayInterview;
 window.deleteStayInterview = deleteStayInterview;
 window.cancelStayInterviewEdit = cancelStayInterviewEdit;
+window.generateStayInterviewSummary = generateStayInterviewSummary;

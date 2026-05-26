@@ -2988,12 +2988,35 @@
                       <textarea id="stayQ7" rows="3" placeholder="Employee response..."></textarea>
                     </div>
                     <div class="field">
-                      <label for="stayManagerSummary">HR / Manager Summary</label>
+                      <div
+                        style="
+                          display: flex;
+                          align-items: center;
+                          justify-content: space-between;
+                          gap: 10px;
+                          flex-wrap: wrap;
+                          margin-bottom: 6px;
+                        "
+                      >
+                        <label for="stayManagerSummary" style="margin: 0">HR / Manager Summary</label>
+                        <button
+                          class="button soft sm"
+                          id="generateStayInterviewSummaryBtn"
+                          type="button"
+                        >
+                          Generate AI summary
+                        </button>
+                      </div>
                       <textarea
                         id="stayManagerSummary"
                         rows="4"
-                        placeholder="Summarize themes, action items, and follow-up..."
+                        placeholder="Summarize themes, action items, and follow-up — or use Generate AI summary above."
                       ></textarea>
+                      <p class="muted" style="margin: 8px 0 0; font-size: 0.82rem">
+                        Uses AI to synthesize Q1–Q7 into an HR-ready summary (requires Supabase Edge
+                        Function setup). Falls back to a structured draft if AI is unavailable.
+                        Review and edit before saving.
+                      </p>
                     </div>
                     <div class="button-row">
                       <button

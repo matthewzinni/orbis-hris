@@ -16,6 +16,32 @@ npm run db:push
 npm run db:status
 ```
 
+## Stay interview AI summary (Edge Function)
+
+The **Generate AI summary** button calls `summarize-stay-interview`. The OpenAI key must live in Supabase secrets (never in `VITE_*`).
+
+```bash
+# One-time: link project if needed
+supabase link --project-ref YOUR_PROJECT_REF
+
+# Set secrets on the hosted project
+supabase secrets set OPENAI_API_KEY=sk-...
+# Optional:
+supabase secrets set OPENAI_MODEL=gpt-4o-mini
+
+# Deploy the function
+supabase functions deploy summarize-stay-interview
+```
+
+Local function testing (optional):
+
+```bash
+# supabase/.env.local — gitignored; OPENAI_API_KEY only for serve
+supabase functions serve summarize-stay-interview --env-file supabase/.env.local
+```
+
+After deploy, sign in on production and use Stay Interviews → **Generate AI summary**. If the secret is missing, the app uses the structured template draft instead.
+
 ## Smoke test (production)
 
 1. Hard refresh or incognito → `https://www.orbis-btw.com`

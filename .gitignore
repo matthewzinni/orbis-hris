@@ -7,6 +7,9 @@ tools/.env.python
 # Dependencies (never commit)
 node_modules/
 
+# Stay interview import data (may contain PII)
+scripts/data/*.csv
+
 # Local secrets & Supabase CLI
 .env
 
