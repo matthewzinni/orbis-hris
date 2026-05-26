@@ -7,12 +7,14 @@ Bulk-insert rows into `public.stay_interviews` and attach them to employees usin
 ### Setup
 
 1. Use a trusted machine. You need the **service role** key (Settings → API in Supabase). Do not commit it or use it in the Vite client.
-2. Export credentials in your shell (or a local env file you never commit):
+2. The Vite `.env` only has `VITE_SUPABASE_*` (anon/publishable). Export **separate** script credentials:
 
 ```bash
 export SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
 export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
 ```
+
+   Or point at a local file you never commit, e.g. `tools/.env.python` in a sibling Orbis checkout (same variable names).
 
 3. Prepare a CSV. Start from `examples/stay_interviews_template.csv` (headers only). **Get real `employee_id` values** from Supabase → Table Editor → `employees` → column `id` (Orbis also shows this as the employee / BTW number in the UI). Do not guess IDs.
 
@@ -58,4 +60,6 @@ Same as the app / table: `interview_type` (defaults to `Stay Interview`), `q1`�
 ### Notes
 
 - RLS is bypassed with the service role; run only with data you are allowed to load.
-- If `select=id,employee_id,first_name,last_name,email` fails because a column is missing in your project, adjust the query in `fetch_employees()` to match your schema.
+- `fetch_employees()` selects `id,first_name,last_name` only (this project stores the BTW id in `employees.id`; there is no `email` or `employee_id` column).
+- Bulk CSV from Word templates: `python3 scripts/build_stay_interviews_csv.py` reads `~/Desktop/Work/Stay Interviews/Stay_Interview_*.docx` and writes `scripts/data/stay_interviews_import.csv` (gitignored).
+- `scripts/data/*.csv` is gitignored because rows contain interview responses (PII).

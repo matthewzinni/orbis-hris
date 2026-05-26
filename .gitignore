@@ -2,11 +2,16 @@ hr_audit.py
 .env.python
 tools/.env.python
 
+.DS_Store
+
 # Dependencies (never commit)
 node_modules/
 
 # Local secrets & Supabase CLI
 .env
+
+# Stay interview import data (may contain PII)
+scripts/data/*.csv
 .env.local
 .env.*.local
 supabase/.branches

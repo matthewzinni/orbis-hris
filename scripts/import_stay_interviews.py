@@ -123,7 +123,8 @@ def rest_json(
 
 def fetch_employees(base_url: str, service_key: str) -> list[dict[str, Any]]:
     """Fetch up to 50k employees (adjust Range if needed)."""
-    url = f"{base_url.rstrip('/')}/rest/v1/employees?select=id,employee_id,first_name,last_name,email"
+    # employee_id / email omitted: not present on all Orbis projects (id is the BTW key)
+    url = f"{base_url.rstrip('/')}/rest/v1/employees?select=id,first_name,last_name"
     headers = {
         "apikey": service_key,
         "Authorization": f"Bearer {service_key}",
