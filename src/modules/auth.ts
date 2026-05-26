@@ -1,16 +1,4 @@
-import * as SupabaseService from '../services/supabaseClient';
-
-const supabase =
-  (SupabaseService as any).supabaseClient ||
-  (SupabaseService as any).supabase ||
-  (window as any).supabaseClient ||
-  (window as any).supabase;
-
-if (!supabase) {
-  console.error(
-    'Supabase client export was not found. Check src/services/supabaseClient.ts exports.'
-  );
-}
+import { isSupabaseConfigured, supabaseClient as supabase } from '../services/supabaseClient';
 
 function showToast(message: string, type: 'success' | 'error' = 'success'): void {
   if (typeof window.showToast === 'function') {
@@ -81,6 +69,14 @@ export async function signIn(email?: string, password?: string) {
 
   setLoginError('');
 
+  if (!isSupabaseConfigured) {
+    const message =
+      'This site is missing Supabase configuration. In Vercel (or your host), set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY for Production, then redeploy.';
+    setLoginError(message);
+    showToast(message, 'error');
+    return null;
+  }
+
   if (!resolvedEmail || !resolvedPassword) {
     const message = 'Please enter both email and password.';
     setLoginError(message);
@@ -117,6 +113,11 @@ export async function signIn(email?: string, password?: string) {
 }
 
 export async function signOut() {
+  if (!isSupabaseConfigured) {
+    showToast('Sign out skipped: Supabase is not configured.', 'error');
+    return;
+  }
+
   try {
     await supabase.auth.signOut();
     if (typeof window.clearOrbisSessionState === 'function') {
@@ -136,6 +137,10 @@ export async function signOut() {
 }
 
 export async function getCurrentSession() {
+  if (!isSupabaseConfigured) {
+    return null;
+  }
+
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -144,6 +149,10 @@ export async function getCurrentSession() {
 }
 
 export function watchAuthState(callback: (event: string, session: unknown) => void) {
+  if (!isSupabaseConfigured) {
+    return { data: { subscription: { unsubscribe: () => undefined } } };
+  }
+
   return supabase.auth.onAuthStateChange((event, session) => {
     console.log('Auth state changed:', event);
     callback(event, session);
