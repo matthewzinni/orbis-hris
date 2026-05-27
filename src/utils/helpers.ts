@@ -13,6 +13,7 @@ type EmployeeLike = {
 
 declare global {
   interface Window {
+    getCurrentEmployeeForOrbis?: () => EmployeeLike | null;
     currentEmployee?: EmployeeLike | null;
     safeGet?: (id: string) => HTMLElement | null;
     setText?: (id: string, value: unknown) => void;
@@ -464,9 +465,14 @@ export function printMeeting(): void {
 }
 
 export function printReview(): void {
+  const employee =
+    typeof window.getCurrentEmployeeForOrbis === 'function'
+      ? window.getCurrentEmployeeForOrbis()
+      : window.currentEmployee ?? null;
+
   if (
     typeof window.canAccessPerformanceReviews === 'function' &&
-    !window.canAccessPerformanceReviews()
+    !window.canAccessPerformanceReviews(employee)
   ) {
     showToast('You do not have access to print performance reviews for this employee.', 'error');
     return;

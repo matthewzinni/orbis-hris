@@ -1393,13 +1393,14 @@
                               <th>Display name</th>
                               <th>Role</th>
                               <th>Supervisor</th>
+                              <th>Roster UUIDs</th>
                               <th>Can delete</th>
                               <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody id="settingsUserAccessBody">
                             <tr>
-                              <td colspan="6" class="empty">Loading user access...</td>
+                              <td colspan="7" class="empty">Loading user access...</td>
                             </tr>
                           </tbody>
                         </table>
@@ -3479,6 +3480,39 @@
                     <div id="reviewsHistory" class="history-list">
                       <div class="empty">No reviews loaded yet.</div>
                     </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card" style="margin-top: 14px">
+                <div class="card-header">Review attachments</div>
+                <div class="card-body">
+                  <p class="muted" style="margin: 0 0 12px; font-size: 13px">
+                    Files are stored on the employee record and linked to the review you last saved or
+                    opened for editing.
+                  </p>
+                  <div
+                    class="button-row file-upload-row"
+                    style="align-items: flex-end; flex-wrap: wrap; gap: 12px"
+                  >
+                    <div class="field" style="flex: 1; min-width: 200px; margin: 0">
+                      <label for="reviewAttachmentFile">Attach file</label>
+                      <input id="reviewAttachmentFile" type="file" />
+                    </div>
+                    <button
+                      class="button primary"
+                      type="button"
+                      id="reviewAttachmentUploadBtn"
+                      onclick="uploadPerformanceReviewAttachment()"
+                    >
+                      Upload
+                    </button>
+                  </div>
+                  <div
+                    id="reviewAttachmentsList"
+                    class="history-list"
+                    style="margin-top: 14px"
+                  >
+                    <div class="empty muted">Open or save a review to attach files.</div>
                   </div>
                 </div>
               </div>

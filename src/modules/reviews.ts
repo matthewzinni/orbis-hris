@@ -1,6 +1,7 @@
 import { canAccessPerformanceReviews } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { loadPerformanceReviewAttachments } from './employeeDocuments';
 import {
   clearCanvasSignature,
   getCanvasSignature,
@@ -71,6 +72,8 @@ declare global {
   interface Window {
     currentEmployee?: ReviewEmployee;
     currentReviewId?: string | null;
+    reviewAttachmentContextId?: string | null;
+    cancelReviewEdit?: () => void;
     currentImpactPlayerRosterMap?: Record<string, FlagMeta>;
     currentAtRiskRosterMap?: Record<string, FlagMeta>;
     saveReviewRecord?: () => Promise<void>;
@@ -169,6 +172,64 @@ function setInputValue(id: string, value: unknown): void {
   if (!input) return;
 
   input.value = String(value ?? '');
+}
+
+function resetPerformanceReviewFormUi(options?: {
+  preserveReviewAttachmentContext?: boolean;
+}): void {
+  currentReviewId = null;
+  window.currentReviewId = null;
+
+  if (!options?.preserveReviewAttachmentContext) {
+    window.reviewAttachmentContextId = null;
+  }
+
+  const saveButton = safeGet('saveReviewBtn');
+  if (saveButton) saveButton.textContent = 'Save Review';
+
+  safeGet('cancelReviewEditBtn')?.classList.add('hidden');
+  safeGet('reviewEditStatus')?.classList.add('hidden');
+
+  const refused = safeGet<HTMLInputElement>('reviewRefusedToSign');
+  if (refused) {
+    refused.checked = false;
+  }
+
+  clearCanvasSignature('reviewEmployeeSignature', 'reviewEmployeeSigStatus');
+  clearCanvasSignature('reviewManagerSignature', 'reviewManagerSigStatus');
+  clearCanvasSignature('reviewWitnessSignature', 'reviewWitnessSigStatus');
+
+  setInputValue('reviewDate', todayInputValue());
+  setInputValue('reviewType', '');
+  setInputValue('reviewQuality', '');
+  setInputValue('reviewAttendance', '');
+  setInputValue('reviewReliability', '');
+  setInputValue('reviewCommunication', '');
+  setInputValue('reviewJudgement', '');
+  setInputValue('reviewInitiative', '');
+  setInputValue('reviewTeamwork', '');
+  setInputValue('reviewKnowledge', '');
+  setInputValue('reviewTraining', '');
+  setInputValue('reviewStrengths', '');
+  setInputValue('reviewImprovements', '');
+  setInputValue('reviewEmployeeComments', '');
+  setInputValue('reviewManagerComments', '');
+
+  const reviewFile = safeGet<HTMLInputElement>('reviewAttachmentFile');
+  if (reviewFile) reviewFile.value = '';
+}
+
+export function cancelReviewEdit(): void {
+  if (!assertPerformanceReviewAccess()) return;
+
+  resetPerformanceReviewFormUi();
+
+  const active = getCurrentEmployee();
+  const employeeId = String(active?.dbId || active?.id || active?.employee_id || '').trim();
+
+  if (employeeId) {
+    void loadPerformanceReviewAttachments(employeeId);
+  }
 }
 
 export function reviewScoreFromValue(value: unknown): number | null {
@@ -310,33 +371,35 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
   const target = safeGet('reviewsHistory');
   if (!target) return;
 
-  if (!assertPerformanceReviewAccess()) {
-    target.innerHTML = '<div class="empty">Performance reviews are not available for this employee.</div>';
-    return;
-  }
+  try {
+    if (!assertPerformanceReviewAccess()) {
+      target.innerHTML =
+        '<div class="empty">Performance reviews are not available for this employee.</div>';
+      return;
+    }
 
-  const { data, error } = await supabaseClient
-    .from('employee_reviews')
-    .select('*')
-    .eq('employee_id', employeeId)
-    .order('review_date', { ascending: false });
+    const { data, error } = await supabaseClient
+      .from('employee_reviews')
+      .select('*')
+      .eq('employee_id', employeeId)
+      .order('review_date', { ascending: false });
 
-  if (error) {
-    console.error('Could not load reviews:', error);
-    target.innerHTML = '<div class="empty">Could not load reviews.</div>';
-    return;
-  }
+    if (error) {
+      console.error('Could not load reviews:', error);
+      target.innerHTML = '<div class="empty">Could not load reviews.</div>';
+      return;
+    }
 
-  const rows = (data || []) as ReviewRecord[];
+    const rows = (data || []) as ReviewRecord[];
 
-  if (!rows.length) {
-    target.innerHTML = '<div class="empty">No reviews found for this employee.</div>';
-    return;
-  }
+    if (!rows.length) {
+      target.innerHTML = '<div class="empty">No reviews found for this employee.</div>';
+      return;
+    }
 
-  target.innerHTML = rows
-    .map(
-      (row) => `
+    target.innerHTML = rows
+      .map(
+        (row) => `
       <div class="history-item" data-review-id="${escapeHtml(row.id || '')}">
         <div class="history-top">
           <div>
@@ -356,25 +419,28 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
         </div>
       </div>
     `
-    )
-    .join('');
+      )
+      .join('');
 
-  target.querySelectorAll<HTMLButtonElement>('[data-edit-review-id]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const reviewId = button.dataset.editReviewId;
-      const review = rows.find((row) => String(row.id) === String(reviewId));
-      if (!review) return;
-      editReviewRecord(review);
+    target.querySelectorAll<HTMLButtonElement>('[data-edit-review-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const reviewId = button.dataset.editReviewId;
+        const review = rows.find((row) => String(row.id) === String(reviewId));
+        if (!review) return;
+        editReviewRecord(review);
+      });
     });
-  });
 
-  target.querySelectorAll<HTMLButtonElement>('[data-delete-review-id]').forEach((button) => {
-    button.addEventListener('click', async () => {
-      const reviewId = button.dataset.deleteReviewId;
-      if (!reviewId) return;
-      await deleteReviewRecord(reviewId, employeeId);
+    target.querySelectorAll<HTMLButtonElement>('[data-delete-review-id]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const reviewId = button.dataset.deleteReviewId;
+        if (!reviewId) return;
+        await deleteReviewRecord(reviewId, employeeId);
+      });
     });
-  });
+  } finally {
+    void loadPerformanceReviewAttachments(employeeId);
+  }
 }
 
 export function editReviewRecord(review: ReviewRecord): void {
@@ -432,6 +498,17 @@ export function editReviewRecord(review: ReviewRecord): void {
 
   safeGet('cancelReviewEditBtn')?.classList.remove('hidden');
 
+  const attachmentReviewId = String(review.id || '').trim();
+  if (attachmentReviewId) {
+    window.reviewAttachmentContextId = attachmentReviewId;
+  }
+
+  const active = getCurrentEmployee();
+  const resolvedId = String(active?.dbId || active?.id || active?.employee_id || '').trim();
+  if (resolvedId) {
+    void loadPerformanceReviewAttachments(resolvedId);
+  }
+
   showToast('Review loaded for editing.');
 }
 
@@ -457,6 +534,10 @@ export async function deleteReviewRecord(reviewId: string, employeeId: string): 
   }
 
   showToast('Review deleted.');
+
+  if (String(window.reviewAttachmentContextId || '') === String(reviewId)) {
+    window.reviewAttachmentContextId = null;
+  }
 
   if (String(currentReviewId || '') === String(reviewId)) {
     currentReviewId = null;
@@ -550,23 +631,19 @@ export async function saveReviewRecord(): Promise<void> {
 
   applyReviewAutoSignals(activeEmployee, employeeId, averageScore);
 
-  currentReviewId = null;
-  window.currentReviewId = null;
-
-  const saveButton = safeGet('saveReviewBtn');
-  if (saveButton) saveButton.textContent = 'Save Review';
-
-  safeGet('cancelReviewEditBtn')?.classList.add('hidden');
-  safeGet('reviewEditStatus')?.classList.add('hidden');
-
-  const refused = safeGet<HTMLInputElement>('reviewRefusedToSign');
-  if (refused) {
-    refused.checked = false;
+  const savedRow = (Array.isArray(result.data) ? result.data[0] : result.data) as
+    | ReviewRecord
+    | undefined;
+  const resolvedAttachmentReviewId = savedRow?.id
+    ? String(savedRow.id)
+    : reviewId
+      ? String(reviewId)
+      : null;
+  if (resolvedAttachmentReviewId) {
+    window.reviewAttachmentContextId = resolvedAttachmentReviewId;
   }
 
-  clearCanvasSignature('reviewEmployeeSignature', 'reviewEmployeeSigStatus');
-  clearCanvasSignature('reviewManagerSignature', 'reviewManagerSigStatus');
-  clearCanvasSignature('reviewWitnessSignature', 'reviewWitnessSigStatus');
+  resetPerformanceReviewFormUi({ preserveReviewAttachmentContext: true });
 
   await refreshReviewDependentUi(employeeId);
 }
@@ -576,3 +653,4 @@ window.editReviewRecord = editReviewRecord;
 window.deleteReviewRecord = deleteReviewRecord;
 window.saveReviewRecord = saveReviewRecord;
 window.saveEmployeeReview = saveReviewRecord;
+window.cancelReviewEdit = cancelReviewEdit;

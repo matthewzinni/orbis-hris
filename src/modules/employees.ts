@@ -7,7 +7,9 @@ import { appState } from '../core/state';
 import {
   isSupervisorUser,
   employeeMatchesSupervisorAccess,
+  parseSupervisedEmployeeIds,
   setCurrentUserAccess,
+  fetchUserAccessRowForEmail,
 } from '../services/access';
 
 export type EmployeeRecord = Record<string, unknown>;
@@ -66,18 +68,14 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
       .toLowerCase();
 
     if (userEmail) {
-      const { data: accessRows, error: accessError } = await supabaseClient
-        .from('user_access')
-        .select('email, display_name, role, supervisor_name, can_delete')
-        .eq('email', userEmail)
-        .limit(1);
+      const accessRow = await fetchUserAccessRowForEmail(userEmail);
 
-      if (!accessError && accessRows?.[0]) {
-        const role = String(accessRows[0].role || window.currentUserRole || 'user')
+      if (accessRow) {
+        const role = String(accessRow.role || window.currentUserRole || 'user')
           .trim()
           .toLowerCase();
-        setCurrentUserAccess(accessRows[0], role);
-        console.log('[Access Loaded In loadEmployees]', role, accessRows[0]);
+        setCurrentUserAccess(accessRow, role);
+        console.log('[Access Loaded In loadEmployees]', role, accessRow);
       }
     }
   } catch (accessErr) {
@@ -101,7 +99,12 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
   let scoped: EmployeeRecord[];
 
   if (isSupervisorUser()) {
-    if (!window.currentUserAccess?.supervisor_name) {
+    const scopedIds = parseSupervisedEmployeeIds(window.currentUserAccess);
+    const hasSupervisorName = Boolean(
+      String(window.currentUserAccess?.supervisor_name || '').trim()
+    );
+
+    if (!scopedIds.length && !hasSupervisorName) {
       showToast('No employee access assigned. Contact HR.', 'error');
       scoped = [];
     } else {

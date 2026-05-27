@@ -80,7 +80,7 @@ The standalone files `candidate_notes.sql`, `orbis_rls_helpers.sql`, and `orbis_
 | Role | Employees | Notes / meetings / discipline / incidents / stay interviews | Performance reviews | Candidates |
 |------|-----------|----------------------------------------------------------------|---------------------|------------|
 | **admin** | Full CRUD | Full CRUD | Full CRUD | Full CRUD |
-| **supervisor** | Read direct reports only | CRUD for their team | CRUD for their team | No access |
+| **supervisor** | Direct reports only (fuzzy `supervisor` text), **or** explicit `user_access.supervised_employee_ids` when set | CRUD for scoped employees | CRUD for scoped employees | No access |
 | **user** | Read-only directory | No access | No access | No access |
 
 Supervisor matching mirrors `employeeMatchesSupervisorAccess()` in `src/services/access.ts`.

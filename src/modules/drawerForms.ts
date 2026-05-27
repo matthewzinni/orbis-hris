@@ -91,6 +91,7 @@ export function resetDrawerEntryForms(): void {
   window.currentNoteId = null;
   window.currentMeetingId = null;
   window.currentReviewId = null;
+  window.reviewAttachmentContextId = null;
 }
 
 export function resetDrawerForms(): void {
@@ -144,6 +145,7 @@ declare global {
     currentReviewId?: string | null;
     currentIncidentReportId?: string | null;
     currentStayInterviewId?: string | null;
+    reviewAttachmentContextId?: string | null;
   }
 }
 

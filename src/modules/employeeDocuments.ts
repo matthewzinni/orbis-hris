@@ -1,7 +1,11 @@
+import { canAccessPerformanceReviews } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
 const EMPLOYEE_DOCUMENTS_BUCKET = 'employee-documents';
+
+/** Stored in employee_documents.document_type for files uploaded from the Performance Review tab. */
+export const REVIEW_ATTACHMENT_DOC_TYPE = 'Performance Review Attachment';
 
 interface EmployeeDocumentRecord {
   id?: string;
@@ -31,6 +35,9 @@ declare global {
     loadEmployeeDocuments?: (employeeId: string) => Promise<void>;
     uploadEmployeeDocument?: () => Promise<void>;
     deleteEmployeeDocument?: (docId: string) => Promise<void>;
+    loadPerformanceReviewAttachments?: (employeeId: string) => Promise<void>;
+    uploadPerformanceReviewAttachment?: () => Promise<void>;
+    reviewAttachmentContextId?: string | null;
 
     showToast?: (message: string, type?: string) => void;
     safeGet?: (id: string) => HTMLElement | null;
@@ -83,6 +90,15 @@ function getResolvedEmployeeId(fallbackId?: string): string {
   return String(
     employee?.dbId || employee?.employee_id || employee?.id || employee?.displayId || fallbackId || ''
   ).trim();
+}
+
+function getReviewAttachmentTargetId(): string | null {
+  const ctx = String(
+    (window as Window & { reviewAttachmentContextId?: string | null }).reviewAttachmentContextId ||
+      ''
+  ).trim();
+  if (ctx) return ctx;
+  return String((window as Window & { currentReviewId?: string | null }).currentReviewId || '').trim() || null;
 }
 
 export async function deleteEmployeeDocument(docId: string): Promise<void> {
@@ -140,6 +156,9 @@ export async function deleteEmployeeDocument(docId: string): Promise<void> {
 
   if (employeeId) {
     await loadEmployeeDocuments(employeeId);
+    if (safeGet('reviewAttachmentsList') && getReviewAttachmentTargetId()) {
+      await loadPerformanceReviewAttachments(employeeId);
+    }
   }
 }
 
@@ -307,6 +326,184 @@ export async function uploadEmployeeDocument(): Promise<void> {
   await loadEmployeeDocuments(employeeId);
 }
 
+export async function loadPerformanceReviewAttachments(employeeId: string): Promise<void> {
+  const target = safeGet('reviewAttachmentsList');
+  if (!target) return;
+
+  const activeEmployee = getCurrentEmployee();
+  const primaryEmployeeId = String(employeeId || getResolvedEmployeeId() || '').trim();
+  const employeeIds = getEmployeeLookupIds(activeEmployee, primaryEmployeeId);
+  const idsToSearch = employeeIds.length ? employeeIds : [primaryEmployeeId];
+
+  if (!idsToSearch[0]) {
+    target.innerHTML = '<div class="empty">Open an employee to view review attachments.</div>';
+    return;
+  }
+
+  if (!canAccessPerformanceReviews(activeEmployee as Record<string, unknown> | null | undefined)) {
+    target.innerHTML = '<div class="empty">Review attachments are not available for this employee.</div>';
+    return;
+  }
+
+  const reviewId = getReviewAttachmentTargetId();
+  if (!reviewId) {
+    target.innerHTML =
+      '<div class="empty muted">Save the review first, or click <strong>Edit</strong> on a review in history, then upload files here.</div>';
+    return;
+  }
+
+  target.innerHTML = '<div class="empty">Loading attachments…</div>';
+
+  const { data, error } = await supabaseClient
+    .from('employee_documents')
+    .select('*')
+    .in('employee_id', idsToSearch)
+    .eq('review_id', reviewId)
+    .order('uploaded_at', { ascending: false });
+
+  if (error) {
+    console.error('[ReviewAttachments] Load failed:', error);
+    target.innerHTML =
+      '<div class="empty">Could not load review attachments. Apply the latest database migration if this is a new feature.</div>';
+    return;
+  }
+
+  const rows = (data || []) as EmployeeDocumentRecord[];
+
+  if (!rows.length) {
+    target.innerHTML = '<div class="empty muted">No files attached to this review yet.</div>';
+    return;
+  }
+
+  const docsWithUrls = await Promise.all(
+    rows.map(async (row) => {
+      if (!row.file_path) {
+        return { ...row, signedUrl: null };
+      }
+
+      const { data: signedData, error: signedError } = await supabaseClient.storage
+        .from(EMPLOYEE_DOCUMENTS_BUCKET)
+        .createSignedUrl(String(row.file_path), 3600);
+
+      return {
+        ...row,
+        signedUrl: signedError ? null : signedData?.signedUrl || null,
+      };
+    })
+  );
+
+  target.innerHTML = docsWithUrls
+    .map(
+      (row) => `
+      <div class="history-item">
+        <div class="history-top">
+          <div>
+            <div class="history-title">${escapeHtml(row.file_name || 'Attachment')}</div>
+            <div class="history-date">${escapeHtml(row.uploaded_at || '')}</div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="button danger sm review-doc-delete" type="button" data-delete-review-doc-id="${escapeHtml(row.id || '')}">Delete</button>
+            ${
+              row.signedUrl
+                ? `<a href="${escapeHtml(row.signedUrl)}" target="_blank" rel="noopener noreferrer" class="button soft sm">View</a>`
+                : ''
+            }
+          </div>
+        </div>
+      </div>
+    `
+    )
+    .join('');
+
+  target.querySelectorAll<HTMLButtonElement>('[data-delete-review-doc-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const docId = button.dataset.deleteReviewDocId;
+      if (docId) void deleteEmployeeDocument(docId);
+    });
+  });
+}
+
+export async function uploadPerformanceReviewAttachment(): Promise<void> {
+  const employee = getCurrentEmployee();
+  const employeeId = getResolvedEmployeeId();
+  const reviewId = getReviewAttachmentTargetId();
+
+  if (!employee || !employeeId) {
+    showToast('Open an employee first.', 'error');
+    return;
+  }
+
+  if (!canAccessPerformanceReviews(employee as Record<string, unknown> | null | undefined)) {
+    showToast('You do not have permission to add review attachments for this employee.', 'error');
+    return;
+  }
+
+  if (!reviewId) {
+    showToast('Save the review or open an existing review from history before attaching files.', 'error');
+    return;
+  }
+
+  const fileInput = safeGet<HTMLInputElement>('reviewAttachmentFile');
+  const file = fileInput?.files?.[0];
+
+  if (!file) {
+    showToast('Choose a file to upload.', 'error');
+    return;
+  }
+
+  const fileExt = file.name.includes('.') ? file.name.split('.').pop() : '';
+  const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filePath = `${employeeId}/${Date.now()}_review_${safeName}`;
+
+  const { error: uploadError } = await supabaseClient.storage
+    .from(EMPLOYEE_DOCUMENTS_BUCKET)
+    .upload(filePath, file, { upsert: false });
+
+  if (uploadError) {
+    console.error('[ReviewAttachments] Upload failed:', uploadError);
+    showToast(`Upload failed: ${uploadError.message}`, 'error');
+    return;
+  }
+
+  const {
+    data: { user },
+  } = await supabaseClient.auth.getUser();
+
+  const insertRow: Record<string, unknown> = {
+    employee_id: employeeId,
+    document_type: REVIEW_ATTACHMENT_DOC_TYPE,
+    file_name: file.name,
+    file_path: filePath,
+    file_ext: fileExt || null,
+    uploaded_by: user?.id || null,
+    review_id: reviewId,
+  };
+
+  let { error: insertError } = await supabaseClient.from('employee_documents').insert([insertRow]);
+
+  if (insertError?.code === 'PGRST204' && String(insertError.message || '').includes('review_id')) {
+    delete insertRow.review_id;
+    const retry = await supabaseClient.from('employee_documents').insert([insertRow]);
+    insertError = retry.error;
+    if (!insertError) {
+      showToast('File uploaded, but review link requires the latest database migration.', 'warning');
+    }
+  }
+
+  if (insertError) {
+    console.error('[ReviewAttachments] DB insert failed:', insertError);
+    showToast(`Saved file but database insert failed: ${insertError.message}`, 'error');
+    return;
+  }
+
+  showToast('Attachment uploaded.');
+  if (fileInput) fileInput.value = '';
+
+  await loadPerformanceReviewAttachments(employeeId);
+}
+
 window.loadEmployeeDocuments = loadEmployeeDocuments;
 window.uploadEmployeeDocument = uploadEmployeeDocument;
 window.deleteEmployeeDocument = deleteEmployeeDocument;
+window.loadPerformanceReviewAttachments = loadPerformanceReviewAttachments;
+window.uploadPerformanceReviewAttachment = uploadPerformanceReviewAttachment;

@@ -51,6 +51,7 @@ import {
   loadEmployeeReviews,
   editReviewRecord,
   deleteReviewRecord,
+  cancelReviewEdit,
 } from './modules/reviews';
 import {
   saveDisciplineRecord,
@@ -174,6 +175,7 @@ function registerLegacyBridges(): void {
   bridge.loadEmployeeReviews = loadEmployeeReviews;
   bridge.editReviewRecord = editReviewRecord;
   bridge.deleteReviewRecord = deleteReviewRecord;
+  bridge.cancelReviewEdit = cancelReviewEdit;
 
   bridge.saveDisciplineRecord = saveDisciplineRecord;
   bridge.saveDisciplineReport = saveDisciplineRecord;

@@ -1,5 +1,10 @@
 import { supabaseClient } from '../services/supabaseClient';
-import { getUserRole, isAdminUser, type UserAccessRow } from '../services/access';
+import {
+  getUserRole,
+  isAdminUser,
+  parseSupervisedEmployeeIds,
+  type UserAccessRow,
+} from '../services/access';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
 const USER_ACCESS_ROLES = ['admin', 'supervisor', 'user'] as const;
@@ -42,11 +47,25 @@ function normalizeUserRole(value: string): string {
   return USER_ACCESS_ROLES.includes(role as (typeof USER_ACCESS_ROLES)[number]) ? role : 'user';
 }
 
+function parseScopedEmployeeIdsFromInput(raw: string): string[] | null {
+  const parts = String(raw || '')
+    .split(/[,\s]+/)
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+
+  return parts.length ? parts : null;
+}
+
+function formatScopedIdsForInput(row: UserAccessRow): string {
+  return parseSupervisedEmployeeIds(row).join(', ');
+}
+
 function readRowFromForm(root: ParentNode, originalEmail: string): UserAccessRow | null {
   const emailInput = root.querySelector<HTMLInputElement>('[data-field="email"]');
   const displayInput = root.querySelector<HTMLInputElement>('[data-field="display_name"]');
   const roleSelect = root.querySelector<HTMLSelectElement>('[data-field="role"]');
   const supervisorInput = root.querySelector<HTMLInputElement>('[data-field="supervisor_name"]');
+  const scopedIdsInput = root.querySelector<HTMLTextAreaElement>('[data-field="supervised_employee_ids"]');
   const canDeleteInput = root.querySelector<HTMLInputElement>('[data-field="can_delete"]');
 
   const email = normalizeUserEmail(emailInput?.value || originalEmail);
@@ -61,6 +80,7 @@ function readRowFromForm(root: ParentNode, originalEmail: string): UserAccessRow
     display_name: String(displayInput?.value || '').trim(),
     role: normalizeUserRole(roleSelect?.value || 'user'),
     supervisor_name: String(supervisorInput?.value || '').trim(),
+    supervised_employee_ids: parseScopedEmployeeIdsFromInput(scopedIdsInput?.value || ''),
     can_delete: Boolean(canDeleteInput?.checked),
   };
 }
@@ -83,6 +103,12 @@ function renderUserAccessViewRow(row: UserAccessRow): string {
       <td>${esc(row.display_name || '—')}</td>
       <td>${esc(String(row.role || 'user').toUpperCase())}</td>
       <td>${esc(row.supervisor_name || '—')}</td>
+      <td class="muted" style="max-width: 240px; font-size: 0.85rem; word-break: break-all">${(() => {
+        const ids = parseSupervisedEmployeeIds(row);
+        if (!ids.length) return '—';
+        const preview = ids.join(', ');
+        return esc(preview.length > 120 ? `${preview.slice(0, 120)}…` : preview);
+      })()}</td>
       <td>${row.can_delete ? 'Yes' : 'No'}</td>
       <td>
         <div class="settings-user-actions table-actions">
@@ -129,8 +155,17 @@ function renderUserAccessEditRow(row: UserAccessRow, isNew: boolean): string {
           type="text"
           data-field="supervisor_name"
           value="${escAttr(row.supervisor_name || '')}"
-          placeholder="Supervisor name"
+          placeholder="Supervisor name (fuzzy match)"
         />
+      </td>
+      <td>
+        <textarea
+          class="settings-inline-input"
+          data-field="supervised_employee_ids"
+          rows="2"
+          style="min-width: 200px; resize: vertical"
+          placeholder="Optional: employees.id UUIDs, comma-separated (limits roster)"
+        >${escAttr(formatScopedIdsForInput(row))}</textarea>
       </td>
       <td>
         <label class="settings-delete-check">
@@ -168,6 +203,7 @@ function renderUserAccessTableBody(): void {
           display_name: '',
           role: 'user',
           supervisor_name: '',
+          supervised_employee_ids: null,
           can_delete: false,
         },
         true
@@ -188,7 +224,7 @@ function renderUserAccessTableBody(): void {
 
   if (!parts.length) {
     body.innerHTML =
-      '<tr><td colspan="6" class="empty">No user access rows found. Use Add user to grant access.</td></tr>';
+      '<tr><td colspan="7" class="empty">No user access rows found. Use Add user to grant access.</td></tr>';
     return;
   }
 
@@ -258,6 +294,7 @@ async function saveUserAccessRow(
           display_name: payload.display_name,
           role: payload.role,
           supervisor_name: payload.supervisor_name,
+          supervised_employee_ids: payload.supervised_employee_ids,
           can_delete: payload.can_delete,
         })
         .eq('email', lookupEmail)
@@ -465,18 +502,18 @@ async function loadUserAccessTable(): Promise<void> {
   if (!body) return;
 
   body.innerHTML =
-    '<tr><td colspan="6" class="empty">Loading user access...</td></tr>';
+    '<tr><td colspan="7" class="empty">Loading user access...</td></tr>';
 
   const { data, error } = await supabaseClient
     .from('user_access')
-    .select('email, display_name, role, supervisor_name, can_delete')
+    .select('email, display_name, role, supervisor_name, supervised_employee_ids, can_delete')
     .order('role', { ascending: true })
     .order('email', { ascending: true });
 
   if (error) {
     console.error('[Settings] user_access load failed:', error);
     body.innerHTML =
-      '<tr><td colspan="6" class="empty">Could not load user access records.</td></tr>';
+      '<tr><td colspan="7" class="empty">Could not load user access records.</td></tr>';
     if (countEl) countEl.textContent = 'Load failed';
     return;
   }

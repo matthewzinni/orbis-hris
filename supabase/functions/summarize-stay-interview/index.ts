@@ -1,5 +1,3 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -58,6 +56,27 @@ function buildUserPrompt(body: RequestBody): string {
   return lines.join('\n');
 }
 
+/** Validate JWT without bundling @supabase/supabase-js (smaller cold start, fewer boot failures). */
+async function getUserIdFromJwt(
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  authHeader: string
+): Promise<string | null> {
+  const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      Authorization: authHeader,
+      apikey: supabaseAnonKey,
+    },
+  });
+
+  if (!res.ok) {
+    return null;
+  }
+
+  const body = (await res.json()) as { id?: string };
+  return typeof body?.id === 'string' && body.id.length > 0 ? body.id : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -79,16 +98,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Server configuration error' }, 500);
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    const userId = await getUserIdFromJwt(supabaseUrl, supabaseAnonKey, authHeader);
+    if (!userId) {
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
@@ -103,7 +114,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    const body = (await req.json()) as RequestBody;
+    const body = (await req.json().catch(() => null)) as RequestBody | null;
+    if (!body || typeof body !== 'object') {
+      return jsonResponse({ error: 'Invalid JSON body' }, 400);
+    }
     const userPrompt = buildUserPrompt(body);
     if (!userPrompt) {
       return jsonResponse({ error: 'No employee responses provided' }, 400);

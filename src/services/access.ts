@@ -9,6 +9,8 @@ export type UserAccessRow = {
   display_name?: string;
   role?: string;
   supervisor_name?: string;
+  /** When non-empty, supervisor roster + RLS are limited to these employees.id (UUID) values. */
+  supervised_employee_ids?: string[] | null;
   can_delete?: boolean;
 };
 
@@ -41,6 +43,51 @@ export function setCurrentUserAccess(access: UserAccessRow | null, role?: string
   window.currentUserAccess = currentUserAccess;
 }
 
+export async function fetchUserAccessRowForEmail(email: string): Promise<UserAccessRow | null> {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return null;
+
+  const select =
+    'email, display_name, role, supervisor_name, supervised_employee_ids, can_delete';
+
+  // Prefer SECURITY DEFINER RPC: matches auth.users.email to user_access so RLS/casing
+  // on the table cannot hide the row when JWT email differs from stored user_access.email.
+  const { data: rpcRow, error: rpcErr } = await supabaseClient.rpc('orbis_get_my_user_access');
+  if (!rpcErr && rpcRow) {
+    const row = (Array.isArray(rpcRow) ? rpcRow[0] : rpcRow) as UserAccessRow | undefined;
+    if (row && typeof row === 'object') {
+      const rowEmail = String(row.email || '')
+        .trim()
+        .toLowerCase();
+      if (rowEmail === normalized) {
+        return row;
+      }
+    }
+  }
+
+  const { data: exactMatch, error: exactErr } = await supabaseClient
+    .from('user_access')
+    .select(select)
+    .eq('email', normalized)
+    .limit(1);
+
+  if (!exactErr && exactMatch?.[0]) {
+    return exactMatch[0] as UserAccessRow;
+  }
+
+  const { data: ilikeMatch, error: ilikeErr } = await supabaseClient
+    .from('user_access')
+    .select(select)
+    .ilike('email', normalized)
+    .limit(1);
+
+  if (!ilikeErr && ilikeMatch?.[0]) {
+    return ilikeMatch[0] as UserAccessRow;
+  }
+
+  return null;
+}
+
 export async function getUserRole(): Promise<string | null> {
   try {
     const {
@@ -54,15 +101,11 @@ export async function getUserRole(): Promise<string | null> {
 
     currentUserAccess = null;
 
-    const { data: accessRows, error: accessError } = await supabaseClient
-      .from('user_access')
-      .select('email, display_name, role, supervisor_name, can_delete')
-      .eq('email', userEmail)
-      .limit(1);
+    const accessRow = await fetchUserAccessRowForEmail(userEmail);
 
-    if (!accessError && accessRows?.[0]) {
-      currentUserAccess = accessRows[0] as UserAccessRow;
-      const accessRole = String(accessRows[0].role || '')
+    if (accessRow) {
+      currentUserAccess = accessRow;
+      const accessRole = String(accessRow.role || '')
         .toLowerCase()
         .trim();
       if (accessRole) {
@@ -150,8 +193,26 @@ export function canAccessPerformanceReviews(employee?: EmployeeLike | null): boo
   return false;
 }
 
+/** Normalize UUID list from user_access (PostgREST may return string[] or JSON). */
+export function parseSupervisedEmployeeIds(access: UserAccessRow | null | undefined): string[] {
+  const raw = access?.supervised_employee_ids;
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((id) => String(id || '').trim().toLowerCase()).filter(Boolean);
+  }
+  return [];
+}
+
 export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | undefined): boolean {
   if (!isSupervisorUser()) return true;
+
+  const scopedIds = parseSupervisedEmployeeIds(currentUserAccess);
+  if (scopedIds.length > 0) {
+    const empId = String(employee?.id || employee?.dbId || '')
+      .trim()
+      .toLowerCase();
+    return Boolean(empId) && scopedIds.includes(empId);
+  }
 
   const supervisorName = String(currentUserAccess?.supervisor_name || '')
     .trim()

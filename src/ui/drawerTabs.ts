@@ -2,7 +2,16 @@
  * Accessible drawer tab groups (WAI-ARIA tabs pattern).
  */
 
+import type { EmployeeLike } from '../services/access';
 import { stopMeetingDictation } from '../modules/dictation';
+
+function getEmployeeForDrawerTabAccess(): EmployeeLike | null | undefined {
+  if (typeof window.getCurrentEmployeeForOrbis === 'function') {
+    return window.getCurrentEmployeeForOrbis() as EmployeeLike | null | undefined;
+  }
+
+  return (window.currentEmployee as EmployeeLike | null | undefined) ?? null;
+}
 
 type DrawerTabKind = 'employee' | 'candidate';
 
@@ -95,8 +104,26 @@ function runEmployeeTabSideEffects(tabName: string): void {
     window.initIncidentSignaturePads();
   }
 
-  if (tabName === 'reviews' && typeof window.initReviewSignaturePads === 'function') {
-    window.initReviewSignaturePads();
+  if (tabName === 'reviews') {
+    if (typeof window.initReviewSignaturePads === 'function') {
+      window.initReviewSignaturePads();
+    }
+
+    const employee =
+      typeof window.getCurrentEmployeeForOrbis === 'function'
+        ? window.getCurrentEmployeeForOrbis()
+        : window.currentEmployee;
+
+    const employeeId = String(
+      (employee as { employee_id?: string; id?: string; dbId?: string })?.employee_id ||
+        (employee as { id?: string })?.id ||
+        (employee as { dbId?: string })?.dbId ||
+        ''
+    ).trim();
+
+    if (employeeId && typeof window.loadPerformanceReviewAttachments === 'function') {
+      void window.loadPerformanceReviewAttachments(employeeId);
+    }
   }
 
   if (tabName === 'care-support') {
@@ -200,7 +227,7 @@ export function activateDrawerTab(kind: DrawerTabKind, tabName: string, focusTab
     kind === 'employee' &&
     tabName === 'reviews' &&
     typeof window.canAccessPerformanceReviews === 'function' &&
-    !window.canAccessPerformanceReviews()
+    !window.canAccessPerformanceReviews(getEmployeeForDrawerTabAccess())
   ) {
     tabName = 'profile';
   }
