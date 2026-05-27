@@ -531,7 +531,7 @@ export function applyRolePermissions(): void {
   if (supervisorMode) {
     document
       .querySelectorAll(
-        '#deleteEmployeeBtn, #terminateEmployeeBtn, .delete-btn, .danger-delete, [data-admin-only="true"]'
+        '#deleteEmployeeBtn, #terminateEmployeeBtn, .delete-btn, .danger-delete, [data-delete-review-id], [data-admin-only="true"]'
       )
       .forEach((el) => {
         (el as HTMLElement).classList.add('hidden');
@@ -544,40 +544,55 @@ export function applyRolePermissions(): void {
       'empId',
       'employeeId',
       'empEmployeeId',
+      'employeeIdInput',
       'empStatus',
       'status',
+      'employeeStatusInput',
       'empFirstName',
       'firstName',
       'employeeFirstName',
+      'employeeFirstNameInput',
       'empLastName',
       'lastName',
       'employeeLastName',
+      'employeeLastNameInput',
       'empDepartment',
       'department',
       'employeeDepartment',
+      'employeeDepartmentInput',
       'empPosition',
       'position',
       'employeePosition',
+      'employeePositionInput',
       'empSupervisor',
       'supervisor',
+      'employeeSupervisor',
+      'employeeSupervisorInput',
       'empPayType',
       'payType',
+      'employeePayTypeInput',
       'empStandardHours',
       'standardHours',
+      'employeeStandardHoursInput',
       'empBenefitsStatus',
       'benefitsStatus',
+      'employeeBenefitsStatusInput',
       'empHireDate',
       'hireDate',
+      'employeeHireDateInput',
       'employeeTerminationDateInput',
       'employeeTerminationDate',
       'empTerminationDate',
       'terminationDate',
       'empNextReviewDate',
       'nextReviewDate',
+      'employeeNextReviewInput',
       'empAnniversaryDate',
       'anniversaryDate',
+      'employeeAnniversaryDateInput',
       'empTenureBracket',
       'tenureBracket',
+      'employeeTenureBracketInput',
       'empWorkEmail',
       'workEmail',
       'empPersonalEmail',
@@ -586,6 +601,8 @@ export function applyRolePermissions(): void {
       'phone',
       'empNotes',
       'notes',
+      'atRiskReasonInput',
+      'impactPlayerReasonInput',
     ];
 
     employeeAdminFieldIds.forEach((id) => {
@@ -595,6 +612,27 @@ export function applyRolePermissions(): void {
       field.readOnly = true;
       field.title = 'Locked: supervisors cannot edit core employee profile fields';
     });
+
+    const adminPanel = document.getElementById('tab-employee');
+    adminPanel
+      ?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        'input, select, textarea'
+      )
+      .forEach((field) => {
+        field.disabled = true;
+        field.readOnly = true;
+        field.title = 'Locked: supervisors cannot edit core employee profile fields';
+      });
+
+    ['markAtRiskBtn', 'clearAtRiskBtn', 'markImpactPlayerBtn', 'clearImpactPlayerBtn'].forEach(
+      (id) => {
+        const btn = safeGet(id) as HTMLButtonElement | null;
+        if (!btn) return;
+        btn.disabled = true;
+        btn.classList.add('hidden');
+        btn.title = 'Locked: supervisors cannot change HR flags';
+      }
+    );
 
     const saveEmployeeBtn = safeGet('saveEmployeeBtn') as HTMLButtonElement | null;
     if (saveEmployeeBtn) {
@@ -634,6 +672,27 @@ export function applyRolePermissions(): void {
       newEmployeeBtn.disabled = false;
       newEmployeeBtn.removeAttribute('title');
     }
+
+    const adminPanel = document.getElementById('tab-employee');
+    adminPanel
+      ?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        'input, select, textarea'
+      )
+      .forEach((field) => {
+        field.disabled = false;
+        field.readOnly = false;
+        field.removeAttribute('title');
+      });
+
+    ['markAtRiskBtn', 'clearAtRiskBtn', 'markImpactPlayerBtn', 'clearImpactPlayerBtn'].forEach(
+      (id) => {
+        const btn = safeGet(id) as HTMLButtonElement | null;
+        if (!btn) return;
+        btn.disabled = false;
+        btn.classList.remove('hidden');
+        btn.removeAttribute('title');
+      }
+    );
   }
 
   applyRoleLocks();

@@ -1,4 +1,4 @@
-import { canAccessPerformanceReviews } from '../services/access';
+import { canAccessPerformanceReviews, isSupervisorUser } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { loadPerformanceReviewAttachments } from './employeeDocuments';
@@ -338,6 +338,7 @@ function applyReviewAutoSignals(
 }
 
 async function refreshReviewDependentUi(employeeId: string): Promise<void> {
+  window.invalidateEmployeeDrawerTab?.('reviews');
   await loadEmployeeReviews(employeeId);
 
   if (typeof window.loadImpactPlayersFallback === 'function') {
@@ -397,6 +398,8 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
       return;
     }
 
+    const showReviewDelete = !isSupervisorUser();
+
     target.innerHTML = rows
       .map(
         (row) => `
@@ -408,7 +411,11 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
           </div>
           <div style="display:flex; gap:6px; align-items:center;">
             <button class="button soft sm" type="button" data-edit-review-id="${escapeHtml(row.id || '')}">Edit</button>
-            <button class="button danger sm" type="button" data-delete-review-id="${escapeHtml(row.id || '')}">Delete</button>
+            ${
+              showReviewDelete
+                ? `<button class="button danger sm" type="button" data-delete-review-id="${escapeHtml(row.id || '')}">Delete</button>`
+                : ''
+            }
           </div>
         </div>
         <div class="history-body">

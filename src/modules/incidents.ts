@@ -158,12 +158,6 @@ export async function loadEmployeeIncidents(employeeId: string): Promise<void> {
     const primaryEmployeeId = String(employeeId || getEmployeeId(activeEmployee) || '').trim();
     const employeeIds = getEmployeeLookupIds(activeEmployee, primaryEmployeeId);
 
-    console.log('[Incidents] Loading incident history for:', {
-      primaryEmployeeId,
-      employeeIds,
-      activeEmployee,
-    });
-
     if (!primaryEmployeeId && !employeeIds.length) {
       target.innerHTML = '<div class="empty">Open an employee to view incidents.</div>';
       return;

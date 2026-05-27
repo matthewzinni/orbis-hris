@@ -454,21 +454,11 @@ function populateDrawerProfileDetails(employee: DrawerEmployeeRecord): void {
     .join('');
 }
 
-async function loadDrawerTabData(employeeId: string): Promise<void> {
+function prepareEmployeeDrawerSession(employeeId: string): void {
   const recordId = String(employeeId || '').trim();
-
   if (!recordId) return;
 
-  await Promise.all([
-    window.loadEmployeeReviews?.(recordId),
-    window.loadEmployeeDiscipline?.(recordId),
-    window.loadEmployeeIncidents?.(recordId),
-    window.loadEmployeeMeetings?.(recordId),
-    window.loadStayInterviews?.(recordId),
-    window.loadEmergencyContacts?.(recordId),
-    window.loadEmployeeDocuments?.(recordId),
-    window.loadEmployeeCareSupport?.(recordId),
-  ]);
+  window.resetEmployeeDrawerTabLoadState?.();
 }
 
 export async function openEmployeeDrawer(employeeId: string): Promise<void> {
@@ -512,9 +502,8 @@ export async function openEmployeeDrawer(employeeId: string): Promise<void> {
   ).trim();
 
   populateDrawer(normalized);
+  prepareEmployeeDrawerSession(recordId);
   openDrawer(normalized);
-
-  await loadDrawerTabData(recordId);
 }
 
 export function closeEmployeeDrawer(): void {
@@ -522,6 +511,7 @@ export function closeEmployeeDrawer(): void {
   openedEmployeeRecordId = null;
 
   window.selectedEmployeeId = null;
+  window.resetEmployeeDrawerTabLoadState?.();
 
   if (typeof window.removeDrawerIdentityHeader === 'function') {
     window.removeDrawerIdentityHeader('employeeDrawerIdentityHeader');

@@ -62,6 +62,10 @@ function shouldResetEntryTabForm(
 }
 
 function runEmployeeTabSideEffects(tabName: string): void {
+  if (typeof window.loadEmployeeDrawerTab === 'function') {
+    window.loadEmployeeDrawerTab(tabName);
+  }
+
   if (tabName !== 'meetings') {
     stopMeetingDictation();
   }
@@ -78,24 +82,6 @@ function runEmployeeTabSideEffects(tabName: string): void {
     }
   }
 
-  if (tabName === 'onboarding') {
-    const employee =
-      typeof window.getCurrentEmployeeForOrbis === 'function'
-        ? window.getCurrentEmployeeForOrbis()
-        : window.currentEmployee;
-
-    const employeeId = String(
-      (employee as { employee_id?: string; id?: string; dbId?: string })?.employee_id
-        || (employee as { id?: string })?.id
-        || (employee as { dbId?: string })?.dbId
-        || ''
-    ).trim();
-
-    if (employeeId && typeof window.loadOnboardingTasks === 'function') {
-      void window.loadOnboardingTasks(employeeId);
-    }
-  }
-
   if (tabName === 'discipline' && typeof window.initDisciplineSignaturePads === 'function') {
     window.initDisciplineSignaturePads();
   }
@@ -104,44 +90,8 @@ function runEmployeeTabSideEffects(tabName: string): void {
     window.initIncidentSignaturePads();
   }
 
-  if (tabName === 'reviews') {
-    if (typeof window.initReviewSignaturePads === 'function') {
-      window.initReviewSignaturePads();
-    }
-
-    const employee =
-      typeof window.getCurrentEmployeeForOrbis === 'function'
-        ? window.getCurrentEmployeeForOrbis()
-        : window.currentEmployee;
-
-    const employeeId = String(
-      (employee as { employee_id?: string; id?: string; dbId?: string })?.employee_id ||
-        (employee as { id?: string })?.id ||
-        (employee as { dbId?: string })?.dbId ||
-        ''
-    ).trim();
-
-    if (employeeId && typeof window.loadPerformanceReviewAttachments === 'function') {
-      void window.loadPerformanceReviewAttachments(employeeId);
-    }
-  }
-
-  if (tabName === 'care-support') {
-    const employee =
-      typeof window.getCurrentEmployeeForOrbis === 'function'
-        ? window.getCurrentEmployeeForOrbis()
-        : window.currentEmployee;
-
-    const employeeId = String(
-      (employee as { employee_id?: string; id?: string; dbId?: string })?.employee_id
-        || (employee as { id?: string })?.id
-        || (employee as { dbId?: string })?.dbId
-        || ''
-    ).trim();
-
-    if (employeeId && typeof window.loadEmployeeCareSupport === 'function') {
-      void window.loadEmployeeCareSupport(employeeId);
-    }
+  if (tabName === 'reviews' && typeof window.initReviewSignaturePads === 'function') {
+    window.initReviewSignaturePads();
   }
 
   const isEmployeeAdminTab =

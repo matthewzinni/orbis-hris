@@ -25,6 +25,7 @@ import './ui/drawerLayout';
 import './ui/drawerIdentityHeader';
 import './ui/drawerUi';
 import './ui/drawerTabs';
+import './modules/employeeDrawerTabLoads';
 import './modules/drawer';
 import './modules/notes';
 import './ui/appSections';

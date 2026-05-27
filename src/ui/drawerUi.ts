@@ -824,23 +824,6 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
         });
     }
 
-    if (typeof window.loadEmployeeNotes === 'function') window.loadEmployeeNotes(employeeId);
-    if (typeof window.loadEmployeeDiscipline === 'function') window.loadEmployeeDiscipline(employeeId);
-    if (typeof window.loadEmployeeMeetings === 'function') window.loadEmployeeMeetings(employeeId);
-    if (typeof window.loadEmergencyContacts === 'function') window.loadEmergencyContacts(employeeId);
-    if (typeof window.loadEmployeeDocuments === 'function') window.loadEmployeeDocuments(employeeId);
-    if (canLoadReviews && typeof window.loadEmployeeReviews === 'function') {
-        window.loadEmployeeReviews(employeeId);
-    }
-    if (typeof window.loadEmployeeIncidents === 'function') window.loadEmployeeIncidents(employeeId);
-    if (typeof window.loadStayInterviews === 'function') window.loadStayInterviews(employeeId);
-    if (typeof window.loadEmployeeOnboarding === 'function') window.loadEmployeeOnboarding(employeeId);
-    if (typeof window.loadEmployeeManualAtRisk === 'function') window.loadEmployeeManualAtRisk(employeeId);
-    if (typeof window.loadEmployeeManualImpactPlayer === 'function') {
-        window.loadEmployeeManualImpactPlayer(employeeId);
-    }
-    if (typeof window.loadEmployeeHistory === 'function') window.loadEmployeeHistory(employeeId);
-
     const markAtRiskBtn = domGet('markAtRiskBtn');
     const clearAtRiskBtn = domGet('clearAtRiskBtn');
     const markImpactPlayerBtn = domGet('markImpactPlayerBtn');
