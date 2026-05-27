@@ -615,8 +615,28 @@ export function applyRolePermissions(): void {
       newEmployeeBtn.classList.add('hidden');
       newEmployeeBtn.title = 'Locked: supervisors cannot create employee records';
     }
+  } else {
+    const saveEmployeeBtn = safeGet('saveEmployeeBtn') as HTMLButtonElement | null;
+    if (saveEmployeeBtn) {
+      saveEmployeeBtn.classList.remove('hidden');
+      saveEmployeeBtn.disabled = false;
+      saveEmployeeBtn.removeAttribute('title');
+    }
+
+    const newEmployeeBtn =
+      (safeGet('newEmployeeBtn') as HTMLButtonElement | null) ||
+      (document.querySelector(
+        "button[onclick='openNewEmployeeForm()']"
+      ) as HTMLButtonElement | null);
+
+    if (newEmployeeBtn) {
+      newEmployeeBtn.classList.remove('hidden');
+      newEmployeeBtn.disabled = false;
+      newEmployeeBtn.removeAttribute('title');
+    }
   }
 
+  applyRoleLocks();
   applyPerformanceReviewTabAccess(currentEmployee as EmployeeLike | null | undefined);
 }
 
