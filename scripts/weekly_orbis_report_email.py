@@ -707,6 +707,7 @@ def build_html(metrics: dict[str, Any]) -> str:
 
 {detail_sections}
   <p style="margin-top: 24px; font-size: 13px; color: #64748b;">
+    Copyright © 2026 | BTW Global, LLC<br />
     Generated automatically from Orbis / Supabase. Totals may differ slightly from the live dashboard filters.
   </p>
   {footer_link}

@@ -324,6 +324,9 @@ export function printRecord(title: string, contentHTML: string): void {
       <div style="font-size:14px; line-height:1.6;">
         ${contentHTML}
       </div>
+      <div style="margin-top:28px; padding-top:12px; border-top:1px solid #ddd; font-size:11px; color:#888; text-align:center;">
+        Copyright © 2026 | BTW Global, LLC
+      </div>
     </div>
   `;
 

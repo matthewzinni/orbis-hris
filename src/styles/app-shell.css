@@ -78,6 +78,7 @@ body {
 .auth-shell {
   min-height: 100vh;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 24px;
@@ -362,6 +363,22 @@ body.authenticated #appView {
   flex-direction: column;
   gap: 4px;
   margin-top: 20px;
+}
+
+.orbis-legal-footer {
+  margin: 20px 0 0;
+  font-size: 0.75rem;
+  color: var(--muted-soft);
+  text-align: center;
+}
+
+.orbis-sidebar-footer {
+  margin-top: auto;
+  padding: 18px 8px 0;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.52);
+  text-align: center;
 }
 
 .orbis-nav-item {
