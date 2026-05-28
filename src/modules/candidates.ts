@@ -27,6 +27,11 @@ interface CandidateRecord {
   notes?: string;
   created_at?: string;
   applied_date?: string;
+  interview_date?: string;
+  interview_time?: string;
+  interview_type?: string;
+  interview_status?: string;
+  interview_notes?: string;
   [key: string]: unknown;
 }
 
@@ -68,6 +73,7 @@ declare global {
     closeEmployeeDrawer?: () => void;
     switchCandidateTab?: (tabName: string) => void;
     openNewCandidateForm?: () => void;
+    inviteCandidateToInterview?: () => void;
     setText?: (id: string, value: unknown) => void;
     todayInputValue?: () => string;
     closeDrawer?: () => void;
@@ -254,11 +260,26 @@ function getCandidateDrawerValues(): CandidateRecord {
   );
 
   return {
-    first_name: fields[0]?.value?.trim() || '',
-    last_name: fields[1]?.value?.trim() || '',
-    email: fields[2]?.value?.trim() || '',
-    phone: fields[3]?.value?.trim() || '',
-    position: fields[4]?.value?.trim() || '',
+    first_name:
+      getInputValue('candidateFirstNameInput', 'candidateFirstName') ||
+      fields[0]?.value?.trim() ||
+      '',
+    last_name:
+      getInputValue('candidateLastNameInput', 'candidateLastName') ||
+      fields[1]?.value?.trim() ||
+      '',
+    email:
+      getInputValue('candidateEmailInput', 'candidateEmail') ||
+      fields[2]?.value?.trim() ||
+      '',
+    phone:
+      getInputValue('candidatePhoneInput', 'candidatePhone') ||
+      fields[3]?.value?.trim() ||
+      '',
+    position:
+      getInputValue('candidatePositionInput', 'candidatePosition') ||
+      fields[4]?.value?.trim() ||
+      '',
     department:
       getInputValue('candidateDepartmentInput', 'candidateDepartment') ||
       fields[5]?.value?.trim() ||
@@ -267,7 +288,65 @@ function getCandidateDrawerValues(): CandidateRecord {
     source: fields[7]?.value?.trim() || '',
     applied_date: fields[8]?.value?.trim() || '',
     notes: fields[9]?.value?.trim() || '',
+    interview_date: getInputValue('candidateInterviewDate'),
+    interview_time: getInputValue('candidateInterviewTime'),
+    interview_type: getInputValue('candidateInterviewType'),
+    interview_status: getInputValue('candidateInterviewStatus'),
+    interview_notes: getInputValue('candidateInterviewNotes'),
   };
+}
+
+function buildInterviewInviteMailto(candidate: CandidateRecord): string {
+  const email = String(candidate.email || '').trim();
+  const firstName = String(candidate.first_name || '').trim();
+  const position = String(candidate.position || '').trim();
+  const interviewType = String(candidate.interview_type || '').trim() || 'Interview';
+  const interviewDate = String(candidate.interview_date || '').trim();
+  const interviewTime = String(candidate.interview_time || '').trim();
+
+  const whenParts = [interviewDate, interviewTime].filter(Boolean);
+  const whenText = whenParts.length ? whenParts.join(' at ') : '[date and time]';
+  const subject = `Interview Invitation${position ? ` - ${position}` : ''} | BTW Global`;
+  const lines = [
+    `Hi ${firstName || 'there'},`,
+    '',
+    'Thank you for your interest in a position with BTW Global.',
+    `We would like to invite you to an ${interviewType ? interviewType.toLowerCase() : 'interview'}.`,
+    `Proposed schedule: ${whenText}.`,
+    '',
+    'Please reply to confirm your availability, or share a better time that works for you.',
+  ];
+
+  return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
+}
+
+function shouldOpenInterviewTab(stage: unknown): boolean {
+  return String(stage || '').trim().toLowerCase() === 'interviewing';
+}
+
+export function inviteCandidateToInterview(): void {
+  const candidate = getCandidateDrawerValues();
+  const email = String(
+    getInputValue('candidateEmailInput', 'candidateEmail') || candidate.email || ''
+  ).trim();
+
+  if (!email) {
+    showToast('Candidate email is required to send an interview invite.', 'error');
+    return;
+  }
+
+  const mailtoUrl = buildInterviewInviteMailto(candidate);
+  try {
+    const link = document.createElement('a');
+    link.href = mailtoUrl;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  } catch (error) {
+    console.warn('[Candidates] Could not launch interview invite mailto:', error);
+    window.location.assign(mailtoUrl);
+  }
 }
 
 async function resolveCurrentCandidateId(): Promise<string> {
@@ -696,6 +775,26 @@ export async function saveCandidateRecord(): Promise<void> {
         getInputValue('candidateNotesInput', 'candidateNotes', 'newCandidateNotes', 'notes') ||
         drawerValues.notes ||
         '',
+      interview_date:
+        getInputValue('candidateInterviewDate') ||
+        drawerValues.interview_date ||
+        '',
+      interview_time:
+        getInputValue('candidateInterviewTime') ||
+        drawerValues.interview_time ||
+        '',
+      interview_type:
+        getInputValue('candidateInterviewType') ||
+        drawerValues.interview_type ||
+        '',
+      interview_status:
+        getInputValue('candidateInterviewStatus') ||
+        drawerValues.interview_status ||
+        '',
+      interview_notes:
+        getInputValue('candidateInterviewNotes') ||
+        drawerValues.interview_notes ||
+        '',
       applied_date:
         getInputValue('candidateAppliedDateInput', 'candidateAppliedDate', 'appliedDate', 'newCandidateAppliedDate') ||
         drawerValues.applied_date ||
@@ -1016,6 +1115,7 @@ window.closeActiveDrawer = closeActiveDrawer;
 window.isCandidateDrawerOpen = isCandidateDrawerOpen;
 window.switchCandidateTab = switchCandidateTab;
 window.openNewCandidateForm = openNewCandidateForm;
+window.inviteCandidateToInterview = inviteCandidateToInterview;
 
 window.convertCurrentCandidateToEmployee = async function convertCurrentCandidateToEmployee(): Promise<void> {
   const candidateId = await resolveCurrentCandidateId();
@@ -1274,7 +1374,7 @@ export async function openCandidateDrawer(candidateId: string): Promise<void> {
 
   fillCandidateDrawerFields(candidate);
   (window as { currentCandidateId?: string | null }).currentCandidateId = currentCandidateId;
-  switchCandidateTab('profile');
+  switchCandidateTab(shouldOpenInterviewTab(candidate.stage) ? 'interview' : 'profile');
 
   requestAnimationFrame(() => {
     drawer.scrollTop = 0;
@@ -1376,6 +1476,22 @@ function bindCandidateEvents(): void {
       undefined;
 
     void deleteCandidateRecord(explicitId);
+  });
+
+  document.addEventListener('change', (event) => {
+    const target = event.target as HTMLElement | null;
+    if (!(target instanceof HTMLSelectElement)) return;
+    if (target.id !== 'candidateStageInput') return;
+
+    if (shouldOpenInterviewTab(target.value)) {
+      const interviewStatus = safeGet<HTMLSelectElement>('candidateInterviewStatus');
+      if (interviewStatus && !String(interviewStatus.value || '').trim()) {
+        interviewStatus.value = 'Scheduled';
+        interviewStatus.dispatchEvent(new Event('input', { bubbles: true }));
+        interviewStatus.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      switchCandidateTab('interview');
+    }
   });
 }
 

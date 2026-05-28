@@ -70,23 +70,33 @@ export async function deleteOperationsIssueAttachment(
 ): Promise<void> {
   if (!attachment.id) return;
 
-  if (attachment.file_path) {
+  const normalizedPath = String(attachment.file_path || '')
+    .trim()
+    .replace(/^\/+/, '')
+    .replace(/^operations-issues\//, '');
+
+  if (normalizedPath) {
     const { error: storageError } = await supabaseClient.storage
       .from(OPERATIONS_BUCKET)
-      .remove([attachment.file_path]);
+      .remove([normalizedPath]);
 
     if (storageError) {
       console.warn('[Operations] Storage delete warning:', storageError);
     }
   }
 
-  const { error } = await supabaseClient
+  const { data: deletedRows, error } = await supabaseClient
     .from('operations_issue_attachments')
     .delete()
-    .eq('id', attachment.id);
+    .eq('id', attachment.id)
+    .select('id');
 
   if (error) {
     throw error;
+  }
+
+  if (!Array.isArray(deletedRows) || deletedRows.length === 0) {
+    throw new Error('Attachment delete was blocked or no longer exists.');
   }
 }
 

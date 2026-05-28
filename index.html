@@ -1476,6 +1476,13 @@
               >
                 Notes
               </button>
+              <button
+                class="tab-btn"
+                data-candidate-tab="interview"
+                type="button"
+              >
+                Interview
+              </button>
             </div>
             <section class="tab-panel active" id="candidate-tab-profile">
               <div class="card">
@@ -1627,6 +1634,63 @@
                     <div id="candidateNotesHistory" class="history-list">
                       <div class="empty">Open a saved candidate to view note history.</div>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="candidate-tab-interview" hidden>
+              <div class="card">
+                <div class="card-header">Interview Planning</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="candidateInterviewType">Interview Type</label>
+                      <select id="candidateInterviewType">
+                        <option value="">Select interview type</option>
+                        <option value="Phone Screen">Phone Screen</option>
+                        <option value="Video Interview">Video Interview</option>
+                        <option value="Onsite Interview">Onsite Interview</option>
+                        <option value="Panel Interview">Panel Interview</option>
+                        <option value="Final Interview">Final Interview</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="candidateInterviewStatus">Interview Status</label>
+                      <select id="candidateInterviewStatus">
+                        <option value="">Not scheduled</option>
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Completed">Completed</option>
+                        <option value="No Show">No Show</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="candidateInterviewDate">Interview Date</label>
+                      <input id="candidateInterviewDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="candidateInterviewTime">Interview Time</label>
+                      <input id="candidateInterviewTime" type="time" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="candidateInterviewNotes">Interview Notes</label>
+                    <textarea
+                      id="candidateInterviewNotes"
+                      rows="6"
+                      placeholder="Agenda, interviewers, location/link, and preparation notes..."
+                    ></textarea>
+                  </div>
+                  <div class="candidate-actions-row">
+                    <button
+                      class="button primary"
+                      type="button"
+                      onclick="inviteCandidateToInterview()"
+                    >
+                      Invite to Interview
+                    </button>
+                    <span class="muted">Opens your email client with interview invite details pre-filled.</span>
                   </div>
                 </div>
               </div>

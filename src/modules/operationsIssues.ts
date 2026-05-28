@@ -506,14 +506,26 @@ async function handleDeleteAttachment(attachment: { id?: string; file_name?: str
 
   try {
     await deleteOperationsIssueAttachment(attachment);
-    await recordOperationsIssueEvent(currentOperationsIssueId, 'attachment_removed', {
-      note: attachment.file_name || '',
-    });
+    try {
+      await recordOperationsIssueEvent(currentOperationsIssueId, 'attachment_removed', {
+        note: attachment.file_name || '',
+      });
+    } catch (eventError) {
+      // Attachment removal should not fail if audit logging is unavailable.
+      console.warn('[Operations] Attachment delete event logging failed:', eventError);
+    }
     await refreshIssueDrawerPanels(currentOperationsIssueId);
     showToast('Attachment deleted.');
   } catch (error) {
     console.error('[Operations] Attachment delete failed:', error);
+    const message =
+      error && typeof error === 'object' && 'message' in error
+        ? String((error as { message?: string }).message || '')
+        : '';
     showToast('Could not delete attachment.', 'error');
+    if (message) {
+      showToast(message, 'error');
+    }
   }
 }
 

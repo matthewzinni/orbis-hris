@@ -38,11 +38,18 @@ function bindConfirmModalEvents(): void {
   confirmModalBound = true;
 
   const { backdrop, confirmBtn, cancelBtn } = getModalElements();
+  const dialog = backdrop?.querySelector('.orbis-confirm-dialog') as HTMLElement | null;
 
   confirmBtn?.addEventListener('click', () => closeConfirmModal(true));
   cancelBtn?.addEventListener('click', () => closeConfirmModal(false));
 
+  dialog?.addEventListener('click', (event) => {
+    // Prevent drawer/document click handlers from seeing modal clicks.
+    event.stopPropagation();
+  });
+
   backdrop?.addEventListener('click', (event) => {
+    event.stopPropagation();
     if (event.target === backdrop) {
       closeConfirmModal(false);
     }
@@ -58,7 +65,7 @@ function bindConfirmModalEvents(): void {
 
 export function showOrbisConfirm(
   message: string,
-  options: ConfirmOptions = {}
+  options: ConfirmOptions | string = {}
 ): Promise<boolean> {
   bindConfirmModalEvents();
 
@@ -72,8 +79,11 @@ export function showOrbisConfirm(
     closeConfirmModal(false);
   }
 
-  if (title) {
-    title.textContent = options.title;
+  const normalizedOptions: ConfirmOptions =
+    typeof options === 'string' ? { title: options } : options;
+
+  if (title && normalizedOptions.title) {
+    title.textContent = normalizedOptions.title;
     title.classList.remove('hidden');
   } else if (title) {
     title.textContent = '';
@@ -81,11 +91,11 @@ export function showOrbisConfirm(
   }
 
   messageEl.textContent = message;
-  confirmBtn.textContent = options.confirmLabel || 'Confirm';
-  cancelBtn.textContent = options.cancelLabel || 'Cancel';
+  confirmBtn.textContent = normalizedOptions.confirmLabel || 'Confirm';
+  cancelBtn.textContent = normalizedOptions.cancelLabel || 'Cancel';
 
-  confirmBtn.classList.toggle('danger', Boolean(options.danger));
-  confirmBtn.classList.toggle('primary', !options.danger);
+  confirmBtn.classList.toggle('danger', Boolean(normalizedOptions.danger));
+  confirmBtn.classList.toggle('primary', !normalizedOptions.danger);
 
   return new Promise<boolean>((resolve) => {
     pendingResolve = resolve;

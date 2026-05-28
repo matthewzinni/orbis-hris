@@ -842,6 +842,7 @@ export function renderKpiEmployeeMetrics(): void {
   const turnoverRisk = reviewEligibleActive.length
     ? Math.min(100, (turnoverRiskContributors / reviewEligibleActive.length) * 100)
     : 0;
+  const turnoverRiskDisplay = `${turnoverRisk.toFixed(1)}%`;
 
   setKpiText('kActiveHC', activeEmployees.length);
   setKpiText('kDepartments', departments.length);
@@ -849,11 +850,11 @@ export function renderKpiEmployeeMetrics(): void {
 
   if (typeof window.updateTurnoverRiskKpi === 'function') {
     window.updateTurnoverRiskKpi(
-      turnoverRisk,
+      Number(turnoverRisk.toFixed(1)),
       `${turnoverRiskContributors} at-risk employee${turnoverRiskContributors === 1 ? '' : 's'} in first 3 months`
     );
   } else {
-    setKpiText('kTurnoverRisk', turnoverRisk);
+    setKpiText('kTurnoverRisk', turnoverRiskDisplay);
     setKpiText(
       'kTurnoverRiskSub',
       `${turnoverRiskContributors} at-risk employee${turnoverRiskContributors === 1 ? '' : 's'} in first 3 months`
@@ -1027,7 +1028,7 @@ export async function loadSummaryMetrics(): Promise<void> {
       });
 
       Object.entries(latestReviewByEmployee).forEach(([employeeId, item]) => {
-        if (item.avgScore !== null && item.avgScore <= 3) {
+        if (item.avgScore !== null && item.avgScore <= 2) {
           reviewRiskEmployeeIds.add(employeeId);
         }
       });
@@ -1106,7 +1107,7 @@ export async function loadSummaryMetrics(): Promise<void> {
 
       Object.entries(latestReviewByEmployee).forEach(([employeeId, item]) => {
         if (manualSuppressedAtRiskIds.has(employeeId)) return;
-        if (item.avgScore !== null && item.avgScore <= 3) {
+        if (item.avgScore !== null && item.avgScore <= 2) {
           const meta = ensureAtRiskMeta(employeeId);
           meta.lowReview = true;
           meta.reviewScore = item.avgScore;
