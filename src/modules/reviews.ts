@@ -1,6 +1,7 @@
 import { canAccessPerformanceReviews, isSupervisorUser } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { stopAllDictation } from './dictation';
 import { loadPerformanceReviewAttachments } from './employeeDocuments';
 import {
   clearCanvasSignature,
@@ -220,6 +221,7 @@ function resetPerformanceReviewFormUi(options?: {
 }
 
 export function cancelReviewEdit(): void {
+  stopAllDictation();
   if (!assertPerformanceReviewAccess()) return;
 
   resetPerformanceReviewFormUi();
@@ -557,6 +559,7 @@ export async function deleteReviewRecord(reviewId: string, employeeId: string): 
 }
 
 export async function saveReviewRecord(): Promise<void> {
+  stopAllDictation();
   const activeEmployee = getCurrentEmployee();
 
   const employeeId =

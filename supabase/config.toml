@@ -34,3 +34,6 @@ file_size_limit = "50MiB"
 
 [functions.summarize-stay-interview]
 verify_jwt = true
+
+[functions.investigation-hr-guidance]
+verify_jwt = true

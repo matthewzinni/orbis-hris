@@ -1,5 +1,41 @@
 # Orbis scripts
 
+## Weekly HR email (`weekly_orbis_report_email.py`)
+
+Sends an HTML snapshot (headcount, stay interviews due, open investigations, discipline, operations) to **matthew.zinni@btwglobal.com** by default.
+
+### Setup
+
+1. Copy `scripts/examples/weekly_report.env.example` → `scripts/.env.weekly_report` (gitignored).
+2. Fill in `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and SMTP credentials (BTW uses **Google Workspace**: `smtp.gmail.com:587` + Google **app password**).
+3. Test without sending:
+
+```bash
+set -a && source scripts/.env.weekly_report && set +a
+python3 scripts/weekly_orbis_report_email.py --dry-run
+```
+
+4. Send once:
+
+```bash
+python3 scripts/weekly_orbis_report_email.py
+```
+
+Override recipients with `MAIL_TO=you@btwglobal.com,other@btwglobal.com`.
+
+### Schedule (every Monday 8:00 AM)
+
+```bash
+mkdir -p scripts/logs
+crontab -e
+```
+
+```cron
+0 8 * * 1 cd /Users/matthewzinni/Desktop/Work/HRIS/Orbis && set -a && . scripts/.env.weekly_report && set +a && /usr/bin/python3 scripts/weekly_orbis_report_email.py >> scripts/logs/weekly_report.log 2>&1
+```
+
+---
+
 ## Import stay interviews (`import_stay_interviews.py`)
 
 Bulk-insert rows into `public.stay_interviews` and attach them to employees using the same `employee_id` value the app uses: **`employees.id`** (Orbis `dbId`).

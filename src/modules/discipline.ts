@@ -1,5 +1,6 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { stopAllDictation } from './dictation';
 import {
   clearCanvasSignature,
   getCanvasSignature,
@@ -338,6 +339,7 @@ export function editDisciplineRecord(record: DisciplineRecord): void {
 }
 
 export function cancelDisciplineEdit(): void {
+  stopAllDictation();
   currentDisciplineId = null;
   window.currentDisciplineId = null;
 
@@ -384,6 +386,8 @@ export async function deleteDisciplineRecord(recordId: string, employeeId: strin
 }
 
 export async function saveDisciplineRecord(): Promise<void> {
+  stopAllDictation();
+
   const activeEmployee = getCurrentEmployee();
   const employeeId = getEmployeeId(activeEmployee);
 

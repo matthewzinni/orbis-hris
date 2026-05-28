@@ -646,10 +646,19 @@ body.authenticated #appView {
   margin-bottom: var(--space-section);
 }
 
+.dashboard-quick-links .card-header {
+  text-transform: none;
+  letter-spacing: -0.02em;
+}
+
 .dashboard-quick-links-grid {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.dashboard-quick-links-grid .button {
+  text-transform: none;
 }
 
 .orbis-alerts-wrap {

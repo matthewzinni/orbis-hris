@@ -1,5 +1,6 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { stopAllDictation } from './dictation';
 import {
   clearCanvasSignature,
   getCanvasSignature,
@@ -336,6 +337,7 @@ export async function deleteIncidentRecord(incidentId: string, employeeId: strin
 }
 
 export async function saveIncidentRecord(): Promise<void> {
+  stopAllDictation();
   const activeEmployee = getCurrentEmployee();
   const employeeId = getEmployeeId(activeEmployee);
 

@@ -42,6 +42,18 @@ supabase functions serve summarize-stay-interview --env-file supabase/.env.local
 
 After deploy, sign in on production and use Stay Interviews → **Generate AI summary**. If the secret is missing, the app uses the structured template draft instead.
 
+## Investigation AI guidance (Edge Function)
+
+The **Generate AI guidance** button on Investigations → **AI Guidance** calls `investigation-hr-guidance` (same `OPENAI_API_KEY` secret as stay interviews).
+
+```bash
+supabase functions deploy investigation-hr-guidance
+```
+
+Apply the database migration that adds `investigations.ai_guidance` (or run `supabase db push`).
+
+If AI is unavailable, Orbis uses a structured template with next steps and federal/NC checkpoint reminders.
+
 ## Smoke test (production)
 
 1. Hard refresh or incognito → `https://www.orbis-btw.com`

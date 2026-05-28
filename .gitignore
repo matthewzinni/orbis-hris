@@ -9,12 +9,12 @@ node_modules/
 
 # Stay interview import data (may contain PII)
 scripts/data/*.csv
+scripts/.env.weekly_report
+scripts/logs/
+scripts/output/
 
 # Local secrets & Supabase CLI
 .env
-
-# Stay interview import data (may contain PII)
-scripts/data/*.csv
 .env.local
 .env.*.local
 supabase/.branches

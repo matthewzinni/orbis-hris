@@ -53,6 +53,11 @@ import type {
   EmployeeWellnessCheckIn,
   RecognitionType,
 } from '../types/careEngagementTypes';
+import {
+  stopAllDictation,
+  updateCareDictationTargets,
+  type DictationTargetOption,
+} from './dictation';
 
 export type CareEditorMode =
   | 'matrix'
@@ -74,6 +79,26 @@ type EditorState = {
 
 let editorState: EditorState | null = null;
 let onSavedCallback: (() => void) | null = null;
+
+const CARE_DICTATION_TARGETS: Partial<Record<CareEditorMode, DictationTargetOption[]>> = {
+  matrix: [
+    { id: 'careMatrixInitiativesInput', label: 'Current initiatives' },
+    { id: 'careMatrixGapsInput', label: 'Identified gaps' },
+    { id: 'careMatrixActionsInput', label: 'Proposed actions' },
+  ],
+  'care-item': [
+    { id: 'careItemNeedInput', label: 'Need or concern' },
+    { id: 'careItemActionInput', label: 'Action taken' },
+  ],
+  recognition: [{ id: 'careRecSummaryInput', label: 'Recognition summary' }],
+  'pulse-snapshot': [{ id: 'carePulseCommentsInput', label: 'Themes / comments summary' }],
+  'employee-note': [{ id: 'careNoteSummaryInput', label: 'Care note summary' }],
+  'employee-wellness': [{ id: 'careWellnessNotesInput', label: 'Check-in notes' }],
+};
+
+function syncCareDictationForMode(mode: CareEditorMode): void {
+  updateCareDictationTargets(CARE_DICTATION_TARGETS[mode] || []);
+}
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -248,6 +273,7 @@ function notifySaved(): void {
 }
 
 export function closeCareEngagementDrawer(): void {
+  stopAllDictation();
   editorState = null;
   setDrawerOpen(false);
   setDeleteVisible(false);
@@ -273,6 +299,7 @@ function openEditorDrawer(title: string, subtitle: string, mode: CareEditorMode,
   safeGet(fieldMap[mode])?.classList.remove('hidden');
   setDeleteVisible(canDelete);
   setDrawerOpen(true);
+  syncCareDictationForMode(mode);
 }
 
 function setText(id: string, value: string): void {
@@ -525,6 +552,8 @@ export function openEmployeeWellnessEditor(
 export async function saveCareEngagementEditor(): Promise<void> {
   if (!editorState) return;
   if (!assertCanMutateCareEditor()) return;
+
+  stopAllDictation();
 
   const mode = editorState.mode;
 

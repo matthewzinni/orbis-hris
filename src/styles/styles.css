@@ -647,6 +647,16 @@ input[type="search"] {
   color: #b45309;
 }
 
+.investigation-guidance-disclaimer {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #334155;
+}
+
 .file-upload-row {
   align-items: center;
   gap: 12px;

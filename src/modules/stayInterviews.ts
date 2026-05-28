@@ -11,6 +11,7 @@ import {
   STAY_INTERVIEW_QUESTION_LABELS,
 } from '../services/stayInterviewSummary';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { stopAllDictation } from './dictation';
 
 interface StayInterviewRecord {
   id?: string;
@@ -361,6 +362,7 @@ export async function loadStayInterviews(employeeId: string): Promise<void> {
 }
 
 export async function saveStayInterview(): Promise<void> {
+  stopAllDictation();
   const employee = getCurrentEmployee();
 
   if (!employee) {
@@ -494,6 +496,7 @@ export async function deleteStayInterview(stayInterviewId: string): Promise<void
 }
 
 export function cancelStayInterviewEdit(): void {
+  stopAllDictation();
   resetStayInterviewForm();
   showToast('Stay interview edit cancelled.');
 }

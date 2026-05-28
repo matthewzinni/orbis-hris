@@ -265,14 +265,14 @@
           </div>
         </div>
             <div class="card dashboard-quick-links" id="dashboardQuickLinks">
-              <div class="card-header">Quick links</div>
+              <div class="card-header">Quick Links</div>
               <div class="card-body">
                 <div class="dashboard-quick-links-grid">
                   <button class="button soft" type="button" data-nav-view="employeesView">
-                    Employee roster
+                    Employee Roster
                   </button>
                   <button class="button soft" type="button" data-nav-view="candidatesView">
-                    Candidate pipeline
+                    Candidate Pipeline
                   </button>
                   <button
                     class="button soft"
@@ -280,10 +280,10 @@
                     type="button"
                     onclick="openNewCandidateForm()"
                   >
-                    ＋ Add candidate
+                    ＋ Add Candidate
                   </button>
                   <button class="button soft" type="button" data-nav-view="documentsView">
-                    Document library
+                    Document Library
                   </button>
                   <button
                     class="button soft"
@@ -291,7 +291,7 @@
                     data-nav-view="operationsView"
                     data-operations-access
                   >
-                    Operations center
+                    Operations Center
                   </button>
                   <button
                     class="button soft admin-only hidden"
@@ -1850,6 +1850,9 @@
               <button class="tab-btn active" type="button" data-investigation-tab="case">
                 Case
               </button>
+              <button class="tab-btn" type="button" data-investigation-tab="guidance">
+                AI Guidance
+              </button>
               <button class="tab-btn" type="button" data-investigation-tab="interviews">
                 Interviews
               </button>
@@ -1970,6 +1973,41 @@
                   <div class="field">
                     <label for="invRecommendedActionInput">Recommended Action</label>
                     <textarea id="invRecommendedActionInput" rows="3"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden" data-investigation-panel="guidance" aria-hidden="true">
+              <div class="card">
+                <div class="card-header">Next Best Move &amp; Compliance</div>
+                <div class="card-body">
+                  <div class="investigation-guidance-disclaimer" role="note">
+                    AI-assisted planning for investigators. Suggests workflow next steps and common
+                    federal / North Carolina checkpoints when discipline or termination may apply.
+                    <strong>Not legal advice</strong> — have employment counsel review final
+                    decisions.
+                  </div>
+                  <div class="button-row" style="margin: 12px 0">
+                    <button
+                      class="button soft"
+                      id="generateInvestigationGuidanceBtn"
+                      type="button"
+                    >
+                      Generate AI guidance
+                    </button>
+                  </div>
+                  <div class="field">
+                    <label for="invAiGuidanceInput">HR guidance notes</label>
+                    <textarea
+                      id="invAiGuidanceInput"
+                      rows="16"
+                      placeholder="Click Generate AI guidance to draft next steps and compliance checkpoints from this case. Edit before saving."
+                    ></textarea>
+                    <p class="muted" style="margin: 8px 0 0; font-size: 0.82rem">
+                      Uses the same OpenAI setup as Stay Interview summaries (Supabase Edge
+                      Function). Saves with the case when you click Save Investigation.
+                    </p>
                   </div>
                 </div>
               </div>

@@ -3,7 +3,7 @@
  */
 
 import type { EmployeeLike } from '../services/access';
-import { stopMeetingDictation } from '../modules/dictation';
+import { stopAllDictation } from '../modules/dictation';
 
 function getEmployeeForDrawerTabAccess(): EmployeeLike | null | undefined {
   if (typeof window.getCurrentEmployeeForOrbis === 'function') {
@@ -66,9 +66,7 @@ function runEmployeeTabSideEffects(tabName: string): void {
     window.loadEmployeeDrawerTab(tabName);
   }
 
-  if (tabName !== 'meetings') {
-    stopMeetingDictation();
-  }
+  stopAllDictation();
 
   if (shouldResetEntryTabForm(tabName) && typeof window.resetDrawerEntryForms === 'function') {
     window.resetDrawerEntryForms();

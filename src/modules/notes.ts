@@ -1,5 +1,6 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { stopAllDictation } from './dictation';
 import { resetDrawerForms } from './drawerForms';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 
@@ -63,6 +64,7 @@ export function startNoteEdit(note: EmployeeNote): void {
 }
 
 export function cancelNoteEdit(): void {
+  stopAllDictation();
   currentNoteId = null;
   window.currentNoteId = null;
 
@@ -95,6 +97,8 @@ async function refreshDashboardAfterNoteChange(): Promise<void> {
 }
 
 export async function saveEmployeeNote(): Promise<void> {
+  stopAllDictation();
+
   if (!window.currentEmployee) {
     return;
   }

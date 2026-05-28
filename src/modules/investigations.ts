@@ -24,6 +24,13 @@ import {
   renderInvestigationEvidence,
   uploadInvestigationEvidenceFile,
 } from '../services/investigationsAttachments';
+import { requestInvestigationAiGuidance, InvestigationAiError } from '../services/investigationAiGuidance';
+import {
+  buildInvestigationGuidanceFallback,
+  collectInvestigationGuidanceContext,
+  type InvestigationGuidanceContext,
+} from '../services/investigationGuidance';
+import { initInvestigationDictation, stopInvestigationDictation } from './dictation';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import {
   fetchAllInvestigations,
@@ -65,6 +72,7 @@ declare global {
     cancelInvestigationEdit?: () => void;
     isInvestigationDrawerOpen?: () => boolean;
     applyInvestigationsCenterAccess?: () => void;
+    generateInvestigationGuidance?: () => Promise<void>;
   }
 }
 
@@ -505,6 +513,10 @@ function focusClosedOutcomeField(): void {
 }
 
 function setInvestigationTab(tabId: string): void {
+  if (activeInvestigationTab === 'interviews' && tabId !== 'interviews') {
+    stopInvestigationDictation();
+  }
+
   activeInvestigationTab = tabId;
 
   document.querySelectorAll('[data-investigation-tab]').forEach((button) => {
@@ -902,6 +914,7 @@ function fillInvestigationDrawer(investigation: Investigation | null): void {
     invFollowUpDateInput: investigation?.follow_up_date || '',
     invConfidentialNotesInput: investigation?.confidential_notes || '',
     invWitnessesInput: investigation?.witnesses || '',
+    invAiGuidanceInput: investigation?.ai_guidance || '',
   };
 
   Object.entries(fields).forEach(([id, value]) => {
@@ -939,6 +952,8 @@ export function isInvestigationDrawerOpen(): boolean {
 }
 
 export function closeInvestigationDrawer(): void {
+  stopInvestigationDictation();
+
   const backdrop = safeGet('drawerBackdrop');
   const drawer = safeGet('investigationDrawer');
   const employeeDrawer = safeGet('employeeDrawer');
@@ -1063,6 +1078,143 @@ export function cancelInvestigationEdit(): void {
   closeInvestigationDrawer();
 }
 
+function readInvestigationField(id: string): string {
+  return String(
+    safeGet<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id)?.value || ''
+  ).trim();
+}
+
+function buildGuidanceContextFromDrawer(evidenceCount?: number): InvestigationGuidanceContext {
+  const investigation = currentInvestigationId
+    ? cachedInvestigations.find((row) => String(row.id) === String(currentInvestigationId))
+    : null;
+
+  const reportedBy = resolveReportedByFromForm();
+  const targetedIds = getSelectedTargetedEmployeeIds();
+  const focusIds = getSelectedFocusEmployeeIds();
+
+  const interviews = cachedInterviews
+    .map((row) => ({
+      type: formatInvestigationLabel(String(row.interview_type || 'other')),
+      date: String(row.interview_date || '').trim() || undefined,
+      notes: String(row.notes || '').trim(),
+    }))
+    .filter((row) => row.notes || row.type);
+
+  return {
+    caseNumber: investigation?.case_number || undefined,
+    title: readInvestigationField('invTitleInput'),
+    category: readInvestigationField('invCategoryInput'),
+    status: readInvestigationField('invStatusInput'),
+    severity: readInvestigationField('invSeverityInput'),
+    allegationSummary: readInvestigationField('invAllegationInput'),
+    witnesses: readInvestigationField('invWitnessesInput'),
+    findingsSummary: readInvestigationField('invFindingsInput'),
+    outcome: readInvestigationField('invOutcomeInput'),
+    recommendedAction: readInvestigationField('invRecommendedActionInput'),
+    targetedEmployees: targetedIds.map((id) => getEmployeeLabel(id)),
+    focusEmployees: focusIds.map((id) => getEmployeeLabel(id)),
+    reportedBy: reportedBy.displayName || undefined,
+    interviews: interviews.length ? interviews : undefined,
+    evidenceCount,
+  };
+}
+
+async function countInvestigationEvidence(investigationId: string): Promise<number> {
+  const { count, error } = await supabaseClient
+    .from('investigation_evidence')
+    .select('id', { count: 'exact', head: true })
+    .eq('investigation_id', investigationId);
+
+  if (error) {
+    console.warn('[Investigations] Could not count evidence:', error);
+    return 0;
+  }
+
+  return count || 0;
+}
+
+export async function generateInvestigationGuidance(): Promise<void> {
+  if (!canManageInvestigations()) {
+    showToast('You do not have permission to generate investigation guidance.', 'error');
+    return;
+  }
+
+  const guidanceEl = safeGet<HTMLTextAreaElement>('invAiGuidanceInput');
+  const generateBtn = safeGet<HTMLButtonElement>('generateInvestigationGuidanceBtn');
+
+  if (!guidanceEl) {
+    showToast('Guidance field not found.', 'error');
+    return;
+  }
+
+  let evidenceCount: number | undefined;
+  if (currentInvestigationId) {
+    evidenceCount = await countInvestigationEvidence(currentInvestigationId);
+  }
+
+  const rawContext = buildGuidanceContextFromDrawer(evidenceCount);
+  const context = collectInvestigationGuidanceContext(rawContext);
+  const templateDraft = buildInvestigationGuidanceFallback(rawContext);
+
+  if (!context && !templateDraft) {
+    showToast('Add a case title or allegation summary before generating guidance.', 'error');
+    return;
+  }
+
+  const existing = String(guidanceEl.value || '').trim();
+  if (existing) {
+    const confirmed = await showOrbisConfirm(
+      'Replace the current HR guidance notes with a new AI draft from this case?',
+      {
+        title: 'Regenerate guidance',
+        confirmLabel: 'Replace',
+      }
+    );
+    if (!confirmed) return;
+  }
+
+  const originalBtnLabel = generateBtn?.textContent || 'Generate AI guidance';
+  if (generateBtn) {
+    generateBtn.disabled = true;
+    generateBtn.textContent = 'Generating…';
+  }
+
+  let draft = '';
+
+  try {
+    if (context) {
+      try {
+        draft = await requestInvestigationAiGuidance(context);
+        showToast('AI guidance drafted. Review, edit, and save the case.');
+      } catch (err) {
+        let reason =
+          err instanceof InvestigationAiError ? err.message : 'AI guidance is unavailable.';
+        if (/failed to send a request to the edge function|relay error/i.test(reason)) {
+          reason =
+            'Edge function not reachable — deploy investigation-hr-guidance in Supabase (see DEPLOY.md).';
+        }
+        console.warn('[Investigations] AI guidance failed:', reason);
+        draft = templateDraft;
+        showToast(`Using template guidance (${reason})`, 'success');
+      }
+    } else {
+      draft = templateDraft;
+      showToast('Template guidance drafted. Review and edit before saving.');
+    }
+
+    guidanceEl.value = draft;
+    guidanceEl.dispatchEvent(new Event('input', { bubbles: true }));
+    setInvestigationTab('guidance');
+    guidanceEl.focus();
+  } finally {
+    if (generateBtn) {
+      generateBtn.disabled = false;
+      generateBtn.textContent = originalBtnLabel;
+    }
+  }
+}
+
 function readDrawerValues(): Record<string, string> {
   const read = (id: string) =>
     String(
@@ -1090,6 +1242,7 @@ function readDrawerValues(): Record<string, string> {
     follow_up_date: read('invFollowUpDateInput'),
     confidential_notes: read('invConfidentialNotesInput'),
     witnesses: read('invWitnessesInput'),
+    ai_guidance: read('invAiGuidanceInput'),
     targeted_employee_ids: targetedEmployeeIds.join(','),
     focus_employee_ids: focusEmployeeIds.join(','),
     primary_employee_id: targetedEmployeeIds[0] || focusEmployeeIds[0] || '',
@@ -1175,6 +1328,7 @@ async function saveInvestigationRecordInner(): Promise<void> {
     follow_up_date: values.follow_up_date || null,
     confidential_notes: values.confidential_notes || null,
     witnesses: values.witnesses || null,
+    ai_guidance: values.ai_guidance || null,
     targeted_employee_id: targetedEmployeeIds[0] || null,
     primary_employee_id: targetedEmployeeIds[0] || focusEmployeeIds[0] || null,
     closed_at:
@@ -1385,6 +1539,7 @@ async function handleAddInterview(): Promise<void> {
     `${formatInvestigationLabel(interviewType)} interview logged`
   );
 
+  stopInvestigationDictation();
   safeGet<HTMLTextAreaElement>('invInterviewNotesInput')!.value = '';
   cachedInterviews = await loadInvestigationInterviews(currentInvestigationId);
   renderInvestigationInterviews(safeGet('investigationInterviewsList'), cachedInterviews);
@@ -1542,6 +1697,8 @@ function bindInvestigationsEvents(): void {
 
   (window as { __investigationsEventsBound?: boolean }).__investigationsEventsBound = true;
 
+  initInvestigationDictation();
+
   const previousCloseActiveDrawer = window.closeActiveDrawer;
   window.closeActiveDrawer = () => {
     if (isInvestigationDrawerOpen()) {
@@ -1626,6 +1783,11 @@ function bindInvestigationsEvents(): void {
     void handleAddInterview();
   });
 
+  safeGet('generateInvestigationGuidanceBtn')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void generateInvestigationGuidance();
+  });
+
   safeGet('addInvestigationEvidenceLinkBtn')?.addEventListener('click', (event) => {
     event.preventDefault();
     void handleAddEvidenceLink();
@@ -1672,6 +1834,7 @@ function registerInvestigationsWindowGlobals(): void {
   globalRef.cancelInvestigationEdit = cancelInvestigationEdit;
   globalRef.isInvestigationDrawerOpen = isInvestigationDrawerOpen;
   globalRef.applyInvestigationsCenterAccess = applyInvestigationsCenterAccess;
+  globalRef.generateInvestigationGuidance = generateInvestigationGuidance;
 }
 
 registerInvestigationsWindowGlobals();

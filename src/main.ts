@@ -126,6 +126,7 @@ import {
 import './ui/loadingUi';
 import './ui/dashboardRetry';
 import './ui/confirmModal';
+import './modules/dictation';
 import './ui/commandPalette';
 import './ui/signaturePads';
 import './ui/kpis';
