@@ -605,6 +605,10 @@ export function renderEmployeeDrawerIdentityHeader(
       window.setText('drawerSub', 'Create employee record');
     }
 
+    if (typeof window.clearEmployeeDrawerRiskSignals === 'function') {
+      window.clearEmployeeDrawerRiskSignals();
+    }
+
     return;
   }
 
@@ -633,6 +637,10 @@ export function renderEmployeeDrawerIdentityHeader(
   if (typeof window.setText === 'function') {
     window.setText('drawerTitle', employeeName);
     window.setText('drawerSub', meta);
+  }
+
+  if (typeof window.renderEmployeeDrawerRiskSignals === 'function') {
+    window.renderEmployeeDrawerRiskSignals(employee as Record<string, unknown>);
   }
 }
 
@@ -864,6 +872,9 @@ export function closeDrawer(): void {
 
     removeDrawerIdentityHeader('employeeDrawerIdentityHeader');
     document.getElementById('employeeDrawerChrome')?.replaceChildren();
+    if (typeof window.clearEmployeeDrawerRiskSignals === 'function') {
+      window.clearEmployeeDrawerRiskSignals();
+    }
     setEmployeeDrawerCreateMode(false);
     ensureDrawerLayout('employeeDrawer');
 

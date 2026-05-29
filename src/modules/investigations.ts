@@ -718,6 +718,11 @@ export async function loadInvestigations(): Promise<void> {
     loadInvestigationsDashboardMetrics(cachedInvestigations);
     investigationsHydrated = true;
 
+    if (typeof window.initOrbisDisclosure === 'function') {
+      const root = document.getElementById('orbisSectionInvestigations');
+      if (root) window.initOrbisDisclosure(root);
+    }
+
     if (typeof window.updateWorkspaceAlerts === 'function') {
       window.updateWorkspaceAlerts();
     }
@@ -1098,6 +1103,8 @@ function buildGuidanceContextFromDrawer(evidenceCount?: number): InvestigationGu
       type: formatInvestigationLabel(String(row.interview_type || 'other')),
       date: String(row.interview_date || '').trim() || undefined,
       notes: String(row.notes || '').trim(),
+      interviewer:
+        String(row.interviewer_name || row.interviewer_email || '').trim() || undefined,
     }))
     .filter((row) => row.notes || row.type);
 
@@ -1150,6 +1157,7 @@ export async function generateInvestigationGuidance(): Promise<void> {
 
   let evidenceCount: number | undefined;
   if (currentInvestigationId) {
+    cachedInterviews = await loadInvestigationInterviews(currentInvestigationId);
     evidenceCount = await countInvestigationEvidence(currentInvestigationId);
   }
 

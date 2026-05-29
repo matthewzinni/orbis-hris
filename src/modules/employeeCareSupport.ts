@@ -1,6 +1,7 @@
 // Employee drawer — Care & Support tab (HR/admin, Supabase-backed)
 
 import {
+  deleteCareItem,
   deleteEmployeeCareNote,
   deleteEmployeeFollowUp,
   deleteEmployeeResource,
@@ -15,13 +16,17 @@ import {
 import { showOrbisConfirm } from '../ui/confirmModal';
 import {
   bindCareEngagementEditorEvents,
+  openCareItemEditor,
   openEmployeeCareNoteEditor,
   openEmployeeFollowUpEditor,
   openEmployeeResourceEditor,
   openEmployeeWellnessEditor,
   setCareEditorOnSaved,
 } from './careEngagementEditor';
-import { canViewCareEngagementDetails } from '../services/careEngagementAccess';
+import {
+  canManageCareEngagementRecords,
+  canViewCareEngagementDetails,
+} from '../services/careEngagementAccess';
 import { employeeDisplayName } from '../services/employeeUtils';
 import type { CareEngagementDataset } from '../types/careEngagementTypes';
 
@@ -58,7 +63,11 @@ function resolveEmployeeId(employee: EmployeeLike): string {
   ).trim();
 }
 
-function itemMatchesEmployee(itemEmployeeId: string, employee: EmployeeLike): boolean {
+function itemMatchesEmployee(
+  itemEmployeeId: string,
+  employee: EmployeeLike,
+  itemEmployeeName = ''
+): boolean {
   const targetId = resolveCareEmployeeId(employee);
   if (!targetId) return false;
 
@@ -69,7 +78,20 @@ function itemMatchesEmployee(itemEmployeeId: string, employee: EmployeeLike): bo
 
   const keys = resolveEmployeeKeys(employee).map(String);
   const id = String(itemEmployeeId || '').trim();
-  return keys.includes(id);
+  if (id && keys.includes(id)) return true;
+
+  const rosterName = employeeDisplayName(employee).trim().toLowerCase();
+  const itemName = String(itemEmployeeName || '').trim().toLowerCase();
+  return Boolean(rosterName && itemName && rosterName === itemName);
+}
+
+function careTypeLabel(type: string): string {
+  if (type === 'spiritual') return 'Spiritual / Values-Based';
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function careItemStatusLabel(status: string): string {
+  return status.replace(/_/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 const RECOGNITION_LABELS: Record<string, string> = {
@@ -130,6 +152,32 @@ async function handleCareSupportPanelClick(event: Event): Promise<void> {
 
     const recordId = resolveEmployeeId(employee);
     const dataset = await fetchCareEngagementDataset(true);
+
+    if (target.closest('[data-add-care-item]')) {
+      void openCareItemEditor(null, recordId);
+      return;
+    }
+
+    const editCareItemId = target
+      .closest('[data-edit-care-item]')
+      ?.getAttribute('data-edit-care-item');
+    if (editCareItemId) {
+      const item = dataset.careItems.find((row) => row.id === editCareItemId);
+      if (item) void openCareItemEditor(item);
+      return;
+    }
+
+    const deleteCareItemId = target
+      .closest('[data-delete-care-item]')
+      ?.getAttribute('data-delete-care-item');
+    if (deleteCareItemId) {
+      void confirmDeleteDrawerRecord(
+        'care item',
+        async () => deleteCareItem(deleteCareItemId),
+        recordId
+      );
+      return;
+    }
 
     if (target.closest('[data-add-care-note]')) {
       openEmployeeCareNoteEditor(recordId, null);
@@ -277,11 +325,17 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
 
   bindDrawerCareEvents(recordId);
 
-  notesEl.innerHTML = '<div class="empty">Loading care & support...</div>';
+  const loadingHtml = '<div class="empty">Loading care & support...</div>';
+  notesEl.innerHTML = loadingHtml;
+  const itemsListEl = document.getElementById('employeeCareItemsList');
+  if (itemsListEl) itemsListEl.innerHTML = loadingHtml;
 
   try {
     const dataset = await fetchCareEngagementDataset(true);
 
+    const careItems = dataset.careItems.filter((item) =>
+      itemMatchesEmployee(item.employeeId, employee, item.employeeName)
+    );
     const notes = dataset.employeeNotes.filter((n) => itemMatchesEmployee(n.employeeId, employee));
     const followUps = dataset.followUps.filter((f) => itemMatchesEmployee(f.employeeId, employee));
     const recognition = dataset.recognition.filter((r) => itemMatchesEmployee(r.employeeId, employee));
@@ -291,6 +345,7 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
     );
 
     const name = employeeDisplayName(employee);
+    const canManage = canManageCareEngagementRecords();
 
     const sectionHeader = (title: string, addAttr: string) => `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -298,6 +353,33 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
         <button type="button" class="button soft sm" data-${addAttr}="1">Add</button>
       </div>
     `;
+
+    renderList(
+      'employeeCareItemsList',
+      `${canManage ? sectionHeader('Care items', 'add-care-item') : '<strong>Care items</strong>'}${careItems
+        .map((item) => {
+          const actions = canManage
+            ? actionButtons('edit-care-item', item.id, 'delete-care-item', item.id)
+            : '';
+          return `
+        <div class="history-item">
+          <div class="history-title">${esc(careTypeLabel(item.type))}
+            <span class="care-confidentiality-pill ${esc(item.confidentiality)}">${esc(item.confidentiality.replace(/_/g, ' '))}</span>
+          </div>
+          <div class="history-body">
+            <strong>Need:</strong> ${esc(item.needOrConcern || '—')}<br />
+            ${item.actionTaken ? `<strong>Action:</strong> ${esc(item.actionTaken)}<br />` : ''}
+            <strong>Owner:</strong> ${esc(item.owner || '—')} ·
+            <strong>Follow-up:</strong> ${esc(formatDate(item.followUpDate))} ·
+            ${esc(careItemStatusLabel(item.status))}
+          </div>
+          ${actions}
+        </div>
+      `;
+        })
+        .join('')}`,
+      `No care items in the tracker for ${name} yet.`
+    );
 
     renderList(
       'employeeCareNotesList',

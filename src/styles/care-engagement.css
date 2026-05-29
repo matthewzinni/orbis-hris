@@ -273,6 +273,12 @@
   color: var(--care-accent-2, #8b6f4e);
 }
 
+.care-confidentiality-help {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
 .care-confidentiality-pill {
   font-size: 0.68rem;
   text-transform: uppercase;

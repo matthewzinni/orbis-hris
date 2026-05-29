@@ -1,0 +1,287 @@
+/* Orbis polish — spacing rhythm, surfaces, motion, disclosure, executive insight */
+
+@keyframes orbis-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes orbis-drawer-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.orbis-fade-in {
+  animation: orbis-fade-in 320ms var(--orbis-ease-out) both;
+}
+
+.orbis-app-section.active {
+  animation: orbis-fade-in 280ms var(--orbis-ease-out) both;
+}
+
+/* Softer elevated surfaces */
+.card,
+.kpi-card,
+.toolbar,
+.orbis-topbar {
+  background: var(--surface-elevated, rgba(255, 255, 255, 0.94));
+}
+
+.card {
+  box-shadow: var(--shadow-soft, var(--shadow));
+}
+
+.card-body {
+  padding: 18px 20px 20px;
+}
+
+.card-header {
+  padding: 16px 20px;
+  font-size: 0.98rem;
+  letter-spacing: -0.02em;
+}
+
+.kpi-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.kpi-value {
+  font-size: 1.85rem;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.kpi-sub {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--muted-soft);
+}
+
+.muted {
+  line-height: 1.5;
+}
+
+/* Tables breathe */
+.mini-table-wrap table,
+.table-wrap table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.mini-table-wrap th,
+.table-wrap th {
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 10px 12px;
+}
+
+.mini-table-wrap td,
+.table-wrap td {
+  padding: 11px 12px;
+  line-height: 1.45;
+}
+
+/* Progressive disclosure */
+.orbis-disclosure-card .orbis-disclosure-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.orbis-disclosure-toggle {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: var(--surface-muted, #f4f6f8);
+  color: var(--navy-2);
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background var(--orbis-transition),
+    border-color var(--orbis-transition),
+    transform var(--orbis-transition);
+}
+
+.orbis-disclosure-toggle:hover {
+  background: var(--accent-blue-soft);
+  border-color: rgba(47, 111, 237, 0.25);
+  transform: translateY(-1px);
+}
+
+.orbis-disclosure-summary {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.orbis-disclosure-card:not(.is-expanded) .orbis-disclosure-panel {
+  display: none;
+}
+
+.orbis-disclosure-card.is-expanded .orbis-disclosure-panel {
+  animation: orbis-fade-in 240ms var(--orbis-ease-out) both;
+}
+
+/* Executive insight */
+.insight-line {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface-muted, #f6f8fa);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.insight-line + .insight-line {
+  margin-top: 10px;
+}
+
+.insight-line--attention {
+  border-color: rgba(226, 91, 106, 0.28);
+  background: linear-gradient(180deg, #fff8f9 0%, #fff5f7 100%);
+}
+
+.insight-line--positive {
+  border-color: rgba(47, 191, 113, 0.28);
+  background: linear-gradient(180deg, #f4fdf8 0%, #eefbf4 100%);
+}
+
+.insight-line--neutral {
+  border-color: rgba(203, 213, 225, 0.9);
+}
+
+/* Drawer motion */
+.drawer:not(.hidden) {
+  animation: orbis-drawer-in 280ms var(--orbis-ease-out) both;
+}
+
+.drawer-backdrop:not(.hidden) {
+  animation: orbis-fade-in 200ms ease both;
+}
+
+/* Button press feedback */
+.button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.99);
+}
+
+.button {
+  transition:
+    transform var(--orbis-transition),
+    box-shadow var(--orbis-transition),
+    background var(--orbis-transition),
+    border-color var(--orbis-transition);
+}
+
+/* Loading shimmer reuse */
+.skeleton,
+.loading-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.55) 0%,
+    rgba(248, 250, 252, 0.95) 50%,
+    rgba(226, 232, 240, 0.55) 100%
+  );
+  background-size: 200% 100%;
+  animation: orbis-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes orbis-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+/* Employee drawer — risk signal summary */
+.employee-drawer-risk-signals {
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #fff8f9 0%, #fffdfb 100%);
+}
+
+.employee-drawer-risk-signals-inner {
+  padding: 12px 20px 14px;
+}
+
+.employee-drawer-risk-signals-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.employee-drawer-risk-signals-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.employee-drawer-risk-signal {
+  font-size: 0.86rem;
+  line-height: 1.45;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.employee-drawer-risk-signal--risk {
+  background: #fff0f3;
+  border-color: rgba(226, 91, 106, 0.22);
+  color: #9f1239;
+}
+
+.employee-drawer-risk-signal--warn {
+  background: #fff7db;
+  border-color: rgba(240, 164, 59, 0.28);
+  color: #92400e;
+}
+
+.employee-drawer-risk-signal--neutral {
+  background: var(--surface-muted, #f4f6f8);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbis-fade-in,
+  .orbis-app-section.active,
+  .drawer:not(.hidden),
+  .drawer-backdrop:not(.hidden),
+  .orbis-disclosure-card.is-expanded .orbis-disclosure-panel {
+    animation: none;
+  }
+
+  .button:active:not(:disabled),
+  .kpi-card:hover,
+  .orbis-disclosure-toggle:hover {
+    transform: none;
+  }
+}

@@ -4,6 +4,7 @@ export type InvestigationGuidanceInterview = {
   type: string;
   date?: string;
   notes: string;
+  interviewer?: string;
 };
 
 export type InvestigationGuidanceContext = {
@@ -136,6 +137,7 @@ export function collectInvestigationGuidanceContext(
       type: String(row.type || '').trim(),
       date: String(row.date || '').trim() || undefined,
       notes: String(row.notes || '').trim(),
+      interviewer: String(row.interviewer || '').trim() || undefined,
     }))
     .filter((row) => row.type || row.notes);
 
@@ -170,19 +172,56 @@ export function buildInvestigationGuidanceFallback(
   const status = String(context.status || 'intake').toLowerCase();
   const serious = mayInvolveSeriousAction(context);
   const steps = nextStepsForStatus(status);
+  const interviews = context.interviews || [];
+  const hasInterviewNotes = interviews.some((row) => row.notes.trim());
 
   const lines: string[] = [
+    'FINDINGS & RECOMMENDATION',
+  ];
+
+  if (!interviews.length) {
+    lines.push(
+      '• Preliminary finding: Inconclusive — no interviews logged in Orbis yet.',
+      '• Complete complainant, respondent, witness, and supervisor interviews before recommending discipline.',
+      '• Recommended outcome: inconclusive pending more evidence'
+    );
+  } else if (!hasInterviewNotes) {
+    lines.push(
+      `• ${interviews.length} interview(s) logged but notes are empty — add notes and regenerate.`,
+      '• Preliminary finding: Inconclusive until interview content is documented.'
+    );
+  } else {
+    lines.push(
+      '• AI unavailable — review INTERVIEW ANALYSIS below and enter your judgment manually.',
+      '• Compare accounts for corroboration and contradictions before setting outcome on the Case tab.',
+      '• Preliminary finding: [Substantiated | Partially substantiated | Unsubstantiated | Inconclusive]',
+      '• Recommended outcome: [coaching | corrective_action | policy_reminder | unsubstantiated | etc.]'
+    );
+  }
+
+  lines.push('', 'INTERVIEW ANALYSIS');
+
+  if (!interviews.length) {
+    lines.push('• No interviews provided — finding must remain inconclusive until interviews are complete.');
+  } else {
+    interviews.forEach((row) => {
+      const when = row.date ? ` (${row.date})` : '';
+      const who = row.interviewer ? ` — ${row.interviewer}` : '';
+      const excerpt = row.notes.trim()
+        ? row.notes.trim().slice(0, 400) + (row.notes.length > 400 ? '…' : '')
+        : '(no notes recorded)';
+      lines.push(`• ${row.type || 'Interview'}${when}${who}: ${excerpt}`);
+    });
+    lines.push('• Compare the accounts above — note alignment with the allegation and conflicts between interviews.');
+  }
+
+  lines.push(
+    '',
     'NEXT BEST MOVE',
     `• Current status: ${statusLabel(status)}.`,
     `• Priority: ${steps[0]}`,
-    '',
-    'WORKFLOW CHECKLIST',
-    ...steps.map((step) => `• ${step}`),
-  ];
-
-  if (context.interviews?.length) {
-    lines.push(`• ${context.interviews.length} interview(s) logged — confirm all planned interviews are complete.`);
-  }
+    ...steps.slice(1).map((step) => `• ${step}`)
+  );
 
   if (typeof context.evidenceCount === 'number') {
     lines.push(`• Evidence items on file: ${context.evidenceCount} — verify index matches allegations.`);
@@ -191,19 +230,19 @@ export function buildInvestigationGuidanceFallback(
   if (serious) {
     lines.push(
       '',
-      'DISCIPLINE & TERMINATION — FEDERAL CHECKPOINTS',
+      'COMPLIANCE CHECKPOINTS — FEDERAL',
       ...federalCheckpoints().map((item) => `• ${item}`),
       '',
-      'NORTH CAROLINA CHECKPOINTS',
+      'COMPLIANCE CHECKPOINTS — NORTH CAROLINA',
       ...northCarolinaCheckpoints().map((item) => `• ${item}`)
     );
   } else {
     lines.push(
       '',
-      'DISCIPLINE & TERMINATION — FEDERAL CHECKPOINTS',
-      '• No serious discipline/termination flags detected from category/outcome — revisit if findings change.',
+      'COMPLIANCE CHECKPOINTS — FEDERAL',
+      '• Revisit if findings support discipline — document legitimate business reason before adverse action.',
       '',
-      'NORTH CAROLINA CHECKPOINTS',
+      'COMPLIANCE CHECKPOINTS — NORTH CAROLINA',
       '• Standard at-will and documentation practices apply if minor coaching only.'
     );
   }

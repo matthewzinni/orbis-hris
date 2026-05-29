@@ -1,6 +1,7 @@
 /**
  * Care & Engagement data layer (Supabase with in-memory fallback if tables missing).
  */
+import { filterCareEngagementDatasetForViewer } from '../services/careConfidentiality';
 import {
   enrichCareEngagementDataset,
   ensureCareEmployeeRosterLoaded,
@@ -238,7 +239,7 @@ export async function fetchCareEngagementDataset(force = false): Promise<CareEng
 
   await ensureCareEmployeeRosterLoaded();
   const loaded = await loadFromSupabase();
-  cachedDataset = enrichCareEngagementDataset(loaded);
+  cachedDataset = filterCareEngagementDatasetForViewer(enrichCareEngagementDataset(loaded));
   return cachedDataset;
 }
 

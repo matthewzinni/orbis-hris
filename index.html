@@ -204,7 +204,7 @@
               Turnover Risk
               <span
                 class="info-icon"
-                title="Score is based on early tenure (0-6 months) and overdue reviews. Higher score = higher retention risk."
+                title="Includes everyone flagged at-risk (low review, manual HR flag, or open discipline), plus operations load and early tenure. Investigations and overdue stay interviews do not affect this score."
                 style="cursor: help; font-size: 0.8rem; color: var(--muted)"
                 >ⓘ</span
               >
@@ -231,7 +231,7 @@
             <div class="kpi-label">At-Risk Employees</div>
             <div class="kpi-value" id="kAtRiskEmployees">—</div>
             <div class="kpi-sub" id="kAtRiskEmployeesSub">
-              No employees currently flagged from latest review scores or HR indicators
+              Flagged from low review scores, manual HR notes, or open discipline
             </div>
           </div>
           <div class="kpi-card warn" id="cardOnLeave">
@@ -333,10 +333,26 @@
                 </div>
               </div>
             </div>
-            <div class="card" id="reviewDashboardCard">
-              <div class="card-header">Stay Interview Dashboard</div>
+            <div
+              class="card orbis-disclosure-card is-expanded"
+              id="reviewDashboardCard"
+              data-orbis-disclosure
+              data-orbis-disclosure-start="open"
+            >
+              <div class="card-header orbis-disclosure-header">
+                <span>Stay Interview Dashboard</span>
+                <button
+                  type="button"
+                  class="orbis-disclosure-toggle"
+                  data-orbis-disclosure-toggle
+                  aria-expanded="true"
+                >
+                  Hide details
+                </button>
+              </div>
               <div class="card-body">
-                <div class="detail-grid" id="reviewDashboardSummary" style="margin-bottom: 16px">
+                <div class="orbis-disclosure-summary">
+                <div class="detail-grid" id="reviewDashboardSummary" style="margin-bottom: 0">
                   <div class="detail-card">
                     <div class="detail-label">Overdue Interviews</div>
                     <div class="detail-value" id="reviewDashboardOverdue" data-stay-interview-metric="overdue">—</div>
@@ -350,7 +366,9 @@
                     <div class="detail-value" id="reviewDashboardCompleted" data-stay-interview-metric="completed">—</div>
                   </div>
                 </div>
-                <div class="mini-table-wrap">
+                </div>
+                <div class="orbis-disclosure-panel" data-orbis-disclosure-panel>
+                <div class="mini-table-wrap" style="margin-top: 16px">
                   <table>
                     <thead>
                       <tr>
@@ -368,6 +386,7 @@
                       </tr>
                     </tbody>
                   </table>
+                </div>
                 </div>
               </div>
             </div>
@@ -389,17 +408,49 @@
                 </div>
               </div>
             </div>
-            <div class="card">
-              <div class="card-header">Impact Players</div>
+            <div
+              class="card orbis-disclosure-card"
+              data-orbis-disclosure
+              data-orbis-disclosure-start="collapsed"
+            >
+              <div class="card-header orbis-disclosure-header">
+                <span>Impact Players</span>
+                <button
+                  type="button"
+                  class="orbis-disclosure-toggle"
+                  data-orbis-disclosure-toggle
+                  aria-expanded="false"
+                >
+                  Show details
+                </button>
+              </div>
               <div class="card-body">
-                <div id="impactPlayers" class="history-list">
+                <p class="muted orbis-disclosure-summary" style="margin: 0">
+                  High performers from reviews and recognition — expand for names.
+                </p>
+                <div class="orbis-disclosure-panel" data-orbis-disclosure-panel hidden>
+                <div id="impactPlayers" class="history-list" style="margin-top: 12px">
                   <div class="empty">Loading impact players...</div>
+                </div>
                 </div>
               </div>
             </div>
-            <div class="card">
-              <div class="card-header">
+            <div
+              class="card orbis-disclosure-card"
+              data-orbis-disclosure
+              data-orbis-disclosure-start="collapsed"
+            >
+              <div class="card-header orbis-disclosure-header">
                 <span>Recent HR Activity</span>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+                <button
+                  type="button"
+                  class="orbis-disclosure-toggle"
+                  data-orbis-disclosure-toggle
+                  aria-expanded="false"
+                >
+                  Show details
+                </button>
                 <button
                   id="clearRecentActivityBtn"
                   class="button soft sm"
@@ -408,10 +459,16 @@
                 >
                   Clear All
                 </button>
+                </div>
               </div>
               <div class="card-body">
-                <div id="recentActivity" class="history-list">
+                <p class="muted orbis-disclosure-summary" style="margin: 0">
+                  Latest notes, discipline, incidents, and stay interview activity.
+                </p>
+                <div class="orbis-disclosure-panel" data-orbis-disclosure-panel hidden>
+                <div id="recentActivity" class="history-list" style="margin-top: 12px">
                   <div class="empty">Loading activity...</div>
+                </div>
                 </div>
               </div>
             </div>
@@ -749,12 +806,31 @@
 
           <div class="layout">
             <div class="stack">
-              <div class="card" id="investigationsCasesCard">
-                <div class="card-header">
+              <div
+                class="card orbis-disclosure-card is-expanded"
+                id="investigationsCasesCard"
+                data-orbis-disclosure
+                data-orbis-disclosure-start="open"
+              >
+                <div class="card-header orbis-disclosure-header">
                   <span>Investigation Cases</span>
-                  <span class="muted" id="investigationsTableCount">Loading cases...</span>
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+                    <span class="muted" id="investigationsTableCount">Loading cases...</span>
+                    <button
+                      type="button"
+                      class="orbis-disclosure-toggle"
+                      data-orbis-disclosure-toggle
+                      aria-expanded="true"
+                    >
+                      Hide table
+                    </button>
+                  </div>
                 </div>
                 <div class="card-body">
+                  <p class="muted orbis-disclosure-summary" style="margin: 0 0 4px">
+                    Search, filter, and open investigation cases. Use the table for case actions.
+                  </p>
+                  <div class="orbis-disclosure-panel" data-orbis-disclosure-panel>
                   <div class="toolbar" style="margin-bottom: 12px">
                     <div class="toolbar-left">
                       <input
@@ -795,6 +871,7 @@
                         </tr>
                       </tbody>
                     </table>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -891,6 +968,11 @@
               <div class="kpi-label">Upcoming Check-Ins</div>
               <div class="kpi-value" id="kCareCheckIns">—</div>
               <div class="kpi-sub">Next 14 days</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareStayInterviews">
+              <div class="kpi-label">Stay Interviews Due</div>
+              <div class="kpi-value" id="kCareStayInterviews">—</div>
+              <div class="kpi-sub" id="kCareStayInterviewsSub">Retention signal from roster stay dates</div>
             </div>
           </div>
 
@@ -1144,13 +1226,28 @@
             </div>
             <div class="layout layout-reports">
               <div class="stack">
-                <div class="card">
-                  <div class="card-header">
+                <div
+                  class="card orbis-disclosure-card is-expanded"
+                  data-orbis-disclosure
+                  data-orbis-disclosure-start="open"
+                >
+                  <div class="card-header orbis-disclosure-header">
                     <span>Stay interview report</span>
-                    <span class="muted" id="reportsStayInterviewCount">Loading...</span>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+                      <span class="muted" id="reportsStayInterviewCount">Loading...</span>
+                      <button
+                        type="button"
+                        class="orbis-disclosure-toggle"
+                        data-orbis-disclosure-toggle
+                        aria-expanded="true"
+                      >
+                        Hide table
+                      </button>
+                    </div>
                   </div>
                   <div class="card-body">
-                    <div class="detail-grid" style="margin-bottom: 12px">
+                    <div class="orbis-disclosure-summary">
+                    <div class="detail-grid" style="margin-bottom: 0">
                       <div class="detail-card">
                         <div class="detail-label">Overdue</div>
                         <div class="detail-value" id="reportsStayOverdue">—</div>
@@ -1164,7 +1261,9 @@
                         <div class="detail-value" id="reportsStayCompleted">—</div>
                       </div>
                     </div>
-                    <div class="table-wrap reports-table-wrap">
+                    </div>
+                    <div class="orbis-disclosure-panel" data-orbis-disclosure-panel>
+                    <div class="table-wrap reports-table-wrap" style="margin-top: 16px">
                       <table>
                         <thead>
                           <tr>
@@ -1182,6 +1281,7 @@
                           </tr>
                         </tbody>
                       </table>
+                    </div>
                     </div>
                   </div>
                 </div>
@@ -1220,12 +1320,27 @@
                 </div>
               </div>
             </div>
-            <div class="card reports-er-card">
-              <div class="card-header">
+            <div
+              class="card reports-er-card orbis-disclosure-card"
+              data-orbis-disclosure
+              data-orbis-disclosure-start="collapsed"
+            >
+              <div class="card-header orbis-disclosure-header">
                 <span>Discipline &amp; incident trends</span>
-                <span class="muted" id="reportsErTrendsSubtitle">Loading...</span>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+                  <span class="muted" id="reportsErTrendsSubtitle">Loading...</span>
+                  <button
+                    type="button"
+                    class="orbis-disclosure-toggle"
+                    data-orbis-disclosure-toggle
+                    aria-expanded="false"
+                  >
+                    Show details
+                  </button>
+                </div>
               </div>
               <div class="card-body">
+                <div class="orbis-disclosure-summary">
                 <div class="detail-grid reports-er-summary">
                   <div class="detail-card">
                     <div class="detail-label">Open discipline</div>
@@ -1244,6 +1359,8 @@
                     <div class="detail-value" id="reportsErIncidents90">—</div>
                   </div>
                 </div>
+                </div>
+                <div class="orbis-disclosure-panel" data-orbis-disclosure-panel hidden>
                 <div class="layout layout-reports-er">
                   <div class="stack">
                     <div class="reports-subsection">
@@ -1346,6 +1463,7 @@
                       </tbody>
                     </table>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -1982,11 +2100,12 @@
 
             <div class="hidden" data-investigation-panel="guidance" aria-hidden="true">
               <div class="card">
-                <div class="card-header">Next Best Move &amp; Compliance</div>
+                <div class="card-header">Findings, Recommendation &amp; Compliance</div>
                 <div class="card-body">
                   <div class="investigation-guidance-disclaimer" role="note">
-                    AI-assisted planning for investigators. Suggests workflow next steps and common
-                    federal / North Carolina checkpoints when discipline or termination may apply.
+                    AI-assisted analysis for investigators. Reviews interview notes and case facts to
+                    draft a preliminary finding, recommended outcome, and action — plus federal /
+                    North Carolina checkpoints when discipline may apply.
                     <strong>Not legal advice</strong> — have employment counsel review final
                     decisions.
                   </div>
@@ -2004,7 +2123,7 @@
                     <textarea
                       id="invAiGuidanceInput"
                       rows="16"
-                      placeholder="Click Generate AI guidance to draft next steps and compliance checkpoints from this case. Edit before saving."
+                      placeholder="Click Generate AI guidance to analyze interview notes and draft a preliminary finding, recommended outcome, and next steps. Edit before saving."
                     ></textarea>
                     <p class="muted" style="margin: 8px 0 0; font-size: 0.82rem">
                       Uses the same OpenAI setup as Stay Interview summaries (Supabase Edge
@@ -2204,9 +2323,16 @@
                     <div class="field">
                       <label for="careItemConfidentialityInput">Confidentiality</label>
                       <select id="careItemConfidentialityInput">
-                        <option value="standard">Standard</option>
-                        <option value="restricted">Restricted</option>
-                        <option value="hr_only">HR Only</option>
+                        <option value="standard" title="Visible to HR admins and all supervisors with Care access">
+                          Standard
+                        </option>
+                        <option
+                          value="restricted"
+                          title="Visible to HR admins and this employee's supervisor only"
+                        >
+                          Restricted
+                        </option>
+                        <option value="hr_only" title="Visible to HR admins only">HR Only</option>
                       </select>
                     </div>
                   </div>
@@ -2324,9 +2450,16 @@
                     <div class="field">
                       <label for="careNoteConfidentialityInput">Confidentiality</label>
                       <select id="careNoteConfidentialityInput">
-                        <option value="standard">Standard</option>
-                        <option value="restricted">Restricted</option>
-                        <option value="hr_only">HR Only</option>
+                        <option value="standard" title="Visible to HR admins and all supervisors with Care access">
+                          Standard
+                        </option>
+                        <option
+                          value="restricted"
+                          title="Visible to HR admins and this employee's supervisor only"
+                        >
+                          Restricted
+                        </option>
+                        <option value="hr_only" title="Visible to HR admins only">HR Only</option>
                       </select>
                     </div>
                   </div>
@@ -2415,6 +2548,12 @@
           aria-hidden="true"
         >
           <div id="employeeDrawerChrome" class="drawer-chrome"></div>
+          <div
+            id="employeeDrawerRiskSignals"
+            class="employee-drawer-risk-signals hidden"
+            role="region"
+            aria-label="Risk signals"
+          ></div>
           <div class="drawer-header">
             <div>
               <h2 class="drawer-title" id="drawerTitle">Employee</h2>
@@ -3760,6 +3899,16 @@
             <section class="tab-panel admin-only hidden" id="tab-care-support">
               <div class="care-drawer-section">
                 <div class="card">
+                  <div class="card-header">Care Items (Tracker)</div>
+                  <div class="card-body">
+                    <div id="employeeCareItemsList" class="history-list">
+                      <div class="empty">Open an employee to view care items.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
                   <div class="card-header">Care Notes</div>
                   <div class="card-body">
                     <div id="employeeCareNotesList" class="history-list">
@@ -3809,8 +3958,8 @@
                 </div>
               </div>
               <p class="muted" style="font-size: 0.8rem; margin: 0">
-                HR/admin only · Demo data until <code>care_notes</code> and related tables are
-                connected in Supabase.
+                HR/admin only · Synced with Care &amp; Engagement tracker (<code>care_items</code> and
+                related tables).
               </p>
             </section>
             <section class="tab-panel" id="tab-employee">

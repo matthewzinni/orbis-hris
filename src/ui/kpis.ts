@@ -7,6 +7,14 @@ import {
   isActiveDashboardEmployee,
 } from '../services/employeeUtils';
 import { hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
+import {
+  buildHrIntelligenceContext,
+  computeTurnoverRiskPercentage,
+  enrichAtRiskMetaFromContext,
+  isOpenInvestigationStatus,
+  isOpenOperationsIssue,
+  isTurnoverRiskContributor,
+} from '../services/hrIntelligence';
 
 interface KpiEmployeeRecord {
   id?: string;
@@ -58,6 +66,9 @@ type AtRiskMeta = {
   reviewScore?: number | null;
   flaggedDate?: string;
   flaggedBy?: string;
+  openInvestigation?: boolean;
+  stayInterviewOverdue?: boolean;
+  operationsPressure?: boolean;
 };
 
 type ImpactPlayerMeta = {
@@ -88,6 +99,7 @@ declare global {
     updateTurnoverRiskKpi?: (rate: number, subtext: string) => void;
     currentImpactPlayerRosterMap?: Record<string, ImpactPlayerMeta>;
     currentAtRiskRosterMap?: Record<string, AtRiskMeta>;
+    hrIntelligenceContext?: import('../services/hrIntelligence').HrIntelligenceContext;
     loadSummaryMetrics?: () => Promise<void>;
     compareText?: (a: unknown, b: unknown) => number;
     safeSet?: (id: string, value: unknown) => void;
@@ -653,15 +665,22 @@ export function buildKpiHoverDetails(): void {
 
   setKpiCardTooltip('cardDepartments', departmentCounts, 'No departments available');
 
-  const turnoverRiskEmployees = activeEmployees
-    .filter((employee) => {
-      const tenureMonths = getEmployeeTenureMonths(employee);
-      return tenureMonths > 0 && tenureMonths <= 6 && employeeHasAtRiskMeta(employee);
-    })
+  const intelligenceForTooltip =
+    window.hrIntelligenceContext || buildHrIntelligenceContext({ employees: reviewEligibleActive });
+  const atRiskMapForTooltip = window.currentAtRiskRosterMap || {};
+
+  const turnoverRiskEmployees = reviewEligibleActive
+    .filter((employee) =>
+      isTurnoverRiskContributor(
+        employee,
+        atRiskMapForTooltip[getEmployeeKey(employee)],
+        intelligenceForTooltip,
+        getEmployeeTenureMonths(employee)
+      )
+    )
     .map((employee) => {
       const tenureMonths = getEmployeeTenureMonths(employee);
       const name = employeeDisplayName(employee);
-
       return tenureMonths > 0 ? `${name} • ${tenureMonths} mo` : name;
     })
     .filter(Boolean)
@@ -670,7 +689,7 @@ export function buildKpiHoverDetails(): void {
   setKpiCardTooltip(
     'cardTurnoverRisk',
     turnoverRiskEmployees,
-    'No at-risk employees in early tenure'
+    'No employees currently contributing to turnover risk'
   );
 
   const terminatedNames = employees
@@ -831,34 +850,33 @@ export function renderKpiEmployeeMetrics(): void {
 
   const reviewsDue = overdueReviewEmployees.length;
 
-  const turnoverRiskEmployees = reviewEligibleActive.filter((employee) => {
-    const tenureMonths = getEmployeeTenureMonths(employee);
-    const isFirstThreeMonths = tenureMonths > 0 && tenureMonths <= 3;
-    const isEarlyTenure = tenureMonths <= 6;
-    return (isFirstThreeMonths || isEarlyTenure) && employeeHasAtRiskMeta(employee);
-  });
+  const intelligenceContext =
+    window.hrIntelligenceContext ||
+    buildHrIntelligenceContext({ employees: reviewEligibleActive });
+  const atRiskMap = window.currentAtRiskRosterMap || {};
 
-  const turnoverRiskContributors = turnoverRiskEmployees.length;
-  const turnoverRisk = reviewEligibleActive.length
-    ? Math.min(100, (turnoverRiskContributors / reviewEligibleActive.length) * 100)
-    : 0;
+  const turnoverResult = computeTurnoverRiskPercentage(
+    reviewEligibleActive,
+    intelligenceContext,
+    getEmployeeTenureMonths,
+    (employeeId) => atRiskMap[employeeId],
+    () => true
+  );
+
+  const turnoverRisk = turnoverResult.percentage;
+  const turnoverRiskContributors = turnoverResult.contributorCount;
   const turnoverRiskDisplay = `${turnoverRisk.toFixed(1)}%`;
+  const turnoverSubtext = `${turnoverRiskContributors} employee${turnoverRiskContributors === 1 ? '' : 's'} flagged at-risk and/or with retention signals (discipline, reviews, or operations load)`;
 
   setKpiText('kActiveHC', activeEmployees.length);
   setKpiText('kDepartments', departments.length);
   setKpiText('kOnLeave', onLeave);
 
   if (typeof window.updateTurnoverRiskKpi === 'function') {
-    window.updateTurnoverRiskKpi(
-      Number(turnoverRisk.toFixed(1)),
-      `${turnoverRiskContributors} at-risk employee${turnoverRiskContributors === 1 ? '' : 's'} in first 3 months`
-    );
+    window.updateTurnoverRiskKpi(Number(turnoverRisk.toFixed(1)), turnoverSubtext);
   } else {
     setKpiText('kTurnoverRisk', turnoverRiskDisplay);
-    setKpiText(
-      'kTurnoverRiskSub',
-      `${turnoverRiskContributors} at-risk employee${turnoverRiskContributors === 1 ? '' : 's'} in first 3 months`
-    );
+    setKpiText('kTurnoverRiskSub', turnoverSubtext);
   }
 
   const turnoverRiskCard = safeGet('kTurnoverRisk')?.closest('.kpi-card');
@@ -920,28 +938,41 @@ export async function loadSummaryMetrics(): Promise<void> {
   await ensureKpiEmployeeRoster();
 
   try {
-    const [disciplineRes, reviewsRes, incidentsRes, manualRiskRes, impactPlayerRes] =
-      await Promise.all([
-        supabaseClient
-          .from('discipline_reports')
-          .select('id, employee_id, issue_type, report_status'),
-        supabaseClient
-          .from('employee_reviews')
-          .select(
-            'employee_id, attendance_score, performance_score, teamwork_score, attitude_score, reliability_score, created_at, review_date'
-          ),
-        supabaseClient.from('incident_reports').select('employee_id, status'),
-        supabaseClient
-          .from('employee_notes')
-          .select('employee_id, note_type, note_text, note_date, created_at, created_by')
-          .in('note_type', ['At-Risk Flag', 'At-Risk Cleared'])
-          .order('created_at', { ascending: false }),
-        supabaseClient
-          .from('employee_notes')
-          .select('employee_id, note_type, note_text, note_date, created_at')
-          .in('note_type', ['Impact Player Flag', 'Impact Player Cleared'])
-          .order('created_at', { ascending: false }),
-      ]);
+    const [
+      disciplineRes,
+      reviewsRes,
+      manualRiskRes,
+      impactPlayerRes,
+      investigationsRes,
+      operationsRes,
+    ] = await Promise.all([
+      supabaseClient
+        .from('discipline_reports')
+        .select('id, employee_id, issue_type, report_status, discipline_level'),
+      supabaseClient
+        .from('employee_reviews')
+        .select(
+          'employee_id, attendance_score, performance_score, teamwork_score, attitude_score, reliability_score, created_at, review_date'
+        ),
+      supabaseClient
+        .from('employee_notes')
+        .select('employee_id, note_type, note_text, note_date, created_at, created_by')
+        .in('note_type', ['At-Risk Flag', 'At-Risk Cleared'])
+        .order('created_at', { ascending: false }),
+      supabaseClient
+        .from('employee_notes')
+        .select('employee_id, note_type, note_text, note_date, created_at')
+        .in('note_type', ['Impact Player Flag', 'Impact Player Cleared'])
+        .order('created_at', { ascending: false }),
+      supabaseClient
+        .from('investigations')
+        .select(
+          'id, status, primary_employee_id, targeted_employee_id, investigation_subjects(employee_id, subject_role)'
+        ),
+      supabaseClient
+        .from('operations_issues')
+        .select('id, status, is_recurring, department, related_employee_id, priority'),
+    ]);
 
     if (!disciplineRes.error) {
       const openDisciplineCases = (disciplineRes.data || []).filter((row) =>
@@ -987,7 +1018,6 @@ export async function loadSummaryMetrics(): Promise<void> {
     }
 
     const reviewRiskEmployeeIds = new Set<string>();
-    const incidentRiskEmployeeIds = new Set<string>();
     const manualRiskEmployeeIds = new Set<string>();
     const latestReviewByEmployee: Record<string, LatestReviewEntry> = {};
 
@@ -1065,20 +1095,6 @@ export async function loadSummaryMetrics(): Promise<void> {
       }
     });
 
-    if (!incidentsRes.error) {
-      (incidentsRes.data || []).forEach((row) => {
-        const record = row as { employee_id?: string; status?: string };
-        const status = String(record.status || '').toLowerCase();
-        const employeeId = String(record.employee_id || '');
-        if (employeeId && status !== 'closed' && !manualSuppressedAtRiskIds.has(employeeId)) {
-          incidentRiskEmployeeIds.add(employeeId);
-        }
-      });
-    } else {
-      console.error(incidentsRes.error);
-      failedMetrics.push('open incidents');
-    }
-
     if (!manualRiskRes.error) {
       Object.keys(atRiskMap).forEach((key) => {
         atRiskMap[key] = {
@@ -1114,12 +1130,51 @@ export async function loadSummaryMetrics(): Promise<void> {
         }
       });
 
-      incidentRiskEmployeeIds.forEach((employeeId) => {
-        if (manualSuppressedAtRiskIds.has(employeeId)) return;
-        const meta = ensureAtRiskMeta(employeeId);
-        meta.openIncidentCount = (meta.openIncidentCount || 0) + 1;
-      });
     }
+
+    const rosterEmployees = getDashboardKpiEmployees();
+    const intelligenceContext = buildHrIntelligenceContext({
+      disciplineRows: (disciplineRes.data || []) as Array<{
+        employee_id?: string;
+        report_status?: string;
+      }>,
+      investigationRows: !investigationsRes.error
+        ? (investigationsRes.data || []).filter((row) =>
+            isOpenInvestigationStatus((row as { status?: string }).status)
+          )
+        : [],
+      operationsRows: !operationsRes.error
+        ? (operationsRes.data || []).filter((row) =>
+            isOpenOperationsIssue((row as { status?: string }).status)
+          )
+        : [],
+      employees: rosterEmployees,
+    });
+    window.hrIntelligenceContext = intelligenceContext;
+
+    if (investigationsRes.error) {
+      console.warn('[KPIs] investigations intelligence:', investigationsRes.error);
+      failedMetrics.push('investigations intelligence');
+    }
+
+    if (operationsRes.error) {
+      console.warn('[KPIs] operations intelligence:', operationsRes.error);
+      failedMetrics.push('operations intelligence');
+    }
+
+    intelligenceContext.disciplineOpenByEmployee.forEach((_, employeeId) => {
+      if (manualSuppressedAtRiskIds.has(employeeId)) return;
+      const meta = ensureAtRiskMeta(employeeId);
+      meta.disciplineRisk = true;
+    });
+
+    Object.keys(atRiskMap).forEach((employeeId) => {
+      atRiskMap[employeeId] = enrichAtRiskMetaFromContext(
+        employeeId,
+        atRiskMap[employeeId],
+        intelligenceContext
+      );
+    });
 
     pruneInactiveAtRiskMap(atRiskMap);
     window.currentAtRiskRosterMap = atRiskMap;
@@ -1182,8 +1237,8 @@ export async function loadSummaryMetrics(): Promise<void> {
 
     const combinedRiskEmployeeIds = new Set([
       ...reviewRiskEmployeeIds,
-      ...incidentRiskEmployeeIds,
       ...manualRiskEmployeeIds,
+      ...intelligenceContext.disciplineOpenByEmployee.keys(),
     ]);
     const atRiskEmployees = combinedRiskEmployeeIds.size;
     const impactRosterMap = window.currentImpactPlayerRosterMap || impactMap;
@@ -1213,15 +1268,15 @@ export async function loadSummaryMetrics(): Promise<void> {
       }
     ).length;
 
-    const hasAnyData = !reviewsRes.error || !incidentsRes.error;
+    const hasAnyData = !reviewsRes.error;
 
     if (hasAnyData) {
       setKpiText('kAtRiskEmployees', atRiskEmployees);
       setKpiText(
         'kAtRiskEmployeesSub',
         atRiskEmployees === 0
-          ? 'No employees currently flagged from latest review scores or HR indicators'
-          : `${atRiskEmployees} employee${atRiskEmployees === 1 ? '' : 's'} currently flagged by review score or incident activity`
+          ? 'No employees flagged from low review scores, manual HR flags, or open discipline'
+          : `${atRiskEmployees} employee${atRiskEmployees === 1 ? '' : 's'} flagged by review score, HR note, or open discipline`
       );
     } else {
       failedMetrics.push('at-risk summary');
@@ -1245,6 +1300,14 @@ export async function loadSummaryMetrics(): Promise<void> {
     }
 
     renderKpiEmployeeMetrics();
+
+    if (typeof window.loadExecutiveInsight === 'function') {
+      window.loadExecutiveInsight();
+    }
+
+    if (typeof window.refreshEmployeeDrawerRiskSignalsIfOpen === 'function') {
+      window.refreshEmployeeDrawerRiskSignalsIfOpen();
+    }
 
     if (typeof window.loadRiskEmployeesFallback === 'function') {
       await window.loadRiskEmployeesFallback();

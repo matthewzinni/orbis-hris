@@ -8,6 +8,10 @@ type FlagMeta = {
   highReview?: boolean;
   reviewScore?: number | null;
   openIncidentCount?: number;
+  disciplineRisk?: boolean;
+  openInvestigation?: boolean;
+  stayInterviewOverdue?: boolean;
+  operationsPressure?: boolean;
   flaggedDate?: string;
   flaggedBy?: string;
 };
@@ -62,8 +66,8 @@ export function hasActiveRiskMeta(meta: FlagMeta | null | undefined): boolean {
 
   return (
     meta.lowReview === true ||
-    (meta.openIncidentCount ?? 0) > 0 ||
-    String(meta.manualReason || '').trim() !== ''
+    String(meta.manualReason || '').trim() !== '' ||
+    meta.disciplineRisk === true
   );
 }
 
@@ -126,8 +130,8 @@ export function buildRiskBadgeHtml(riskMeta: FlagMeta | null): string {
     lines.push('', `Review Score: ${Number(riskMeta.reviewScore).toFixed(1)}`);
   }
 
-  if ((riskMeta.openIncidentCount ?? 0) > 0) {
-    lines.push('', `Open Incidents: ${riskMeta.openIncidentCount}`);
+  if (riskMeta.disciplineRisk) {
+    lines.push('', 'Open discipline case on file');
   }
 
   if (riskMeta.flaggedDate) {

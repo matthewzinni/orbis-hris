@@ -52,7 +52,13 @@ supabase functions deploy investigation-hr-guidance
 
 Apply the database migration that adds `investigations.ai_guidance` (or run `supabase db push`).
 
-If AI is unavailable, Orbis uses a structured template with next steps and federal/NC checkpoint reminders.
+If AI is unavailable, Orbis uses a structured template that summarizes logged interview notes and prompts you to enter findings manually.
+
+After changing the edge function prompt, redeploy:
+
+```bash
+supabase functions deploy investigation-hr-guidance
+```
 
 ## Smoke test (production)
 

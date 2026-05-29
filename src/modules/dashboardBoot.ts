@@ -666,25 +666,16 @@ export async function loadReviewDashboardFallback(): Promise<void> {
 }
 
 export async function loadExecutiveInsightFallback(): Promise<void> {
-  const employees = getDashboardEmployees();
-  const activeEmployees = employees.filter((e) => isActiveDashboardEmployee(e));
-  const onLeave = employees.filter(
-    (employee) => String(employee.status || '').toUpperCase() === 'LEAVE'
-  ).length;
-  const departments = new Set(
-    activeEmployees
-      .map((employee) => String(employee.department || employee.dept || '').trim())
-      .filter(Boolean)
-  );
+  if (typeof window.loadExecutiveInsight === 'function') {
+    window.loadExecutiveInsight();
+    return;
+  }
 
   const insightEl = getOrCreateDashboardSectionBody('Executive Insight', 'executiveInsight');
   if (!insightEl) return;
 
-  insightEl.innerHTML = `
-        <div class="insight-line"><strong>${activeEmployees.length}</strong> active employees across <strong>${departments.size}</strong> department${departments.size === 1 ? '' : 's'}.</div>
-        <div class="insight-line">${onLeave} employee${onLeave === 1 ? '' : 's'} currently marked on leave.</div>
-        <div class="insight-line">Stay interview, risk, and impact lists are being calculated from current employee records.</div>
-    `;
+  insightEl.innerHTML =
+    '<div class="insight-line insight-line--neutral">Executive insight will appear after workforce metrics load.</div>';
 }
 
 export async function loadRiskEmployeesFallback(): Promise<void> {
@@ -1169,6 +1160,12 @@ function finalizeDashboardLoad(syncStatus: DashboardSyncStatus, syncedAt: Date):
 
   if (syncStatus === 'partial') {
     showToast('Some dashboard sections could not be refreshed.', 'error');
+  }
+
+  if (typeof window.initOrbisDisclosure === 'function') {
+    window.initOrbisDisclosure();
+  } else if (typeof window.initDashboardDisclosure === 'function') {
+    window.initDashboardDisclosure();
   }
 
   if (typeof window.initKpiHoverUi === 'function') {

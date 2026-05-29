@@ -1,4 +1,5 @@
 import './styles/app-shell.css';
+import './styles/orbis-polish.css';
 import './styles/styles.css';
 import './styles/care-engagement.css';
 import './utils/helpers';
@@ -35,6 +36,9 @@ import './ui/departmentSummary';
 import './modules/onboarding';
 import './modules/employees';
 import './modules/dashboardBoot';
+import './ui/executiveInsight';
+import './ui/dashboardDisclosure';
+import './ui/employeeDrawerRiskSignals';
 import './modules/reports';
 import './modules/settingsAdmin';
 import { initAppShell, showAuthenticatedOrbisView, showAuthView } from './app/appShell';

@@ -798,6 +798,11 @@ export async function loadReportsSection(force = false): Promise<void> {
   await Promise.all([loadStayInterviewReportRows(), loadErTrendsReport()]);
   renderDepartmentHeadcountReport();
   reportsSectionLoaded = true;
+
+  if (typeof window.initOrbisDisclosure === 'function') {
+    const reportsRoot = document.getElementById('orbisSectionReports');
+    if (reportsRoot) window.initOrbisDisclosure(reportsRoot);
+  }
 }
 
 function bindReportsEvents(): void {

@@ -378,8 +378,17 @@ export function applySupervisorDashboardView(): void {
     const riskMap = window.currentAtRiskRosterMap || {};
     const atRisk = employees.filter((e: EmployeeLike) => {
       const key = String(e.dbId || e.id || '');
-      const risk = riskMap[key] as { lowReview?: boolean; openIncidentCount?: number; manualReason?: string } | undefined;
-      return risk && (risk.lowReview || (risk.openIncidentCount ?? 0) > 0 || risk.manualReason);
+      const risk = riskMap[key] as {
+        lowReview?: boolean;
+        manualReason?: string;
+        disciplineRisk?: boolean;
+      } | undefined;
+      return (
+        risk &&
+        (risk.lowReview ||
+          Boolean(String(risk.manualReason || '').trim()) ||
+          risk.disciplineRisk)
+      );
     }).length;
 
     const teamCount = employees.filter((e: EmployeeLike) => {

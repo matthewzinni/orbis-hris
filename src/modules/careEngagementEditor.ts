@@ -28,6 +28,7 @@ import {
   readCareEmployeeSelect,
   resolveStoredCareEmployeeId,
 } from '../services/careEmployeePicker';
+import { applyCareConfidentialitySelectHelp } from '../services/careConfidentiality';
 import {
   canManageCareEngagementRecords,
   canViewCareEngagementDetails,
@@ -903,6 +904,9 @@ export function bindCareEngagementEditorEvents(): void {
 
   bindCareEmployeeSelectAutoFill('careItemEmployeeInput', 'careItemDepartmentInput');
   bindCareEmployeeSelectAutoFill('careRecEmployeeInput', 'careRecDepartmentInput');
+
+  applyCareConfidentialitySelectHelp('careItemConfidentialityInput');
+  applyCareConfidentialitySelectHelp('careNoteConfidentialityInput');
 }
 
 declare global {

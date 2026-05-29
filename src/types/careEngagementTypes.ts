@@ -136,4 +136,6 @@ export interface CareEngagementKpis {
   careGapsIdentified: number;
   activeSupportInitiatives: number;
   upcomingCheckIns: number;
+  stayInterviewsOverdue: number;
+  stayInterviewsDueSoon: number;
 }

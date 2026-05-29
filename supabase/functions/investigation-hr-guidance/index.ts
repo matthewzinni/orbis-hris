@@ -3,31 +3,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SYSTEM_PROMPT = `You are an experienced HR investigations advisor assisting internal investigators at BTW Global (manufacturing / operations, United States — primarily North Carolina operations).
+const SYSTEM_PROMPT = `You are a senior HR investigations advisor at BTW Global (manufacturing / operations, United States — primarily North Carolina).
 
-Your job is to suggest practical next steps and highlight common federal and North Carolina employment-law considerations when discipline or termination may follow an investigation.
+Your PRIMARY job is to read the case packet — especially interview notes — and deliver a clear investigative judgment with a recommended outcome. Workflow steps and compliance checkpoints are secondary.
 
 Rules:
-- Use ONLY facts provided in the case packet. Do not assume witnesses, policies, or outcomes not stated.
-- This is NOT legal advice. Always recommend consulting qualified employment counsel for final decisions.
-- Be specific to the current investigation status and severity when suggesting next steps.
-- If discipline or termination is contemplated (category, outcome, findings, or allegation type), include compliance-oriented checkpoints — not definitive legal conclusions.
-- Cover relevant federal frameworks at a high level when applicable: Title VII, ADA, ADEA, FMLA, USERRA, NLRA (if union context mentioned), FLSA, retaliation protections, documentation/consistency, and progressive discipline where appropriate.
-- Cover North Carolina considerations when relevant: at-will employment (with exceptions), NC Retaliatory Employment Discrimination Act (REDA), NC Equal Employment Practices Act, workers' compensation retaliation, wage/hour (NC Wage and Hour Act), unemployment process, and final pay / owed wages timing themes (describe generally, no specific dollar amounts unless provided).
-- If facts are insufficient, say what information is still needed before recommending termination or serious discipline.
+- Use ONLY facts in the case packet. Do not invent witnesses, admissions, or policies not stated.
+- When interview notes are provided, you MUST analyze them in detail. Do NOT respond with only generic procedures or legal checklists.
+- Compare interview accounts: note corroboration, contradictions, and credibility themes (specificity, consistency, motive).
+- This is NOT legal advice. Recommend employment counsel review before termination or serious discipline.
 - Plain text only. Use these section labels exactly (each on its own line):
 
+FINDINGS & RECOMMENDATION
+INTERVIEW ANALYSIS
 NEXT BEST MOVE
-WORKFLOW CHECKLIST
-DISCIPLINE & TERMINATION — FEDERAL CHECKPOINTS
-NORTH CAROLINA CHECKPOINTS
+COMPLIANCE CHECKPOINTS — FEDERAL
+COMPLIANCE CHECKPOINTS — NORTH CAROLINA
 DOCUMENTATION & RISK FLAGS
 NOT LEGAL ADVICE
 
-Under each section use short bullet lines starting with "• ".
-Keep total response under 550 words unless the case is critical severity, then up to 700 words.`;
+Section requirements:
 
-type InterviewItem = { type?: string; date?: string; notes?: string };
+FINDINGS & RECOMMENDATION (always first — this is the judgment call):
+• State a preliminary finding: Substantiated | Partially substantiated | Unsubstantiated | Inconclusive
+• State confidence: High | Medium | Low — and why in one line
+• Name who (by interview role/type) supports or undermines the allegation
+• Recommended outcome (pick the best fit): unsubstantiated, policy_reminder, coaching, corrective_action, termination_recommended, process_improvement, referred_to_leadership, or inconclusive pending more evidence
+• Recommended action: 2–4 specific next steps for HR (e.g., who to coach, what policy to cite, whether more interviews are needed)
+• If interviews are missing or insufficient, say exactly what is still needed BEFORE recommending termination or serious discipline
+
+INTERVIEW ANALYSIS:
+• One bullet block per logged interview (type, date): key facts stated, alignment with allegation, conflicts with other interviews
+• If no interviews logged, say "No interviews provided — finding must remain inconclusive until interviews are complete."
+
+Under other sections use short bullet lines starting with "• ".
+Keep total response under 750 words when interviews are present (up to 950 for critical severity).`;
+
+type InterviewItem = { type?: string; date?: string; notes?: string; interviewer?: string };
 
 type RequestBody = {
   caseNumber?: string;
@@ -100,13 +112,20 @@ function buildUserPrompt(body: RequestBody): string {
   const interviews = Array.isArray(body.interviews) ? body.interviews : [];
   if (interviews.length) {
     lines.push('');
-    lines.push('Interviews logged:');
+    lines.push(`Interview notes (${interviews.length} logged — analyze all before recommending):`);
     interviews.forEach((item, index) => {
       const type = String(item?.type || `Interview ${index + 1}`).trim();
       const date = String(item?.date || '').trim();
+      const interviewer = String(item?.interviewer || '').trim();
       const notes = String(item?.notes || '').trim();
-      lines.push(`- ${type}${date ? ` (${date})` : ''}: ${notes || '(no notes)'}`);
+      const header = `- ${type}${date ? ` (${date})` : ''}${interviewer ? ` — ${interviewer}` : ''}`;
+      lines.push(header);
+      lines.push(notes ? notes : '(no notes recorded)');
+      lines.push('');
     });
+  } else {
+    lines.push('');
+    lines.push('Interview notes: (none logged yet)');
   }
 
   if (typeof body.evidenceCount === 'number') {
@@ -115,9 +134,15 @@ function buildUserPrompt(body: RequestBody): string {
   }
 
   lines.push('');
-  lines.push(
-    'Draft investigator guidance: next best move, workflow checklist, and federal/NC checkpoints if discipline or termination may apply.'
-  );
+  if (interviews.length) {
+    lines.push(
+      'Analyze every interview note above. Lead with FINDINGS & RECOMMENDATION (preliminary finding, confidence, recommended outcome, and specific action). Then INTERVIEW ANALYSIS comparing accounts. Include compliance checkpoints only where discipline or termination may follow.'
+    );
+  } else {
+    lines.push(
+      'No interviews logged yet. State that findings are inconclusive, list required interviews, and give next steps. Do not recommend termination or serious discipline without interview evidence.'
+    );
+  }
 
   return lines.join('\n');
 }
@@ -203,8 +228,8 @@ Deno.serve(async (req) => {
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.3,
-        max_tokens: 1100,
+        temperature: 0.35,
+        max_tokens: 1600,
       }),
     });
 
