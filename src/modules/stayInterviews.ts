@@ -1,6 +1,10 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { employeeDisplayName } from '../services/employeeUtils';
 import {
+  describeScheduledNextStayInterview,
+  syncEmployeeNextStayInterviewFromLatestRecord,
+} from '../services/stayInterviewEmployeeSync';
+import {
   requestStayInterviewAiSummary,
   StayInterviewAiError,
 } from '../services/stayInterviewAiSummary';
@@ -127,6 +131,70 @@ function getEmployeeLookupIds(
     .filter(Boolean)
     .map(String)
     .filter((value, index, array) => array.indexOf(value) === index);
+}
+
+function applyNextStayInterviewToEmployeeState(
+  employee: StayInterviewEmployee,
+  nextDate: string
+): void {
+  employee.next_review_date = nextDate;
+  employee.nextReviewDate = nextDate;
+  employee.nextReview = nextDate;
+
+  [
+    'empNextReviewDate',
+    'nextReviewDate',
+    'employeeNextReviewInput',
+    'employeeNextReviewDate',
+  ].forEach((id) => setInputValue(id, nextDate));
+}
+
+async function refreshStayInterviewSchedulingUi(): Promise<void> {
+  if (typeof window.loadSummaryMetrics === 'function') {
+    await window.loadSummaryMetrics();
+  }
+
+  if (typeof window.loadReviewDashboard === 'function') {
+    await window.loadReviewDashboard();
+  }
+
+  if (typeof window.renderKpiEmployeeMetrics === 'function') {
+    window.renderKpiEmployeeMetrics();
+  }
+
+  if (typeof window.loadEmployees === 'function') {
+    await window.loadEmployees();
+  }
+
+  if (typeof window.renderRoster === 'function') {
+    window.renderRoster();
+  }
+}
+
+async function scheduleNextStayInterviewFromLatest(
+  employee: StayInterviewEmployee,
+  employeeRecordId: string
+): Promise<string | null> {
+  const lookupIds = getEmployeeLookupIds(employee, employeeRecordId);
+  const { nextDate, error } = await syncEmployeeNextStayInterviewFromLatestRecord(
+    employeeRecordId,
+    lookupIds
+  );
+
+  if (error) {
+    console.error('[StayInterviews] Could not update next stay interview date:', error);
+    showToast('Stay interview saved, but the next due date could not be updated.', 'error');
+    return null;
+  }
+
+  if (!nextDate) {
+    return null;
+  }
+
+  applyNextStayInterviewToEmployeeState(employee, nextDate);
+  await refreshStayInterviewSchedulingUi();
+
+  return nextDate;
 }
 
 function setInputValue(id: string, value: unknown): void {
@@ -412,7 +480,14 @@ export async function saveStayInterview(): Promise<void> {
     return;
   }
 
-  showToast(currentStayInterviewId ? 'Stay interview updated.' : 'Stay interview saved.');
+  const nextDate = await scheduleNextStayInterviewFromLatest(employee, employeeRecordId);
+  const scheduleNote = nextDate
+    ? ` Next stay interview due ${describeScheduledNextStayInterview(nextDate)} (6 months after the latest interview; weekends move to Fri/Mon).`
+    : '';
+
+  showToast(
+    (currentStayInterviewId ? 'Stay interview updated.' : 'Stay interview saved.') + scheduleNote
+  );
   resetStayInterviewForm();
   await loadStayInterviews(employeeRecordId);
 }
@@ -485,14 +560,24 @@ export async function deleteStayInterview(stayInterviewId: string): Promise<void
     resetStayInterviewForm();
   }
 
-  showToast('Stay interview deleted.');
-
   const employee = getCurrentEmployee();
   const employeeRecordId = String(employee?.dbId || employee?.id || '').trim();
 
   if (employeeRecordId) {
     await loadStayInterviews(employeeRecordId);
+
+    if (employee) {
+      const nextDate = await scheduleNextStayInterviewFromLatest(employee, employeeRecordId);
+      const scheduleNote = nextDate
+        ? ` Next due date is now ${describeScheduledNextStayInterview(nextDate)} based on the latest remaining interview.`
+        : '';
+
+      showToast(`Stay interview deleted.${scheduleNote}`);
+      return;
+    }
   }
+
+  showToast('Stay interview deleted.');
 }
 
 export function cancelStayInterviewEdit(): void {
