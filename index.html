@@ -7,19 +7,26 @@
       name="description"
       content="BTW Global Orbis — HR intelligence, employee records, care & engagement, and operations."
     />
-    <title>BTW Global Orbis</title>
-    <link rel="icon" href="data:," />
+    <title>Orbis | BTW Global</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/src/styles/app-shell.css" />
+    <link rel="stylesheet" href="/src/styles/orbis-brand.css" />
+    <link rel="stylesheet" href="/src/styles/orbis-space-theme.css" />
     <link rel="stylesheet" href="/src/styles/styles.css" />
+    <link rel="stylesheet" href="/src/styles/orbis-alerts.css" />
   </head>
 
   <body>
-    <div id="authView" class="auth-shell">
-      <div class="auth-card">
-        <div class="auth-head">
-          <h1>BTW Global Orbis</h1>
-          <p>HR Intelligence & Operations System</p>
+    <div id="authView" class="auth-shell auth-shell--branded">
+      <div class="auth-brand-hero">
+        <img class="orbis-brand-mark" src="/orbis-logo.svg" width="120" height="120" alt="" />
+        <div class="orbis-brand-lockup">
+          <span class="orbis-brand-name">ORBIS</span>
+          <span class="orbis-brand-tagline">BUILD • SOLVE • ELEVATE</span>
         </div>
+        <p class="orbis-brand-product">HR Intelligence &amp; Operations · BTW Global</p>
+      </div>
+      <div class="auth-card">
         <div class="auth-body">
           <div class="field">
             <label for="loginEmail">Email</label>
@@ -61,11 +68,17 @@
       <div class="orbis-app-shell">
         <aside class="orbis-sidebar" aria-label="Primary navigation">
           <div class="orbis-sidebar-brand">
-            <div class="orbis-sidebar-logo" aria-hidden="true">BTW</div>
-            <div>
-              <div class="orbis-sidebar-title">Orbis</div>
-              <div class="orbis-sidebar-subtitle">HR Intelligence</div>
+            <div class="orbis-sidebar-brand-row">
+              <div class="orbis-sidebar-logo" aria-hidden="true">
+                <img src="/orbis-logo.svg" width="44" height="44" alt="" />
+              </div>
+              <div>
+                <div class="orbis-sidebar-title">Orbis</div>
+                <div class="orbis-sidebar-tagline">Build · Solve · Elevate</div>
+              </div>
             </div>
+            <div class="orbis-sidebar-subtitle">HR Intelligence</div>
+            <div class="orbis-sidebar-company">BTW Global</div>
           </div>
           <nav class="orbis-sidebar-nav" aria-label="Main navigation">
             <button

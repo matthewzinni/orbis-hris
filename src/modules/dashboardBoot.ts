@@ -3,6 +3,7 @@
 // ============================================
 
 import { supabaseClient } from '../services/supabaseClient';
+import { isRecentHrActivityNote } from '../services/employeeSystemNotes';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { loadEmployees } from './employees';
 import { loadCandidates } from './candidates';
@@ -1018,6 +1019,7 @@ export async function loadRecentHrActivity(): Promise<void> {
     }
 
     const notes = ((notesRes.data || []) as Record<string, unknown>[])
+      .filter(isRecentHrActivityNote)
       .map((row) =>
         mapActivityRow(
           row,

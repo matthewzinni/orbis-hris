@@ -101,14 +101,116 @@ export function isActiveDashboardEmployee(employee: EmployeeLike | null | undefi
 export function daysUntilDate(dateValue: unknown): number | null {
   if (!dateValue) return null;
 
-  const date = new Date(`${String(dateValue)}T00:00:00`);
+  const date = parseDueDate(dateValue);
 
-  if (Number.isNaN(date.getTime())) return null;
+  if (!date) return null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
   return Math.ceil((date.getTime() - today.getTime()) / 86_400_000);
+}
+
+/** Calendar date at local midnight, or null when invalid. */
+export function parseDueDate(dateValue: unknown): Date | null {
+  if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) {
+    const copy = new Date(dateValue);
+    copy.setHours(0, 0, 0, 0);
+    return copy;
+  }
+
+  if (!dateValue) return null;
+
+  const parsed = new Date(`${String(dateValue).trim()}T00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function formatDueDateLabel(
+  date: Date | null,
+  rawFallback = ''
+): string {
+  if (date) {
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }
+
+  return String(rawFallback || '').trim();
+}
+
+export function readEmployeeNextStayInterviewDateRaw(
+  employee: EmployeeLike | null | undefined
+): string {
+  if (!employee) return '';
+
+  const record = employee as {
+    nextReview?: string | Date | null;
+    next_review_date?: string;
+    nextReviewDate?: string | Date;
+  };
+
+  if (record.nextReview instanceof Date && !Number.isNaN(record.nextReview.getTime())) {
+    return record.nextReview.toISOString().slice(0, 10);
+  }
+
+  return String(
+    record.nextReview ||
+      record.next_review_date ||
+      record.nextReviewDate ||
+      ''
+  ).trim();
+}
+
+export function getEmployeeNextStayInterviewDueDate(
+  employee: EmployeeLike | null | undefined
+): Date | null {
+  return parseDueDate(readEmployeeNextStayInterviewDateRaw(employee));
+}
+
+/** Earliest due date first (most overdue at top). Missing dates sort last. */
+export function compareByDueDateAsc(
+  leftDate: unknown,
+  rightDate: unknown
+): number {
+  const leftKey = parseDueDate(leftDate)?.getTime() ?? Number.POSITIVE_INFINITY;
+  const rightKey = parseDueDate(rightDate)?.getTime() ?? Number.POSITIVE_INFINITY;
+
+  return leftKey - rightKey;
+}
+
+export function compareEmployeesByDueDateAsc(
+  left: EmployeeLike | null | undefined,
+  right: EmployeeLike | null | undefined,
+  readDueDate: (
+    employee: EmployeeLike | null | undefined
+  ) => Date | null = getEmployeeNextStayInterviewDueDate
+): number {
+  const leftKey = readDueDate(left)?.getTime() ?? Number.POSITIVE_INFINITY;
+  const rightKey = readDueDate(right)?.getTime() ?? Number.POSITIVE_INFINITY;
+
+  if (leftKey !== rightKey) {
+    return leftKey - rightKey;
+  }
+
+  return compareEmployeesByLastName(left, right);
+}
+
+export function formatEmployeeDueDateLine(
+  employee: EmployeeLike | null | undefined,
+  readDueDate: (
+    employee: EmployeeLike | null | undefined
+  ) => Date | null = getEmployeeNextStayInterviewDueDate,
+  readRawDate: (
+    employee: EmployeeLike | null | undefined
+  ) => string = readEmployeeNextStayInterviewDateRaw
+): string {
+  const name = employeeDisplayName(employee);
+  const dueDate = readDueDate(employee);
+  const label = formatDueDateLabel(dueDate, readRawDate(employee));
+
+  return label ? `${name} • ${label}` : name;
 }
 
 declare global {

@@ -1,0 +1,162 @@
+/* Orbis brand — logo lockup, login cosmos shell, letterhead helpers */
+
+.auth-shell--branded {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(94, 231, 255, 0.12), transparent 34%),
+    radial-gradient(circle at 82% 78%, rgba(168, 85, 247, 0.16), transparent 36%),
+    linear-gradient(165deg, #050814 0%, #0b1530 42%, #1a0f3d 100%);
+}
+
+.auth-shell--branded::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 80px 120px, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1.5px 1.5px at 160px 60px, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 240px 180px, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1px 1px at 320px 90px, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 420px 140px, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 55px 200px, rgba(255, 255, 255, 0.25), transparent),
+    radial-gradient(1.5px 1.5px at 380px 40px, rgba(255, 255, 255, 0.3), transparent);
+  background-size: 460px 220px;
+  opacity: 0.85;
+}
+
+.auth-shell--branded .orbis-legal-footer {
+  position: relative;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.auth-brand-hero {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 32px;
+  color: #fff;
+}
+
+.auth-brand-hero .orbis-brand-mark {
+  width: 120px;
+  height: 120px;
+  display: block;
+  filter: drop-shadow(0 12px 36px rgba(79, 140, 255, 0.45));
+}
+
+.orbis-brand-lockup {
+  margin-top: 22px;
+}
+
+.orbis-brand-name {
+  display: block;
+  font-size: 2.75rem;
+  font-weight: 700;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  line-height: 1;
+}
+
+.orbis-brand-tagline {
+  display: block;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+
+.orbis-brand-product {
+  margin: 16px 0 0;
+  font-size: 1rem;
+  opacity: 0.8;
+}
+
+.auth-shell--branded .auth-card {
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.auth-shell--branded .auth-head {
+  display: none;
+}
+
+.auth-shell--branded .auth-body {
+  padding-top: 26px;
+}
+
+/* Sidebar brand */
+.orbis-sidebar-brand {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 6px 8px 12px;
+}
+
+.orbis-sidebar-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.orbis-sidebar-logo {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.orbis-sidebar-logo img {
+  width: 44px;
+  height: 44px;
+  display: block;
+}
+
+.orbis-sidebar-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  text-transform: uppercase;
+}
+
+.orbis-sidebar-tagline {
+  margin-top: 2px;
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.orbis-sidebar-subtitle {
+  margin-top: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  opacity: 0.68;
+}
+
+.orbis-sidebar-company {
+  width: 100%;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}

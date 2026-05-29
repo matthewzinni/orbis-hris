@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" role="img" aria-label="Orbis">
+  <defs>
+    <linearGradient id="orbisGrad" x1="8" y1="8" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5ee7ff"/>
+      <stop offset="45%" stop-color="#4f8cff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="60" cy="60" rx="50" ry="15" stroke="url(#orbisGrad)" stroke-width="4.5" transform="rotate(-24 60 60)"/>
+  <circle cx="60" cy="60" r="27" stroke="url(#orbisGrad)" stroke-width="4.5"/>
+  <line x1="41" y1="41" x2="79" y2="79" stroke="url(#orbisGrad)" stroke-width="4.5" stroke-linecap="round"/>
+  <circle cx="41" cy="41" r="5.5" fill="url(#orbisGrad)"/>
+  <circle cx="79" cy="79" r="5.5" fill="url(#orbisGrad)"/>
+</svg>

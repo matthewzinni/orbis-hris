@@ -1,3 +1,4 @@
+import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { stopAllDictation } from './dictation';
@@ -235,7 +236,14 @@ export async function loadEmployeeNotes(employeeId: string): Promise<void> {
     return;
   }
 
-  const rows = data as EmployeeNote[];
+  const rows = (data as EmployeeNote[]).filter(
+    (row) => !isSystemEmployeeNoteType(row.note_type)
+  );
+
+  if (!rows.length) {
+    target.innerHTML = '<div class="empty">No notes for this employee</div>';
+    return;
+  }
 
   target.innerHTML = rows
     .map(

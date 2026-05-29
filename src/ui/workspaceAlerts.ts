@@ -185,6 +185,32 @@ export function updateWorkspaceAlerts(): void {
   renderAlertsPanel(collectWorkspaceAlerts());
 }
 
+function mountAlertsPanelPortal(): void {
+  const panel = document.getElementById('orbisAlertsPanel');
+  if (!panel || panel.dataset.portaled === 'true') return;
+
+  document.body.appendChild(panel);
+  panel.dataset.portaled = 'true';
+}
+
+function positionAlertsPanel(): void {
+  const panel = document.getElementById('orbisAlertsPanel');
+  const btn = document.getElementById('orbisAlertsBtn');
+
+  if (!panel || !btn || panel.classList.contains('hidden')) return;
+
+  const rect = btn.getBoundingClientRect();
+  const width = Math.min(320, window.innerWidth - 32);
+  const right = Math.max(16, window.innerWidth - rect.right);
+  const top = rect.bottom + 8;
+
+  panel.style.position = 'fixed';
+  panel.style.top = `${top}px`;
+  panel.style.right = `${right}px`;
+  panel.style.left = 'auto';
+  panel.style.width = `${width}px`;
+}
+
 function setAlertsPanelOpen(open: boolean): void {
   const panel = document.getElementById('orbisAlertsPanel');
   const btn = document.getElementById('orbisAlertsBtn');
@@ -194,6 +220,16 @@ function setAlertsPanelOpen(open: boolean): void {
   panel.classList.toggle('open', open);
   panel.classList.toggle('hidden', !open);
   btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+  if (open) {
+    positionAlertsPanel();
+  } else {
+    panel.style.position = '';
+    panel.style.top = '';
+    panel.style.right = '';
+    panel.style.left = '';
+    panel.style.width = '';
+  }
 }
 
 function bindWorkspaceAlerts(): void {
@@ -202,6 +238,8 @@ function bindWorkspaceAlerts(): void {
   }
 
   (window as { __workspaceAlertsBound?: boolean }).__workspaceAlertsBound = true;
+
+  mountAlertsPanelPortal();
 
   const btn = document.getElementById('orbisAlertsBtn');
   const panel = document.getElementById('orbisAlertsPanel');
@@ -238,6 +276,22 @@ function bindWorkspaceAlerts(): void {
   window.addEventListener('orbis:section-change', () => {
     setAlertsPanelOpen(false);
   });
+
+  window.addEventListener('resize', () => {
+    if (panel?.classList.contains('open')) {
+      positionAlertsPanel();
+    }
+  });
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (panel?.classList.contains('open')) {
+        positionAlertsPanel();
+      }
+    },
+    true
+  );
 
   updateWorkspaceAlerts();
 }

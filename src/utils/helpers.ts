@@ -1,5 +1,7 @@
 // Shared DOM helpers, toast, and print utilities (ported from js/utils/helpers.js)
 
+import { orbisLetterheadHtml, orbisPrintFooterHtml } from '../brand/letterhead';
+
 type EmployeeLike = {
   id?: string;
   dbId?: string;
@@ -307,26 +309,18 @@ export function printRecord(title: string, contentHTML: string): void {
 
   container.innerHTML = `
     <div style="font-family: Arial, sans-serif; color:#111; padding:24px; max-width:800px; margin:0 auto; background:#fff;">
-      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:20px; margin-bottom:18px; border-bottom:2px solid #111; padding-bottom:14px;">
-        <div>
-          <div style="font-size:24px; font-weight:700; letter-spacing:0.02em;">BTW Global</div>
-          <div style="font-size:12px; color:#666; margin-top:4px;">HR Record Export</div>
-        </div>
-        <div style="text-align:right; font-size:12px; color:#555; line-height:1.5;">
-          <div><strong>Generated:</strong> ${new Date().toLocaleDateString()}</div>
-          <div><strong>Type:</strong> ${esc(title)}</div>
-        </div>
-      </div>
-      <div style="margin-bottom:16px;">
-        <div style="font-size:20px; font-weight:700; margin-bottom:6px;">${esc(title)}</div>
-        <div style="font-size:13px; color:#666;">Prepared from the BTW Global HRIS</div>
-      </div>
+      ${orbisLetterheadHtml({
+        documentTitle: title,
+        subtitle: 'HR Intelligence & Operations',
+        metaLines: [
+          `<strong>Generated:</strong> ${new Date().toLocaleDateString()}`,
+          `<strong>Type:</strong> ${esc(title)}`,
+        ],
+      })}
       <div style="font-size:14px; line-height:1.6;">
         ${contentHTML}
       </div>
-      <div style="margin-top:28px; padding-top:12px; border-top:1px solid #ddd; font-size:11px; color:#888; text-align:center;">
-        Copyright © 2026 | BTW Global, LLC
-      </div>
+      ${orbisPrintFooterHtml()}
     </div>
   `;
 

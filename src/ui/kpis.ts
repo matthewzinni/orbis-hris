@@ -2,8 +2,12 @@ import { getEmployeeById, loadEmployees } from '../modules/employees';
 import { supabaseClient } from '../services/supabaseClient';
 import { hideKpiRetryBanner, showKpiRetryBanner } from './dashboardRetry';
 import {
+  compareEmployeesByDueDateAsc,
   daysUntilDate,
   employeeDisplayName,
+  formatDueDateLabel,
+  formatEmployeeDueDateLine,
+  getEmployeeNextStayInterviewDueDate,
   isActiveDashboardEmployee,
 } from '../services/employeeUtils';
 import { hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
@@ -366,19 +370,23 @@ function isOnLeaveStatus(status: string): boolean {
 }
 
 function getEmployeeNextReviewDate(employee: KpiEmployeeRecord): Date | null {
-  const raw =
-    employee.nextReview ||
-    employee.next_review_date ||
-    (employee as { nextReviewDate?: string | Date }).nextReviewDate;
+  return getEmployeeNextStayInterviewDueDate(employee);
+}
 
-  if (raw instanceof Date && !Number.isNaN(raw.getTime())) {
-    return raw;
-  }
+function sortOverdueStayInterviewEmployees(
+  employees: KpiEmployeeRecord[]
+): KpiEmployeeRecord[] {
+  return [...employees].sort((left, right) =>
+    compareEmployeesByDueDateAsc(left, right, getEmployeeNextStayInterviewDueDate)
+  );
+}
 
-  if (!raw) return null;
-
-  const parsed = new Date(`${String(raw)}T00:00:00`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
+function buildOverdueStayInterviewLines(
+  employees: KpiEmployeeRecord[]
+): string[] {
+  return sortOverdueStayInterviewEmployees(employees)
+    .map((employee) => formatEmployeeDueDateLine(employee))
+    .filter(Boolean);
 }
 
 function applyReviewImpactPlayers(
@@ -580,13 +588,7 @@ function setKpiCardTooltip(
 }
 
 function formatReviewDateLabel(reviewDate: Date | null): string {
-  if (!reviewDate) return '';
-
-  return reviewDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return formatDueDateLabel(reviewDate);
 }
 
 function getEmployeeDepartmentLabel(employee: KpiEmployeeRecord): string {
@@ -783,18 +785,15 @@ export function buildKpiHoverDetails(): void {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const overdueReviews = reviewEligibleActive
-    .filter((employee) => isReviewOverdue(employee, today))
-    .map((employee) => {
-      const name = employeeDisplayName(employee);
-      const dateLabel = getEmployeeNextReviewLabel(employee);
+  const overdueReviewEmployees = reviewEligibleActive.filter((employee) =>
+    isReviewOverdue(employee, today)
+  );
 
-      return dateLabel ? `${name} • ${dateLabel}` : name;
-    })
-    .filter(Boolean)
-    .sort(compareKpiText);
-
-  setKpiCardTooltip('cardReviewsDue', overdueReviews, 'No overdue stay interviews');
+  setKpiCardTooltip(
+    'cardReviewsDue',
+    buildOverdueStayInterviewLines(overdueReviewEmployees),
+    'No overdue stay interviews'
+  );
 
   const metrics = buildKpiMetrics(roster);
 
@@ -897,13 +896,10 @@ export function renderKpiEmployeeMetrics(): void {
 
   const reviewsDueInfo = safeGet('kReviewsDueInfo');
   if (reviewsDueInfo) {
-    const overdueNames = overdueReviewEmployees
-      .map((employee) => employeeDisplayName(employee))
-      .filter(Boolean)
-      .sort(compareKpiText);
+    const overdueLines = buildOverdueStayInterviewLines(overdueReviewEmployees);
 
-    reviewsDueInfo.title = overdueNames.length
-      ? `Counts active non-contract employees whose next stay interview date is today or earlier. Due now: ${overdueNames.join(', ')}`
+    reviewsDueInfo.title = overdueLines.length
+      ? `Counts active non-contract employees whose next stay interview date is today or earlier. Due now (oldest first): ${overdueLines.join('; ')}`
       : 'Counts active non-contract employees whose next stay interview date is today or earlier. No overdue stay interviews right now.';
   }
 

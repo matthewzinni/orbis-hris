@@ -33,6 +33,7 @@ from datetime import date, datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from html import escape
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
@@ -596,6 +597,35 @@ def render_detail_table(
 """
 
 
+def _orbis_logo_svg_inline(width: int = 56) -> str:
+    repo_root = Path(__file__).resolve().parent.parent
+    logo_path = repo_root / "public" / "orbis-logo.svg"
+    if not logo_path.is_file():
+        return ""
+    svg = logo_path.read_text(encoding="utf-8").strip()
+    return svg.replace('viewBox="0 0 120 120"', f'width="{width}" height="{width}" viewBox="0 0 120 120"', 1)
+
+
+def _orbis_letterhead_html(document_title: str, report_date: str) -> str:
+    logo = _orbis_logo_svg_inline()
+    logo_cell = (
+        f'<div style="flex-shrink:0;width:56px;height:56px;">{logo}</div>'
+        if logo
+        else ""
+    )
+    return f"""\
+  <div style="display:flex;align-items:flex-start;gap:16px;padding-bottom:16px;margin-bottom:22px;border-bottom:2px solid #e2e8f0;">
+    {logo_cell}
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:26px;font-weight:700;letter-spacing:0.32em;color:#0f172a;line-height:1;">ORBIS</div>
+      <div style="margin-top:6px;font-size:10px;font-weight:600;letter-spacing:0.28em;color:#64748b;text-transform:uppercase;">BUILD • SOLVE • ELEVATE</div>
+      <div style="margin-top:8px;font-size:12px;color:#64748b;">HR Intelligence &amp; Operations · BTW Global, LLC</div>
+      <div style="margin-top:12px;font-size:18px;font-weight:700;color:#102a43;">{escape(document_title)}</div>
+      <div style="margin-top:4px;font-size:13px;color:#64748b;">Report date: {report_date}</div>
+    </div>
+  </div>"""
+
+
 def build_html(metrics: dict[str, Any]) -> str:
     app_url = os.environ.get("ORBIS_APP_URL", "").strip()
     report_date = escape(str(metrics.get("report_date") or ""))
@@ -683,9 +713,8 @@ def build_html(metrics: dict[str, Any]) -> str:
     return f"""\
 <!DOCTYPE html>
 <html>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #102a43; line-height: 1.5;">
-  <h2 style="margin: 0 0 8px;">Orbis Weekly HR Snapshot</h2>
-  <p style="margin: 0 0 20px; color: #64748b;">Report date: {report_date}</p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #102a43; line-height: 1.5; max-width: 820px; margin: 0 auto; padding: 24px;">
+  {_orbis_letterhead_html("Weekly HR Snapshot", report_date)}
 
   <h3 style="margin: 0 0 10px;">Summary</h3>
   <table cellpadding="8" cellspacing="0" style="border-collapse: collapse; width: 100%; max-width: 520px;">
@@ -707,7 +736,7 @@ def build_html(metrics: dict[str, Any]) -> str:
 
 {detail_sections}
   <p style="margin-top: 24px; font-size: 13px; color: #64748b;">
-    Copyright © 2026 | BTW Global, LLC<br />
+    Copyright © 2026 | BTW Global, LLC · Powered by Orbis<br />
     Generated automatically from Orbis / Supabase. Totals may differ slightly from the live dashboard filters.
   </p>
   {footer_link}

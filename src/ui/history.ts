@@ -1,3 +1,4 @@
+import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
 import { supabaseClient } from '../services/supabaseClient';
 import { esc } from '../utils/helpers';
 
@@ -233,11 +234,13 @@ export async function loadEmployeeHistory(employeeId: string): Promise<void> {
   ]);
 
   const timeline: TimelineItem[] = [
-    ...notes.map((note) => ({
-      type: 'Note',
-      date: String(note.note_date || ''),
-      text: String(note.note_text || ''),
-    })),
+    ...notes
+      .filter((note) => !isSystemEmployeeNoteType(note.note_type))
+      .map((note) => ({
+        type: 'Note',
+        date: String(note.note_date || ''),
+        text: String(note.note_text || ''),
+      })),
     ...meetings.map((meeting) => ({
       type: 'Meeting',
       date: String(meeting.meeting_date || ''),

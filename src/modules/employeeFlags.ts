@@ -253,16 +253,12 @@ export async function clearAtRiskStatus(): Promise<void> {
   }
 
   const employeeDbId = getEmployeeDbId(currentEmployee);
-  const noteText =
-    String((safeGet('atRiskReasonInput') as HTMLTextAreaElement | null)?.value || '').trim() ||
-    'Manual at-risk flag cleared';
-
   const { error } = await supabaseClient.from('employee_notes').insert([
     {
       employee_id: employeeDbId,
       note_date: todayInputValue(),
       note_type: 'At-Risk Cleared',
-      note_text: noteText,
+      note_text: '',
     },
   ]);
 
@@ -273,7 +269,7 @@ export async function clearAtRiskStatus(): Promise<void> {
   }
 
   showToast('At-risk flag cleared.');
-  recordAuditEvent('Cleared At-Risk', currentEmployee, noteText);
+  recordAuditEvent('Cleared At-Risk', currentEmployee, 'Manual at-risk flag cleared');
   setManualAtRiskUi(false, '');
 
   removeEmployeeFromAtRiskMap(currentEmployee);
@@ -345,16 +341,12 @@ export async function clearImpactPlayerStatus(): Promise<void> {
   }
 
   const employeeDbId = getEmployeeDbId(currentEmployee);
-  const noteText =
-    String((safeGet('impactPlayerReasonInput') as HTMLTextAreaElement | null)?.value || '').trim() ||
-    'Manual Impact Player flag cleared';
-
   const { error } = await supabaseClient.from('employee_notes').insert([
     {
       employee_id: employeeDbId,
       note_date: todayInputValue(),
       note_type: 'Impact Player Cleared',
-      note_text: noteText,
+      note_text: '',
     },
   ]);
 
@@ -365,7 +357,7 @@ export async function clearImpactPlayerStatus(): Promise<void> {
   }
 
   showToast('Impact Player flag cleared.');
-  recordAuditEvent('Cleared Impact Player', currentEmployee, noteText);
+  recordAuditEvent('Cleared Impact Player', currentEmployee, 'Manual Impact Player flag cleared');
   setManualImpactPlayerUi(false, '');
 
   removeEmployeeFromImpactMap(currentEmployee);
