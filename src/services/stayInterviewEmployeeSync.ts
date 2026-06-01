@@ -4,6 +4,38 @@ import {
   formatStayInterviewScheduleLabel,
 } from './stayInterviewSchedule';
 
+function maxIsoDate(left: string | null, right: string | null): string | null {
+  const a = String(left || '').trim();
+  const b = String(right || '').trim();
+
+  if (!a) return b || null;
+  if (!b) return a;
+  return a >= b ? a : b;
+}
+
+export async function fetchEmployeeNextStayInterviewDate(
+  employeeRecordId: string
+): Promise<string | null> {
+  const recordId = String(employeeRecordId || '').trim();
+
+  if (!recordId) {
+    return null;
+  }
+
+  const { data, error } = await supabaseClient
+    .from('employees')
+    .select('next_review_date')
+    .eq('id', recordId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[StayInterviews] Could not read next stay interview date:', error);
+    return null;
+  }
+
+  return String(data?.next_review_date || '').trim() || null;
+}
+
 export async function fetchLatestStayInterviewDate(
   employeeIds: string[]
 ): Promise<string | null> {
@@ -75,6 +107,39 @@ export async function syncEmployeeNextStayInterviewFromLatestRecord(
   }
 
   return syncEmployeeNextStayInterviewFromLastDate(employeeRecordId, latestDate);
+}
+
+/**
+ * After saving a stay interview: compute from the latest interview date, try a direct
+ * employee update (admins), then read back from employees (DB trigger works for all roles).
+ */
+export async function syncEmployeeNextStayInterviewAfterStayInterviewSaved(
+  employeeRecordId: string,
+  employeeLookupIds: string[],
+  savedInterviewDate?: string | null
+): Promise<{ nextDate: string | null; error: Error | null }> {
+  const latestFromRecords = await fetchLatestStayInterviewDate(employeeLookupIds);
+  const saved = String(savedInterviewDate || '').trim();
+  const effectiveLast = maxIsoDate(latestFromRecords, saved);
+
+  if (!effectiveLast) {
+    return { nextDate: null, error: null };
+  }
+
+  await syncEmployeeNextStayInterviewFromLastDate(employeeRecordId, effectiveLast);
+
+  const fromDb = await fetchEmployeeNextStayInterviewDate(employeeRecordId);
+  const expected = computeNextStayInterviewDateFromLast(effectiveLast);
+
+  if (fromDb) {
+    return { nextDate: fromDb, error: null };
+  }
+
+  if (expected) {
+    return { nextDate: expected, error: null };
+  }
+
+  return { nextDate: null, error: null };
 }
 
 export function describeScheduledNextStayInterview(nextDate: string): string {

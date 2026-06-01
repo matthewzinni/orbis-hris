@@ -2,6 +2,7 @@ import { supabaseClient } from '../services/supabaseClient';
 import { employeeDisplayName } from '../services/employeeUtils';
 import {
   describeScheduledNextStayInterview,
+  syncEmployeeNextStayInterviewAfterStayInterviewSaved,
   syncEmployeeNextStayInterviewFromLatestRecord,
 } from '../services/stayInterviewEmployeeSync';
 import {
@@ -171,6 +172,34 @@ async function refreshStayInterviewSchedulingUi(): Promise<void> {
   }
 }
 
+async function scheduleNextStayInterviewAfterSave(
+  employee: StayInterviewEmployee,
+  employeeRecordId: string,
+  savedInterviewDate: string
+): Promise<string | null> {
+  const lookupIds = getEmployeeLookupIds(employee, employeeRecordId);
+  const { nextDate, error } = await syncEmployeeNextStayInterviewAfterStayInterviewSaved(
+    employeeRecordId,
+    lookupIds,
+    savedInterviewDate
+  );
+
+  if (error) {
+    console.error('[StayInterviews] Could not update next stay interview date:', error);
+    showToast('Stay interview saved, but the next due date could not be updated.', 'error');
+    return null;
+  }
+
+  if (!nextDate) {
+    return null;
+  }
+
+  applyNextStayInterviewToEmployeeState(employee, nextDate);
+  await refreshStayInterviewSchedulingUi();
+
+  return nextDate;
+}
+
 async function scheduleNextStayInterviewFromLatest(
   employee: StayInterviewEmployee,
   employeeRecordId: string
@@ -183,7 +212,6 @@ async function scheduleNextStayInterviewFromLatest(
 
   if (error) {
     console.error('[StayInterviews] Could not update next stay interview date:', error);
-    showToast('Stay interview saved, but the next due date could not be updated.', 'error');
     return null;
   }
 
@@ -445,9 +473,12 @@ export async function saveStayInterview(): Promise<void> {
     return;
   }
 
+  const interviewDate =
+    safeGet<HTMLInputElement>('stayInterviewDate')?.value?.trim() || todayInputValue();
+
   const payload = {
     employee_id: employeeRecordId,
-    interview_date: safeGet<HTMLInputElement>('stayInterviewDate')?.value || null,
+    interview_date: interviewDate,
     interview_type: safeGet<HTMLSelectElement>('stayInterviewType')?.value || '',
     q1: safeGet<HTMLTextAreaElement>('stayQ1')?.value || '',
     q2: safeGet<HTMLTextAreaElement>('stayQ2')?.value || '',
@@ -475,14 +506,22 @@ export async function saveStayInterview(): Promise<void> {
   }
 
   if (error) {
+    const detail =
+      typeof error.message === 'string' && error.message.trim()
+        ? error.message.trim()
+        : 'Unknown error';
     console.error('[StayInterviews] Could not save stay interview:', error);
-    showToast('Could not save stay interview.', 'error');
+    showToast(`Could not save stay interview: ${detail}`, 'error');
     return;
   }
 
-  const nextDate = await scheduleNextStayInterviewFromLatest(employee, employeeRecordId);
+  const nextDate = await scheduleNextStayInterviewAfterSave(
+    employee,
+    employeeRecordId,
+    interviewDate
+  );
   const scheduleNote = nextDate
-    ? ` Next stay interview due ${describeScheduledNextStayInterview(nextDate)} (6 months after the latest interview; weekends move to Fri/Mon).`
+    ? ` Next stay interview due ${describeScheduledNextStayInterview(nextDate)} (6 months after this interview; Sat→Fri, Sun→Mon).`
     : '';
 
   showToast(
