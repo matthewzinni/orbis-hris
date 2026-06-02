@@ -105,6 +105,10 @@ export function sanitizeDisciplineAutofillLeak(forceClear = false): void {
       actionField.value = '';
     }
   }
+
+  if (typeof window.scrubAllSignatureNameInputs === 'function') {
+    window.scrubAllSignatureNameInputs();
+  }
 }
 
 export function ensureDrawerTabFallbacks(

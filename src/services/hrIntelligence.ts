@@ -72,6 +72,23 @@ export function isOpenDisciplineStatus(status: unknown): boolean {
   return OPEN_DISCIPLINE_STATUSES.has(String(status || 'open').trim().toLowerCase());
 }
 
+/** Coaching, verbal, and written warnings do not auto-flag at-risk. */
+export function isSevereDisciplineLevel(level: unknown): boolean {
+  const raw = String(level || '').trim().toLowerCase();
+  if (!raw) return false;
+
+  return (
+    raw.includes('final warning') ||
+    raw.includes('level 4') ||
+    raw.includes('termination') ||
+    raw.includes('level 5')
+  );
+}
+
+export function countsTowardAtRiskDiscipline(level: unknown): boolean {
+  return isSevereDisciplineLevel(level);
+}
+
 export function isOpenOperationsIssue(status: unknown): boolean {
   return !CLOSED_OPERATIONS_STATUSES.has(String(status || '').trim().toLowerCase());
 }
@@ -117,6 +134,7 @@ export function buildHrIntelligenceContext(input: {
 
   (input.disciplineRows || []).forEach((row) => {
     if (!isOpenDisciplineStatus(row.report_status)) return;
+    if (!countsTowardAtRiskDiscipline(row.discipline_level)) return;
     const employeeId = String(row.employee_id || '').trim();
     if (!employeeId) return;
     disciplineOpenByEmployee.set(employeeId, (disciplineOpenByEmployee.get(employeeId) || 0) + 1);
@@ -352,7 +370,7 @@ export function buildExecutiveInsightLines(input: {
   if (atRiskCount) {
     lines.push({
       tone: 'attention',
-      text: `${atRiskCount} employee${atRiskCount === 1 ? '' : 's'} are flagged at-risk from low review scores, manual HR flags, or open discipline. Review the At-Risk list for names and departments.`,
+      text: `${atRiskCount} employee${atRiskCount === 1 ? '' : 's'} are flagged at-risk from low review scores, manual HR flags, or severe open discipline (final warning+). Review the At-Risk list for names and departments.`,
     });
   } else if (input.dueSoonStayCount > 0) {
     lines.push({

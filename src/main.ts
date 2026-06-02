@@ -5,6 +5,7 @@ import './styles/orbis-polish.css';
 import './styles/styles.css';
 import './styles/care-engagement.css';
 import './styles/orbis-alerts.css';
+import './styles/org-chart.css';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
 import {
@@ -38,6 +39,8 @@ import './ui/workspaceAlerts';
 import './ui/departmentSummary';
 import './modules/onboarding';
 import './modules/employees';
+import './modules/orgChart';
+import './modules/attendance';
 import './modules/dashboardBoot';
 import './ui/executiveInsight';
 import './ui/dashboardDisclosure';

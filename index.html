@@ -92,11 +92,22 @@
             <button class="orbis-nav-item" type="button" data-nav-view="employeesView">
               Employees
             </button>
+            <button class="orbis-nav-item" type="button" data-nav-view="orgChartView">
+              Org Chart
+            </button>
             <button class="orbis-nav-item" type="button" data-nav-view="candidatesView">
               Candidates
             </button>
             <button class="orbis-nav-item" type="button" data-nav-view="documentsView">
               Documents
+            </button>
+            <button
+              class="orbis-nav-item hidden"
+              type="button"
+              data-nav-view="attendanceView"
+              data-attendance-access
+            >
+              Attendance
             </button>
             <button
               class="orbis-nav-item"
@@ -244,7 +255,7 @@
             <div class="kpi-label">At-Risk Employees</div>
             <div class="kpi-value" id="kAtRiskEmployees">—</div>
             <div class="kpi-sub" id="kAtRiskEmployeesSub">
-              Flagged from low review scores, manual HR notes, or open discipline
+              Flagged from low review scores, manual HR notes, or severe open discipline (final warning+)
             </div>
           </div>
           <div class="kpi-card warn" id="cardOnLeave">
@@ -285,6 +296,9 @@
                 <div class="dashboard-quick-links-grid">
                   <button class="button soft" type="button" data-nav-view="employeesView">
                     Employee Roster
+                  </button>
+                  <button class="button soft" type="button" data-nav-view="orgChartView">
+                    Org Chart
                   </button>
                   <button class="button soft" type="button" data-nav-view="candidatesView">
                     Candidate Pipeline
@@ -558,6 +572,137 @@
                     </thead>
                     <tbody id="employeeRosterBody"></tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="orbisSectionOrgChart"
+          class="orbis-app-section hidden"
+          data-section="orgChartView"
+          aria-hidden="true"
+        >
+          <div class="page">
+            <div class="card" id="orgChartPage">
+              <div class="card-header">
+                <span>Organization Chart</span>
+                <span class="muted org-chart-summary" id="orgChartSummary"></span>
+              </div>
+              <div class="card-body">
+                <div class="org-chart-toolbar">
+                  <div class="org-chart-toolbar-left">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="orgChartActiveOnly" checked />
+                      Active employees only
+                    </label>
+                    <span class="muted" style="font-size: 0.85rem">
+                      Built from each employee’s Supervisor field on the roster.
+                    </span>
+                  </div>
+                  <div class="toolbar-right">
+                    <button class="button soft" type="button" id="orgChartRefreshBtn">Refresh</button>
+                    <button class="button soft" type="button" id="orgChartPrintBtn">Print</button>
+                  </div>
+                </div>
+                <div id="orgChartTree" class="org-chart-tree" role="tree" aria-label="Reporting hierarchy">
+                  <p class="empty">Loading org chart…</p>
+                </div>
+              </div>
+            </div>
+            <div class="card hidden" id="orgChartUnlinkedCard">
+              <div class="card-header">Supervisor not in roster</div>
+              <div class="card-body">
+                <p class="muted" style="margin-bottom: 12px">
+                  These employees have a supervisor on file who does not match anyone in your current
+                  view. They still appear in the tree as top-level nodes.
+                </p>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Supervisor on file</th>
+                      </tr>
+                    </thead>
+                    <tbody id="orgChartUnlinkedBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="orbisSectionAttendance"
+          class="orbis-app-section hidden"
+          data-section="attendanceView"
+          aria-hidden="true"
+        >
+          <div class="page" id="attendancePage">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Intuit Workforce live attendance</span>
+              </div>
+              <div class="toolbar-right">
+                <button class="button soft" id="attendanceSyncBtn" type="button">Sync now</button>
+              </div>
+            </div>
+            <div class="kpi-grid compact-grid">
+              <div class="kpi-card">
+                <div class="kpi-label">Present</div>
+                <div class="kpi-value" id="attendancePresentCount">—</div>
+                <div class="kpi-sub">Employees clocked in / present</div>
+              </div>
+              <div class="kpi-card warm-accent">
+                <div class="kpi-label">Absent</div>
+                <div class="kpi-value" id="attendanceAbsentCount">—</div>
+                <div class="kpi-sub">Employees marked absent</div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <span>Attendance Snapshot</span>
+                <span class="muted">As of <span id="attendanceAsOf">—</span> · <span id="attendanceSource">Intuit Workforce</span></span>
+              </div>
+              <div class="card-body">
+                <div class="detail-grid" style="margin-bottom: 12px">
+                  <div>
+                    <div class="detail-label">Present roster</div>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                          </tr>
+                        </thead>
+                        <tbody id="attendancePresentBody">
+                          <tr><td colspan="3" class="empty">Click “Sync now” to load attendance.</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <div>
+                    <div class="detail-label">Absent roster</div>
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                          </tr>
+                        </thead>
+                        <tbody id="attendanceAbsentBody">
+                          <tr><td colspan="3" class="empty">Click “Sync now” to load attendance.</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4065,6 +4210,7 @@
                         id="employeeTenureBracketInput"
                         type="text"
                         placeholder="0-6 months, 1-2 years, etc."
+                        autocomplete="section-orbis-admin tenure"
                       />
                     </div>
                   </div>
@@ -4184,127 +4330,6 @@
        5. Main app bootstrap
        Keep this order so shared functions exist before modules use them.
   ====================================================== -->
-    <!-- 6. App Bootstrap -->
-    <script>
-      function initSig(canvasId, statusId) {
-        const canvas = document.getElementById(canvasId);
-
-        const status = document.getElementById(statusId);
-
-        if (!canvas) return;
-
-        if (canvas.dataset.sigInitialized === 'true') return;
-
-        canvas.dataset.sigInitialized = 'true';
-
-        const ctx = canvas.getContext('2d');
-
-        let drawing = false;
-
-        function getPos(event) {
-          const rect = canvas.getBoundingClientRect();
-
-          const point = event.touches ? event.touches[0] : event;
-
-          return {
-            x: point.clientX - rect.left,
-
-            y: point.clientY - rect.top,
-          };
-        }
-
-        function startDrawing(event) {
-          drawing = true;
-
-          const pos = getPos(event);
-
-          ctx.beginPath();
-
-          ctx.moveTo(pos.x, pos.y);
-        }
-
-        function draw(event) {
-          if (!drawing) return;
-
-          if (event.touches) {
-            event.preventDefault();
-          }
-
-          const pos = getPos(event);
-
-          ctx.lineTo(pos.x, pos.y);
-
-          ctx.stroke();
-        }
-
-        function stopDrawing() {
-          if (!drawing) return;
-
-          drawing = false;
-
-          canvas.dataset.signature = canvas.toDataURL();
-
-          if (status) {
-            status.textContent = 'Signed';
-
-            status.style.color = 'green';
-          }
-        }
-
-        canvas.addEventListener('mousedown', startDrawing);
-
-        canvas.addEventListener('mousemove', draw);
-
-        window.addEventListener('mouseup', stopDrawing);
-
-        canvas.addEventListener('touchstart', startDrawing);
-
-        canvas.addEventListener('touchmove', draw);
-
-        canvas.addEventListener('touchend', stopDrawing);
-      }
-
-      function clearSig(canvasId, statusId) {
-        const canvas = document.getElementById(canvasId);
-
-        const status = document.getElementById(statusId);
-
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        canvas.dataset.signature = '';
-
-        if (status) {
-          status.textContent = 'Not signed';
-
-          status.style.color = '#667085';
-        }
-      }
-
-      function initDisciplineSignaturePads() {
-        initSig('disciplineEmployeeSignature', 'disciplineEmployeeSigStatus');
-
-        initSig('disciplineManagerSignature', 'disciplineManagerSigStatus');
-
-        initSig('disciplineWitnessSignature', 'disciplineWitnessSigStatus');
-      }
-
-      document.addEventListener('DOMContentLoaded', initDisciplineSignaturePads);
-
-      document.addEventListener('click', (event) => {
-        const tabBtn = event.target.closest('.tab-btn');
-
-        if (!tabBtn) return;
-
-        if (tabBtn.dataset.tab !== 'discipline') return;
-
-        setTimeout(initDisciplineSignaturePads, 200);
-      });
-    </script>
-
     <script type="module" src="/src/main.ts"></script>
 
 

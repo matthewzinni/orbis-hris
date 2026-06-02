@@ -1,33 +1,345 @@
 /**
- * Canvas signature pads for ER forms (discipline, incidents, performance reviews).
+ * ER form signatures: typed digital signature + optional draw + remote signing links.
  */
+
+import '../styles/signature-field.css';
+import { copySigningLink, createSignatureRequest, type SignatureFormType } from '../services/signatureRequests';
 
 const initializedPads = new Set<string>();
 
-export function initSignaturePad(canvasId: string, statusId: string): void {
+export type SignatureRequestContext = {
+  formType: SignatureFormType;
+  recordId: string;
+  employeeId: string;
+  signerName?: string;
+  signerEmail?: string;
+};
+
+let signatureRequestContext: SignatureRequestContext | null = null;
+
+export function setSignatureRequestContext(context: SignatureRequestContext | null): void {
+  signatureRequestContext = context;
+}
+
+export function getSignatureRequestContext(): SignatureRequestContext | null {
+  return signatureRequestContext;
+}
+
+const TENURE_AUTOFILL_PATTERN =
+  /^\d+\s*[-–]\s*\d+(\s*(year|yr|month|mo)s?)?$/i;
+
+function isLikelyAutofillLeak(value: string): boolean {
+  const trimmed = String(value || '').trim();
+  if (!trimmed) return false;
+
+  if (TENURE_AUTOFILL_PATTERN.test(trimmed)) return true;
+
+  const lower = trimmed.toLowerCase();
+  if (/\d+\s*[-–]\s*\d+/.test(lower) && /\b(year|yr|month|mo)\b/.test(lower)) {
+    return true;
+  }
+
+  if (/^0\s*[-–]\s*1\b/.test(lower)) return true;
+
+  return (
+    lower === 'hourly' ||
+    lower === 'salary' ||
+    lower === 'active' ||
+    lower === 'inactive' ||
+    lower === 'terminated' ||
+    lower.includes('0-6 month') ||
+    lower.includes('1-2 year') ||
+    lower.includes('0-1 year')
+  );
+}
+
+function scrubSignatureNameInput(input: HTMLInputElement | null | undefined): void {
+  if (!input) return;
+  if (!isLikelyAutofillLeak(input.value)) return;
+
+  input.value = '';
+
+  const canvas = input
+    .closest('.signature-field-controls')
+    ?.parentElement?.querySelector('canvas') as HTMLCanvasElement | null;
+
+  if (!canvas?.id) return;
+
+  const statusId = canvas.id.replace(/Signature$/i, 'SigStatus');
+  clearSignaturePad(canvas.id, statusId);
+}
+
+function applySignatureAutofillGuards(input: HTMLInputElement, canvasId: string): void {
+  input.id = `sigLegalName_${canvasId}`;
+  input.removeAttribute('name');
+  input.setAttribute('autocomplete', 'new-password');
+  input.setAttribute('autocorrect', 'off');
+  input.setAttribute('autocapitalize', 'words');
+  input.setAttribute('spellcheck', 'false');
+  input.setAttribute('data-lpignore', 'true');
+  input.setAttribute('data-1p-ignore', 'true');
+  input.setAttribute('data-form-type', 'other');
+  input.setAttribute('aria-label', 'Signer full legal name');
+  input.placeholder = 'Full legal name';
+
+  input.readOnly = true;
+  const enableEditing = () => {
+    input.readOnly = false;
+  };
+  input.addEventListener('focus', enableEditing);
+  input.addEventListener('pointerdown', enableEditing);
+
+  const scrub = () => scrubSignatureNameInput(input);
+  input.addEventListener('input', scrub);
+  input.addEventListener('change', scrub);
+  input.addEventListener('animationstart', (event) => {
+    if (event.animationName === 'onAutoFillStart') {
+      scrub();
+    }
+  });
+
+  scrub();
+  requestAnimationFrame(scrub);
+  window.setTimeout(scrub, 0);
+  window.setTimeout(scrub, 120);
+  window.setTimeout(scrub, 400);
+}
+
+export function scrubAllSignatureNameInputs(): void {
+  document.querySelectorAll<HTMLInputElement>('.signature-typed-name').forEach((input) => {
+    scrubSignatureNameInput(input);
+  });
+}
+
+function ensureCanvasSize(canvas: HTMLCanvasElement): void {
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.max(320, Math.floor(rect.width || 320));
+  const height = Math.max(120, Math.floor(rect.height || 120));
+
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+}
+
+export function createTypedSignatureImage(name: string, width = 640, height = 160): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.strokeRect(0.5, 0.5, width - 1, height - 1);
+
+  const trimmed = String(name || '').trim();
+  const fontSize = Math.min(56, Math.max(28, Math.floor(width / Math.max(trimmed.length, 8))));
+
+  ctx.fillStyle = '#111827';
+  ctx.font = `italic ${fontSize}px "Segoe Script", "Snell Roundhand", "Brush Script MT", cursive`;
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+  ctx.fillText(trimmed, width / 2, height / 2 + 4);
+
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('Digitally signed', width - 12, height - 12);
+
+  return canvas.toDataURL('image/png');
+}
+
+function paintSignatureOnCanvas(canvas: HTMLCanvasElement, signature: string): void {
+  ensureCanvasSize(canvas);
+  const ctx = canvas.getContext('2d');
+  if (!ctx || !signature) return;
+
+  const image = new Image();
+  image.onload = () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  };
+  image.src = signature;
+}
+
+function setSignedStatus(status: HTMLElement | null, signed: boolean): void {
+  if (!status) return;
+  status.textContent = signed ? 'Signed' : 'Not signed';
+  status.style.color = signed ? 'green' : '#667085';
+}
+
+function mountSignatureControls(
+  canvas: HTMLCanvasElement,
+  statusId: string,
+  options?: { allowRemote?: boolean; signerRole?: 'employee' | 'manager' | 'witness' }
+): void {
+  if (canvas.dataset.signatureEnhanced === 'true') return;
+
+  const status = document.getElementById(statusId);
+  const wrapper = canvas.parentElement;
+  if (!wrapper) return;
+
+  wrapper.querySelectorAll('.signature-field-controls').forEach((node) => node.remove());
+
+  const controls = document.createElement('div');
+  controls.className = 'signature-field-controls';
+  controls.setAttribute('autocomplete', 'section-orbis-signature');
+  controls.innerHTML = `
+    <div class="signature-mode-toggle" role="tablist" aria-label="Signature method">
+      <button type="button" class="signature-mode-btn is-active" data-mode="type">Type name</button>
+      <button type="button" class="signature-mode-btn" data-mode="draw">Draw</button>
+    </div>
+    <div class="signature-typed-row">
+      <input
+        type="text"
+        class="signature-typed-name"
+        placeholder="Full legal name"
+        autocomplete="section-orbis-signature name"
+      />
+      <button type="button" class="button soft sm signature-apply-btn">Apply signature</button>
+    </div>
+    <div class="signature-draw-wrap is-hidden">
+      <span class="muted" style="font-size:12px;">Use mouse or touch to sign below.</span>
+    </div>
+  `;
+
+  wrapper.insertBefore(controls, canvas);
+
+  const modeButtons = controls.querySelectorAll<HTMLButtonElement>('.signature-mode-btn');
+  const typedRow = controls.querySelector('.signature-typed-row') as HTMLElement;
+  const drawWrap = controls.querySelector('.signature-draw-wrap') as HTMLElement;
+  const typedInput = controls.querySelector<HTMLInputElement>('.signature-typed-name');
+  const applyBtn = controls.querySelector<HTMLButtonElement>('.signature-apply-btn');
+
+  const setMode = (mode: 'type' | 'draw') => {
+    modeButtons.forEach((btn) => {
+      btn.classList.toggle('is-active', btn.dataset.mode === mode);
+    });
+    typedRow.classList.toggle('is-hidden', mode !== 'type');
+    drawWrap.classList.toggle('is-hidden', mode !== 'draw');
+    canvas.style.display = mode === 'draw' ? 'block' : 'none';
+  };
+
+  modeButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      setMode(btn.dataset.mode === 'draw' ? 'draw' : 'type');
+    });
+  });
+
+  if (typedInput) {
+    applySignatureAutofillGuards(typedInput, canvas.id);
+  }
+
+  applyBtn?.addEventListener('click', () => {
+    const name = String(typedInput?.value || '').trim();
+    if (isLikelyAutofillLeak(name)) {
+      if (typedInput) typedInput.value = '';
+      window.showToast?.('Enter the signer’s full name (not tenure or pay type).', 'error');
+      return;
+    }
+    if (name.length < 2) {
+      window.showToast?.('Enter your full name to apply a signature.', 'error');
+      return;
+    }
+
+    const signature = createTypedSignatureImage(name, canvas.width || 640, canvas.height || 160);
+    canvas.dataset.signature = signature;
+    paintSignatureOnCanvas(canvas, signature);
+    setSignedStatus(status, true);
+    canvas.style.display = 'block';
+  });
+
+  if (options?.allowRemote) {
+    const remoteRow = document.createElement('div');
+    remoteRow.className = 'signature-remote-row';
+    remoteRow.innerHTML = `
+      <button type="button" class="button soft sm signature-send-link-btn">Send signing link</button>
+      <span class="muted" style="font-size:12px;">Employee signs via unique link (no login).</span>
+    `;
+    controls.appendChild(remoteRow);
+
+    remoteRow.querySelector('.signature-send-link-btn')?.addEventListener('click', () => {
+      void handleSendSigningLink(options.signerRole || 'employee');
+    });
+  }
+
+  setMode('type');
+  canvas.dataset.signatureEnhanced = 'true';
+}
+
+async function handleSendSigningLink(signerRole: 'employee' | 'manager' | 'witness'): Promise<void> {
+  const context = getSignatureRequestContext();
+  if (!context?.recordId) {
+    window.showToast?.('Save the form first, then send a signing link.', 'error');
+    return;
+  }
+
+  try {
+    const { signingUrl } = await createSignatureRequest({
+      formType: context.formType,
+      recordId: context.recordId,
+      employeeId: context.employeeId,
+      signerRole,
+      signerName: context.signerName,
+      signerEmail: context.signerEmail,
+    });
+
+    await copySigningLink(signingUrl);
+    window.showToast?.('Signing link copied to clipboard.', 'success');
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not create signing link.';
+    window.showToast?.(message, 'error');
+  }
+}
+
+export function initSignaturePad(
+  canvasId: string,
+  statusId: string,
+  options?: { allowRemote?: boolean; signerRole?: 'employee' | 'manager' | 'witness' }
+): void {
   const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
   const status = document.getElementById(statusId);
 
-  if (!canvas || initializedPads.has(canvasId)) {
-    return;
+  if (!canvas) return;
+
+  const alreadyMounted =
+    initializedPads.has(canvasId) && canvas.dataset.signatureEnhanced === 'true';
+  if (alreadyMounted) return;
+
+  if (initializedPads.has(canvasId) && canvas.dataset.signatureEnhanced !== 'true') {
+    initializedPads.delete(canvasId);
+    canvas.parentElement
+      ?.querySelectorAll('.signature-field-controls')
+      .forEach((node) => node.remove());
   }
 
   initializedPads.add(canvasId);
+  canvas.dataset.sigInitialized = 'true';
+
+  ensureCanvasSize(canvas);
+  mountSignatureControls(canvas, statusId, options);
 
   const ctx = canvas.getContext('2d');
-  if (!ctx) {
-    return;
-  }
+  if (!ctx) return;
+
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#111827';
 
   let drawing = false;
 
   const getPos = (event: MouseEvent | TouchEvent) => {
     const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
     const point = 'touches' in event ? event.touches[0] : event;
 
     return {
-      x: point.clientX - rect.left,
-      y: point.clientY - rect.top,
+      x: (point.clientX - rect.left) * scaleX,
+      y: (point.clientY - rect.top) * scaleY,
     };
   };
 
@@ -39,9 +351,7 @@ export function initSignaturePad(canvasId: string, statusId: string): void {
   };
 
   const draw = (event: MouseEvent | TouchEvent) => {
-    if (!drawing) {
-      return;
-    }
+    if (!drawing) return;
 
     if ('touches' in event) {
       event.preventDefault();
@@ -53,24 +363,18 @@ export function initSignaturePad(canvasId: string, statusId: string): void {
   };
 
   const stopDrawing = () => {
-    if (!drawing) {
-      return;
-    }
+    if (!drawing) return;
 
     drawing = false;
     canvas.dataset.signature = canvas.toDataURL();
-
-    if (status) {
-      status.textContent = 'Signed';
-      status.style.color = 'green';
-    }
+    setSignedStatus(status, true);
   };
 
   canvas.addEventListener('mousedown', startDrawing);
   canvas.addEventListener('mousemove', draw);
   window.addEventListener('mouseup', stopDrawing);
-  canvas.addEventListener('touchstart', startDrawing);
-  canvas.addEventListener('touchmove', draw);
+  canvas.addEventListener('touchstart', startDrawing, { passive: false });
+  canvas.addEventListener('touchmove', draw, { passive: false });
   canvas.addEventListener('touchend', stopDrawing);
 }
 
@@ -78,10 +382,9 @@ export function clearSignaturePad(canvasId: string, statusId: string): void {
   const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
   const status = document.getElementById(statusId);
 
-  if (!canvas) {
-    return;
-  }
+  if (!canvas) return;
 
+  ensureCanvasSize(canvas);
   const ctx = canvas.getContext('2d');
   if (ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -89,10 +392,10 @@ export function clearSignaturePad(canvasId: string, statusId: string): void {
 
   delete canvas.dataset.signature;
 
-  if (status) {
-    status.textContent = 'Not signed';
-    status.style.color = '#667085';
-  }
+  const typedInput = canvas.parentElement?.querySelector<HTMLInputElement>('.signature-typed-name');
+  if (typedInput) typedInput.value = '';
+
+  setSignedStatus(status, false);
 }
 
 export function getCanvasSignature(canvasId: string): string {
@@ -100,51 +403,60 @@ export function getCanvasSignature(canvasId: string): string {
   return canvas?.dataset?.signature || '';
 }
 
-export function setCanvasSignature(
-  canvasId: string,
-  statusId: string,
-  signature: string
-): void {
+export function setCanvasSignature(canvasId: string, statusId: string, signature: string): void {
   const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
   const status = document.getElementById(statusId);
 
-  if (!canvas) {
-    return;
-  }
+  if (!canvas) return;
 
   if (signature) {
+    ensureCanvasSize(canvas);
+    canvas.style.display = 'block';
+    canvas.style.background = '#ffffff';
     canvas.dataset.signature = signature;
-    if (status) {
-      status.textContent = 'Signed';
-      status.style.color = 'green';
-    }
+    paintSignatureOnCanvas(canvas, signature);
+    setSignedStatus(status, true);
     return;
   }
 
-  delete canvas.dataset.signature;
-  if (status) {
-    status.textContent = 'Not signed';
-    status.style.color = '#667085';
-  }
+  clearSignaturePad(canvasId, statusId);
 }
 
 export function clearCanvasSignature(canvasId: string, statusId: string): void {
   clearSignaturePad(canvasId, statusId);
 }
 
+function refreshSignaturePadGuards(
+  canvasId: string,
+  statusId: string,
+  options?: { allowRemote?: boolean; signerRole?: 'employee' | 'manager' | 'witness' }
+): void {
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null;
+  if (!canvas) return;
+
+  const typedInput = canvas.parentElement?.querySelector<HTMLInputElement>('.signature-typed-name');
+  if (typedInput) {
+    applySignatureAutofillGuards(typedInput, canvasId);
+  }
+
+  if (!initializedPads.has(canvasId)) {
+    initSignaturePad(canvasId, statusId, options);
+  }
+}
+
 export function initErSignaturePads(formPrefix: 'discipline' | 'incident' | 'review'): void {
-  initSignaturePad(
-    `${formPrefix}EmployeeSignature`,
-    `${formPrefix}EmployeeSigStatus`
-  );
-  initSignaturePad(
-    `${formPrefix}ManagerSignature`,
-    `${formPrefix}ManagerSigStatus`
-  );
-  initSignaturePad(
-    `${formPrefix}WitnessSignature`,
-    `${formPrefix}WitnessSigStatus`
-  );
+  refreshSignaturePadGuards(`${formPrefix}EmployeeSignature`, `${formPrefix}EmployeeSigStatus`, {
+    allowRemote: true,
+    signerRole: 'employee',
+  });
+  refreshSignaturePadGuards(`${formPrefix}ManagerSignature`, `${formPrefix}ManagerSigStatus`, {
+    signerRole: 'manager',
+  });
+  refreshSignaturePadGuards(`${formPrefix}WitnessSignature`, `${formPrefix}WitnessSigStatus`, {
+    signerRole: 'witness',
+  });
+
+  scrubAllSignatureNameInputs();
 }
 
 declare global {
@@ -153,6 +465,15 @@ declare global {
     initDisciplineSignaturePads?: () => void;
     initIncidentSignaturePads?: () => void;
     initReviewSignaturePads?: () => void;
+    scrubAllSignatureNameInputs?: () => void;
+    setSignatureRequestContext?: (context: SignatureRequestContext | null) => void;
+    requestEmployeeSignatureLink?: (
+      formType: SignatureFormType,
+      recordId: string,
+      employeeId: string,
+      signerName?: string,
+      signerEmail?: string
+    ) => Promise<void>;
   }
 }
 
@@ -160,6 +481,25 @@ window.clearSig = clearSignaturePad;
 window.initDisciplineSignaturePads = () => initErSignaturePads('discipline');
 window.initIncidentSignaturePads = () => initErSignaturePads('incident');
 window.initReviewSignaturePads = () => initErSignaturePads('review');
+window.setSignatureRequestContext = setSignatureRequestContext;
+window.scrubAllSignatureNameInputs = scrubAllSignatureNameInputs;
+
+window.requestEmployeeSignatureLink = async (
+  formType,
+  recordId,
+  employeeId,
+  signerName,
+  signerEmail
+) => {
+  setSignatureRequestContext({
+    formType,
+    recordId,
+    employeeId,
+    signerName,
+    signerEmail,
+  });
+  await handleSendSigningLink('employee');
+};
 
 document.addEventListener('DOMContentLoaded', () => {
   initErSignaturePads('discipline');

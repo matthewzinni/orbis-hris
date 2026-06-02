@@ -21,17 +21,30 @@ python3 scripts/weekly_orbis_report_email.py --dry-run
 python3 scripts/weekly_orbis_report_email.py
 ```
 
-Override recipients with `MAIL_TO=you@btwglobal.com,other@btwglobal.com`.
+Override recipients and schedule in `scripts/.env.weekly_report`:
 
-### Schedule (every Monday 8:00 AM)
-
-```bash
-mkdir -p scripts/logs
-crontab -e
+```env
+MAIL_TO=you@btwglobal.com,other@btwglobal.com
+WEEKLY_REPORT_DAY_OF_WEEK=1
+WEEKLY_REPORT_HOUR=8
+WEEKLY_REPORT_MINUTE=0
 ```
 
-```cron
-0 8 * * 1 cd /Users/matthewzinni/Desktop/Work/HRIS/Orbis && set -a && . scripts/.env.weekly_report && set +a && /usr/bin/python3 scripts/weekly_orbis_report_email.py >> scripts/logs/weekly_report.log 2>&1
+(`DAY_OF_WEEK`: 0=Sun, 1=Mon, … 6=Sat — local Mac time.)
+
+### Schedule (automatic weekly send)
+
+```bash
+chmod +x scripts/run_weekly_report.sh scripts/install_weekly_report_cron.sh
+./scripts/install_weekly_report_cron.sh
+```
+
+This installs cron using `WEEKLY_REPORT_*` from `.env.weekly_report` (default **Monday 8:00 AM**). Logs: `scripts/logs/weekly_report.log`.
+
+Manual send anytime:
+
+```bash
+./scripts/run_weekly_report.sh
 ```
 
 ---

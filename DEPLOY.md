@@ -60,14 +60,52 @@ After changing the edge function prompt, redeploy:
 supabase functions deploy investigation-hr-guidance
 ```
 
+## Remote e-sign links (Edge Function)
+
+Employee signing links (`/sign.html?token=...`) call `form-signature` (no Orbis login required).
+
+```bash
+npm run db:push   # creates signature_requests table
+supabase functions deploy form-signature
+```
+
+HR flow: save the discipline/incident/review record → **Send signing link** (or **Request signature** in history). The link is copied to the clipboard for email/SMS.
+
+## Attendance tracker (Intuit Workforce API)
+
+The **Attendance** section calls Supabase Edge Function `intuit-workforce-attendance` and shows only who is **Present** vs **Absent**.
+
+Set hosted function secrets:
+
+```bash
+supabase secrets set INTUIT_WORKFORCE_ATTENDANCE_URL=https://api.intuit.example/attendance
+supabase secrets set INTUIT_WORKFORCE_API_TOKEN=your_intuit_api_token
+```
+
+Optional JSON path overrides (defaults shown):
+
+```bash
+supabase secrets set INTUIT_WORKFORCE_PRESENT_PATH=present
+supabase secrets set INTUIT_WORKFORCE_ABSENT_PATH=absent
+supabase secrets set INTUIT_WORKFORCE_ASOF_PATH=asOf
+supabase secrets set INTUIT_WORKFORCE_TIMEZONE_PATH=timezone
+```
+
+Deploy:
+
+```bash
+supabase functions deploy intuit-workforce-attendance
+```
+
 ## Smoke test (production)
 
 1. Hard refresh or incognito → `https://www.orbis-btw.com`
 2. Sign in
 3. Dashboard KPIs load (not stuck on skeletons)
-4. Open an employee → Stay Interviews tab
-5. Care & Engagement (admin: can edit; supervisor: read-only banner, no create buttons)
-6. Sign out
+4. Open **Attendance** → click **Sync now** → Present/Absent populate
+5. Open an employee → Stay Interviews tab
+6. Care & Engagement (admin: can edit; supervisor: read-only banner, no create buttons)
+7. Sign out
 
 ## Security
 

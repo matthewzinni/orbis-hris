@@ -40,7 +40,7 @@ Stay interview CSV import: [scripts/README.md](scripts/README.md) (service role 
 | Role | Access |
 |------|--------|
 | **admin** | Full HRIS including Care (edit), investigations, reports, settings |
-| **supervisor** | Team roster; Care center **read-only**; no per-employee Care & Support tab |
+| **supervisor** | Team roster; Attendance view; Care center **read-only**; no per-employee Care & Support tab |
 | **user** | Read-only directory |
 
 ## Commands

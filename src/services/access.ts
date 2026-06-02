@@ -706,6 +706,10 @@ export function applyRolePermissions(): void {
 
   applyRoleLocks();
   applyPerformanceReviewTabAccess(currentEmployee as EmployeeLike | null | undefined);
+
+  if (typeof window.applyAttendanceAccess === 'function') {
+    window.applyAttendanceAccess();
+  }
 }
 
 function applyPerformanceReviewTabAccess(employee?: EmployeeLike | null): void {
@@ -761,6 +765,7 @@ declare global {
     runTerminateEmployee?: () => void;
     isCreatingEmployee?: boolean;
     currentEmergencyContactId?: string | null;
+    applyAttendanceAccess?: () => void;
   }
 }
 

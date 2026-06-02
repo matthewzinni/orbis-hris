@@ -5,6 +5,7 @@ import {
   clearCanvasSignature,
   getCanvasSignature,
   setCanvasSignature,
+  setSignatureRequestContext,
 } from '../ui/signaturePads';
 
 interface DisciplineRecord {
@@ -245,8 +246,13 @@ export async function loadEmployeeDiscipline(employeeId: string): Promise<void> 
             <strong>${escapeHtml(row.issue_type || 'Discipline Report')}</strong>
             <span>${escapeHtml(row.incident_date || row.created_at || '')}</span>
           </div>
-          <div style="display:flex; gap:6px; align-items:center;">
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
             <button class="button soft sm" type="button" data-edit-discipline-id="${escapeHtml(row.id || '')}">Edit</button>
+            ${
+              row.employee_signature
+                ? ''
+                : `<button class="button soft sm" type="button" data-sign-discipline-id="${escapeHtml(row.id || '')}">Request signature</button>`
+            }
             <button class="button danger sm" type="button" data-delete-discipline-id="${escapeHtml(row.id || '')}">Delete</button>
           </div>
         </div>
@@ -272,6 +278,36 @@ export async function loadEmployeeDiscipline(employeeId: string): Promise<void> 
       });
     });
 
+    target.querySelectorAll<HTMLButtonElement>('[data-sign-discipline-id]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const recordId = button.dataset.signDisciplineId;
+        const record = rows.find((row) => String(row.id) === String(recordId));
+        if (!recordId || !record) return;
+
+        const employee = getCurrentEmployee();
+        const employeeId = String(record.employee_id || getEmployeeId(employee) || '').trim();
+        if (!employeeId) {
+          showToast('Employee context is missing for this record.', 'error');
+          return;
+        }
+
+        const signerName = [employee?.first_name || employee?.first, employee?.last_name || employee?.last]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+
+        if (typeof window.requestEmployeeSignatureLink === 'function') {
+          await window.requestEmployeeSignatureLink(
+            'discipline',
+            recordId,
+            employeeId,
+            signerName,
+            String((employee as { email?: string })?.email || '').trim() || undefined
+          );
+        }
+      });
+    });
+
     target.querySelectorAll<HTMLButtonElement>('[data-delete-discipline-id]').forEach((button) => {
       button.addEventListener('click', async () => {
         const recordId = button.dataset.deleteDisciplineId;
@@ -293,7 +329,23 @@ export function editDisciplineRecord(record: DisciplineRecord): void {
   currentDisciplineId = record.id || null;
   window.currentDisciplineId = currentDisciplineId;
 
+  const employee = getCurrentEmployee();
+  const employeeId = String(record.employee_id || getEmployeeId(employee) || '').trim();
+  if (record.id && employeeId) {
+    setSignatureRequestContext({
+      formType: 'discipline',
+      recordId: String(record.id),
+      employeeId,
+      signerName: [employee?.first_name || employee?.first, employee?.last_name || employee?.last]
+        .filter(Boolean)
+        .join(' ')
+        .trim(),
+      signerEmail: String((employee as { email?: string; work_email?: string })?.email || '').trim(),
+    });
+  }
+
   activateDisciplineTab();
+  window.initDisciplineSignaturePads?.();
 
   setInputValue('disciplineDate', normalizeDateInputValue(record.incident_date));
   setInputValue('disciplineType', record.issue_type || '');
@@ -306,21 +358,26 @@ export function editDisciplineRecord(record: DisciplineRecord): void {
 
   if (refused) refused.checked = record.refused_to_sign === true;
 
-  setCanvasSignature(
-    'disciplineEmployeeSignature',
-    'disciplineEmployeeSigStatus',
-    String(record.employee_signature || '')
-  );
-  setCanvasSignature(
-    'disciplineManagerSignature',
-    'disciplineManagerSigStatus',
-    String(record.manager_signature || '')
-  );
-  setCanvasSignature(
-    'disciplineWitnessSignature',
-    'disciplineWitnessSigStatus',
-    String(record.witness_signature || '')
-  );
+  const applyStoredSignatures = () => {
+    setCanvasSignature(
+      'disciplineEmployeeSignature',
+      'disciplineEmployeeSigStatus',
+      String(record.employee_signature || '')
+    );
+    setCanvasSignature(
+      'disciplineManagerSignature',
+      'disciplineManagerSigStatus',
+      String(record.manager_signature || '')
+    );
+    setCanvasSignature(
+      'disciplineWitnessSignature',
+      'disciplineWitnessSigStatus',
+      String(record.witness_signature || '')
+    );
+  };
+
+  applyStoredSignatures();
+  window.setTimeout(applyStoredSignatures, 0);
 
   const saveButton = safeGet('saveDisciplineBtn');
 
@@ -352,6 +409,7 @@ export function cancelDisciplineEdit(): void {
   safeGet('cancelDisciplineEditBtn')?.classList.add('hidden');
   safeGet('disciplineEditStatus')?.classList.add('hidden');
 
+  setSignatureRequestContext(null);
   showToast('Discipline edit cancelled.');
 }
 
@@ -420,7 +478,27 @@ export async function saveDisciplineRecord(): Promise<void> {
     return;
   }
 
+  const savedRecord = Array.isArray(result.data) ? result.data[0] : null;
+  const savedRecordId = String(savedRecord?.id || recordId || '').trim();
+
   showToast(recordId ? 'Discipline report updated.' : 'Discipline report saved.');
+
+  if (savedRecordId) {
+    const employee = getCurrentEmployee();
+    const employeeId = String(savedRecord?.employee_id || getEmployeeId(employee) || '').trim();
+    if (employeeId) {
+      setSignatureRequestContext({
+        formType: 'discipline',
+        recordId: savedRecordId,
+        employeeId,
+        signerName: [employee?.first_name || employee?.first, employee?.last_name || employee?.last]
+          .filter(Boolean)
+          .join(' ')
+          .trim(),
+        signerEmail: String((employee as { email?: string })?.email || '').trim(),
+      });
+    }
+  }
 
   currentDisciplineId = null;
   window.currentDisciplineId = null;

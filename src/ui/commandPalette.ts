@@ -48,6 +48,14 @@ const ACTION_COMMANDS: CommandItem[] = [
     run: () => switchMainView('employeesView'),
   },
   {
+    id: 'nav-org-chart',
+    kind: 'action',
+    title: 'Go to Org Chart',
+    subtitle: 'Navigation',
+    searchText: 'org chart organization hierarchy reporting structure supervisor tree',
+    run: () => switchMainView('orgChartView'),
+  },
+  {
     id: 'nav-candidates',
     kind: 'action',
     title: 'Go to Candidate Pipeline',
@@ -62,6 +70,14 @@ const ACTION_COMMANDS: CommandItem[] = [
     subtitle: 'Navigation',
     searchText: 'documents files library',
     run: () => switchMainView('documentsView'),
+  },
+  {
+    id: 'nav-attendance',
+    kind: 'action',
+    title: 'Go to Attendance',
+    subtitle: 'Navigation',
+    searchText: 'attendance present absent workforce intuit',
+    run: () => switchMainView('attendanceView'),
   },
   {
     id: 'nav-operations',
@@ -443,6 +459,7 @@ function getNavigationCommands(): CommandItem[] {
 
   return ACTION_COMMANDS.filter((command) => {
     if (strictAdminIds.has(command.id)) return false;
+    if (command.id === 'nav-attendance') return isSupervisorUser();
     if (command.id === 'nav-care-engagement') return isSupervisorUser();
     return true;
   });

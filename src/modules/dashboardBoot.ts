@@ -697,6 +697,12 @@ export async function loadRiskEmployeesFallback(): Promise<void> {
     .sort(compareEmployeesByLastName);
 
   setText('kAtRiskEmployees', String(riskEmployees.length));
+  setText(
+    'kAtRiskEmployeesSub',
+    riskEmployees.length === 0
+      ? 'No employees flagged from low review scores, manual HR flags, or severe open discipline (final warning+)'
+      : `${riskEmployees.length} employee${riskEmployees.length === 1 ? '' : 's'} flagged by review score, HR note, or severe open discipline`
+  );
 
   const container = resolveDashboardListContainer('riskEmployees');
 

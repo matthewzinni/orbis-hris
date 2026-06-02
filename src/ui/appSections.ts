@@ -20,6 +20,9 @@ declare global {
     loadInvestigations?: () => Promise<void>;
     ensureCareEngagementLoaded?: (force?: boolean) => void;
     loadCareEngagement?: () => Promise<void>;
+    loadAttendance?: (force?: boolean) => Promise<void>;
+    loadOrgChart?: () => Promise<void>;
+    renderOrgChart?: () => void;
   }
 }
 
@@ -58,10 +61,12 @@ async function ensureEmployeesSectionReady(): Promise<void> {
 const SECTION_LABELS: Record<string, string> = {
   dashboardView: 'Dashboard',
   employeesView: 'Employees',
+  orgChartView: 'Org Chart',
   candidatesView: 'Candidates',
   documentsView: 'Documents',
   operationsView: 'Operations',
   careEngagementView: 'Care & Engagement',
+  attendanceView: 'Attendance',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
   settingsView: 'Admin & Settings',
@@ -86,6 +91,19 @@ const APP_SECTIONS: AppSection[] = [
     aliases: ['employees', 'employeeRoster'],
     onEnter: () => {
       void ensureEmployeesSectionReady();
+    },
+  },
+  {
+    id: 'orgChartView',
+    rootId: 'orbisSectionOrgChart',
+    targetId: 'orgChartPage',
+    aliases: ['org chart', 'orgchart', 'organization chart', 'hierarchy'],
+    onEnter: () => {
+      if (typeof window.loadOrgChart === 'function') {
+        void window.loadOrgChart();
+      } else if (typeof window.renderOrgChart === 'function') {
+        window.renderOrgChart();
+      }
     },
   },
   {
@@ -118,6 +136,17 @@ const APP_SECTIONS: AppSection[] = [
         window.ensureOperationsIssuesLoaded(true);
       } else if (typeof window.loadOperationsIssues === 'function') {
         void window.loadOperationsIssues();
+      }
+    },
+  },
+  {
+    id: 'attendanceView',
+    rootId: 'orbisSectionAttendance',
+    targetId: 'attendancePage',
+    aliases: ['attendance', 'workforce attendance'],
+    onEnter: () => {
+      if (typeof window.loadAttendance === 'function') {
+        void window.loadAttendance();
       }
     },
   },

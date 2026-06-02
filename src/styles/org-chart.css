@@ -1,0 +1,152 @@
+.org-chart-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.org-chart-toolbar-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.org-chart-summary {
+  color: var(--muted, #6b7280);
+  font-size: 0.9rem;
+}
+
+.org-chart-forest,
+.org-chart-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.org-chart-forest > .org-chart-item {
+  margin-bottom: 20px;
+}
+
+.org-chart-children {
+  margin-top: 8px;
+  margin-left: 20px;
+  padding-left: 16px;
+  border-left: 2px solid rgba(148, 163, 184, 0.35);
+}
+
+.org-chart-item + .org-chart-item {
+  margin-top: 8px;
+}
+
+.org-chart-node-button {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.org-chart-node-button:hover {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+.org-chart-node-name {
+  display: block;
+  font-weight: 600;
+}
+
+.org-chart-node-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: var(--muted, #6b7280);
+}
+
+.org-chart-node-reports {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--muted, #6b7280);
+}
+
+@media print {
+  body.org-chart-print-mode #authView,
+  body.org-chart-print-mode .orbis-sidebar,
+  body.org-chart-print-mode .orbis-topbar,
+  body.org-chart-print-mode .org-chart-toolbar,
+  body.org-chart-print-mode #orbisAppMain > section:not(#orbisSectionOrgChart) {
+    display: none !important;
+  }
+
+  body.org-chart-print-mode,
+  body.org-chart-print-mode #appView,
+  body.org-chart-print-mode .orbis-app-shell,
+  body.org-chart-print-mode .orbis-workspace,
+  body.org-chart-print-mode #orbisAppMain {
+    background: #fff !important;
+  }
+
+  body.org-chart-print-mode .orbis-workspace,
+  body.org-chart-print-mode .orbis-app-main,
+  body.org-chart-print-mode .page,
+  body.org-chart-print-mode #orbisSectionOrgChart {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  body.org-chart-print-mode #orbisSectionOrgChart {
+    display: block !important;
+  }
+
+  body.org-chart-print-mode #orbisSectionOrgChart .card {
+    border: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    page-break-inside: avoid;
+  }
+
+  body.org-chart-print-mode #orbisSectionOrgChart .card-header {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    padding: 0 0 10px 0 !important;
+    border-bottom: 1px solid #d1d5db !important;
+  }
+
+  body.org-chart-print-mode .org-chart-forest > .org-chart-item {
+    margin-bottom: 10px !important;
+  }
+
+  body.org-chart-print-mode .org-chart-children {
+    margin-left: 12px !important;
+    padding-left: 10px !important;
+    border-left: 1px solid #d1d5db !important;
+  }
+
+  body.org-chart-print-mode .org-chart-node-button {
+    max-width: none !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    background: #fff !important;
+    color: #111 !important;
+    padding: 6px 8px !important;
+    box-shadow: none !important;
+  }
+
+  body.org-chart-print-mode .org-chart-node-meta,
+  body.org-chart-print-mode .org-chart-node-reports,
+  body.org-chart-print-mode .muted {
+    color: #4b5563 !important;
+  }
+}

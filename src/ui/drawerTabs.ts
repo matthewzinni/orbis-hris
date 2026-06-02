@@ -82,14 +82,20 @@ function runEmployeeTabSideEffects(tabName: string): void {
 
   if (tabName === 'discipline' && typeof window.initDisciplineSignaturePads === 'function') {
     window.initDisciplineSignaturePads();
+    window.setTimeout(() => window.scrubAllSignatureNameInputs?.(), 0);
+    window.setTimeout(() => window.scrubAllSignatureNameInputs?.(), 200);
   }
 
   if (tabName === 'incidents' && typeof window.initIncidentSignaturePads === 'function') {
     window.initIncidentSignaturePads();
+    window.setTimeout(() => window.scrubAllSignatureNameInputs?.(), 0);
+    window.setTimeout(() => window.scrubAllSignatureNameInputs?.(), 200);
   }
 
   if (tabName === 'reviews' && typeof window.initReviewSignaturePads === 'function') {
     window.initReviewSignaturePads();
+    window.setTimeout(() => window.scrubAllSignatureNameInputs?.(), 0);
+    window.setTimeout(() => window.scrubAllSignatureNameInputs?.(), 200);
   }
 
   const isEmployeeAdminTab =

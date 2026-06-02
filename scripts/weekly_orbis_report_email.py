@@ -39,8 +39,8 @@ from urllib.parse import urlparse
 
 DEFAULT_MAIL_TO = "matthew.zinni@btwglobal.com"
 
-# BTW Global / Orbis — defaults (env file or OS env overrides these).
-# Paste only the two secrets below, or put them in scripts/.env.weekly_report (gitignored).
+# BTW Global / Orbis — non-secret defaults only.
+# Put SUPABASE_SERVICE_ROLE_KEY and SMTP_PASS in scripts/.env.weekly_report (gitignored).
 ORBIS_WEEKLY_CONFIG: dict[str, str] = {
     "SUPABASE_URL": "https://fxljbnyarfwnqgheywgw.supabase.co",
     "SUPABASE_SERVICE_ROLE_KEY": "",
@@ -808,7 +808,12 @@ def main() -> None:
         die("You pasted the Publishable key. Use the Secret / service_role key instead.")
 
     mail_to_raw = os.environ.get("MAIL_TO", DEFAULT_MAIL_TO).strip() or DEFAULT_MAIL_TO
-    mail_to = [part.strip() for part in mail_to_raw.split(",") if part.strip()]
+    mail_to = [
+        part.strip()
+        for chunk in mail_to_raw.replace(";", ",").split(",")
+        for part in [chunk]
+        if part.strip()
+    ]
 
     metrics = collect_metrics(base_url, service_key)
     html = build_html(metrics)

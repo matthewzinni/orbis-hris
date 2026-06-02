@@ -1,0 +1,89 @@
+.signature-field-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.signature-mode-toggle {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.signature-mode-btn {
+  border: 1px solid var(--line, #d9e2ec);
+  background: #fff;
+  color: var(--text, #1f2937);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.signature-mode-btn.is-active {
+  border-color: var(--blue, #2f6fed);
+  background: var(--blue-light, #eaf2ff);
+  color: var(--blue-strong, #2563eb);
+}
+
+.signature-typed-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.signature-typed-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line, #d9e2ec);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  background-color: #fff !important;
+}
+
+@keyframes onAutoFillStart {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.signature-typed-name:-webkit-autofill {
+  animation-name: onAutoFillStart;
+  -webkit-box-shadow: 0 0 0 1000px #fff inset !important;
+  -webkit-text-fill-color: #111827 !important;
+}
+
+.signature-draw-wrap.is-hidden,
+.signature-typed-row.is-hidden {
+  display: none !important;
+}
+
+.signature-remote-row {
+  margin-top: 4px;
+}
+
+.signature-remote-link {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+canvas[id$='Signature'] {
+  background: #fff;
+}
+
+.signature-remote-link input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line, #d9e2ec);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: #f8fafc;
+}

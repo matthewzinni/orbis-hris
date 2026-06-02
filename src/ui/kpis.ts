@@ -140,12 +140,11 @@ function isImpactPlayer(employee: KpiEmployeeRecord): boolean {
 }
 
 function isAtRisk(employee: KpiEmployeeRecord): boolean {
-  const key = getEmployeeKey(employee);
+  if (typeof window.isEmployeeAtRisk === 'function') {
+    return window.isEmployeeAtRisk(employee);
+  }
 
-  return Boolean(
-    employee.at_risk ||
-      (key && window.currentAtRiskRosterMap?.[key])
-  );
+  return employeeHasAtRiskMeta(employee) || Boolean(employee.at_risk || employee.atRisk);
 }
 
 function daysBetween(startDate: string, endDate: Date = new Date()): number | null {
@@ -865,7 +864,7 @@ export function renderKpiEmployeeMetrics(): void {
   const turnoverRisk = turnoverResult.percentage;
   const turnoverRiskContributors = turnoverResult.contributorCount;
   const turnoverRiskDisplay = `${turnoverRisk.toFixed(1)}%`;
-  const turnoverSubtext = `${turnoverRiskContributors} employee${turnoverRiskContributors === 1 ? '' : 's'} flagged at-risk and/or with retention signals (discipline, reviews, or operations load)`;
+  const turnoverSubtext = `${turnoverRiskContributors} employee${turnoverRiskContributors === 1 ? '' : 's'} with retention signals (low reviews, severe discipline, or operations load)`;
 
   setKpiText('kActiveHC', activeEmployees.length);
   setKpiText('kDepartments', departments.length);
@@ -1133,6 +1132,7 @@ export async function loadSummaryMetrics(): Promise<void> {
       disciplineRows: (disciplineRes.data || []) as Array<{
         employee_id?: string;
         report_status?: string;
+        discipline_level?: string;
       }>,
       investigationRows: !investigationsRes.error
         ? (investigationsRes.data || []).filter((row) =>
@@ -1231,12 +1231,12 @@ export async function loadSummaryMetrics(): Promise<void> {
     pruneInactiveImpactMap(impactMap);
     window.currentImpactPlayerRosterMap = impactMap;
 
-    const combinedRiskEmployeeIds = new Set([
-      ...reviewRiskEmployeeIds,
-      ...manualRiskEmployeeIds,
-      ...intelligenceContext.disciplineOpenByEmployee.keys(),
-    ]);
-    const atRiskEmployees = combinedRiskEmployeeIds.size;
+    const atRiskRosterEmployees = rosterEmployees.filter(
+      (employee) =>
+        employeeHasAtRiskMeta(employee) ||
+        (typeof window.isEmployeeAtRisk === 'function' && window.isEmployeeAtRisk(employee))
+    );
+    const atRiskEmployees = atRiskRosterEmployees.length;
     const impactRosterMap = window.currentImpactPlayerRosterMap || impactMap;
     const impactPlayers = (Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : []).filter(
       (employee) => {
@@ -1271,8 +1271,8 @@ export async function loadSummaryMetrics(): Promise<void> {
       setKpiText(
         'kAtRiskEmployeesSub',
         atRiskEmployees === 0
-          ? 'No employees flagged from low review scores, manual HR flags, or open discipline'
-          : `${atRiskEmployees} employee${atRiskEmployees === 1 ? '' : 's'} flagged by review score, HR note, or open discipline`
+          ? 'No employees flagged from low review scores, manual HR flags, or severe open discipline (final warning+)'
+          : `${atRiskEmployees} employee${atRiskEmployees === 1 ? '' : 's'} flagged by review score, HR note, or severe open discipline`
       );
     } else {
       failedMetrics.push('at-risk summary');
