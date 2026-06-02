@@ -390,6 +390,11 @@ function populateDrawer(employee: DrawerEmployeeRecord): void {
     String(employee.tenure_bracket || '')
   );
 
+  const remoteInput = safeGet<HTMLInputElement>('employeeIsRemoteInput');
+  if (remoteInput) {
+    remoteInput.checked = Boolean(employee.is_remote);
+  }
+
   const atRiskBadge = safeGet('drawerAtRiskBadge');
   const riskMeta =
     typeof window.getEmployeeRiskMeta === 'function'
@@ -440,6 +445,7 @@ function populateDrawerProfileDetails(employee: DrawerEmployeeRecord): void {
     ['Tenure Years', employee.tenureYears || employee.tenure_years],
     ['Benefits Status', employee.benefitsStatus || employee.benefits_status],
     ['Tenure Bracket', employee.tenureBracket || employee.tenure_bracket],
+    ['Work location', employee.is_remote ? 'Overseas / remote' : 'In house'],
   ];
 
   details.innerHTML = detailRows
@@ -854,6 +860,7 @@ export async function saveEmployeeRecord(): Promise<void> {
     phone: getInputValue('empPhone', 'phone') || null,
     notes: getInputValue('empNotes', 'notes') || null,
     termination_date: status === 'TERMINATED' ? terminationDate || null : null,
+    is_remote: Boolean(safeGet<HTMLInputElement>('employeeIsRemoteInput')?.checked),
   };
 
   payload.id = editedEmployeeId;

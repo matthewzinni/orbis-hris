@@ -173,6 +173,10 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
     window.applyInvestigationsCenterAccess();
   }
 
+  if (typeof window.applyAttendanceAccess === 'function') {
+    window.applyAttendanceAccess();
+  }
+
   if (typeof window.ensureOperationsIssuesLoaded === 'function') {
     window.ensureOperationsIssuesLoaded();
   }

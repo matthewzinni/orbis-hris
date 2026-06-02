@@ -1,0 +1,188 @@
+#attendancePage .attendance-manual-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+#attendancePage .attendance-roll-call-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+#attendancePage .attendance-roll-call-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+#attendancePage .attendance-roll-call-meta {
+  font-size: 0.82rem;
+}
+
+#attendancePage .attendance-roll-call-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+#attendancePage .attendance-roll-call-controls .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#attendancePage .attendance-roll-call-controls .field label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+#attendancePage .attendance-roll-call-controls .input[type='date'] {
+  min-width: 10.5rem;
+}
+
+#attendancePage .attendance-roll-call-body {
+  padding-top: 0;
+}
+
+#attendancePage .attendance-roll-call-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+#attendancePage .attendance-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#attendancePage .attendance-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+}
+
+#attendancePage .attendance-legend-swatch--onsite {
+  background: transparent;
+}
+
+#attendancePage .attendance-legend-swatch--remote {
+  background: rgba(56, 189, 248, 0.35);
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+#attendancePage .attendance-table-scroll {
+  max-height: min(62vh, 720px);
+}
+
+#attendancePage .attendance-checklist-table {
+  width: 100%;
+}
+
+#attendancePage .attendance-checklist-table .attendance-check-col {
+  width: 4.5rem;
+  text-align: center;
+}
+
+#attendancePage .attendance-checklist-table td.attendance-check-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+#attendancePage .attendance-present-check {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+#attendancePage .attendance-checklist-table tbody tr.attendance-group-row td {
+  padding: 14px 12px 8px;
+  border-bottom: none;
+  background: transparent !important;
+}
+
+#attendancePage .attendance-checklist-table tbody tr.attendance-group-row:first-child td {
+  padding-top: 4px;
+}
+
+#attendancePage .attendance-group-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+#attendancePage .attendance-group-count {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  opacity: 0.85;
+}
+
+#attendancePage .attendance-checklist-table tbody tr.attendance-group-row + tr.attendance-employee-row td {
+  border-top: 1px solid var(--line);
+}
+
+#attendancePage .attendance-checklist-table tbody tr.is-remote td {
+  background: rgba(56, 189, 248, 0.06);
+  box-shadow: inset 3px 0 0 rgba(56, 189, 248, 0.55);
+}
+
+#attendancePage .attendance-name-cell {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#attendancePage .attendance-remote-badge {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+#attendancePage .attendance-checklist-table tbody tr.is-absent td:not(.attendance-check-cell) {
+  color: var(--muted);
+}
+
+body.authenticated #attendancePage .attendance-checklist-table tbody tr.is-absent td:not(.attendance-check-cell) {
+  color: #8fa3c4;
+}
+
+body.authenticated #attendancePage .attendance-checklist-table tbody tr.attendance-employee-row td {
+  color: var(--text);
+}
+
+body.authenticated #attendancePage .attendance-checklist-table tbody tr.is-remote td {
+  background: rgba(56, 189, 248, 0.08);
+  box-shadow: inset 3px 0 0 rgba(56, 189, 248, 0.65);
+}
+
+body.authenticated #attendancePage .attendance-checklist-table tbody tr.attendance-employee-row:hover td {
+  background: rgba(79, 140, 255, 0.08);
+}
+
+body.authenticated #attendancePage .attendance-checklist-table tbody tr.is-remote:hover td {
+  background: rgba(56, 189, 248, 0.12);
+}

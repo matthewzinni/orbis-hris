@@ -86,6 +86,90 @@ async function describeInvokeFailure(error: unknown): Promise<string> {
   return 'Attendance sync failed.';
 }
 
+function normalizePeopleList(value: unknown): AttendancePerson[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map(normalizePerson)
+    .filter((row): row is AttendancePerson => Boolean(row));
+}
+
+export async function loadManualAttendanceSnapshot(
+  attendanceDate: string
+): Promise<AttendanceSummary | null> {
+  const date = String(attendanceDate || '').trim();
+  if (!date) return null;
+
+  const { data, error } = await supabaseClient
+    .from('attendance_manual_snapshots')
+    .select('present, absent, timezone, source, updated_at')
+    .eq('attendance_date', date)
+    .maybeSingle();
+
+  if (error) {
+    if (error.code === '42P01' || /does not exist/i.test(error.message || '')) {
+      throw new AttendanceSyncError(
+        'Attendance storage is not set up yet. Run database migrations (npm run db:push).'
+      );
+    }
+    throw new AttendanceSyncError(error.message || 'Could not load saved attendance.');
+  }
+
+  if (!data) return null;
+
+  const row = data as {
+    present?: unknown;
+    absent?: unknown;
+    timezone?: string | null;
+    source?: string | null;
+    updated_at?: string | null;
+  };
+
+  return {
+    asOf: String(row.updated_at || new Date().toISOString()),
+    timezone: String(row.timezone || '').trim() || undefined,
+    source: String(row.source || 'Manual').trim() || 'Manual',
+    present: normalizePeopleList(row.present),
+    absent: normalizePeopleList(row.absent),
+  };
+}
+
+export async function saveManualAttendanceSnapshot(
+  attendanceDate: string,
+  snapshot: AttendanceSummary
+): Promise<void> {
+  const date = String(attendanceDate || '').trim();
+  if (!date) {
+    throw new AttendanceSyncError('Choose a date before saving attendance.');
+  }
+
+  const user = (await supabaseClient.auth.getUser()).data.user;
+  const updatedBy =
+    String(user?.email || user?.id || '')
+      .trim() || undefined;
+
+  const { error } = await supabaseClient.from('attendance_manual_snapshots').upsert(
+    {
+      attendance_date: date,
+      present: snapshot.present,
+      absent: snapshot.absent,
+      timezone: snapshot.timezone || null,
+      source: snapshot.source || 'Manual',
+      updated_by: updatedBy,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'attendance_date' }
+  );
+
+  if (error) {
+    if (error.code === '42P01' || /does not exist/i.test(error.message || '')) {
+      throw new AttendanceSyncError(
+        'Attendance storage is not set up yet. Run database migrations (npm run db:push).'
+      );
+    }
+    throw new AttendanceSyncError(error.message || 'Could not save attendance.');
+  }
+}
+
 export async function fetchIntuitAttendanceSnapshot(): Promise<AttendanceSummary> {
   const { data, error } = await supabaseClient.functions.invoke('intuit-workforce-attendance', {
     body: {},

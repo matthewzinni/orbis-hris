@@ -24,6 +24,9 @@ export interface Employee {
     position?: string;
     supervisor?: string;
 
+    /** Overseas / remote (Attendance roll call grouping). */
+    is_remote?: boolean;
+
     // Status
     status?: 'Active' | 'Inactive' | 'Terminated' | 'Leave';
     pay_type?: 'Hourly' | 'Salary';

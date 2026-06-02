@@ -642,67 +642,75 @@
           aria-hidden="true"
         >
           <div class="page" id="attendancePage">
-            <div class="toolbar">
+            <div class="toolbar attendance-toolbar">
               <div class="toolbar-left">
-                <span class="muted">Intuit Workforce live attendance</span>
+                <span class="muted">Check employees who are present, then save</span>
               </div>
-              <div class="toolbar-right">
-                <button class="button soft" id="attendanceSyncBtn" type="button">Sync now</button>
+              <div class="toolbar-right attendance-manual-actions">
+                <button class="button primary" id="attendanceSaveBtn" type="button">Save attendance</button>
+                <button class="button soft" id="attendanceSyncBtn" type="button" title="Requires Intuit Workforce API access">
+                  Sync from Intuit
+                </button>
               </div>
             </div>
             <div class="kpi-grid compact-grid">
               <div class="kpi-card">
                 <div class="kpi-label">Present</div>
                 <div class="kpi-value" id="attendancePresentCount">—</div>
-                <div class="kpi-sub">Employees clocked in / present</div>
+                <div class="kpi-sub">Checked in roll call</div>
               </div>
               <div class="kpi-card warm-accent">
                 <div class="kpi-label">Absent</div>
                 <div class="kpi-value" id="attendanceAbsentCount">—</div>
-                <div class="kpi-sub">Employees marked absent</div>
+                <div class="kpi-sub">Not checked</div>
               </div>
             </div>
-            <div class="card">
-              <div class="card-header">
-                <span>Attendance Snapshot</span>
-                <span class="muted">As of <span id="attendanceAsOf">—</span> · <span id="attendanceSource">Intuit Workforce</span></span>
+            <div class="card attendance-roll-call-card">
+              <div class="card-header attendance-roll-call-header">
+                <div class="attendance-roll-call-title">
+                  <span>Roll call</span>
+                  <span class="muted attendance-roll-call-meta"
+                    >As of <span id="attendanceAsOf">—</span> · <span id="attendanceSource">Manual</span></span
+                  >
+                </div>
+                <div class="attendance-roll-call-controls">
+                  <div class="field">
+                    <label for="attendanceDateInput">Date</label>
+                    <input class="input" id="attendanceDateInput" type="date" />
+                  </div>
+                  <button class="button soft" id="attendanceMarkAllPresentBtn" type="button">
+                    All present
+                  </button>
+                  <button class="button soft" id="attendanceClearAllBtn" type="button">Clear all</button>
+                </div>
               </div>
-              <div class="card-body">
-                <div class="detail-grid" style="margin-bottom: 12px">
-                  <div>
-                    <div class="detail-label">Present roster</div>
-                    <div class="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Department</th>
-                          </tr>
-                        </thead>
-                        <tbody id="attendancePresentBody">
-                          <tr><td colspan="3" class="empty">Click “Sync now” to load attendance.</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <div>
-                    <div class="detail-label">Absent roster</div>
-                    <div class="table-wrap">
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Department</th>
-                          </tr>
-                        </thead>
-                        <tbody id="attendanceAbsentBody">
-                          <tr><td colspan="3" class="empty">Click “Sync now” to load attendance.</td></tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+              <div class="card-body attendance-roll-call-body">
+                <div class="attendance-roll-call-legend" aria-hidden="true">
+                  <span class="attendance-legend-item"
+                    ><span class="attendance-legend-swatch attendance-legend-swatch--onsite"></span> In
+                    house</span
+                  >
+                  <span class="attendance-legend-item"
+                    ><span class="attendance-legend-swatch attendance-legend-swatch--remote"></span>
+                    Overseas / remote</span
+                  >
+                </div>
+                <div class="table-wrap attendance-table-scroll">
+                  <table class="attendance-checklist-table">
+                    <thead>
+                      <tr>
+                        <th class="attendance-check-col">Present</th>
+                        <th>Name</th>
+                        <th>ID</th>
+                        <th>Department</th>
+                      </tr>
+                    </thead>
+                    <tbody id="attendanceChecklistBody">
+                      <tr>
+                        <td colspan="4" class="empty">Loading employees…</td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </div>
@@ -4212,6 +4220,15 @@
                         placeholder="0-6 months, 1-2 years, etc."
                         autocomplete="section-orbis-admin tenure"
                       />
+                    </div>
+                    <div class="field employee-remote-field">
+                      <label class="checkbox-label" for="employeeIsRemoteInput">
+                        <input id="employeeIsRemoteInput" type="checkbox" />
+                        Overseas / remote employee
+                      </label>
+                      <p class="muted" style="margin: 6px 0 0; font-size: 0.82rem; line-height: 1.45">
+                        Groups this person in the remote section on the Attendance roll call.
+                      </p>
                     </div>
                   </div>
                   <div class="button-row" style="margin-top: 8px">

@@ -539,6 +539,12 @@ export function clearEmployeeAdminForm(): void {
     el.dispatchEvent(new Event('change', { bubbles: true }));
   });
 
+  const remoteInput = safeGet('employeeIsRemoteInput') as HTMLInputElement | null;
+  if (remoteInput) {
+    remoteInput.checked = false;
+    remoteInput.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
   unlockEmployeeIdFields();
   syncEmployeeTerminationDateFieldVisibility('ACTIVE');
 }

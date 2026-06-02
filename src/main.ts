@@ -6,6 +6,7 @@ import './styles/styles.css';
 import './styles/care-engagement.css';
 import './styles/orbis-alerts.css';
 import './styles/org-chart.css';
+import './styles/attendance.css';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
 import {
@@ -318,6 +319,9 @@ async function initializeProtectedModules(): Promise<void> {
     applyOperationsCenterAccess();
     applyCareEngagementCenterAccess();
     applyInvestigationsCenterAccess();
+    if (typeof bridge.applyAttendanceAccess === 'function') {
+      bridge.applyAttendanceAccess();
+    }
   } catch (err) {
     console.error('Employee module failed to load employees:', err);
   }
