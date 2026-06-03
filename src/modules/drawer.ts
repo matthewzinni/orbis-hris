@@ -7,6 +7,7 @@ import { showOrbisConfirm } from '../ui/confirmModal';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
 import { cleanEmployeeNameValue } from '../services/employeeUtils';
 import { createDefaultOnboardingTasks } from './onboarding';
+import { createDefaultOffboardingTasks } from './offboarding';
 import {
   employeeToPayrollSnapshot,
   logNewHirePayrollHandoff,
@@ -149,6 +150,7 @@ function getNextAnniversaryDate(employee: DrawerEmployeeRecord): string {
 
 const EMPLOYEE_RELATED_TABLES = [
   'onboarding_tasks',
+  'offboarding_tasks',
   'employee_notes',
   'employee_meetings',
   'employee_reviews',
@@ -567,6 +569,7 @@ function normalizeDrawerTabName(tabName: string): string {
   if (raw.includes('discipline')) return 'discipline';
   if (raw.includes('emergency')) return 'emergency';
   if (raw.includes('onboarding')) return 'onboarding';
+  if (raw.includes('offboarding')) return 'offboarding';
   if (raw.includes('document')) return 'documents';
   if (raw.includes('history')) return 'history';
   if (raw.includes('notes')) return 'notes';
@@ -586,6 +589,7 @@ function normalizeDrawerTabName(tabName: string): string {
     review: 'reviews',
     emergency: 'emergency',
     onboarding: 'onboarding',
+    offboarding: 'offboarding',
     documents: 'documents',
     history: 'history',
     employeeadmin: 'employeeadmin',
@@ -658,6 +662,10 @@ export function switchDrawerTab(tabName: string): void {
 
   if (normalizedTab === 'onboarding') {
     void window.loadOnboardingTasks?.(employeeId);
+  }
+
+  if (normalizedTab === 'offboarding') {
+    void window.loadOffboardingTasks?.(employeeId);
   }
 
   if (normalizedTab === 'caresupport') {
@@ -881,6 +889,13 @@ export async function saveEmployeeRecord(): Promise<void> {
   const payrollBeforeSnapshot = employeeToPayrollSnapshot(
     window.currentEmployee as Record<string, unknown> | null | undefined
   );
+  const statusBefore = normalizeStatusForAdminInput(
+    String(
+      (window.currentEmployee as Record<string, unknown> | null | undefined)?.status ||
+        (window.currentEmployee as Record<string, unknown> | null | undefined)?.displayStatus ||
+        ''
+    )
+  );
 
   if (isCreating) {
     const insertResult = await client
@@ -979,6 +994,14 @@ export async function saveEmployeeRecord(): Promise<void> {
   }
 
   showToast('Employee saved.');
+
+  if (status === 'TERMINATED' && statusBefore !== 'TERMINATED') {
+    try {
+      await createDefaultOffboardingTasks(editedEmployeeId);
+    } catch (err) {
+      console.warn('[Drawer] Offboarding tasks failed:', err);
+    }
+  }
 
   try {
     const handoffCount = await logPayrollHandoffsFromEmployeeSave({

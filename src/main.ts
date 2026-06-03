@@ -43,6 +43,7 @@ import './ui/hrInbox';
 import './modules/payrollHandoff';
 import './ui/departmentSummary';
 import './modules/onboarding';
+import './modules/offboarding';
 import './modules/employees';
 import './modules/orgChart';
 import './modules/attendance';

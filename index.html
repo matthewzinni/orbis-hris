@@ -2832,6 +2832,14 @@
                 Onboarding
               </button>
               <button
+                class="tab-btn admin-only hidden"
+                data-tab="offboarding"
+                type="button"
+                data-admin-only
+              >
+                Offboarding
+              </button>
+              <button
                 class="tab-btn"
                 data-tab="documents"
                 type="button"
@@ -3966,8 +3974,11 @@
             </section>
             <section class="tab-panel" id="tab-onboarding">
               <div class="card">
-                <div class="card-header">Onboarding Packet</div>
+                <div class="card-header">Onboarding checklist</div>
                 <div class="card-body">
+                  <p class="muted" style="margin: 0 0 10px; font-size: 0.82rem; line-height: 1.45">
+                    Standard packet: W-4, I-9, and Standalone Form Packet.
+                  </p>
                   <div id="onboardingSummary" class="muted">Loading onboarding...</div>
                   <div
                     style="
@@ -3989,6 +4000,34 @@
                 </div>
               </div>
             </section>
+            <section class="tab-panel admin-only hidden" id="tab-offboarding" data-admin-only>
+              <div class="card">
+                <div class="card-header">Offboarding checklist</div>
+                <div class="card-body">
+                  <p class="muted" style="margin: 0 0 10px; font-size: 0.82rem; line-height: 1.45">
+                    Standard separation workflow: exit interview through final payroll and access removal.
+                  </p>
+                  <div id="offboardingSummary" class="muted">Loading offboarding...</div>
+                  <div
+                    style="
+                      margin: 10px 0;
+                      background: #eef3f9;
+                      border-radius: 999px;
+                      height: 10px;
+                      overflow: hidden;
+                    "
+                  >
+                    <div
+                      id="offboardingProgressBar"
+                      style="height: 10px; width: 0%; background: #dc2626"
+                    ></div>
+                  </div>
+                  <div id="offboardingChecklist" class="history-list">
+                    <div class="empty">No offboarding items loaded yet.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
             <section class="tab-panel" id="tab-documents">
               <div class="two-col">
                 <div class="card">
@@ -3998,13 +4037,14 @@
                       <label for="docType">Document Type</label>
                       <select id="docType">
                         <option value="">Select document type</option>
+                        <option value="W-4">W-4</option>
+                        <option value="I-9">I-9</option>
+                        <option value="Standalone Form Packet">Standalone Form Packet</option>
                         <option value="Handbook Acknowledgment">Handbook Acknowledgment</option>
                         <option value="Policy Acknowledgment">Policy Acknowledgment</option>
                         <option value="Discipline Form">Discipline Form</option>
                         <option value="Training Sign-Off">Training Sign-Off</option>
                         <option value="Benefits Form">Benefits Form</option>
-                        <option value="I-9">I-9</option>
-                        <option value="W-4">W-4</option>
                         <option value="Other">Other</option>
                       </select>
                     </div>

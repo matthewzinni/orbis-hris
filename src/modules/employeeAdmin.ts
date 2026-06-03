@@ -7,6 +7,8 @@ import { showOrbisConfirm } from '../ui/confirmModal';
 import { resetDrawerForms } from './drawerForms';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
 import { openNewEmployeeDrawer } from '../ui/drawerUi';
+import { createDefaultOffboardingTasks } from './offboarding';
+import { createPayrollHandoff } from '../services/payrollHandoff';
 
 type EmployeeRow = Record<string, unknown>;
 
@@ -56,6 +58,7 @@ export async function deleteEmployeeById(
   const relatedTables = [
     'payroll_handoffs',
     'onboarding_tasks',
+    'offboarding_tasks',
     'employee_notes',
     'employee_meetings',
     'employee_reviews',
@@ -172,8 +175,27 @@ export async function runTerminateEmployee(): Promise<void> {
     currentEmployee,
     'Employee marked terminated with file retained for turnover reporting.'
   );
+
+  const termDate = new Date().toISOString().slice(0, 10);
+  try {
+    await createDefaultOffboardingTasks(targetId);
+    await createPayrollHandoff({
+      employee_id: targetId,
+      change_type: 'termination',
+      effective_date: termDate,
+      summary: `Termination — ${employeeName}`,
+      payload: { termination_date: termDate },
+    });
+  } catch (err) {
+    console.warn('[EmployeeAdmin] Offboarding/payroll handoff failed:', err);
+  }
+
   showToast('Employee terminated. File retained for turnover reporting.', 'success');
   await refreshDashboardAfterEmployeeChange();
+
+  if (typeof window.loadHrInbox === 'function') {
+    void window.loadHrInbox(true);
+  }
 
   if (typeof window.closeDrawer === 'function') {
     window.closeDrawer();

@@ -68,6 +68,9 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
     case 'onboarding':
       void window.loadOnboardingTasks?.(id);
       break;
+    case 'offboarding':
+      void window.loadOffboardingTasks?.(id);
+      break;
     case 'documents':
       void window.loadEmployeeDocuments?.(id);
       break;
@@ -97,6 +100,7 @@ declare global {
     loadEmployeeManualAtRisk?: (employeeId: string) => void;
     loadEmployeeManualImpactPlayer?: (employeeId: string) => void;
     loadOnboardingTasks?: (employeeId: string) => Promise<void>;
+    loadOffboardingTasks?: (employeeId: string) => Promise<void>;
     loadEmployeePayrollHandoffs?: (employeeId: string) => Promise<void>;
   }
 }

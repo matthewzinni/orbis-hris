@@ -14,7 +14,13 @@ import {
   readEmployeeNextStayInterviewDateRaw,
 } from './employeeUtils';
 import { isOpenDisciplineStatus, isOpenInvestigationStatus } from './hrIntelligence';
-import { getActiveEmployees, getEmployeeById, getEmployees, loadEmployees } from '../modules/employees';
+import {
+  getActiveEmployees,
+  getEmployeeById,
+  getEmployees,
+  loadEmployees,
+  normalizeEmployeeStatus,
+} from '../modules/employees';
 import type { Investigation } from '../types/investigationsTypes';
 import { normalizeInvestigationStatus } from '../types/investigationsTypes';
 import {
@@ -33,7 +39,8 @@ export type HrInboxKind =
   | 'investigation'
   | 'care_follow_up'
   | 'operations'
-  | 'payroll_handoff';
+  | 'payroll_handoff'
+  | 'offboarding';
 
 export type HrInboxRoute =
   | { type: 'employee'; employeeId: string; drawerTab?: string }
@@ -55,6 +62,7 @@ export type HrInboxItem = {
 const DUE_SOON_DAYS = 7;
 const NEW_HIRE_DAYS = 14;
 const ONBOARDING_HIRE_LOOKBACK_DAYS = 90;
+const OFFBOARDING_TERM_LOOKBACK_DAYS = 30;
 
 const SEVERITY_RANK: Record<HrInboxSeverity, number> = {
   overdue: 0,
@@ -71,6 +79,7 @@ const KIND_LABELS: Record<HrInboxKind, string> = {
   care_follow_up: 'Care follow-up',
   operations: 'Operations',
   payroll_handoff: 'Payroll handoff',
+  offboarding: 'Offboarding',
 };
 
 type EmployeeLike = Record<string, unknown>;
@@ -441,6 +450,90 @@ function collectOperationsItems(
   return items;
 }
 
+function daysSinceTermination(employee: EmployeeLike): number | null {
+  const termRaw = employee.termination_date || employee.terminationDate;
+  const daysUntil = daysUntilDate(termRaw);
+  if (daysUntil === null) return null;
+  return -daysUntil;
+}
+
+function collectOffboardingItems(
+  tasks: Array<{ id: string; employee_id?: string; task_name?: string; status?: string }>,
+  employees: EmployeeLike[]
+): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  const employeeByRosterId = new Map<string, EmployeeLike>();
+  employees.forEach((employee) => {
+    const keys = [employee.employee_id, employee.displayId, employee.id, employee.dbId]
+      .filter(Boolean)
+      .map(String);
+    keys.forEach((key) => employeeByRosterId.set(key, employee));
+  });
+
+  const pendingByEmployee = new Map<string, Array<{ id: string; task_name?: string }>>();
+
+  tasks.forEach((task) => {
+    if (String(task.status || '').toLowerCase() === 'completed') return;
+
+    const rosterId = String(task.employee_id || '').trim();
+    if (!rosterId) return;
+
+    const employee = employeeByRosterId.get(rosterId) || resolveEmployee(rosterId);
+    if (!employee || normalizeEmployeeStatus(employee.status) !== 'terminated') return;
+
+    const daysSince = daysSinceTermination(employee);
+    if (daysSince === null || daysSince > OFFBOARDING_TERM_LOOKBACK_DAYS) return;
+
+    const drawerId = drawerEmployeeId(employee);
+    if (!drawerId) return;
+
+    const bucket = pendingByEmployee.get(drawerId) || [];
+    bucket.push({ id: task.id, task_name: task.task_name });
+    pendingByEmployee.set(drawerId, bucket);
+  });
+
+  pendingByEmployee.forEach((pendingTasks, employeeId) => {
+    const employee = getEmployeeById(employeeId) || resolveEmployee(employeeId);
+    if (!employee) return;
+
+    const name = employeeDisplayName(employee);
+    const termLabel = formatDueDateLabel(
+      parseDueDate(employee.termination_date || employee.terminationDate),
+      String(employee.termination_date || employee.terminationDate || '')
+    );
+
+    if (pendingTasks.length > 1) {
+      items.push({
+        id: `offboarding:${employeeId}`,
+        kind: 'offboarding',
+        severity: 'due_soon',
+        employeeName: name,
+        dueDate: isoDateFromValue(employee.termination_date || employee.terminationDate),
+        title: `Offboarding incomplete — ${name}`,
+        detail: `${pendingTasks.length} tasks open (terminated ${termLabel})`,
+        route: { type: 'employee', employeeId, drawerTab: 'offboarding' },
+      });
+      return;
+    }
+
+    pendingTasks.forEach((task) => {
+      items.push({
+        id: `offboarding:${task.id}`,
+        kind: 'offboarding',
+        severity: 'due_soon',
+        employeeName: name,
+        dueDate: isoDateFromValue(employee.termination_date || employee.terminationDate),
+        title: `Offboarding — ${name}`,
+        detail: String(task.task_name || 'Task').trim() || 'Pending task',
+        route: { type: 'employee', employeeId, drawerTab: 'offboarding' },
+      });
+    });
+  });
+
+  return items;
+}
+
 function daysSinceDate(isoDate: string): number | null {
   const daysUntil = daysUntilDate(isoDate);
   if (daysUntil === null) return null;
@@ -512,12 +605,14 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     }
   }
 
-  const employees = getActiveEmployees() as EmployeeLike[];
+  const allEmployees = getEmployees() as EmployeeLike[];
+  const activeEmployees = getActiveEmployees() as EmployeeLike[];
 
   const payrollHandoffsPromise = loadPendingPayrollHandoffs();
 
   const [
     onboardingRes,
+    offboardingRes,
     disciplineRes,
     investigationsRes,
     careItemsRes,
@@ -526,6 +621,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     payrollHandoffs,
   ] = await Promise.all([
     supabaseClient.from('onboarding_tasks').select('id, employee_id, task_name, status'),
+    supabaseClient.from('offboarding_tasks').select('id, employee_id, task_name, status'),
     supabaseClient
       .from('discipline_reports')
       .select('id, employee_id, issue_type, report_status'),
@@ -544,6 +640,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
 
   const queryErrors = [
     onboardingRes.error,
+    offboardingRes.error,
     disciplineRes.error,
     investigationsRes.error,
     careItemsRes.error,
@@ -556,8 +653,9 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
   }
 
   const merged: HrInboxItem[] = [
-    ...collectStayInterviewItems(employees),
-    ...collectOnboardingItems(onboardingRes.data || [], employees),
+    ...collectStayInterviewItems(activeEmployees),
+    ...collectOnboardingItems(onboardingRes.data || [], activeEmployees),
+    ...collectOffboardingItems(offboardingRes.data || [], allEmployees),
     ...collectDisciplineItems(disciplineRes.data || []),
     ...collectInvestigationItems((investigationsRes.data || []) as Investigation[]),
     ...collectCareFollowUpItems(careItemsRes.data || [], careFollowUpsRes.data || []),
@@ -659,6 +757,17 @@ export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSum
       detail: `${operations} issue${operations === 1 ? '' : 's'} need attention`,
       count: operations,
       viewId: 'operationsView',
+    });
+  }
+
+  const offboarding = items.filter((item) => item.kind === 'offboarding').length;
+  if (offboarding > 0) {
+    alerts.push({
+      id: 'offboarding-open',
+      label: 'Offboarding checklists',
+      detail: `${offboarding} open item${offboarding === 1 ? '' : 's'} for recent terminations`,
+      count: offboarding,
+      viewId: 'dashboardView',
     });
   }
 
