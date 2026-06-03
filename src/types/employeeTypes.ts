@@ -27,6 +27,10 @@ export interface Employee {
     /** Overseas / remote (excluded from Attendance roll call). */
     is_remote?: boolean;
 
+    /** Baseline PTO hours from payroll import; remaining is computed in app. */
+    pto_balance_hours?: number | null;
+    pto_balance_as_of?: string | null;
+
     // Status
     status?: 'Active' | 'Inactive' | 'Terminated' | 'Leave';
     pay_type?: 'Hourly' | 'Salary';

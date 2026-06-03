@@ -3,6 +3,7 @@ import {
   cancelLeaveRequest,
   canManageLeaveRequests,
   createLeaveRequest,
+  deleteLeaveRequest,
   denyLeaveRequest,
   employeeNameForLeave,
   formatLeaveDateRange,
@@ -10,10 +11,17 @@ import {
   leaveTypeLabel,
   loadApprovedLeaveOutToday,
   loadLeaveRequestsForEmployee,
+  updateLeaveRequest,
   type LeaveRequestRecord,
   type LeaveType,
 } from '../services/leaveRequests';
+import {
+  formatPtoHours,
+  loadEmployeePtoSnapshot,
+  ptoPanelHeaderLabel,
+} from '../services/ptoBalance';
 import { isAdminUser } from '../services/access';
+import { showOrbisConfirm } from '../ui/confirmModal';
 
 declare global {
   interface Window {
@@ -54,16 +62,51 @@ function statusClass(status: string): string {
   return `leave-status leave-status--${esc(String(status || 'requested').toLowerCase())}`;
 }
 
-function renderLeaveRow(record: LeaveRequestRecord): string {
+function renderAdminDeleteButton(record: LeaveRequestRecord): string {
+  if (!isAdminUser()) return '';
+  return `<button type="button" class="button danger sm" data-leave-action="delete" data-leave-id="${esc(record.id)}">Delete</button>`;
+}
+
+function renderLeaveActions(record: LeaveRequestRecord): string {
+  const buttons: string[] = [];
   const canAct = record.status === 'requested' && canManageLeaveRequests();
-  const actions = canAct
-    ? `<div class="leave-request-actions">
-        <button type="button" class="button soft" data-leave-action="approve" data-leave-id="${esc(record.id)}">Approve</button>
-        <button type="button" class="button soft" data-leave-action="deny" data-leave-id="${esc(record.id)}">Deny</button>
-      </div>`
-    : record.status === 'requested'
-      ? '<div class="muted" style="font-size:0.8rem">Awaiting approval</div>'
-      : '';
+  const canEditHours =
+    record.status === 'approved' &&
+    isAdminUser() &&
+    String(record.leave_type || '').toLowerCase() === 'pto' &&
+    record.deduct_from_pto_balance !== false;
+
+  if (canAct) {
+    buttons.push(
+      `<button type="button" class="button soft" data-leave-action="approve" data-leave-id="${esc(record.id)}">Approve</button>`,
+      `<button type="button" class="button soft" data-leave-action="deny" data-leave-id="${esc(record.id)}">Deny</button>`
+    );
+  } else if (canEditHours) {
+    buttons.push(
+      `<button type="button" class="button soft" data-leave-action="edit-hours" data-leave-id="${esc(record.id)}" data-leave-hours="${esc(record.hours ?? '')}">Edit hours</button>`,
+      `<button type="button" class="button soft" data-leave-action="cancel" data-leave-id="${esc(record.id)}">Cancel</button>`
+    );
+  } else if (record.status === 'approved' && isAdminUser()) {
+    buttons.push(
+      `<button type="button" class="button soft" data-leave-action="cancel" data-leave-id="${esc(record.id)}">Cancel</button>`
+    );
+  }
+
+  const deleteButton = renderAdminDeleteButton(record);
+  if (deleteButton) buttons.push(deleteButton);
+
+  if (!buttons.length) {
+    if (record.status === 'requested') {
+      return '<div class="muted" style="font-size:0.8rem">Awaiting approval</div>';
+    }
+    return '';
+  }
+
+  return `<div class="leave-request-actions">${buttons.join('')}</div>`;
+}
+
+function renderLeaveRow(record: LeaveRequestRecord): string {
+  const actions = renderLeaveActions(record);
 
   const hours = record.hours != null ? `${record.hours} hr` : '';
   const intermittent = record.intermittent ? ' · Intermittent' : '';
@@ -108,6 +151,9 @@ function bindLeaveRequestUi(): void {
     event.preventDefault();
     if (action === 'approve') void approveLeaveRequestById(id);
     if (action === 'deny') void denyLeaveRequestById(id);
+    if (action === 'cancel') void cancelLeaveRequestById(id);
+    if (action === 'edit-hours') void editLeaveHoursById(id, button.dataset.leaveHours || '');
+    if (action === 'delete') void deleteLeaveRequestById(id);
   });
 }
 
@@ -118,6 +164,45 @@ export function applyLeaveAccess(): void {
     element.classList.toggle('hidden', !visible);
     element.setAttribute('aria-hidden', visible ? 'false' : 'true');
   });
+}
+
+async function refreshLeavePanelHeader(
+  employeeId: string,
+  requests?: LeaveRequestRecord[]
+): Promise<void> {
+  const header = safeGet('leaveRequestPanelHeader');
+  const sub = safeGet('leaveRequestBalanceMeta');
+  if (!header) return;
+
+  const rosterId = employeeId || getCurrentEmployeeRosterId();
+  if (!rosterId) {
+    header.textContent = 'Time Off';
+    if (sub) sub.textContent = '';
+    return;
+  }
+
+  try {
+    const rows = requests ?? (await loadLeaveRequestsForEmployee(rosterId));
+    const snapshot = await loadEmployeePtoSnapshot(rosterId, rows);
+    header.textContent = ptoPanelHeaderLabel(snapshot.remainingHours);
+
+    if (sub) {
+      if (snapshot.baselineHours == null) {
+        sub.textContent = 'Import a PTO baseline from QuickBooks Time to track remaining hours.';
+      } else {
+        const parts = [
+          `Baseline ${formatPtoHours(snapshot.baselineHours)} hr`,
+          snapshot.baselineAsOf ? `as of ${snapshot.baselineAsOf}` : null,
+          snapshot.usedHours > 0
+            ? `${formatPtoHours(snapshot.usedHours)} hr new approved PTO in Orbis`
+            : null,
+        ].filter(Boolean);
+        sub.textContent = parts.join(' · ');
+      }
+    }
+  } catch {
+    header.textContent = 'Time Off';
+  }
 }
 
 export async function loadEmployeeLeaveRequests(employeeId: string): Promise<void> {
@@ -138,6 +223,8 @@ export async function loadEmployeeLeaveRequests(employeeId: string): Promise<voi
 
   try {
     const rows = await loadLeaveRequestsForEmployee(rosterId);
+    await refreshLeavePanelHeader(rosterId, rows);
+
     if (!rows.length) {
       list.innerHTML = '<div class="muted">No leave requests for this employee.</div>';
       return;
@@ -166,6 +253,11 @@ export async function submitEmployeeLeaveRequest(): Promise<void> {
 
   if (!start) {
     showToast('Start date is required.', 'error');
+    return;
+  }
+
+  if (!hoursRaw) {
+    showToast('Hours are required so PTO balance can update on approval.', 'error');
     return;
   }
 
@@ -249,6 +341,67 @@ export async function cancelLeaveRequestById(requestId: string): Promise<void> {
   }
 }
 
+async function editLeaveHoursById(requestId: string, currentHours: string): Promise<void> {
+  if (!isAdminUser()) {
+    showToast('Only admins can edit approved leave hours.', 'error');
+    return;
+  }
+
+  const raw = window.prompt('Hours for this approved PTO request:', currentHours || '8');
+  if (raw == null) return;
+
+  const hours = Number(raw);
+  if (!Number.isFinite(hours) || hours < 0) {
+    showToast('Enter a valid number of hours.', 'error');
+    return;
+  }
+
+  const rosterId = getCurrentEmployeeRosterId();
+
+  try {
+    await updateLeaveRequest(requestId, { hours });
+    showToast('Leave hours updated.');
+    await loadEmployeeLeaveRequests(rosterId);
+  } catch (err) {
+    showToast(err instanceof Error ? err.message : 'Could not update hours.', 'error');
+  }
+}
+
+async function deleteLeaveRequestById(requestId: string): Promise<void> {
+  if (!isAdminUser()) {
+    showToast('Only admins can delete leave requests.', 'error');
+    return;
+  }
+
+  const confirmed = await showOrbisConfirm(
+    'Permanently delete this leave request? This cannot be undone.',
+    {
+      title: 'Delete leave request',
+      confirmLabel: 'Delete',
+      danger: true,
+    }
+  );
+
+  if (!confirmed) return;
+
+  const rosterId = getCurrentEmployeeRosterId();
+
+  try {
+    await deleteLeaveRequest(requestId);
+    showToast('Leave request deleted.');
+    await loadEmployeeLeaveRequests(rosterId);
+    if (typeof window.loadEmployees === 'function') {
+      await window.loadEmployees();
+    }
+    if (typeof window.loadHrInbox === 'function') {
+      void window.loadHrInbox(true);
+    }
+    void renderOutTodayCard();
+  } catch (err) {
+    showToast(err instanceof Error ? err.message : 'Could not delete.', 'error');
+  }
+}
+
 bindLeaveRequestUi();
 applyLeaveAccess();
 
@@ -257,6 +410,7 @@ window.submitEmployeeLeaveRequest = submitEmployeeLeaveRequest;
 window.approveLeaveRequestById = approveLeaveRequestById;
 window.denyLeaveRequestById = denyLeaveRequestById;
 window.cancelLeaveRequestById = cancelLeaveRequestById;
+window.deleteLeaveRequestById = deleteLeaveRequestById;
 window.applyLeaveAccess = applyLeaveAccess;
 
 export async function renderOutTodayCard(): Promise<void> {

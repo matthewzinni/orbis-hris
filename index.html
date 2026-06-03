@@ -4039,10 +4039,11 @@
             </section>
             <section class="tab-panel hidden" id="tab-time-off" data-leave-access>
               <div class="card" id="leaveRequestPanel">
-                <div class="card-header">Time off</div>
+                <div class="card-header" id="leaveRequestPanelHeader">Time Off</div>
                 <div class="card-body">
+                  <p class="muted leave-balance-meta" id="leaveRequestBalanceMeta" style="margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45"></p>
                   <p class="muted" style="margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45">
-                    Log and approve leave for payroll separately — no PTO balance tracking in Orbis.
+                    Baseline hours come from QuickBooks Time (already net of past approved PTO). Only new requests approved in Orbis reduce the remaining balance.
                   </p>
                   <div id="leaveRequestForm" class="leave-request-form">
                     <div class="field">
@@ -4065,7 +4066,7 @@
                       <input class="input" id="leaveRequestEndInput" type="date" />
                     </div>
                     <div class="field">
-                      <label for="leaveRequestHoursInput">Hours (optional)</label>
+                      <label for="leaveRequestHoursInput">Hours</label>
                       <input
                         class="input"
                         id="leaveRequestHoursInput"
@@ -4073,6 +4074,7 @@
                         min="0"
                         step="0.25"
                         placeholder="8"
+                        required
                       />
                     </div>
                     <div class="field field--check">

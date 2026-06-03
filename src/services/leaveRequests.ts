@@ -1,5 +1,5 @@
 /**
- * Time off / leave request cases (no PTO balance math).
+ * Time off / leave request cases with PTO balance display (baseline on employee).
  */
 
 import { getCurrentUserAccess, isAdminUser, isSupervisorUser } from './access';
@@ -30,6 +30,7 @@ export type LeaveRequestRecord = {
   approved_by: string | null;
   approved_at: string | null;
   payroll_notified: boolean;
+  deduct_from_pto_balance: boolean;
   created_at: string;
   created_by: string | null;
 };
@@ -76,6 +77,7 @@ function mapRow(row: Record<string, unknown>): LeaveRequestRecord {
     approved_by: row.approved_by ? String(row.approved_by) : null,
     approved_at: row.approved_at ? String(row.approved_at) : null,
     payroll_notified: Boolean(row.payroll_notified),
+    deduct_from_pto_balance: row.deduct_from_pto_balance === false ? false : true,
     created_at: String(row.created_at || ''),
     created_by: row.created_by ? String(row.created_by) : null,
   };
@@ -195,6 +197,7 @@ export async function createLeaveRequest(draft: LeaveRequestDraft): Promise<Leav
         intermittent: Boolean(draft.intermittent),
         notes: normalize(draft.notes) || null,
         status: 'requested',
+        deduct_from_pto_balance: true,
         created_by: actorEmail(),
       },
     ])
@@ -307,6 +310,55 @@ export async function cancelLeaveRequest(requestId: string): Promise<void> {
 
   if (error) {
     throw new Error(error.message || 'Could not cancel leave request.');
+  }
+}
+
+export async function updateLeaveRequest(
+  requestId: string,
+  patch: Partial<Pick<LeaveRequestDraft, 'start_date' | 'end_date' | 'hours' | 'leave_type' | 'notes'>>
+): Promise<LeaveRequestRecord> {
+  const id = normalize(requestId);
+  if (!id) throw new Error('Leave request id is required.');
+
+  const update: Record<string, unknown> = {};
+  if (patch.start_date !== undefined) update.start_date = normalize(patch.start_date);
+  if (patch.end_date !== undefined) {
+    update.end_date = normalize(patch.end_date || '') || null;
+  }
+  if (patch.hours !== undefined) update.hours = patch.hours;
+  if (patch.leave_type !== undefined) update.leave_type = patch.leave_type;
+  if (patch.notes !== undefined) update.notes = normalize(patch.notes) || null;
+
+  if (!Object.keys(update).length) {
+    throw new Error('Nothing to update.');
+  }
+
+  const { data, error } = await supabaseClient
+    .from('leave_requests')
+    .update(update)
+    .eq('id', id)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw new Error(error.message || 'Could not update leave request.');
+  }
+
+  return mapRow((data || {}) as Record<string, unknown>);
+}
+
+export async function deleteLeaveRequest(requestId: string): Promise<void> {
+  if (!isAdminUser()) {
+    throw new Error('Only admins can delete leave requests.');
+  }
+
+  const id = normalize(requestId);
+  if (!id) return;
+
+  const { error } = await supabaseClient.from('leave_requests').delete().eq('id', id);
+
+  if (error) {
+    throw new Error(error.message || 'Could not delete leave request.');
   }
 }
 

@@ -112,3 +112,87 @@ Same as the app / table: `interview_type` (defaults to `Stay Interview`), `q1`�
 - `fetch_employees()` selects `id,first_name,last_name` only (this project stores the BTW id in `employees.id`; there is no `email` or `employee_id` column).
 - Bulk CSV from Word templates: `python3 scripts/build_stay_interviews_csv.py` reads `~/Desktop/Work/Stay Interviews/Stay_Interview_*.docx` and writes `scripts/data/stay_interviews_import.csv` (gitignored).
 - `scripts/data/*.csv` is gitignored because rows contain interview responses (PII).
+
+---
+
+## Import time off / leave (`import_leave_requests.py`)
+
+Bulk-load historical or approved PTO from **QuickBooks Time (TSheets)** (or any CSV) into `public.leave_requests` without using the drawer one row at a time.
+
+### Export from QuickBooks Time
+
+1. In QBT Time, open **Time Off** (or **Reports → Time Off**).
+2. Filter **Status: Approved** (and date range if you only want history).
+3. Export / download as **CSV** (report export or list export — column names vary slightly; the importer accepts common aliases).
+
+Expected columns (headers are flexible):
+
+| QBT Time column | Maps to |
+|-----------------|---------|
+| Team Member | employee match by name |
+| Days Off | `Jun 26, 2026` or `Aug 20 - 24, 2026` |
+| Duration | hours (`24h 00m` → 24) |
+| Code | leave type (`Paid Time Off (PTO)` → `pto`, `Holiday` → `other`) |
+| Submitted On | stored in notes + optional `approved_at` |
+| Status | `approved`, `denied`, etc. (blank → `--default-status`) |
+
+You can also use explicit columns: `employee_id`, `start_date`, `end_date`, `hours`, `leave_type`, `status`, `notes`.
+
+Template: `examples/leave_requests_template.csv`.
+
+### Setup
+
+Same as stay interviews — service role on a trusted machine:
+
+```bash
+export SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+export IMPORT_ACTOR_EMAIL="matthew.zinni@btwglobal.com"   # optional; stored on rows
+```
+
+### Run
+
+```bash
+python3 scripts/import_leave_requests.py path/to/time_off_export.csv --dry-run
+python3 scripts/import_leave_requests.py path/to/time_off_export.csv
+```
+
+`--dry-run` resolves every employee and validates dates without inserting. Re-running with `--skip-duplicates` (default) skips rows already in Orbis.
+
+Options:
+
+- `--default-status approved` — for historical QBT exports where Status is always Approved
+- `--no-skip-duplicates` — force insert even if a similar row exists
+- `--source-label "QuickBooks Time"` — note prefix on each row
+
+### Matching employees
+
+Same rules as stay interviews, plus **Team Member** / **employee_name** from QBT exports (e.g. `Christian Ange`). If a name is ambiguous, add an `employee_id` column with the Orbis `employees.id` (BTW number).
+
+### Notes
+
+- Imports do **not** change employee status to Leave or create payroll handoffs (historical load only).
+- Imported rows set `deduct_from_pto_balance = false` so they do not subtract again from the QBT baseline.
+- RLS is bypassed with the service role; run only with data you are allowed to load.
+
+---
+
+## Import PTO balances (`import_pto_balances.py`)
+
+Load **Paid Time Off (PTO)** hour totals from a QuickBooks Time balance report into `employees.pto_balance_hours`. Orbis shows **Time Off — XX.XX hours** in the employee drawer. That baseline is already net of PTO approved in QBT; only **new** requests created and approved in Orbis reduce remaining hours.
+
+Prepared from your `btwgloballlc_pto_balances_2026-06-03` report: `examples/pto_balances_2026-06-03.csv`.
+
+```bash
+export SUPABASE_URL="https://YOUR_PROJECT.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"
+
+python3 scripts/import_pto_balances.py scripts/examples/pto_balances_2026-06-03.csv --dry-run
+python3 scripts/import_pto_balances.py scripts/examples/pto_balances_2026-06-03.csv --as-of 2026-06-03
+```
+
+CSV columns: `employee_id` **or** `first_name` + `last_name`, and `pto_balance_hours`.
+
+PDF rows with no Orbis match (add manually if needed): **Jonathan UY**, **Serina Liverman**, **Tobi Mutuc**, **Kelcee Blevins**.
+
+Name fixes in the example CSV: `Castro-Vazquez`, `Deocampo`, `Nicholas` Jordan, `Matthew` Hunsinger, `Sam` Montgomery, `Trent` Wynne, `Doricel` Zenil.
