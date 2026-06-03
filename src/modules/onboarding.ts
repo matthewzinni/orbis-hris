@@ -3,6 +3,11 @@
 // ============================================
 
 import { supabaseClient } from '../services/supabaseClient';
+import {
+  STANDARD_ONBOARDING_TASKS,
+  sortOnboardingTasksByStandard,
+  syncStandardOnboardingTasks,
+} from '../services/onboardingStandard';
 
 function safeGet(id: string): HTMLElement | null {
   if (typeof window.safeGet === 'function') {
@@ -34,83 +39,25 @@ function getCurrentEmployeeId(): string {
 }
 
 export async function createDefaultOnboardingTasks(employeeId: string): Promise<void> {
-  if (!employeeId) return;
-
-  const defaultTasks = [
-    'Complete I-9',
-    'Complete W-4',
-    'Sign Employee Handbook',
-    'Safety Training',
-    'Set Up System Access',
-  ];
-
-  const { data: existingTasks, error: existingError } = await supabaseClient
-    .from('onboarding_tasks')
-    .select('task_name')
-    .eq('employee_id', employeeId);
-
-  if (existingError) {
-    console.warn('Could not check existing onboarding tasks:', existingError);
-  }
-
-  const existingTaskNames = new Set(
-    (existingTasks || []).map((task: { task_name?: string }) =>
-      String(task.task_name || '').trim()
-    )
-  );
-
-  const payload = defaultTasks
-    .filter((taskName) => !existingTaskNames.has(taskName))
-    .map((taskName) => ({
-      employee_id: employeeId,
-      task_name: taskName,
-      status: 'Pending',
-    }));
-
-  if (!payload.length) return;
-
-  const { error } = await supabaseClient.from('onboarding_tasks').insert(payload);
-
-  if (error) {
-    console.error('Onboarding tasks failed to create:', error);
-    showToast('Employee created, but onboarding tasks failed to create.', 'error');
-    return;
-  }
-
-  console.log('Default onboarding tasks created:', employeeId);
+  await syncStandardOnboardingTasks(employeeId);
 }
 
 export async function loadOnboardingTasks(employeeId: string): Promise<void> {
   if (!employeeId) return;
 
-  let { data, error } = await supabaseClient
+  await syncStandardOnboardingTasks(employeeId);
+
+  const { data, error } = await supabaseClient
     .from('onboarding_tasks')
     .select('*')
-    .eq('employee_id', employeeId)
-    .order('task_name', { ascending: true });
+    .eq('employee_id', employeeId);
 
   if (error) {
     console.error('Could not load onboarding tasks:', error);
     return;
   }
 
-  if (!data?.length) {
-    await createDefaultOnboardingTasks(employeeId);
-    const retry = await supabaseClient
-      .from('onboarding_tasks')
-      .select('*')
-      .eq('employee_id', employeeId)
-      .order('task_name', { ascending: true });
-
-    if (retry.error) {
-      console.error('Could not reload onboarding tasks:', retry.error);
-      return;
-    }
-
-    data = retry.data || [];
-  }
-
-  const tasks = data || [];
+  const tasks = sortOnboardingTasksByStandard(data || []);
   const container = document.getElementById('onboardingChecklist');
   const summary = document.getElementById('onboardingSummary');
   const bar = document.getElementById('onboardingProgressBar');
@@ -142,7 +89,9 @@ export async function loadOnboardingTasks(employeeId: string): Promise<void> {
     )
     .join('');
 
-  if (summary) summary.textContent = `${completed} of ${tasks.length} complete`;
+  if (summary) {
+    summary.textContent = `${completed} of ${STANDARD_ONBOARDING_TASKS.length} complete`;
+  }
   if (bar) bar.style.width = `${percent}%`;
 }
 
