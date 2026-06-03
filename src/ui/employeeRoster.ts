@@ -137,6 +137,7 @@ function statusBadge(status) {
     if (normalized === 'INACTIVE') return 'badge badge-inactive';
     if (normalized === 'TERMINATED') return 'badge badge-terminated';
     if (normalized === 'LEAVE') return 'badge badge-leave';
+    if (normalized === 'ABSENT') return 'badge badge-absent';
     return 'badge badge-inactive';
 }
 
@@ -169,6 +170,7 @@ function matchesRosterView(employee: RosterEmployee, rosterMode: string, explici
         return (
             employeeStatus === 'ACTIVE'
             || employeeStatus === 'LEAVE'
+            || employeeStatus === 'ABSENT'
             || (employeeStatus === 'TERMINATED' && !getRosterTerminationDate(employee))
         );
     }

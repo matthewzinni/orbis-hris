@@ -582,6 +582,7 @@
                   <option value="ACTIVE">Active</option>
                   <option value="INACTIVE">Inactive</option>
                   <option value="LEAVE">Leave</option>
+                  <option value="ABSENT">Absent</option>
                   <option value="TERMINATED">Terminated</option>
                 </select>
               </div>
@@ -698,7 +699,7 @@
           <div class="page" id="attendancePage">
             <div class="toolbar attendance-toolbar">
               <div class="toolbar-left">
-                <span class="muted">Check employees who are present, then save</span>
+                <span class="muted">Check present employees, save — absent sets status to Absent (Leave unchanged)</span>
               </div>
               <div class="toolbar-right attendance-manual-actions">
                 <button class="button primary" id="attendanceSaveBtn" type="button">Save attendance</button>
@@ -717,6 +718,14 @@
                 <div class="kpi-label">Absent</div>
                 <div class="kpi-value" id="attendanceAbsentCount">—</div>
                 <div class="kpi-sub">Not checked</div>
+              </div>
+            </div>
+            <div class="card attendance-absent-card hidden" id="attendanceAbsentCard" aria-live="polite">
+              <div class="card-header">Absent today</div>
+              <div class="card-body">
+                <div class="attendance-absent-list" id="attendanceAbsentList">
+                  <div class="muted">No one marked absent.</div>
+                </div>
               </div>
             </div>
             <div class="card attendance-roll-call-card">
@@ -4303,6 +4312,7 @@
                         <option value="ACTIVE">Active</option>
                         <option value="INACTIVE">Inactive</option>
                         <option value="LEAVE">Leave</option>
+                        <option value="ABSENT">Absent</option>
                       </select>
                     </div>
                     <div class="field">

@@ -98,3 +98,45 @@ body.authenticated #attendancePage .attendance-checklist-table tbody tr.attendan
 body.authenticated #attendancePage .attendance-checklist-table tbody tr.attendance-employee-row:hover td {
   background: rgba(79, 140, 255, 0.08);
 }
+
+#attendancePage .attendance-absent-card {
+  margin-bottom: 14px;
+}
+
+#attendancePage .attendance-absent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#attendancePage .attendance-absent-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+#attendancePage .attendance-absent-item strong {
+  font-size: 0.92rem;
+}
+
+#attendancePage .attendance-absent-item .muted {
+  font-size: 0.8rem;
+}
+
+#attendancePage .attendance-absent-note {
+  font-size: 0.78rem;
+  color: #fdba74;
+}
+
+#attendancePage .attendance-leave-badge {
+  font-size: 0.68rem;
+  padding: 2px 7px;
+}
+
+#attendancePage .attendance-checklist-table tbody tr.is-on-leave.is-absent td:not(.attendance-check-cell) {
+  opacity: 0.92;
+}

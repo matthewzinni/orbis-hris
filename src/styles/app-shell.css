@@ -1296,6 +1296,12 @@ tr:hover td {
   border-color: #f1df9c;
 }
 
+.badge-absent {
+  background: #fff7ed;
+  color: #c2410c;
+  border-color: #fed7aa;
+}
+
 .badge-soft {
   background: #edf4ff;
   color: var(--navy);

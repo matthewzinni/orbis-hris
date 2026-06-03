@@ -427,6 +427,7 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
       { value: 'ACTIVE', label: 'Active' },
       { value: 'INACTIVE', label: 'Inactive' },
       { value: 'LEAVE', label: 'Leave' },
+      { value: 'ABSENT', label: 'Absent' },
       { value: 'TERMINATED', label: 'Terminated' },
     ];
     const existingStatuses = Array.from(statusSelect.options || []).map((option) =>

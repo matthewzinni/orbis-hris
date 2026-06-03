@@ -37,6 +37,7 @@ export function normalizeEmployeeStatus(status: unknown): NormalizedEmployeeStat
 
   if (normalized === 'inactive') return 'inactive';
   if (normalized === 'leave' || normalized === 'on leave') return 'leave';
+  if (normalized === 'absent') return 'absent';
   if (normalized === 'terminated' || normalized === 'termination') return 'terminated';
 
   return 'unknown';

@@ -7,7 +7,9 @@ import {
   type AttendancePerson,
   type AttendanceSummary,
 } from '../services/attendance';
+import { syncEmployeeStatusFromRollCall } from '../services/attendanceStatusSync';
 import { isRemoteEmployee } from '../services/attendanceRemoteEmployees';
+import { loadApprovedLeaveOutToday } from '../services/leaveRequests';
 import { employeeDisplayName } from '../services/employeeUtils';
 import { getActiveEmployees } from './employees';
 
@@ -33,6 +35,7 @@ let attendanceCache: AttendanceSummary | null = null;
 let attendanceCacheDate: string | null = null;
 let attendanceLoading = false;
 let attendanceSaving = false;
+let leaveTodayIdsCache = new Set<string>();
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -74,6 +77,26 @@ function employeeRosterId(employee: EmployeeRow): string {
   return String(
     employee.employee_id || employee.displayId || employee.id || employee.dbId || ''
   ).trim();
+}
+
+function isLeaveProtectedEmployee(employee: EmployeeRow): boolean {
+  const id = employeeRosterId(employee);
+  const status = String(employee.status || '')
+    .trim()
+    .toUpperCase();
+  if (status === 'LEAVE' || status === 'ON LEAVE') return true;
+  return id ? leaveTodayIdsCache.has(id) : false;
+}
+
+async function refreshLeaveTodayCache(): Promise<void> {
+  try {
+    const rows = await loadApprovedLeaveOutToday();
+    leaveTodayIdsCache = new Set(
+      rows.map((row) => String(row.employee_id || '').trim()).filter(Boolean)
+    );
+  } catch {
+    leaveTodayIdsCache = new Set();
+  }
 }
 
 function employeeDepartment(employee: EmployeeRow): string {
@@ -219,6 +242,7 @@ function applyChecklistToSnapshot(): AttendanceSummary {
   snapshot.asOf = new Date().toISOString();
   snapshot.source = snapshot.source || 'Manual';
   updateAttendanceKpis(snapshot);
+  renderAbsentList(snapshot);
   return snapshot;
 }
 
@@ -226,8 +250,14 @@ function renderEmployeeChecklistRow(employee: EmployeeRow, presentKeys: Set<stri
   const person = personFromEmployee(employee);
   const key = personKey(person);
   const checked = presentKeys.has(key);
+  const onLeave = isLeaveProtectedEmployee(employee);
   const classes = ['attendance-employee-row'];
   if (!checked) classes.push('is-absent');
+  if (onLeave) classes.push('is-on-leave');
+
+  const leaveBadge = onLeave
+    ? '<span class="badge badge-leave attendance-leave-badge">On leave</span>'
+    : '';
 
   return `<tr class="${classes.join(' ')}">
     <td class="attendance-check-cell">
@@ -239,10 +269,45 @@ function renderEmployeeChecklistRow(employee: EmployeeRow, presentKeys: Set<stri
         aria-label="Present: ${escapeHtml(person.name)}"
       />
     </td>
-    <td class="attendance-name-cell">${escapeHtml(person.name)}</td>
+    <td class="attendance-name-cell">${escapeHtml(person.name)}${leaveBadge}</td>
     <td>${escapeHtml(person.employeeId)}</td>
     <td>${escapeHtml(person.department || '—')}</td>
   </tr>`;
+}
+
+function renderAbsentList(snapshot: AttendanceSummary): void {
+  const card = safeGet('attendanceAbsentCard');
+  const list = safeGet('attendanceAbsentList');
+  if (!card || !list) return;
+
+  const absent = sortPeople(snapshot.absent);
+  const isToday = getSelectedDate() === todayIsoDate();
+
+  if (!absent.length) {
+    card.classList.add('hidden');
+    list.innerHTML = '<div class="muted">No one marked absent.</div>';
+    return;
+  }
+
+  card.classList.remove('hidden');
+  list.innerHTML = absent
+    .map((person) => {
+      const employee = getRollCallEmployees().find(
+        (row) => personKey(personFromEmployee(row)) === personKey(person)
+      );
+      const onLeave = employee ? isLeaveProtectedEmployee(employee) : false;
+      const note = onLeave
+        ? '<span class="attendance-absent-note">On leave — status stays Leave</span>'
+        : isToday
+          ? '<span class="attendance-absent-note">Will set status to Absent on save</span>'
+          : '';
+      return `<div class="attendance-absent-item">
+        <strong>${escapeHtml(person.name)}</strong>
+        <span class="muted">${escapeHtml(person.employeeId)}${person.department ? ` · ${escapeHtml(person.department)}` : ''}</span>
+        ${note}
+      </div>`;
+    })
+    .join('');
 }
 
 function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
@@ -251,6 +316,7 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
 
   const employees = getRollCallEmployees();
   updateAttendanceKpis(snapshot);
+  renderAbsentList(snapshot);
 
   if (!employees.length) {
     body.innerHTML =
@@ -325,7 +391,35 @@ export async function saveAttendance(): Promise<void> {
     snapshot.source = snapshot.source || 'Manual';
     attendanceCache = snapshot;
     updateAttendanceKpis(snapshot);
-    showToast(`Attendance saved for ${date}.`);
+    renderAbsentList(snapshot);
+
+    const syncResult = await syncEmployeeStatusFromRollCall(
+      snapshot,
+      date,
+      todayIsoDate(),
+      getRollCallEmployees()
+    );
+
+    if (syncResult && (syncResult.markedAbsent || syncResult.markedActive)) {
+      if (typeof window.loadEmployees === 'function') {
+        await window.loadEmployees();
+      }
+      if (typeof window.refreshDashboardKpis === 'function') {
+        window.refreshDashboardKpis();
+      }
+    }
+
+    let toast = `Attendance saved for ${date}.`;
+    if (syncResult?.markedAbsent) {
+      toast += ` ${syncResult.markedAbsent} marked Absent.`;
+    }
+    if (syncResult?.markedActive) {
+      toast += ` ${syncResult.markedActive} returned to Active.`;
+    }
+    if (syncResult?.skippedLeave) {
+      toast += ` ${syncResult.skippedLeave} on leave (unchanged).`;
+    }
+    showToast(toast);
   } catch (error) {
     const message =
       error instanceof AttendanceSyncError
@@ -373,6 +467,7 @@ export async function loadAttendance(force = false): Promise<void> {
 
   try {
     await ensureEmployeesLoaded();
+    await refreshLeaveTodayCache();
 
     const saved = await loadManualAttendanceSnapshot(date);
     if (saved) {
@@ -415,6 +510,7 @@ async function syncFromIntuit(): Promise<void> {
   setSyncLoading(true);
 
   try {
+    await refreshLeaveTodayCache();
     const snapshot = await fetchIntuitAttendanceSnapshot();
     attendanceCache = filterSnapshotForRollCall({
       ...snapshot,

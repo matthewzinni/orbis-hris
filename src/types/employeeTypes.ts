@@ -32,7 +32,7 @@ export interface Employee {
     pto_balance_as_of?: string | null;
 
     // Status
-    status?: 'Active' | 'Inactive' | 'Terminated' | 'Leave';
+    status?: 'Active' | 'Inactive' | 'Terminated' | 'Leave' | 'Absent';
     pay_type?: 'Hourly' | 'Salary';
     standard_hours?: number | string;
 
