@@ -9,6 +9,8 @@ import {
   formatEmployeeDueDateLine,
   getEmployeeNextStayInterviewDueDate,
   isActiveDashboardEmployee,
+  isStayInterviewEligibleEmployee,
+  isStayInterviewOverdue,
 } from '../services/employeeUtils';
 import { hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
 import {
@@ -594,23 +596,8 @@ function getEmployeeDepartmentLabel(employee: KpiEmployeeRecord): string {
   return String(employee.dept || employee.department || '').trim();
 }
 
-function isReviewOverdue(employee: KpiEmployeeRecord, today: Date): boolean {
-  const reviewDate = getEmployeeNextReviewDate(employee);
-
-  if (reviewDate) {
-    const normalized = new Date(reviewDate);
-    normalized.setHours(0, 0, 0, 0);
-    return normalized.getTime() <= today.getTime();
-  }
-
-  const days = daysUntilDate(
-    employee.next_review_date ||
-      employee.nextReviewDate ||
-      employee.nextReview ||
-      ''
-  );
-
-  return days !== null && days <= 0;
+function isReviewOverdue(employee: KpiEmployeeRecord): boolean {
+  return isStayInterviewOverdue(employee);
 }
 
 function getEmployeeNextReviewLabel(employee: KpiEmployeeRecord): string {
@@ -641,10 +628,7 @@ export function buildKpiHoverDetails(): void {
   const leaveEmployees = employees.filter((employee) =>
     isOnLeaveStatus(getEmployeeStatus(employee))
   );
-  const reviewEligibleActive = activeEmployees.filter(
-    (employee) =>
-      !String(employee.payType || employee.pay_type || '').toLowerCase().includes('contract')
-  );
+  const reviewEligibleActive = activeEmployees.filter(isStayInterviewEligibleEmployee);
 
   setKpiCardTooltip(
     'cardActiveHC',
@@ -781,12 +765,7 @@ export function buildKpiHoverDetails(): void {
     }
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const overdueReviewEmployees = reviewEligibleActive.filter((employee) =>
-    isReviewOverdue(employee, today)
-  );
+  const overdueReviewEmployees = reviewEligibleActive.filter(isReviewOverdue);
 
   setKpiCardTooltip(
     'cardReviewsDue',
@@ -822,10 +801,7 @@ export function renderKpiEmployeeMetrics(): void {
       ? window.isActiveDashboardEmployee(employee)
       : getEmployeeStatus(employee) === 'ACTIVE'
   );
-  const reviewEligibleActive = activeEmployees.filter(
-    (employee) =>
-      !String(employee.payType || employee.pay_type || '').toLowerCase().includes('contract')
-  );
+  const reviewEligibleActive = activeEmployees.filter(isStayInterviewEligibleEmployee);
 
   const departments = [
     ...new Set(
@@ -839,12 +815,7 @@ export function renderKpiEmployeeMetrics(): void {
     isOnLeaveStatus(getEmployeeStatus(employee))
   ).length;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const overdueReviewEmployees = reviewEligibleActive.filter((employee) =>
-    isReviewOverdue(employee, today)
-  );
+  const overdueReviewEmployees = reviewEligibleActive.filter(isReviewOverdue);
 
   const reviewsDue = overdueReviewEmployees.length;
 

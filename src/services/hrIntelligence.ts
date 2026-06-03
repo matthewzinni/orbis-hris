@@ -3,6 +3,12 @@
  */
 
 import type { Employee } from '../types/employeeTypes';
+import {
+  isStayInterviewEligibleEmployee,
+  isStayInterviewOverdue,
+  isStayInterviewDueSoon,
+  readEmployeeNextStayInterviewDateRaw,
+} from './employeeUtils';
 import { hasActiveRiskMeta } from '../ui/badges';
 
 export type AtRiskIntelligenceMeta = {
@@ -52,13 +58,6 @@ type OperationsRow = {
 const OPEN_DISCIPLINE_STATUSES = new Set(['open', 'pending follow-up', 'pending']);
 const CLOSED_OPERATIONS_STATUSES = new Set(['resolved', 'closed']);
 const CLOSED_INVESTIGATION_STATUS = 'closed';
-
-function parseIsoDate(value: unknown): Date | null {
-  const raw = String(value ?? '').trim();
-  if (!raw) return null;
-  const date = new Date(`${raw.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
 
 function getEmployeeRecordId(employee: Record<string, unknown>): string {
   return String(employee.id || employee.employee_id || employee.dbId || '').trim();
@@ -175,26 +174,19 @@ export function buildHrIntelligenceContext(input: {
     }
   });
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const dueSoonCutoff = new Date(today);
-  dueSoonCutoff.setDate(dueSoonCutoff.getDate() + 14);
 
   (input.employees || []).forEach((employee) => {
     const employeeId = getEmployeeRecordId(employee);
-    if (!employeeId) return;
+    if (!employeeId || !isStayInterviewEligibleEmployee(employee)) return;
 
-    const nextReview = parseIsoDate(
-      employee.next_review_date || employee.nextReview || employee.nextReviewDate
-    );
-    if (!nextReview) return;
+    if (!readEmployeeNextStayInterviewDateRaw(employee)) return;
 
-    if (nextReview <= today) {
+    if (isStayInterviewOverdue(employee)) {
       stayInterviewOverdueIds.add(employeeId);
       return;
     }
 
-    if (nextReview <= dueSoonCutoff) {
+    if (isStayInterviewDueSoon(employee)) {
       stayInterviewDueSoonIds.add(employeeId);
     }
   });

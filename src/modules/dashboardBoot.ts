@@ -12,6 +12,7 @@ import {
   daysUntilDate,
   employeeDisplayName,
   isActiveDashboardEmployee,
+  isStayInterviewEligibleEmployee,
 } from '../services/employeeUtils';
 import {
   renderDashboardRetryState,
@@ -300,11 +301,7 @@ function getOrCreateDashboardSectionBody(titleText: string, preferredId: string)
 }
 
 function isReviewEligibleEmployee(employee: EmployeeRow): boolean {
-  if (!isActiveDashboardEmployee(employee)) return false;
-
-  const payType = String(employee.payType || employee.pay_type || '').toLowerCase();
-
-  return !payType.includes('contract');
+  return isStayInterviewEligibleEmployee(employee);
 }
 
 function getEmployeeRecordKeys(employee: EmployeeRow): string[] {

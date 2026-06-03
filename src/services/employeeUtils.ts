@@ -98,6 +98,33 @@ export function isActiveDashboardEmployee(employee: EmployeeLike | null | undefi
   return status !== 'INACTIVE' && status !== 'ARCHIVED';
 }
 
+export const STAY_INTERVIEW_DUE_SOON_DAYS = 14;
+
+export function isContractEmployee(employee: EmployeeLike | null | undefined): boolean {
+  return String(employee?.pay_type || employee?.payType || '')
+    .trim()
+    .toLowerCase()
+    .includes('contract');
+}
+
+/** Active roster employees who receive stay interview scheduling (excludes contract). */
+export function isStayInterviewEligibleEmployee(
+  employee: EmployeeLike | null | undefined
+): boolean {
+  return isActiveDashboardEmployee(employee) && !isContractEmployee(employee);
+}
+
+/** Matches roll call / stay interview dashboard: due date before today. */
+export function isStayInterviewOverdue(employee: EmployeeLike | null | undefined): boolean {
+  const days = daysUntilDate(readEmployeeNextStayInterviewDateRaw(employee));
+  return days !== null && days < 0;
+}
+
+export function isStayInterviewDueSoon(employee: EmployeeLike | null | undefined): boolean {
+  const days = daysUntilDate(readEmployeeNextStayInterviewDateRaw(employee));
+  return days !== null && days >= 0 && days <= STAY_INTERVIEW_DUE_SOON_DAYS;
+}
+
 export function daysUntilDate(dateValue: unknown): number | null {
   if (!dateValue) return null;
 

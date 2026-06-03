@@ -10,6 +10,7 @@ import {
   formatDueDateLabel,
   getEmployeeNextStayInterviewDueDate,
   isActiveDashboardEmployee,
+  isStayInterviewEligibleEmployee,
   parseDueDate,
   readEmployeeNextStayInterviewDateRaw,
 } from './employeeUtils';
@@ -92,10 +93,8 @@ const KIND_LABELS: Record<HrInboxKind, string> = {
 
 type EmployeeLike = Record<string, unknown>;
 
-function isContractEmployee(employee: EmployeeLike): boolean {
-  return String(employee.pay_type || employee.payType || '')
-    .toLowerCase()
-    .includes('contract');
+function isStayInterviewEligible(employee: EmployeeLike): boolean {
+  return isStayInterviewEligibleEmployee(employee);
 }
 
 function drawerEmployeeId(employee: EmployeeLike): string {
@@ -144,10 +143,6 @@ function compareInboxItems(left: HrInboxItem, right: HrInboxItem): number {
   if (nameCmp !== 0) return nameCmp;
 
   return left.title.localeCompare(right.title, undefined, { sensitivity: 'base' });
-}
-
-function isStayInterviewEligible(employee: EmployeeLike): boolean {
-  return isActiveDashboardEmployee(employee) && !isContractEmployee(employee);
 }
 
 function collectStayInterviewItems(employees: EmployeeLike[]): HrInboxItem[] {
