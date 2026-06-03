@@ -342,12 +342,7 @@
                 </div>
               </div>
             </div>
-            <div
-              class="card admin-only hidden"
-              id="hrInboxCard"
-              data-hr-inbox-access
-              data-admin-only
-            >
+            <div class="card hidden" id="hrInboxCard" data-hr-inbox-access>
               <div class="card-header hr-inbox-header">
                 <div>
                   <span>HR Inbox</span>
@@ -387,6 +382,17 @@
                 <p class="muted hr-inbox-summary" id="hrInboxSummary">Loading inbox…</p>
                 <div class="hr-inbox-list" id="hrInboxList" role="list">
                   <div class="hr-inbox-empty muted">Loading inbox…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card hidden" id="hrInboxOutTodayCard" data-leave-access>
+              <div class="card-header">Out today</div>
+              <div class="card-body">
+                <p class="muted" style="margin: 0 0 8px; font-size: 0.82rem">
+                  Approved time off covering today.
+                </p>
+                <div class="hr-inbox-out-today-list" id="hrInboxOutTodayList">
+                  <div class="muted">Loading…</div>
                 </div>
               </div>
             </div>
@@ -2839,6 +2845,9 @@
               >
                 Offboarding
               </button>
+              <button class="tab-btn hidden" data-tab="time-off" type="button" data-leave-access>
+                Time off
+              </button>
               <button
                 class="tab-btn"
                 data-tab="documents"
@@ -4024,6 +4033,77 @@
                   </div>
                   <div id="offboardingChecklist" class="history-list">
                     <div class="empty">No offboarding items loaded yet.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel hidden" id="tab-time-off" data-leave-access>
+              <div class="card" id="leaveRequestPanel">
+                <div class="card-header">Time off</div>
+                <div class="card-body">
+                  <p class="muted" style="margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45">
+                    Log and approve leave for payroll separately — no PTO balance tracking in Orbis.
+                  </p>
+                  <div id="leaveRequestForm" class="leave-request-form">
+                    <div class="field">
+                      <label for="leaveRequestTypeInput">Type</label>
+                      <select id="leaveRequestTypeInput" class="input">
+                        <option value="pto">PTO</option>
+                        <option value="sick">Sick</option>
+                        <option value="bereavement">Bereavement</option>
+                        <option value="fmla">FMLA</option>
+                        <option value="unpaid">Unpaid</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="leaveRequestStartInput">Start date</label>
+                      <input class="input" id="leaveRequestStartInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="leaveRequestEndInput">End date</label>
+                      <input class="input" id="leaveRequestEndInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="leaveRequestHoursInput">Hours (optional)</label>
+                      <input
+                        class="input"
+                        id="leaveRequestHoursInput"
+                        type="number"
+                        min="0"
+                        step="0.25"
+                        placeholder="8"
+                      />
+                    </div>
+                    <div class="field field--check">
+                      <label class="checkbox-label" for="leaveRequestIntermittentInput">
+                        <input id="leaveRequestIntermittentInput" type="checkbox" />
+                        Intermittent / partial
+                      </label>
+                    </div>
+                    <div class="field field--wide">
+                      <label for="leaveRequestNotesInput">Notes</label>
+                      <textarea
+                        class="input"
+                        id="leaveRequestNotesInput"
+                        rows="2"
+                        placeholder="Optional context for approver"
+                      ></textarea>
+                    </div>
+                    <div class="field field--check">
+                      <label class="checkbox-label" for="leaveRequestSetStatusInput">
+                        <input id="leaveRequestSetStatusInput" type="checkbox" checked />
+                        On approve, set employee to Leave if dates include today
+                      </label>
+                    </div>
+                    <div class="field">
+                      <button class="button primary" id="leaveRequestSubmitBtn" type="button">
+                        Submit request
+                      </button>
+                    </div>
+                  </div>
+                  <div id="leaveRequestList" class="history-list" style="margin-top: 16px">
+                    <div class="empty">No leave requests loaded yet.</div>
                   </div>
                 </div>
               </div>

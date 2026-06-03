@@ -71,6 +71,9 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
     case 'offboarding':
       void window.loadOffboardingTasks?.(id);
       break;
+    case 'time-off':
+      void window.loadEmployeeLeaveRequests?.(id);
+      break;
     case 'documents':
       void window.loadEmployeeDocuments?.(id);
       break;

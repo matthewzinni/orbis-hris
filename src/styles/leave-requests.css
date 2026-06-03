@@ -1,0 +1,108 @@
+#leaveRequestPanel .leave-request-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 16px;
+}
+
+#leaveRequestPanel .leave-request-form .field--wide {
+  grid-column: 1 / -1;
+}
+
+#leaveRequestPanel .leave-request-form .field--check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 2.25rem;
+}
+
+#leaveRequestList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#leaveRequestPanel .leave-request-row {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+#leaveRequestPanel .leave-request-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+#leaveRequestPanel .leave-status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+#leaveRequestPanel .leave-status--requested {
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.14);
+}
+
+#leaveRequestPanel .leave-status--approved {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+#leaveRequestPanel .leave-status--denied {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.14);
+}
+
+#leaveRequestPanel .leave-status--cancelled {
+  color: var(--muted);
+  background: rgba(148, 163, 184, 0.12);
+}
+
+#leaveRequestPanel .leave-request-type {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+#leaveRequestPanel .leave-request-dates {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+#leaveRequestPanel .leave-request-notes {
+  font-size: 0.82rem;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+#leaveRequestPanel .leave-request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+#hrInboxOutTodayCard .hr-inbox-out-today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 0.86rem;
+}
+
+#hrInboxOutTodayCard .hr-inbox-out-today-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}

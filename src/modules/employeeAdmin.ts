@@ -59,6 +59,7 @@ export async function deleteEmployeeById(
     'payroll_handoffs',
     'onboarding_tasks',
     'offboarding_tasks',
+    'leave_requests',
     'employee_notes',
     'employee_meetings',
     'employee_reviews',

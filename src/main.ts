@@ -9,6 +9,7 @@ import './styles/org-chart.css';
 import './styles/attendance.css';
 import './styles/hr-inbox.css';
 import './styles/payroll-handoff.css';
+import './styles/leave-requests.css';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
 import {
@@ -44,6 +45,7 @@ import './modules/payrollHandoff';
 import './ui/departmentSummary';
 import './modules/onboarding';
 import './modules/offboarding';
+import './modules/leaveRequests';
 import './modules/employees';
 import './modules/orgChart';
 import './modules/attendance';

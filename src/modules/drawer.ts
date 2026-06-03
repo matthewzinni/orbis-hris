@@ -151,6 +151,7 @@ function getNextAnniversaryDate(employee: DrawerEmployeeRecord): string {
 const EMPLOYEE_RELATED_TABLES = [
   'onboarding_tasks',
   'offboarding_tasks',
+  'leave_requests',
   'employee_notes',
   'employee_meetings',
   'employee_reviews',
@@ -570,6 +571,7 @@ function normalizeDrawerTabName(tabName: string): string {
   if (raw.includes('emergency')) return 'emergency';
   if (raw.includes('onboarding')) return 'onboarding';
   if (raw.includes('offboarding')) return 'offboarding';
+  if (raw.includes('timeoff') || raw.includes('leave')) return 'timeoff';
   if (raw.includes('document')) return 'documents';
   if (raw.includes('history')) return 'history';
   if (raw.includes('notes')) return 'notes';
@@ -590,6 +592,7 @@ function normalizeDrawerTabName(tabName: string): string {
     emergency: 'emergency',
     onboarding: 'onboarding',
     offboarding: 'offboarding',
+    timeoff: 'timeoff',
     documents: 'documents',
     history: 'history',
     employeeadmin: 'employeeadmin',
@@ -602,6 +605,8 @@ function normalizeDrawerTabName(tabName: string): string {
 function getSwitchTabName(normalizedTab: string): string {
   if (normalizedTab === 'stayinterviews') return 'stay-interviews';
   if (normalizedTab === 'incidentreports') return 'incidents';
+  if (normalizedTab === 'offboarding') return 'offboarding';
+  if (normalizedTab === 'timeoff') return 'time-off';
   if (normalizedTab === 'employeeadmin') return 'employee';
   if (normalizedTab === 'caresupport') return 'care-support';
 
@@ -666,6 +671,10 @@ export function switchDrawerTab(tabName: string): void {
 
   if (normalizedTab === 'offboarding') {
     void window.loadOffboardingTasks?.(employeeId);
+  }
+
+  if (normalizedTab === 'timeoff') {
+    void window.loadEmployeeLeaveRequests?.(employeeId);
   }
 
   if (normalizedTab === 'caresupport') {

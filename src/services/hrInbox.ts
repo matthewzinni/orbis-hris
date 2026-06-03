@@ -3,7 +3,7 @@
  */
 
 import { supabaseClient } from './supabaseClient';
-import { isAdminUser } from './access';
+import { isAdminUser, isSupervisorUser } from './access';
 import {
   daysUntilDate,
   employeeDisplayName,
@@ -28,6 +28,12 @@ import {
   payrollChangeTypeLabel,
   type PayrollHandoffRecord,
 } from './payrollHandoff';
+import {
+  formatLeaveDateRange,
+  leaveTypeLabel,
+  loadPendingLeaveRequests,
+  type LeaveRequestRecord,
+} from './leaveRequests';
 
 export type HrInboxSeverity = 'overdue' | 'due_soon' | 'info';
 
@@ -40,7 +46,8 @@ export type HrInboxKind =
   | 'care_follow_up'
   | 'operations'
   | 'payroll_handoff'
-  | 'offboarding';
+  | 'offboarding'
+  | 'leave_request';
 
 export type HrInboxRoute =
   | { type: 'employee'; employeeId: string; drawerTab?: string }
@@ -80,6 +87,7 @@ const KIND_LABELS: Record<HrInboxKind, string> = {
   operations: 'Operations',
   payroll_handoff: 'Payroll handoff',
   offboarding: 'Offboarding',
+  leave_request: 'Time off',
 };
 
 type EmployeeLike = Record<string, unknown>;
@@ -534,6 +542,39 @@ function collectOffboardingItems(
   return items;
 }
 
+function collectLeaveRequestItems(requests: LeaveRequestRecord[]): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  requests.forEach((request) => {
+    if (request.status !== 'requested') return;
+
+    const employee = resolveEmployee(request.employee_id);
+    const employeeId = employee ? drawerEmployeeId(employee) : request.employee_id;
+    const name = employee ? employeeDisplayName(employee) : request.employee_id;
+
+    const startDays = daysUntilDate(request.start_date);
+    const severity: HrInboxSeverity =
+      startDays !== null && startDays < 0
+        ? 'overdue'
+        : startDays !== null && startDays <= DUE_SOON_DAYS
+          ? 'due_soon'
+          : 'info';
+
+    items.push({
+      id: `leave:${request.id}`,
+      kind: 'leave_request',
+      severity,
+      employeeName: name,
+      dueDate: request.start_date,
+      title: `Time off approval — ${name}`,
+      detail: `${leaveTypeLabel(request.leave_type)} · ${formatLeaveDateRange(request)}`,
+      route: { type: 'employee', employeeId, drawerTab: 'time-off' },
+    });
+  });
+
+  return items;
+}
+
 function daysSinceDate(isoDate: string): number | null {
   const daysUntil = daysUntilDate(isoDate);
   if (daysUntil === null) return null;
@@ -593,7 +634,7 @@ export function kindLabel(kind: HrInboxKind): string {
 }
 
 export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
-  if (!isAdminUser()) {
+  if (!isAdminUser() && !isSupervisorUser()) {
     return [];
   }
 
@@ -609,6 +650,12 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
   const activeEmployees = getActiveEmployees() as EmployeeLike[];
 
   const payrollHandoffsPromise = loadPendingPayrollHandoffs();
+  const pendingLeavePromise = loadPendingLeaveRequests();
+
+  if (isSupervisorUser() && !isAdminUser()) {
+    const pendingLeave = await pendingLeavePromise;
+    return sortHrInboxItems(collectLeaveRequestItems(pendingLeave));
+  }
 
   const [
     onboardingRes,
@@ -619,6 +666,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     careFollowUpsRes,
     operationsRes,
     payrollHandoffs,
+    pendingLeave,
   ] = await Promise.all([
     supabaseClient.from('onboarding_tasks').select('id, employee_id, task_name, status'),
     supabaseClient.from('offboarding_tasks').select('id, employee_id, task_name, status'),
@@ -636,6 +684,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
       .from('operations_issues')
       .select('id, title, status, due_date, department'),
     payrollHandoffsPromise,
+    pendingLeavePromise,
   ]);
 
   const queryErrors = [
@@ -661,6 +710,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     ...collectCareFollowUpItems(careItemsRes.data || [], careFollowUpsRes.data || []),
     ...collectOperationsItems(operationsRes.data || []),
     ...collectPayrollHandoffItems(payrollHandoffs),
+    ...collectLeaveRequestItems(pendingLeave),
   ];
 
   return sortHrInboxItems(merged);
@@ -767,6 +817,17 @@ export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSum
       label: 'Offboarding checklists',
       detail: `${offboarding} open item${offboarding === 1 ? '' : 's'} for recent terminations`,
       count: offboarding,
+      viewId: 'dashboardView',
+    });
+  }
+
+  const leave = items.filter((item) => item.kind === 'leave_request').length;
+  if (leave > 0) {
+    alerts.push({
+      id: 'leave-requests-pending',
+      label: 'Time off approvals',
+      detail: `${leave} request${leave === 1 ? '' : 's'} awaiting approval`,
+      count: leave,
       viewId: 'dashboardView',
     });
   }

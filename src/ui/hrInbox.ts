@@ -1,4 +1,4 @@
-import { isAdminUser } from '../services/access';
+import { isAdminUser, isSupervisorUser } from '../services/access';
 import {
   buildHrInboxItems,
   filterHrInboxItems,
@@ -7,6 +7,7 @@ import {
   type HrInboxRoute,
 } from '../services/hrInbox';
 import { switchMainView } from './navigation';
+import { renderOutTodayCard } from '../modules/leaveRequests';
 
 declare global {
   interface Window {
@@ -187,7 +188,7 @@ function bindHrInboxUi(): void {
 }
 
 export function applyHrInboxAccess(): void {
-  const visible = isAdminUser();
+  const visible = isAdminUser() || isSupervisorUser();
 
   document.querySelectorAll<HTMLElement>('[data-hr-inbox-access]').forEach((element) => {
     element.classList.toggle('hidden', !visible);
@@ -200,7 +201,7 @@ export function getHrInboxItems(): HrInboxItem[] {
 }
 
 export async function loadHrInbox(force = false): Promise<void> {
-  if (!isAdminUser()) {
+  if (!isAdminUser() && !isSupervisorUser()) {
     window.__hrInboxCache = [];
     renderInboxList([]);
     return;
@@ -227,6 +228,8 @@ export async function loadHrInbox(force = false): Promise<void> {
     if (typeof window.updateWorkspaceAlerts === 'function') {
       window.updateWorkspaceAlerts();
     }
+
+    void renderOutTodayCard();
   } catch (err) {
     console.error('[HrInbox] Load failed:', err);
     list.innerHTML =
