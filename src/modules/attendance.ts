@@ -26,7 +26,6 @@ type EmployeeRow = {
   department?: string;
   dept?: string;
   status?: string;
-  is_remote?: boolean | string | number | null;
   [key: string]: unknown;
 };
 
@@ -127,24 +126,24 @@ function sortEmployeesByName(employees: EmployeeRow[]): EmployeeRow[] {
   );
 }
 
-function partitionRosterEmployees(): { inHouse: EmployeeRow[]; remote: EmployeeRow[] } {
-  const inHouse: EmployeeRow[] = [];
-  const remote: EmployeeRow[] = [];
-
-  sortEmployeesByName(getActiveEmployees()).forEach((employee) => {
-    if (isRemoteEmployee(employee)) {
-      remote.push(employee);
-    } else {
-      inHouse.push(employee);
-    }
-  });
-
-  return { inHouse, remote };
+function getRollCallEmployees(): EmployeeRow[] {
+  return sortEmployeesByName(getActiveEmployees()).filter(
+    (employee) => !isRemoteEmployee(employee)
+  );
 }
 
-function getRollCallEmployeeOrder(): EmployeeRow[] {
-  const { inHouse, remote } = partitionRosterEmployees();
-  return [...inHouse, ...remote];
+function isPersonOnRollCall(person: AttendancePerson): boolean {
+  return !isRemoteEmployee(person.employeeId);
+}
+
+function filterSnapshotForRollCall(snapshot: AttendanceSummary): AttendanceSummary {
+  const present = snapshot.present.filter(isPersonOnRollCall);
+  const absent = snapshot.absent.filter(isPersonOnRollCall);
+  return {
+    ...snapshot,
+    present: sortPeople(present),
+    absent: sortPeople(absent),
+  };
 }
 
 function presentKeySet(snapshot: AttendanceSummary): Set<string> {
@@ -165,14 +164,32 @@ function formatAsOfLabel(asOf: string, timezone?: string): string {
   return timezone ? `${label} (${timezone})` : label;
 }
 
+function countChecklistFromDom(): { present: number; absent: number } | null {
+  const body = safeGet<HTMLTableSectionElement>('attendanceChecklistBody');
+  if (!body) return null;
+
+  const rows = body.querySelectorAll<HTMLInputElement>('.attendance-present-check');
+  if (!rows.length) return null;
+
+  let present = 0;
+  rows.forEach((input) => {
+    if (input.checked) present += 1;
+  });
+  return { present, absent: rows.length - present };
+}
+
 function updateAttendanceKpis(snapshot: AttendanceSummary): void {
   const presentCount = safeGet('attendancePresentCount');
   const absentCount = safeGet('attendanceAbsentCount');
   const asOf = safeGet('attendanceAsOf');
   const source = safeGet('attendanceSource');
 
-  if (presentCount) presentCount.textContent = String(snapshot.present.length);
-  if (absentCount) absentCount.textContent = String(snapshot.absent.length);
+  const fromDom = countChecklistFromDom();
+  const presentTotal = fromDom ? fromDom.present : snapshot.present.length;
+  const absentTotal = fromDom ? fromDom.absent : snapshot.absent.length;
+
+  if (presentCount) presentCount.textContent = String(presentTotal);
+  if (absentCount) absentCount.textContent = String(absentTotal);
   if (asOf) asOf.textContent = formatAsOfLabel(snapshot.asOf, snapshot.timezone);
   if (source) source.textContent = snapshot.source || 'Manual';
 }
@@ -183,7 +200,7 @@ function applyChecklistToSnapshot(): AttendanceSummary {
   const absent: AttendancePerson[] = [];
   const body = safeGet<HTMLTableSectionElement>('attendanceChecklistBody');
 
-  getRollCallEmployeeOrder().forEach((employee) => {
+  getRollCallEmployees().forEach((employee) => {
     const person = personFromEmployee(employee);
     const key = personKey(person);
     const checkbox = body?.querySelector<HTMLInputElement>(
@@ -205,21 +222,12 @@ function applyChecklistToSnapshot(): AttendanceSummary {
   return snapshot;
 }
 
-function renderEmployeeChecklistRow(
-  employee: EmployeeRow,
-  presentKeys: Set<string>,
-  remote: boolean
-): string {
+function renderEmployeeChecklistRow(employee: EmployeeRow, presentKeys: Set<string>): string {
   const person = personFromEmployee(employee);
   const key = personKey(person);
   const checked = presentKeys.has(key);
   const classes = ['attendance-employee-row'];
   if (!checked) classes.push('is-absent');
-  if (remote) classes.push('is-remote');
-
-  const nameCell = remote
-    ? `${escapeHtml(person.name)}<span class="attendance-remote-badge">Remote</span>`
-    : escapeHtml(person.name);
 
   return `<tr class="${classes.join(' ')}">
     <td class="attendance-check-cell">
@@ -228,21 +236,12 @@ function renderEmployeeChecklistRow(
         class="attendance-present-check"
         data-attendance-key="${escapeHtml(key)}"
         ${checked ? 'checked' : ''}
-        aria-label="Present: ${escapeHtml(person.name)}${remote ? ' (remote)' : ''}"
+        aria-label="Present: ${escapeHtml(person.name)}"
       />
     </td>
-    <td class="attendance-name-cell">${nameCell}</td>
+    <td class="attendance-name-cell">${escapeHtml(person.name)}</td>
     <td>${escapeHtml(person.employeeId)}</td>
     <td>${escapeHtml(person.department || '—')}</td>
-  </tr>`;
-}
-
-function renderGroupHeaderRow(label: string, count: number): string {
-  return `<tr class="attendance-group-row">
-    <td colspan="4">
-      <span class="attendance-group-label">${escapeHtml(label)}</span>
-      <span class="attendance-group-count">${count}</span>
-    </td>
   </tr>`;
 }
 
@@ -250,34 +249,19 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
   const body = safeGet<HTMLTableSectionElement>('attendanceChecklistBody');
   if (!body) return;
 
-  const { inHouse, remote } = partitionRosterEmployees();
-  const totalCount = inHouse.length + remote.length;
+  const employees = getRollCallEmployees();
   updateAttendanceKpis(snapshot);
 
-  if (!totalCount) {
+  if (!employees.length) {
     body.innerHTML =
       '<tr><td colspan="4" class="empty">No active employees in your roster.</td></tr>';
     return;
   }
 
   const presentKeys = presentKeySet(snapshot);
-  const parts: string[] = [];
-
-  if (inHouse.length) {
-    parts.push(renderGroupHeaderRow('In house', inHouse.length));
-    inHouse.forEach((employee) => {
-      parts.push(renderEmployeeChecklistRow(employee, presentKeys, false));
-    });
-  }
-
-  if (remote.length) {
-    parts.push(renderGroupHeaderRow('Overseas / remote', remote.length));
-    remote.forEach((employee) => {
-      parts.push(renderEmployeeChecklistRow(employee, presentKeys, true));
-    });
-  }
-
-  body.innerHTML = parts.join('');
+  body.innerHTML = employees
+    .map((employee) => renderEmployeeChecklistRow(employee, presentKeys))
+    .join('');
 }
 
 function renderAttendance(snapshot: AttendanceSummary): void {
@@ -392,11 +376,11 @@ export async function loadAttendance(force = false): Promise<void> {
 
     const saved = await loadManualAttendanceSnapshot(date);
     if (saved) {
-      attendanceCache = {
+      attendanceCache = filterSnapshotForRollCall({
         ...saved,
         present: sortPeople(saved.present),
         absent: sortPeople(saved.absent),
-      };
+      });
       attendanceCacheDate = date;
       renderAttendance(attendanceCache);
       return;
@@ -432,11 +416,11 @@ async function syncFromIntuit(): Promise<void> {
 
   try {
     const snapshot = await fetchIntuitAttendanceSnapshot();
-    attendanceCache = {
+    attendanceCache = filterSnapshotForRollCall({
       ...snapshot,
       present: sortPeople(snapshot.present),
       absent: sortPeople(snapshot.absent),
-    };
+    });
     attendanceCacheDate = getSelectedDate();
     renderAttendance(attendanceCache);
     showToast('Loaded from Intuit. Click Save attendance to keep this day.', 'success');

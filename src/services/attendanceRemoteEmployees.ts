@@ -1,5 +1,5 @@
 /**
- * Overseas / remote employee detection for Attendance roll call.
+ * Overseas / remote employee detection (excluded from Attendance roll call).
  * Primary source: employees.is_remote (set in employee drawer).
  * Fallback: legacy numeric ids until all records are updated in admin.
  */

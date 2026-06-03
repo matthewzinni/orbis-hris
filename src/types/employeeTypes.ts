@@ -24,7 +24,7 @@ export interface Employee {
     position?: string;
     supervisor?: string;
 
-    /** Overseas / remote (Attendance roll call grouping). */
+    /** Overseas / remote (excluded from Attendance roll call). */
     is_remote?: boolean;
 
     // Status
