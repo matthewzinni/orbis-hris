@@ -7,6 +7,11 @@ import { showOrbisConfirm } from '../ui/confirmModal';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
 import { cleanEmployeeNameValue } from '../services/employeeUtils';
 import { createDefaultOnboardingTasks } from './onboarding';
+import {
+  employeeToPayrollSnapshot,
+  logNewHirePayrollHandoff,
+  logPayrollHandoffsFromEmployeeSave,
+} from '../services/payrollHandoff';
 
 interface DrawerEmployeeRecord {
   id?: string;
@@ -873,6 +878,10 @@ export async function saveEmployeeRecord(): Promise<void> {
     if (payload[key] === '') delete payload[key];
   });
 
+  const payrollBeforeSnapshot = employeeToPayrollSnapshot(
+    window.currentEmployee as Record<string, unknown> | null | undefined
+  );
+
   if (isCreating) {
     const insertResult = await client
       .from('employees')
@@ -889,6 +898,16 @@ export async function saveEmployeeRecord(): Promise<void> {
     window.isCreatingEmployee = false;
 
     await createDefaultOnboardingTasks(editedEmployeeId);
+
+    try {
+      await logNewHirePayrollHandoff(
+        editedEmployeeId,
+        `${first_name} ${last_name}`,
+        String(payload.hire_date || '')
+      );
+    } catch (err) {
+      console.warn('[Drawer] New hire payroll handoff failed:', err);
+    }
 
     if (typeof window.loadAllDashboardData === 'function') {
       await window.loadAllDashboardData();
@@ -960,6 +979,25 @@ export async function saveEmployeeRecord(): Promise<void> {
   }
 
   showToast('Employee saved.');
+
+  try {
+    const handoffCount = await logPayrollHandoffsFromEmployeeSave({
+      employeeId: editedEmployeeId,
+      before: payrollBeforeSnapshot,
+      after: payload,
+    });
+    if (handoffCount > 0) {
+      showToast(
+        `Logged ${handoffCount} payroll handoff${handoffCount === 1 ? '' : 's'} for external payroll.`
+      );
+    }
+    window.invalidateEmployeeDrawerTab?.('employee');
+    if (typeof window.loadHrInbox === 'function') {
+      void window.loadHrInbox(true);
+    }
+  } catch (err) {
+    console.warn('[Drawer] Payroll handoff logging failed:', err);
+  }
 
   syncOpenedEmployeeRecordId(editedEmployeeId);
 

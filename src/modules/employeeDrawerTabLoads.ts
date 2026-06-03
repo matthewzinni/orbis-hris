@@ -80,6 +80,7 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
     case 'employee':
       window.loadEmployeeManualAtRisk?.(id);
       window.loadEmployeeManualImpactPlayer?.(id);
+      void window.loadEmployeePayrollHandoffs?.(id);
       break;
     default:
       loadedTabs.delete(tabName);
@@ -96,6 +97,7 @@ declare global {
     loadEmployeeManualAtRisk?: (employeeId: string) => void;
     loadEmployeeManualImpactPlayer?: (employeeId: string) => void;
     loadOnboardingTasks?: (employeeId: string) => Promise<void>;
+    loadEmployeePayrollHandoffs?: (employeeId: string) => Promise<void>;
   }
 }
 

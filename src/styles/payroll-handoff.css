@@ -1,0 +1,98 @@
+#payrollHandoffPanel {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+#payrollHandoffPanel .payroll-handoff-heading {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+#payrollHandoffPanel .payroll-handoff-help {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+#payrollHandoffPanel .payroll-handoff-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+#payrollHandoffPanel .payroll-handoff-form .field--wide {
+  grid-column: 1 / -1;
+}
+
+#payrollHandoffList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#payrollHandoffPanel .payroll-handoff-row {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+#payrollHandoffPanel .payroll-handoff-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+#payrollHandoffPanel .payroll-handoff-type {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+#payrollHandoffPanel .payroll-handoff-status {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+#payrollHandoffPanel .payroll-handoff-status--pending {
+  color: #fcd34d;
+  background: rgba(251, 191, 36, 0.14);
+}
+
+#payrollHandoffPanel .payroll-handoff-status--sent {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.14);
+}
+
+#payrollHandoffPanel .payroll-handoff-status--confirmed {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+#payrollHandoffPanel .payroll-handoff-summary {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+#payrollHandoffPanel .payroll-handoff-meta {
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+#payrollHandoffPanel .payroll-handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}

@@ -17,6 +17,11 @@ import { isOpenDisciplineStatus, isOpenInvestigationStatus } from './hrIntellige
 import { getActiveEmployees, getEmployeeById, getEmployees, loadEmployees } from '../modules/employees';
 import type { Investigation } from '../types/investigationsTypes';
 import { normalizeInvestigationStatus } from '../types/investigationsTypes';
+import {
+  loadPendingPayrollHandoffs,
+  payrollChangeTypeLabel,
+  type PayrollHandoffRecord,
+} from './payrollHandoff';
 
 export type HrInboxSeverity = 'overdue' | 'due_soon' | 'info';
 
@@ -27,7 +32,8 @@ export type HrInboxKind =
   | 'discipline'
   | 'investigation'
   | 'care_follow_up'
-  | 'operations';
+  | 'operations'
+  | 'payroll_handoff';
 
 export type HrInboxRoute =
   | { type: 'employee'; employeeId: string; drawerTab?: string }
@@ -64,6 +70,7 @@ const KIND_LABELS: Record<HrInboxKind, string> = {
   investigation: 'Investigation',
   care_follow_up: 'Care follow-up',
   operations: 'Operations',
+  payroll_handoff: 'Payroll handoff',
 };
 
 type EmployeeLike = Record<string, unknown>;
@@ -434,6 +441,45 @@ function collectOperationsItems(
   return items;
 }
 
+function daysSinceDate(isoDate: string): number | null {
+  const daysUntil = daysUntilDate(isoDate);
+  if (daysUntil === null) return null;
+  return -daysUntil;
+}
+
+function collectPayrollHandoffItems(handoffs: PayrollHandoffRecord[]): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  handoffs.forEach((handoff) => {
+    if (handoff.status !== 'pending') return;
+
+    const employee = resolveEmployee(handoff.employee_id);
+    const employeeId = employee ? drawerEmployeeId(employee) : handoff.employee_id;
+    const name = employee ? employeeDisplayName(employee) : handoff.employee_id;
+
+    const effectiveDays = daysUntilDate(handoff.effective_date);
+    const ageDays = daysSinceDate(handoff.created_at.slice(0, 10));
+    const isStale = ageDays !== null && ageDays > 3;
+    const isEffectiveOverdue = effectiveDays !== null && effectiveDays < 0;
+
+    const severity: HrInboxSeverity =
+      isEffectiveOverdue || isStale ? 'overdue' : 'due_soon';
+
+    items.push({
+      id: `payroll:${handoff.id}`,
+      kind: 'payroll_handoff',
+      severity,
+      employeeName: name,
+      dueDate: handoff.effective_date,
+      title: `Payroll handoff — ${name}`,
+      detail: `${payrollChangeTypeLabel(handoff.change_type)} · ${handoff.summary}`,
+      route: { type: 'employee', employeeId, drawerTab: 'employee' },
+    });
+  });
+
+  return items;
+}
+
 export function sortHrInboxItems(items: HrInboxItem[]): HrInboxItem[] {
   return [...items].sort(compareInboxItems);
 }
@@ -468,6 +514,8 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
 
   const employees = getActiveEmployees() as EmployeeLike[];
 
+  const payrollHandoffsPromise = loadPendingPayrollHandoffs();
+
   const [
     onboardingRes,
     disciplineRes,
@@ -475,6 +523,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     careItemsRes,
     careFollowUpsRes,
     operationsRes,
+    payrollHandoffs,
   ] = await Promise.all([
     supabaseClient.from('onboarding_tasks').select('id, employee_id, task_name, status'),
     supabaseClient
@@ -490,6 +539,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     supabaseClient
       .from('operations_issues')
       .select('id, title, status, due_date, department'),
+    payrollHandoffsPromise,
   ]);
 
   const queryErrors = [
@@ -512,6 +562,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     ...collectInvestigationItems((investigationsRes.data || []) as Investigation[]),
     ...collectCareFollowUpItems(careItemsRes.data || [], careFollowUpsRes.data || []),
     ...collectOperationsItems(operationsRes.data || []),
+    ...collectPayrollHandoffItems(payrollHandoffs),
   ];
 
   return sortHrInboxItems(merged);
@@ -608,6 +659,17 @@ export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSum
       detail: `${operations} issue${operations === 1 ? '' : 's'} need attention`,
       count: operations,
       viewId: 'operationsView',
+    });
+  }
+
+  const payroll = items.filter((item) => item.kind === 'payroll_handoff').length;
+  if (payroll > 0) {
+    alerts.push({
+      id: 'payroll-handoffs-pending',
+      label: 'Payroll handoffs',
+      detail: `${payroll} pending change${payroll === 1 ? '' : 's'} for external payroll`,
+      count: payroll,
+      viewId: 'dashboardView',
     });
   }
 

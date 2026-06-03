@@ -5,6 +5,7 @@ import {
   isSupervisorUser,
 } from '../services/access';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
+import { logNewHirePayrollHandoff } from '../services/payrollHandoff';
 import { renderDashboardRetryState } from '../ui/dashboardRetry';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import {
@@ -1082,6 +1083,19 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
     .eq('id', candidateId);
 
   showToast('Candidate converted to employee.');
+
+  const newEmployeeId = String(cleanEmployeePayload.id || employeePayload.id || '').trim();
+  if (newEmployeeId) {
+    try {
+      await logNewHirePayrollHandoff(
+        newEmployeeId,
+        `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+        String(employeePayload.hire_date || '')
+      );
+    } catch (err) {
+      console.warn('[Candidates] New hire payroll handoff failed:', err);
+    }
+  }
 
   await refreshCandidatesUi();
   if (typeof window.loadEmployees === 'function') {

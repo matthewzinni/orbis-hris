@@ -54,6 +54,7 @@ export async function deleteEmployeeById(
   }
 
   const relatedTables = [
+    'payroll_handoffs',
     'onboarding_tasks',
     'employee_notes',
     'employee_meetings',

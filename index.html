@@ -4270,6 +4270,47 @@
                       </p>
                     </div>
                   </div>
+                  <div class="admin-only hidden" id="payrollHandoffPanel" data-admin-only>
+                    <div class="payroll-handoff-heading">Payroll handoff</div>
+                    <p class="muted payroll-handoff-help">
+                      Log changes you send to external payroll. Saving this employee can auto-create entries when
+                      status, department, title, pay type, or benefits change.
+                    </p>
+                    <div class="payroll-handoff-form">
+                      <div class="field">
+                        <label for="payrollHandoffTypeInput">Change type</label>
+                        <select id="payrollHandoffTypeInput" class="input">
+                          <option value="new_hire">New hire</option>
+                          <option value="termination">Termination</option>
+                          <option value="rate">Pay type / rate</option>
+                          <option value="title">Title</option>
+                          <option value="department">Department</option>
+                          <option value="benefits">Benefits</option>
+                          <option value="status">Status</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label for="payrollHandoffEffectiveInput">Effective date</label>
+                        <input class="input" id="payrollHandoffEffectiveInput" type="date" />
+                      </div>
+                      <div class="field field--wide">
+                        <label for="payrollHandoffSummaryInput">Summary</label>
+                        <input
+                          class="input"
+                          id="payrollHandoffSummaryInput"
+                          type="text"
+                          placeholder="e.g. Raise to $24/hr effective 6/15"
+                        />
+                      </div>
+                      <div class="field">
+                        <button class="button soft" id="payrollHandoffLogBtn" type="button">
+                          Log for payroll
+                        </button>
+                      </div>
+                    </div>
+                    <div id="payrollHandoffList"></div>
+                  </div>
                   <div class="button-row" style="margin-top: 8px">
                     <button
                       class="button primary"
