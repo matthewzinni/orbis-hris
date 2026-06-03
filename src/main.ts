@@ -7,6 +7,7 @@ import './styles/care-engagement.css';
 import './styles/orbis-alerts.css';
 import './styles/org-chart.css';
 import './styles/attendance.css';
+import './styles/hr-inbox.css';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
 import {
@@ -37,6 +38,7 @@ import './modules/notes';
 import './ui/appSections';
 import './ui/navigation';
 import './ui/workspaceAlerts';
+import './ui/hrInbox';
 import './ui/departmentSummary';
 import './modules/onboarding';
 import './modules/employees';

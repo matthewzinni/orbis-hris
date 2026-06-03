@@ -177,6 +177,10 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
     window.applyAttendanceAccess();
   }
 
+  if (typeof window.applyHrInboxAccess === 'function') {
+    window.applyHrInboxAccess();
+  }
+
   if (typeof window.ensureOperationsIssuesLoaded === 'function') {
     window.ensureOperationsIssuesLoaded();
   }

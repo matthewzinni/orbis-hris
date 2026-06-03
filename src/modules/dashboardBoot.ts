@@ -1184,6 +1184,10 @@ function finalizeDashboardLoad(syncStatus: DashboardSyncStatus, syncedAt: Date):
     window.buildKpiHoverDetails();
   }
 
+  if (typeof window.loadHrInbox === 'function') {
+    void window.loadHrInbox(true);
+  }
+
   if (typeof window.updateWorkspaceAlerts === 'function') {
     window.updateWorkspaceAlerts();
   }

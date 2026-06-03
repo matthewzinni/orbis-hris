@@ -1,4 +1,5 @@
 import { isAdminUser, isSupervisorUser } from '../services/access';
+import { summarizeHrInboxForAlerts } from '../services/hrInbox';
 import { switchMainView } from './navigation';
 
 type WorkspaceAlert = {
@@ -20,7 +21,7 @@ function parseCountFromElement(id: string): number {
   return match ? Number.parseInt(match[0], 10) : 0;
 }
 
-function collectWorkspaceAlerts(): WorkspaceAlert[] {
+function collectWorkspaceAlertsFromDom(): WorkspaceAlert[] {
   const alerts: WorkspaceAlert[] = [];
 
   const reviewsDue = parseCountFromElement('kReviewsDue');
@@ -130,6 +131,23 @@ function collectWorkspaceAlerts(): WorkspaceAlert[] {
   }
 
   return alerts;
+}
+
+function collectWorkspaceAlerts(): WorkspaceAlert[] {
+  const inboxItems =
+    typeof window.getHrInboxItems === 'function' ? window.getHrInboxItems() : window.__hrInboxCache;
+
+  if (isAdminUser() && inboxItems !== undefined) {
+    return summarizeHrInboxForAlerts(inboxItems).map((alert) => ({
+      id: alert.id,
+      label: alert.label,
+      detail: alert.detail,
+      count: alert.count,
+      viewId: alert.viewId,
+    }));
+  }
+
+  return collectWorkspaceAlertsFromDom();
 }
 
 function renderAlertsPanel(alerts: WorkspaceAlert[]): void {

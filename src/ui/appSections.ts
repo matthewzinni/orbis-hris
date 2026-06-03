@@ -21,6 +21,7 @@ declare global {
     ensureCareEngagementLoaded?: (force?: boolean) => void;
     loadCareEngagement?: () => Promise<void>;
     loadAttendance?: (force?: boolean) => Promise<void>;
+    loadHrInbox?: (force?: boolean) => Promise<void>;
     loadOrgChart?: () => Promise<void>;
     renderOrgChart?: () => void;
   }
@@ -79,6 +80,9 @@ const APP_SECTIONS: AppSection[] = [
     targetId: 'dashboardTop',
     aliases: ['dashboard'],
     onEnter: () => {
+      if (typeof window.loadHrInbox === 'function') {
+        void window.loadHrInbox();
+      }
       if (typeof window.updateWorkspaceAlerts === 'function') {
         window.updateWorkspaceAlerts();
       }

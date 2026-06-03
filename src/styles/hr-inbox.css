@@ -1,0 +1,142 @@
+#hrInboxCard .hr-inbox-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#hrInboxCard .hr-inbox-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+#hrInboxCard .hr-inbox-filters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#hrInboxCard .hr-inbox-filter-btn {
+  font-size: 0.78rem;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+#hrInboxCard .hr-inbox-filter-btn.active {
+  color: var(--text);
+  border-color: rgba(79, 140, 255, 0.45);
+  background: rgba(79, 140, 255, 0.12);
+}
+
+#hrInboxCard .hr-inbox-summary {
+  font-size: 0.84rem;
+  margin-bottom: 12px;
+}
+
+#hrInboxCard .hr-inbox-overdue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #fff;
+  background: #dc2626;
+}
+
+#hrInboxCard .hr-inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: min(52vh, 520px);
+  overflow: auto;
+  padding-right: 2px;
+}
+
+#hrInboxCard .hr-inbox-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+#hrInboxCard .hr-inbox-item:hover {
+  border-color: rgba(79, 140, 255, 0.35);
+  background: rgba(79, 140, 255, 0.08);
+}
+
+#hrInboxCard .hr-inbox-item.severity-overdue {
+  border-left: 3px solid #dc2626;
+}
+
+#hrInboxCard .hr-inbox-item.severity-due_soon {
+  border-left: 3px solid #d97706;
+}
+
+#hrInboxCard .hr-inbox-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+#hrInboxCard .hr-inbox-severity {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+#hrInboxCard .hr-inbox-item.severity-overdue .hr-inbox-severity {
+  color: #fca5a5;
+}
+
+#hrInboxCard .hr-inbox-item.severity-due_soon .hr-inbox-severity {
+  color: #fcd34d;
+}
+
+#hrInboxCard .hr-inbox-kind {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+#hrInboxCard .hr-inbox-item-title {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+#hrInboxCard .hr-inbox-item-detail {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+#hrInboxCard .hr-inbox-empty {
+  padding: 16px 4px;
+  font-size: 0.88rem;
+}
+
+body.authenticated #hrInboxCard .hr-inbox-item-title {
+  color: var(--text);
+}

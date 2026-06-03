@@ -342,6 +342,54 @@
                 </div>
               </div>
             </div>
+            <div
+              class="card admin-only hidden"
+              id="hrInboxCard"
+              data-hr-inbox-access
+              data-admin-only
+            >
+              <div class="card-header hr-inbox-header">
+                <div>
+                  <span>HR Inbox</span>
+                  <span class="hr-inbox-overdue-badge hidden" id="hrInboxOverdueBadge" aria-hidden="true"></span>
+                </div>
+                <div class="hr-inbox-header-actions">
+                  <div class="hr-inbox-filters" role="group" aria-label="Filter inbox">
+                    <button
+                      type="button"
+                      class="hr-inbox-filter-btn active"
+                      data-hr-inbox-filter="all"
+                      aria-pressed="true"
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      class="hr-inbox-filter-btn"
+                      data-hr-inbox-filter="overdue"
+                      aria-pressed="false"
+                    >
+                      Overdue
+                    </button>
+                    <button
+                      type="button"
+                      class="hr-inbox-filter-btn"
+                      data-hr-inbox-filter="due_soon"
+                      aria-pressed="false"
+                    >
+                      This week
+                    </button>
+                  </div>
+                  <button class="button soft" id="hrInboxRefreshBtn" type="button">Refresh</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <p class="muted hr-inbox-summary" id="hrInboxSummary">Loading inbox…</p>
+                <div class="hr-inbox-list" id="hrInboxList" role="list">
+                  <div class="hr-inbox-empty muted">Loading inbox…</div>
+                </div>
+              </div>
+            </div>
         <div class="layout layout-dashboard-overview">
           <div class="stack">
             <div class="card">

@@ -1,0 +1,615 @@
+/**
+ * Virtual HR Inbox (Phase 1): aggregates actionable items from existing Orbis data.
+ */
+
+import { supabaseClient } from './supabaseClient';
+import { isAdminUser } from './access';
+import {
+  daysUntilDate,
+  employeeDisplayName,
+  formatDueDateLabel,
+  getEmployeeNextStayInterviewDueDate,
+  isActiveDashboardEmployee,
+  parseDueDate,
+  readEmployeeNextStayInterviewDateRaw,
+} from './employeeUtils';
+import { isOpenDisciplineStatus, isOpenInvestigationStatus } from './hrIntelligence';
+import { getActiveEmployees, getEmployeeById, getEmployees, loadEmployees } from '../modules/employees';
+import type { Investigation } from '../types/investigationsTypes';
+import { normalizeInvestigationStatus } from '../types/investigationsTypes';
+
+export type HrInboxSeverity = 'overdue' | 'due_soon' | 'info';
+
+export type HrInboxKind =
+  | 'stay_interview'
+  | 'onboarding'
+  | 'new_hire'
+  | 'discipline'
+  | 'investigation'
+  | 'care_follow_up'
+  | 'operations';
+
+export type HrInboxRoute =
+  | { type: 'employee'; employeeId: string; drawerTab?: string }
+  | { type: 'investigation'; investigationId: string }
+  | { type: 'operations'; issueId: string }
+  | { type: 'view'; viewId: string };
+
+export type HrInboxItem = {
+  id: string;
+  kind: HrInboxKind;
+  severity: HrInboxSeverity;
+  title: string;
+  detail: string;
+  employeeName: string;
+  dueDate: string | null;
+  route: HrInboxRoute;
+};
+
+const DUE_SOON_DAYS = 7;
+const NEW_HIRE_DAYS = 14;
+const ONBOARDING_HIRE_LOOKBACK_DAYS = 90;
+
+const SEVERITY_RANK: Record<HrInboxSeverity, number> = {
+  overdue: 0,
+  due_soon: 1,
+  info: 2,
+};
+
+const KIND_LABELS: Record<HrInboxKind, string> = {
+  stay_interview: 'Stay interview',
+  onboarding: 'Onboarding',
+  new_hire: 'New hire',
+  discipline: 'Discipline',
+  investigation: 'Investigation',
+  care_follow_up: 'Care follow-up',
+  operations: 'Operations',
+};
+
+type EmployeeLike = Record<string, unknown>;
+
+function isContractEmployee(employee: EmployeeLike): boolean {
+  return String(employee.pay_type || employee.payType || '')
+    .toLowerCase()
+    .includes('contract');
+}
+
+function drawerEmployeeId(employee: EmployeeLike): string {
+  return String(employee.id || employee.dbId || employee.employee_id || '').trim();
+}
+
+function resolveEmployee(refId: string): EmployeeLike | undefined {
+  const trimmed = String(refId || '').trim();
+  if (!trimmed) return undefined;
+
+  const direct = getEmployeeById(trimmed);
+  if (direct) return direct;
+
+  return getEmployees().find((employee) => {
+    const ids = [employee.employee_id, employee.displayId, employee.id, employee.dbId]
+      .filter(Boolean)
+      .map(String);
+    return ids.includes(trimmed);
+  });
+}
+
+function severityFromDays(days: number | null, fallback: HrInboxSeverity = 'info'): HrInboxSeverity {
+  if (days === null) return fallback;
+  if (days < 0) return 'overdue';
+  if (days <= DUE_SOON_DAYS) return 'due_soon';
+  return 'info';
+}
+
+function isoDateFromValue(value: unknown): string | null {
+  const parsed = parseDueDate(value);
+  if (!parsed) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
+function compareInboxItems(left: HrInboxItem, right: HrInboxItem): number {
+  const severityDiff = SEVERITY_RANK[left.severity] - SEVERITY_RANK[right.severity];
+  if (severityDiff !== 0) return severityDiff;
+
+  const leftDue = parseDueDate(left.dueDate)?.getTime() ?? Number.POSITIVE_INFINITY;
+  const rightDue = parseDueDate(right.dueDate)?.getTime() ?? Number.POSITIVE_INFINITY;
+  if (leftDue !== rightDue) return leftDue - rightDue;
+
+  const nameCmp = left.employeeName.localeCompare(right.employeeName, undefined, {
+    sensitivity: 'base',
+  });
+  if (nameCmp !== 0) return nameCmp;
+
+  return left.title.localeCompare(right.title, undefined, { sensitivity: 'base' });
+}
+
+function isStayInterviewEligible(employee: EmployeeLike): boolean {
+  return isActiveDashboardEmployee(employee) && !isContractEmployee(employee);
+}
+
+function collectStayInterviewItems(employees: EmployeeLike[]): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  employees.filter(isStayInterviewEligible).forEach((employee) => {
+    const dueRaw = readEmployeeNextStayInterviewDateRaw(employee);
+    const days = daysUntilDate(dueRaw);
+    if (days === null) return;
+
+    const severity = severityFromDays(days);
+    if (severity === 'info') return;
+
+    const dueDate = isoDateFromValue(dueRaw);
+    const employeeId = drawerEmployeeId(employee);
+    if (!employeeId) return;
+
+    const name = employeeDisplayName(employee);
+    const dueLabel = formatDueDateLabel(getEmployeeNextStayInterviewDueDate(employee), dueRaw);
+
+    items.push({
+      id: `stay:${employeeId}`,
+      kind: 'stay_interview',
+      severity,
+      employeeName: name,
+      dueDate,
+      title:
+        severity === 'overdue' ? `Stay interview overdue — ${name}` : `Stay interview due soon — ${name}`,
+      detail:
+        severity === 'overdue'
+          ? `Due ${dueLabel} (${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} overdue)`
+          : `Due ${dueLabel} (in ${days} day${days === 1 ? '' : 's'})`,
+      route: { type: 'employee', employeeId, drawerTab: 'stay-interviews' },
+    });
+  });
+
+  return items;
+}
+
+function daysSinceHire(employee: EmployeeLike): number | null {
+  const daysUntilHire = daysUntilDate(employee.hire_date || employee.hireDate);
+  if (daysUntilHire === null) return null;
+  return -daysUntilHire;
+}
+
+function collectOnboardingItems(
+  tasks: Array<{ id: string; employee_id?: string; task_name?: string; status?: string }>,
+  employees: EmployeeLike[]
+): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const hireCutoff = new Date(today);
+  hireCutoff.setDate(hireCutoff.getDate() - ONBOARDING_HIRE_LOOKBACK_DAYS);
+
+  const employeeByRosterId = new Map<string, EmployeeLike>();
+  employees.forEach((employee) => {
+    const keys = [employee.employee_id, employee.displayId, employee.id, employee.dbId]
+      .filter(Boolean)
+      .map(String);
+    keys.forEach((key) => employeeByRosterId.set(key, employee));
+  });
+
+  const pendingByEmployee = new Map<string, Array<{ id: string; task_name?: string }>>();
+
+  tasks.forEach((task) => {
+    if (String(task.status || '').toLowerCase() === 'completed') return;
+
+    const rosterId = String(task.employee_id || '').trim();
+    if (!rosterId) return;
+
+    const employee = employeeByRosterId.get(rosterId) || resolveEmployee(rosterId);
+    if (!employee || !isActiveDashboardEmployee(employee)) return;
+
+    const hireDate = parseDueDate(employee.hire_date || employee.hireDate);
+    if (!hireDate || hireDate < hireCutoff) return;
+
+    const drawerId = drawerEmployeeId(employee);
+    if (!drawerId) return;
+
+    const bucket = pendingByEmployee.get(drawerId) || [];
+    bucket.push({ id: task.id, task_name: task.task_name });
+    pendingByEmployee.set(drawerId, bucket);
+  });
+
+  pendingByEmployee.forEach((pendingTasks, employeeId) => {
+    const employee = getEmployeeById(employeeId) || resolveEmployee(employeeId);
+    if (!employee) return;
+
+    const name = employeeDisplayName(employee);
+    const daysSince = daysSinceHire(employee);
+    const isNewHire =
+      daysSince !== null && daysSince >= 0 && daysSince <= NEW_HIRE_DAYS;
+
+    if (isNewHire && pendingTasks.length > 1) {
+      items.push({
+        id: `new-hire:${employeeId}`,
+        kind: 'new_hire',
+        severity: 'due_soon',
+        employeeName: name,
+        dueDate: isoDateFromValue(employee.hire_date || employee.hireDate),
+        title: `New hire onboarding — ${name}`,
+        detail: `${pendingTasks.length} tasks still open (hired ${formatDueDateLabel(parseDueDate(employee.hire_date || employee.hireDate), String(employee.hire_date || ''))})`,
+        route: { type: 'employee', employeeId, drawerTab: 'onboarding' },
+      });
+      return;
+    }
+
+    pendingTasks.forEach((task) => {
+      items.push({
+        id: `onboarding:${task.id}`,
+        kind: 'onboarding',
+        severity: isNewHire ? 'due_soon' : 'info',
+        employeeName: name,
+        dueDate: isoDateFromValue(employee.hire_date || employee.hireDate),
+        title: `Onboarding — ${name}`,
+        detail: String(task.task_name || 'Task').trim() || 'Pending task',
+        route: { type: 'employee', employeeId, drawerTab: 'onboarding' },
+      });
+    });
+  });
+
+  return items;
+}
+
+function collectDisciplineItems(
+  rows: Array<{ id?: string; employee_id?: string; issue_type?: string; report_status?: string }>
+): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  rows.forEach((row) => {
+    if (!isOpenDisciplineStatus(row.report_status)) return;
+
+    const employee = resolveEmployee(String(row.employee_id || ''));
+    const employeeId = employee ? drawerEmployeeId(employee) : '';
+    const name = employee ? employeeDisplayName(employee) : 'Employee';
+    const issue = String(row.issue_type || 'Discipline').trim() || 'Open case';
+
+    items.push({
+      id: `discipline:${row.id || `${row.employee_id}-${issue}`}`,
+      kind: 'discipline',
+      severity: 'info',
+      employeeName: name,
+      dueDate: null,
+      title: `Open discipline — ${name}`,
+      detail: issue,
+      route: employeeId
+        ? { type: 'employee', employeeId, drawerTab: 'discipline' }
+        : { type: 'view', viewId: 'dashboardView' },
+    });
+  });
+
+  return items;
+}
+
+function investigationIsOverdue(investigation: Investigation): boolean {
+  if (!isOpenInvestigationStatus(investigation.status)) return false;
+  const target = parseDueDate(investigation.target_completion_date);
+  if (!target) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return target < today;
+}
+
+function collectInvestigationItems(investigations: Investigation[]): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  investigations.forEach((investigation) => {
+    if (!investigationIsOverdue(investigation)) return;
+
+    const invId = String(investigation.id || '').trim();
+    if (!invId) return;
+
+    const targetRaw = investigation.target_completion_date;
+    const days = daysUntilDate(targetRaw);
+    const caseLabel = String(investigation.case_number || investigation.title || 'Case').trim();
+
+    const employee =
+      resolveEmployee(String(investigation.primary_employee_id || '')) ||
+      resolveEmployee(String(investigation.targeted_employee_id || ''));
+
+    items.push({
+      id: `investigation:${invId}`,
+      kind: 'investigation',
+      severity: 'overdue',
+      employeeName: employee ? employeeDisplayName(employee) : '—',
+      dueDate: isoDateFromValue(targetRaw),
+      title: `Investigation overdue — ${caseLabel}`,
+      detail: employee
+        ? `${employeeDisplayName(employee)} · target ${formatDueDateLabel(parseDueDate(targetRaw), String(targetRaw || ''))}${days !== null ? ` (${Math.abs(days)}d late)` : ''}`
+        : `Target ${formatDueDateLabel(parseDueDate(targetRaw), String(targetRaw || ''))}`,
+      route: { type: 'investigation', investigationId: invId },
+    });
+  });
+
+  return items;
+}
+
+function isOpenCareStatus(status: unknown): boolean {
+  return ['open', 'in_progress', 'follow_up'].includes(
+    String(status || '').trim().toLowerCase()
+  );
+}
+
+function collectCareFollowUpItems(
+  careItems: Array<{ id?: string; employee_id?: string; title?: string; status?: string; follow_up_date?: string }>,
+  followUps: Array<{ id?: string; employee_id?: string; title?: string; status?: string; due_date?: string }>
+): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  const pushCareItem = (
+    sourceId: string,
+    employeeRef: string,
+    title: string,
+    dueRaw: string,
+    prefix: string
+  ): void => {
+    const days = daysUntilDate(dueRaw);
+    if (days === null || days > DUE_SOON_DAYS) return;
+
+    const employee = resolveEmployee(employeeRef);
+    const employeeId = employee ? drawerEmployeeId(employee) : '';
+    const name = employee ? employeeDisplayName(employee) : 'Employee';
+    const severity = severityFromDays(days);
+
+    items.push({
+      id: `${prefix}:${sourceId}`,
+      kind: 'care_follow_up',
+      severity,
+      employeeName: name,
+      dueDate: isoDateFromValue(dueRaw),
+      title: `${severity === 'overdue' ? 'Care follow-up overdue' : 'Care follow-up due'} — ${name}`,
+      detail: `${title} · ${formatDueDateLabel(parseDueDate(dueRaw), dueRaw)}`,
+      route: employeeId
+        ? { type: 'employee', employeeId, drawerTab: 'care-support' }
+        : { type: 'view', viewId: 'careEngagementView' },
+    });
+  };
+
+  careItems.forEach((item) => {
+    if (!isOpenCareStatus(item.status)) return;
+    const followUp = String(item.follow_up_date || '').trim();
+    if (!followUp) return;
+    pushCareItem(
+      String(item.id || item.employee_id || ''),
+      String(item.employee_id || ''),
+      String(item.title || 'Care item'),
+      followUp,
+      'care-item'
+    );
+  });
+
+  followUps.forEach((item) => {
+    if (!isOpenCareStatus(item.status)) return;
+    const due = String(item.due_date || '').trim();
+    if (!due) return;
+    pushCareItem(
+      String(item.id || item.employee_id || ''),
+      String(item.employee_id || ''),
+      String(item.title || 'Follow-up'),
+      due,
+      'care-follow-up'
+    );
+  });
+
+  return items;
+}
+
+function collectOperationsItems(
+  issues: Array<{
+    id?: string;
+    title?: string;
+    status?: string;
+    due_date?: string;
+    department?: string;
+  }>
+): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  issues.forEach((issue) => {
+    const status = String(issue.status || '').toLowerCase();
+    if (status === 'resolved' || status === 'closed') return;
+
+    const dueRaw = String(issue.due_date || '').trim();
+    if (!dueRaw) return;
+
+    const days = daysUntilDate(dueRaw);
+    if (days === null || days > DUE_SOON_DAYS) return;
+
+    const issueId = String(issue.id || '').trim();
+    if (!issueId) return;
+
+    const severity = severityFromDays(days);
+    const title = String(issue.title || 'Operations issue').trim();
+
+    items.push({
+      id: `operations:${issueId}`,
+      kind: 'operations',
+      severity,
+      employeeName: '—',
+      dueDate: isoDateFromValue(dueRaw),
+      title: `${severity === 'overdue' ? 'Operations overdue' : 'Operations due'} — ${title}`,
+      detail: `${String(issue.department || 'Unassigned').trim()} · ${formatDueDateLabel(parseDueDate(dueRaw), dueRaw)}`,
+      route: { type: 'operations', issueId },
+    });
+  });
+
+  return items;
+}
+
+export function sortHrInboxItems(items: HrInboxItem[]): HrInboxItem[] {
+  return [...items].sort(compareInboxItems);
+}
+
+export function filterHrInboxItems(
+  items: HrInboxItem[],
+  filter: 'all' | 'overdue' | 'due_soon'
+): HrInboxItem[] {
+  if (filter === 'all') return items;
+  if (filter === 'overdue') return items.filter((item) => item.severity === 'overdue');
+  return items.filter(
+    (item) => item.severity === 'overdue' || item.severity === 'due_soon'
+  );
+}
+
+export function kindLabel(kind: HrInboxKind): string {
+  return KIND_LABELS[kind] || kind;
+}
+
+export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
+  if (!isAdminUser()) {
+    return [];
+  }
+
+  if (!getEmployees().length) {
+    try {
+      await loadEmployees();
+    } catch (err) {
+      console.warn('[HrInbox] Could not load employees:', err);
+    }
+  }
+
+  const employees = getActiveEmployees() as EmployeeLike[];
+
+  const [
+    onboardingRes,
+    disciplineRes,
+    investigationsRes,
+    careItemsRes,
+    careFollowUpsRes,
+    operationsRes,
+  ] = await Promise.all([
+    supabaseClient.from('onboarding_tasks').select('id, employee_id, task_name, status'),
+    supabaseClient
+      .from('discipline_reports')
+      .select('id, employee_id, issue_type, report_status'),
+    supabaseClient
+      .from('investigations')
+      .select('id, case_number, title, status, target_completion_date, primary_employee_id, targeted_employee_id'),
+    supabaseClient
+      .from('care_items')
+      .select('id, employee_id, title, status, follow_up_date'),
+    supabaseClient.from('care_follow_ups').select('id, employee_id, title, status, due_date'),
+    supabaseClient
+      .from('operations_issues')
+      .select('id, title, status, due_date, department'),
+  ]);
+
+  const queryErrors = [
+    onboardingRes.error,
+    disciplineRes.error,
+    investigationsRes.error,
+    careItemsRes.error,
+    careFollowUpsRes.error,
+    operationsRes.error,
+  ].filter(Boolean);
+
+  if (queryErrors.length) {
+    console.warn('[HrInbox] Some queries failed:', queryErrors);
+  }
+
+  const merged: HrInboxItem[] = [
+    ...collectStayInterviewItems(employees),
+    ...collectOnboardingItems(onboardingRes.data || [], employees),
+    ...collectDisciplineItems(disciplineRes.data || []),
+    ...collectInvestigationItems((investigationsRes.data || []) as Investigation[]),
+    ...collectCareFollowUpItems(careItemsRes.data || [], careFollowUpsRes.data || []),
+    ...collectOperationsItems(operationsRes.data || []),
+  ];
+
+  return sortHrInboxItems(merged);
+}
+
+export type HrInboxAlertSummary = {
+  id: string;
+  label: string;
+  detail: string;
+  count: number;
+  viewId?: string;
+};
+
+export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSummary[] {
+  const alerts: HrInboxAlertSummary[] = [];
+
+  const stayOverdue = items.filter(
+    (item) => item.kind === 'stay_interview' && item.severity === 'overdue'
+  ).length;
+  if (stayOverdue > 0) {
+    alerts.push({
+      id: 'stay-interviews-due',
+      label: 'Stay interviews due',
+      detail: `${stayOverdue} overdue stay interview${stayOverdue === 1 ? '' : 's'}`,
+      count: stayOverdue,
+      viewId: 'dashboardView',
+    });
+  }
+
+  const staySoon = items.filter(
+    (item) => item.kind === 'stay_interview' && item.severity === 'due_soon'
+  ).length;
+  if (staySoon > 0) {
+    alerts.push({
+      id: 'stay-interviews-due-soon',
+      label: 'Stay interviews due soon',
+      detail: `${staySoon} due within ${DUE_SOON_DAYS} days`,
+      count: staySoon,
+      viewId: 'dashboardView',
+    });
+  }
+
+  const discipline = items.filter((item) => item.kind === 'discipline').length;
+  if (discipline > 0) {
+    alerts.push({
+      id: 'open-discipline',
+      label: 'Open discipline cases',
+      detail: `${discipline} case${discipline === 1 ? '' : 's'} need follow-up`,
+      count: discipline,
+      viewId: 'dashboardView',
+    });
+  }
+
+  const invOverdue = items.filter((item) => item.kind === 'investigation').length;
+  if (invOverdue > 0) {
+    alerts.push({
+      id: 'investigations-overdue',
+      label: 'Overdue investigations',
+      detail: `${invOverdue} case${invOverdue === 1 ? '' : 's'} past target date`,
+      count: invOverdue,
+      viewId: 'investigationsView',
+    });
+  }
+
+  const onboarding = items.filter(
+    (item) => item.kind === 'onboarding' || item.kind === 'new_hire'
+  ).length;
+  if (onboarding > 0) {
+    alerts.push({
+      id: 'onboarding-open',
+      label: 'Onboarding tasks',
+      detail: `${onboarding} open item${onboarding === 1 ? '' : 's'}`,
+      count: onboarding,
+      viewId: 'dashboardView',
+    });
+  }
+
+  const care = items.filter((item) => item.kind === 'care_follow_up').length;
+  if (care > 0) {
+    alerts.push({
+      id: 'care-follow-ups',
+      label: 'Care follow-ups',
+      detail: `${care} due or overdue`,
+      count: care,
+      viewId: 'careEngagementView',
+    });
+  }
+
+  const operations = items.filter((item) => item.kind === 'operations').length;
+  if (operations > 0) {
+    alerts.push({
+      id: 'operations-due',
+      label: 'Operations due',
+      detail: `${operations} issue${operations === 1 ? '' : 's'} need attention`,
+      count: operations,
+      viewId: 'operationsView',
+    });
+  }
+
+  return alerts;
+}

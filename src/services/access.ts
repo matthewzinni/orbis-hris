@@ -710,6 +710,10 @@ export function applyRolePermissions(): void {
   if (typeof window.applyAttendanceAccess === 'function') {
     window.applyAttendanceAccess();
   }
+
+  if (typeof window.applyHrInboxAccess === 'function') {
+    window.applyHrInboxAccess();
+  }
 }
 
 function applyPerformanceReviewTabAccess(employee?: EmployeeLike | null): void {
@@ -766,6 +770,10 @@ declare global {
     isCreatingEmployee?: boolean;
     currentEmergencyContactId?: string | null;
     applyAttendanceAccess?: () => void;
+    applyHrInboxAccess?: () => void;
+    loadHrInbox?: (force?: boolean) => Promise<void>;
+    getHrInboxItems?: () => import('./hrInbox').HrInboxItem[];
+    __hrInboxCache?: import('./hrInbox').HrInboxItem[];
   }
 }
 
