@@ -58,6 +58,16 @@ supabase functions serve summarize-stay-interview --env-file supabase/.env.local
 
 After deploy, sign in on production and use Stay Interviews → **Generate AI summary**. If the secret is missing, the app uses the structured template draft instead.
 
+## Stay interview org themes (Edge Function)
+
+**Reports → Stay interview themes (leadership)** aggregates anonymized Q&A from recent stay interviews and calls `analyze-stay-themes` (same `OPENAI_API_KEY` secret). Use this for management readouts on what is going well, common obstacles, and retention signals.
+
+```bash
+npx supabase functions deploy analyze-stay-themes
+```
+
+If the function or secret is missing, Orbis falls back to a template rollup from the same interview data.
+
 ## Investigation AI guidance (Edge Function)
 
 The **Generate AI guidance** button on Investigations → **AI Guidance** calls `investigation-hr-guidance` (same `OPENAI_API_KEY` secret as stay interviews).

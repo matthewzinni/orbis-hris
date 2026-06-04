@@ -1615,6 +1615,60 @@
               </div>
             </div>
             <div
+              class="card stay-org-themes-card orbis-disclosure-card"
+              data-orbis-disclosure
+              data-orbis-disclosure-start="open"
+              id="stayOrgThemesCard"
+            >
+              <div class="card-header orbis-disclosure-header">
+                <span>Stay interview themes (leadership)</span>
+                <button
+                  type="button"
+                  class="orbis-disclosure-toggle"
+                  data-orbis-disclosure-toggle
+                  aria-expanded="true"
+                >
+                  Hide details
+                </button>
+              </div>
+              <div class="card-body">
+                <p class="muted" style="margin: 0 0 12px">
+                  AI synthesizes common themes across completed stay interviews — what is going well,
+                  obstacles, and retention signals — so you can act early. Individual names are not
+                  included in the leadership report.
+                </p>
+                <div class="stay-org-themes-toolbar">
+                  <label>
+                    <span class="muted">Look back</span>
+                    <select id="stayOrgThemesMonths" aria-label="Months of stay interviews to include">
+                      <option value="6">Last 6 months</option>
+                      <option value="12" selected>Last 12 months</option>
+                      <option value="18">Last 18 months</option>
+                      <option value="24">Last 24 months</option>
+                    </select>
+                  </label>
+                  <button class="button primary" id="stayOrgThemesGenerateBtn" type="button">
+                    Generate themes
+                  </button>
+                  <button class="button soft hidden" id="stayOrgThemesCopyBtn" type="button">
+                    Copy report
+                  </button>
+                  <button class="button soft hidden" id="stayOrgThemesEmailBtn" type="button">
+                    Email Trent &amp; Brent
+                  </button>
+                </div>
+                <p class="muted stay-org-themes-status" id="stayOrgThemesStatus">
+                  Select a date range and generate themes when ready.
+                </p>
+                <div class="stay-org-themes-report-wrap hidden" id="stayOrgThemesReportWrap">
+                  <div class="stay-org-themes-report-header">
+                    <span class="muted" id="stayOrgThemesSourceBadge"></span>
+                  </div>
+                  <pre class="stay-org-themes-report" id="stayOrgThemesReport"></pre>
+                </div>
+              </div>
+            </div>
+            <div
               class="card reports-er-card orbis-disclosure-card"
               data-orbis-disclosure
               data-orbis-disclosure-start="collapsed"

@@ -95,6 +95,7 @@ import {
   cancelMeetingEdit,
 } from './modules/meetings';
 import './modules/stayInterviews';
+import './modules/stayInterviewOrgInsights';
 import './modules/emergencyContacts';
 import './modules/employeeDocuments';
 import {

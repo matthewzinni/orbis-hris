@@ -803,6 +803,10 @@ export async function loadReportsSection(force = false): Promise<void> {
     const reportsRoot = document.getElementById('orbisSectionReports');
     if (reportsRoot) window.initOrbisDisclosure(reportsRoot);
   }
+
+  if (typeof window.initStayInterviewOrgInsights === 'function') {
+    window.initStayInterviewOrgInsights();
+  }
 }
 
 function bindReportsEvents(): void {
