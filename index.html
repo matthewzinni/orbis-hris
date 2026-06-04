@@ -52,13 +52,17 @@
             role="alert"
             aria-live="polite"
           ></div>
-          <div style="display: flex; gap: 10px; margin-top: 18px">
+          <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px">
             <button class="button primary" id="loginBtn" type="button">
               Sign In
             </button>
+            <button class="button soft" id="loginMagicLinkBtn" type="button">
+              Email me a sign-in link
+            </button>
           </div>
           <div class="muted" style="margin-top: 14px">
-            Access is limited to approved admin-created accounts.
+            HR and supervisors use password sign-in. Employees can use a one-time email link with the
+            <strong>work email on file</strong> to view PTO and request time off.
           </div>
         </div>
       </div>
@@ -88,6 +92,14 @@
               aria-current="page"
             >
               Dashboard
+            </button>
+            <button
+              class="orbis-nav-item hidden"
+              type="button"
+              data-nav-view="myTimeOffView"
+              id="navMyTimeOff"
+            >
+              My Time Off
             </button>
             <button class="orbis-nav-item" type="button" data-nav-view="employeesView">
               Employees
@@ -684,6 +696,73 @@
                     </thead>
                     <tbody id="orgChartUnlinkedBody"></tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="orbisSectionMyTimeOff"
+          class="orbis-app-section hidden"
+          data-section="myTimeOffView"
+          aria-hidden="true"
+        >
+          <div class="page employee-portal-page" id="myTimeOffPage">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <span class="muted">View your PTO balance and submit requests for supervisor approval</span>
+              </div>
+            </div>
+            <div class="kpi-grid compact-grid">
+              <div class="kpi-card">
+                <div class="kpi-label">PTO remaining</div>
+                <div class="kpi-value" id="myTimeOffBalanceValue">—</div>
+                <div class="kpi-sub" id="myTimeOffBalanceMeta"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <span id="myTimeOffPanelTitle">My Time Off</span>
+              </div>
+              <div class="card-body employee-portal-body">
+                <form id="myTimeOffRequestForm" class="employee-portal-form" autocomplete="off">
+                  <div class="field-grid two-col">
+                    <div class="field">
+                      <label for="myTimeOffTypeInput">Type</label>
+                      <select class="input" id="myTimeOffTypeInput">
+                        <option value="pto">PTO</option>
+                        <option value="sick">Sick</option>
+                        <option value="unpaid">Unpaid</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="myTimeOffHoursInput">Hours</label>
+                      <input class="input" id="myTimeOffHoursInput" type="number" min="0.25" step="0.25" />
+                    </div>
+                    <div class="field">
+                      <label for="myTimeOffStartInput">Start date</label>
+                      <input class="input" id="myTimeOffStartInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="myTimeOffEndInput">End date (optional)</label>
+                      <input class="input" id="myTimeOffEndInput" type="date" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="myTimeOffNotesInput">Notes (optional)</label>
+                    <textarea class="input" id="myTimeOffNotesInput" rows="2"></textarea>
+                  </div>
+                  <button class="button primary" id="myTimeOffSubmitBtn" type="button">
+                    Submit request
+                  </button>
+                </form>
+                <div class="employee-portal-requests">
+                  <h3 class="employee-portal-requests-title">Your requests</h3>
+                  <div id="myTimeOffRequestList" class="leave-request-list">
+                    <div class="muted">Loading…</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1881,12 +1960,7 @@
                     ></textarea>
                   </div>
                   <div class="candidate-actions-row">
-                    <button
-                      class="button primary"
-                      id="saveCandidateBtn"
-                      type="button"
-                      onclick="saveCandidateRecord()"
-                    >
+                    <button class="button primary" id="saveCandidateBtn" type="button">
                       Save Candidate
                     </button>
                     <button class="button soft" type="button" onclick="openNewCandidateForm()">

@@ -16,6 +16,22 @@ npm run db:push
 npm run db:status
 ```
 
+## Employee PTO portal (self-service)
+
+After `npm run db:push` (migration `20260608120000_employee_portal_access`):
+
+1. **Supabase Auth** → enable **Email** provider and **Magic Link** (OTP). Add your site URL to **Redirect URLs** (e.g. `https://www.orbis-btw.com/`).
+2. Ensure each employee has a **work email** on their profile (Orbis matches login email to `work_email`, `personal_email`, or `email`).
+3. Optional: pre-create `user_access` rows (faster first login):
+
+```bash
+set -a && source scripts/.env.weekly_report && set +a
+python scripts/provision_employee_portal_access.py --dry-run
+python scripts/provision_employee_portal_access.py
+```
+
+Employees use **Email me a sign-in link** on the login page (no password). HR/supervisors still use password sign-in. **PTO requests** require approval by the employee’s **direct supervisor** (supervisor role + roster match) or **admin**.
+
 ## Stay interview AI summary (Edge Function)
 
 The **Generate AI summary** button calls `summarize-stay-interview`. The OpenAI key must live in Supabase secrets (never in `VITE_*`).

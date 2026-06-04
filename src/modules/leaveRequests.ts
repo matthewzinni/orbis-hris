@@ -1,6 +1,7 @@
 import {
   approveLeaveRequest,
   cancelLeaveRequest,
+  canApproveLeaveRequest,
   canManageLeaveRequests,
   createLeaveRequest,
   deleteLeaveRequest,
@@ -69,7 +70,8 @@ function renderAdminDeleteButton(record: LeaveRequestRecord): string {
 
 function renderLeaveActions(record: LeaveRequestRecord): string {
   const buttons: string[] = [];
-  const canAct = record.status === 'requested' && canManageLeaveRequests();
+  const canAct =
+    record.status === 'requested' && canApproveLeaveRequest(record.employee_id);
   const canEditHours =
     record.status === 'approved' &&
     isAdminUser() &&

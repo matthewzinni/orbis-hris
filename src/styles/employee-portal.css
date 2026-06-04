@@ -1,0 +1,23 @@
+.employee-portal-page .employee-portal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.employee-portal-form .field-grid.two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 12px;
+}
+
+.employee-portal-requests-title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.employee-portal-requests .leave-request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

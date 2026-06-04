@@ -11,6 +11,8 @@ export type UserAccessRow = {
   supervisor_name?: string;
   /** When non-empty, supervisor roster + RLS are limited to these employees.id (UUID) values. */
   supervised_employee_ids?: string[] | null;
+  /** employees.id for role=employee (self-service PTO portal). */
+  linked_employee_id?: string | null;
   can_delete?: boolean;
 };
 
@@ -48,7 +50,7 @@ export async function fetchUserAccessRowForEmail(email: string): Promise<UserAcc
   if (!normalized) return null;
 
   const select =
-    'email, display_name, role, supervisor_name, supervised_employee_ids, can_delete';
+    'email, display_name, role, supervisor_name, supervised_employee_ids, linked_employee_id, can_delete';
 
   // Prefer SECURITY DEFINER RPC: matches auth.users.email to user_access so RLS/casing
   // on the table cannot hide the row when JWT email differs from stored user_access.email.
@@ -101,7 +103,16 @@ export async function getUserRole(): Promise<string | null> {
 
     currentUserAccess = null;
 
-    const accessRow = await fetchUserAccessRowForEmail(userEmail);
+    let accessRow = await fetchUserAccessRowForEmail(userEmail);
+
+    if (!accessRow) {
+      const { data: linked, error: linkErr } = await supabaseClient.rpc(
+        'orbis_ensure_employee_portal_access'
+      );
+      if (!linkErr && linked) {
+        accessRow = (Array.isArray(linked) ? linked[0] : linked) as UserAccessRow;
+      }
+    }
 
     if (accessRow) {
       currentUserAccess = accessRow;
@@ -158,6 +169,49 @@ export function canManageEmployeeRecords(): boolean {
 
 export function isSupervisorUser(): boolean {
   return String(currentUserRole || '').toLowerCase() === 'supervisor';
+}
+
+export function isEmployeeUser(): boolean {
+  return String(currentUserRole || '').toLowerCase() === 'employee';
+}
+
+export function getLinkedEmployeeId(): string {
+  return String(currentUserAccess?.linked_employee_id || '').trim();
+}
+
+export function applyEmployeePortalView(): void {
+  if (!isEmployeeUser()) return;
+
+  document.getElementById('supervisorBanner')?.remove();
+
+  const name = currentUserAccess?.display_name || 'My Time Off';
+  const title = safeGet('dashboardTitle');
+  if (title) title.textContent = name;
+
+  const myTimeOffNav = document.getElementById('navMyTimeOff');
+  if (myTimeOffNav) {
+    myTimeOffNav.classList.remove('hidden');
+    myTimeOffNav.classList.add('active');
+    myTimeOffNav.setAttribute('aria-current', 'page');
+  }
+
+  document.querySelectorAll('.orbis-sidebar-nav .orbis-nav-item').forEach((button) => {
+    const view = String((button as HTMLElement).dataset.navView || '');
+    const allowed = view === 'myTimeOffView';
+    if (view !== 'myTimeOffView') {
+      (button as HTMLElement).classList.add('hidden');
+      (button as HTMLButtonElement).disabled = true;
+    }
+  });
+
+  document.querySelectorAll('[data-employee-portal-hide="true"]').forEach((el) => {
+    (el as HTMLElement).classList.add('hidden');
+  });
+
+  document.querySelectorAll('[data-admin-only="true"], .admin-only').forEach((el) => {
+    (el as HTMLElement).classList.add('hidden');
+    (el as HTMLInputElement).disabled = true;
+  });
 }
 
 /** Departments derived from employees visible to the current supervisor. */
@@ -718,6 +772,10 @@ export function applyRolePermissions(): void {
   if (typeof window.applyLeaveAccess === 'function') {
     window.applyLeaveAccess();
   }
+
+  if (isEmployeeUser()) {
+    applyEmployeePortalView();
+  }
 }
 
 function applyPerformanceReviewTabAccess(employee?: EmployeeLike | null): void {
@@ -776,6 +834,10 @@ declare global {
     applyAttendanceAccess?: () => void;
     applyHrInboxAccess?: () => void;
     applyLeaveAccess?: () => void;
+    applyEmployeePortalView?: () => void;
+    isEmployeeUser?: () => boolean;
+    getLinkedEmployeeId?: () => string;
+    loadMyTimeOffPortal?: () => Promise<void>;
     loadHrInbox?: (force?: boolean) => Promise<void>;
     getHrInboxItems?: () => import('./hrInbox').HrInboxItem[];
     __hrInboxCache?: import('./hrInbox').HrInboxItem[];
@@ -788,6 +850,9 @@ window.getUserRole = getUserRole;
 window.isAdminUser = isAdminUser;
 window.canManageEmployeeRecords = canManageEmployeeRecords;
 window.isSupervisorUser = isSupervisorUser;
+window.isEmployeeUser = isEmployeeUser;
+window.getLinkedEmployeeId = getLinkedEmployeeId;
+window.applyEmployeePortalView = applyEmployeePortalView;
 window.canAccessPerformanceReviews = canAccessPerformanceReviews;
 window.employeeMatchesSupervisorAccess = employeeMatchesSupervisorAccess;
 window.applyAdminDashboardView = applyAdminDashboardView;

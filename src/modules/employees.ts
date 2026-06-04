@@ -6,6 +6,9 @@ import { supabaseClient } from '../services/supabaseClient';
 import { appState } from '../core/state';
 import {
   isSupervisorUser,
+  isEmployeeUser,
+  getLinkedEmployeeId,
+  applyEmployeePortalView,
   employeeMatchesSupervisorAccess,
   parseSupervisedEmployeeIds,
   setCurrentUserAccess,
@@ -119,6 +122,19 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
       before: normalizedEmployees.length,
       after: scoped.length,
     });
+  } else if (isEmployeeUser()) {
+    const linkedId = getLinkedEmployeeId();
+    scoped = linkedId
+      ? normalizedEmployees.filter(
+          (employee) => String(employee.id || '').trim() === linkedId
+        )
+      : [];
+    if (!scoped.length && linkedId) {
+      showToast(
+        'Your employee record could not be loaded. Confirm work email on file matches your login.',
+        'error'
+      );
+    }
   } else {
     scoped = normalizedEmployees;
   }
@@ -152,7 +168,12 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
     window.renderDepartmentSummary();
   }
 
-  if (isSupervisorUser()) {
+  if (isEmployeeUser()) {
+    applyEmployeePortalView();
+    if (scoped[0]) {
+      window.currentEmployee = scoped[0];
+    }
+  } else if (isSupervisorUser()) {
     window.applySupervisorDashboardView?.();
   } else {
     window.applyAdminDashboardView?.();

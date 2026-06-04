@@ -10,8 +10,10 @@ import './styles/attendance.css';
 import './styles/hr-inbox.css';
 import './styles/payroll-handoff.css';
 import './styles/leave-requests.css';
+import './styles/employee-portal.css';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
+import { isEmployeeUser } from './services/access';
 import {
   signIn,
   signOut,
@@ -46,6 +48,7 @@ import './ui/departmentSummary';
 import './modules/onboarding';
 import './modules/offboarding';
 import './modules/leaveRequests';
+import './modules/employeePortal';
 import './modules/employees';
 import './modules/orgChart';
 import './modules/attendance';
@@ -323,6 +326,16 @@ async function initializeProtectedModules(): Promise<void> {
     const employeeCount = Array.isArray(bridge.EMPLOYEES) ? bridge.EMPLOYEES.length : 0;
     devLog('Employees loaded:', employeeCount);
 
+    if (isEmployeeUser()) {
+      if (typeof bridge.applyEmployeePortalView === 'function') {
+        bridge.applyEmployeePortalView();
+      }
+      if (typeof bridge.loadMyTimeOffPortal === 'function') {
+        await bridge.loadMyTimeOffPortal();
+      }
+      return;
+    }
+
     applyOperationsCenterAccess();
     applyCareEngagementCenterAccess();
     applyInvestigationsCenterAccess();
@@ -348,6 +361,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   watchAuthState((event, sessionData) => {
     devLog('Auth event:', event, sessionData);
+    if (event === 'SIGNED_IN' && sessionData && document.getElementById('appView')?.classList.contains('hidden')) {
+      showAuthenticatedOrbisView();
+      void initializeProtectedModules().then(() => {
+        initAppSections();
+        if (typeof window.hideDashboardLoadingSkeletons === 'function') {
+          window.hideDashboardLoadingSkeletons();
+        }
+      });
+    }
   });
 
   if (!session) {

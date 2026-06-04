@@ -2,7 +2,14 @@
  * Time off / leave request cases with PTO balance display (baseline on employee).
  */
 
-import { getCurrentUserAccess, isAdminUser, isSupervisorUser } from './access';
+import {
+  employeeMatchesSupervisorAccess,
+  getCurrentUserAccess,
+  getLinkedEmployeeId,
+  isAdminUser,
+  isEmployeeUser,
+  isSupervisorUser,
+} from './access';
 import { supabaseClient } from './supabaseClient';
 import { employeeDisplayName } from './employeeUtils';
 import { createPayrollHandoff } from './payrollHandoff';
@@ -180,6 +187,13 @@ export async function createLeaveRequest(draft: LeaveRequestDraft): Promise<Leav
     throw new Error('Employee and start date are required.');
   }
 
+  if (isEmployeeUser()) {
+    const linked = getLinkedEmployeeId();
+    if (!linked || linked !== employeeId) {
+      throw new Error('You can only submit time off for your own employee record.');
+    }
+  }
+
   const endDate = normalize(draft.end_date || '') || null;
   if (endDate && endDate < startDate) {
     throw new Error('End date cannot be before start date.');
@@ -219,6 +233,10 @@ export async function approveLeaveRequest(
   const id = normalize(requestId);
   if (!id) return;
 
+  if (isEmployeeUser()) {
+    throw new Error('Only your supervisor or HR can approve time off.');
+  }
+
   const { data: existing, error: loadError } = await supabaseClient
     .from('leave_requests')
     .select('*')
@@ -230,6 +248,11 @@ export async function approveLeaveRequest(
   }
 
   const record = mapRow(existing as Record<string, unknown>);
+
+  if (!canApproveLeaveRequest(record.employee_id)) {
+    throw new Error('You can only approve time off for your direct reports.');
+  }
+
   const approver = actorEmail();
 
   const { error } = await supabaseClient
@@ -281,6 +304,25 @@ export async function approveLeaveRequest(
 export async function denyLeaveRequest(requestId: string, notes?: string): Promise<void> {
   const id = normalize(requestId);
   if (!id) return;
+
+  if (isEmployeeUser()) {
+    throw new Error('Only your supervisor or HR can deny time off.');
+  }
+
+  const { data: existing, error: loadError } = await supabaseClient
+    .from('leave_requests')
+    .select('employee_id')
+    .eq('id', id)
+    .single();
+
+  if (loadError || !existing) {
+    throw new Error('Leave request not found.');
+  }
+
+  const employeeId = String((existing as { employee_id?: string }).employee_id || '');
+  if (!canApproveLeaveRequest(employeeId)) {
+    throw new Error('You can only deny time off for your direct reports.');
+  }
 
   const patch: Record<string, unknown> = {
     status: 'denied',
@@ -364,6 +406,26 @@ export async function deleteLeaveRequest(requestId: string): Promise<void> {
 
 export function canManageLeaveRequests(): boolean {
   return isAdminUser() || isSupervisorUser();
+}
+
+export function canSubmitLeaveRequests(): boolean {
+  return canManageLeaveRequests() || (isEmployeeUser() && Boolean(getLinkedEmployeeId()));
+}
+
+export function canApproveLeaveRequest(employeeId: string): boolean {
+  if (isAdminUser()) return true;
+  if (!isSupervisorUser()) return false;
+
+  const employees = (window.EMPLOYEES || window.ALL_EMPLOYEES || []) as Array<
+    Record<string, unknown>
+  >;
+  const match = employees.find(
+    (row) => String(row.id || row.employee_id || '').trim() === String(employeeId).trim()
+  );
+  if (!match) {
+    return employeeMatchesSupervisorAccess({ id: employeeId });
+  }
+  return employeeMatchesSupervisorAccess(match);
 }
 
 export function employeeNameForLeave(employeeId: string): string {

@@ -56,6 +56,59 @@ async function enterAuthenticatedApp(): Promise<void> {
   window.location.reload();
 }
 
+export async function signInWithMagicLink(email?: string): Promise<boolean> {
+  const emailInput = document.querySelector<HTMLInputElement>(
+    '#email, #loginEmail, input[name="email"], input[type="email"]'
+  );
+  const resolvedEmail = String(email || emailInput?.value || '').trim();
+
+  setLoginError('');
+
+  if (!isSupabaseConfigured) {
+    const message =
+      'This site is missing Supabase configuration. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY, then redeploy.';
+    setLoginError(message);
+    showToast(message, 'error');
+    return false;
+  }
+
+  if (!resolvedEmail) {
+    const message = 'Enter your work email to receive a sign-in link.';
+    setLoginError(message);
+    showToast(message, 'error');
+    return false;
+  }
+
+  setLoginLoading(true);
+
+  try {
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const { error } = await supabase.auth.signInWithOtp({
+      email: resolvedEmail,
+      options: { emailRedirectTo: redirectTo },
+    });
+
+    if (error) {
+      const message = error.message || 'Could not send sign-in link.';
+      setLoginError(message);
+      showToast(message, 'error');
+      return false;
+    }
+
+    const message = `Sign-in link sent to ${resolvedEmail}. Check your inbox (and spam).`;
+    setLoginError(message);
+    showToast(message, 'success');
+    return true;
+  } catch (err) {
+    console.error('Magic link failed:', err);
+    setLoginError('Could not send sign-in link. Please try again.');
+    showToast('Could not send sign-in link. Please try again.', 'error');
+    return false;
+  } finally {
+    setLoginLoading(false);
+  }
+}
+
 export async function signIn(email?: string, password?: string) {
   const emailInput = document.querySelector<HTMLInputElement>(
     '#email, #loginEmail, input[name="email"], input[type="email"]'
@@ -167,10 +220,19 @@ export function initAuthBindings(): void {
   const email = document.getElementById('loginEmail');
   const password = document.getElementById('loginPassword');
 
+  const magicLinkBtn = document.getElementById('loginMagicLinkBtn');
+
   if (loginBtn && loginBtn.getAttribute('data-auth-bound') !== '1') {
     loginBtn.setAttribute('data-auth-bound', '1');
     loginBtn.addEventListener('click', () => {
       void signIn();
+    });
+  }
+
+  if (magicLinkBtn && magicLinkBtn.getAttribute('data-auth-bound') !== '1') {
+    magicLinkBtn.setAttribute('data-auth-bound', '1');
+    magicLinkBtn.addEventListener('click', () => {
+      void signInWithMagicLink();
     });
   }
 
@@ -201,6 +263,7 @@ export function initAuthBindings(): void {
 declare global {
   interface Window {
     signIn?: typeof signIn;
+    signInWithMagicLink?: typeof signInWithMagicLink;
     signOut?: typeof signOut;
     showAuthenticatedOrbisView?: () => void;
     showAuthView?: () => void;
@@ -210,6 +273,7 @@ declare global {
 }
 
 window.signIn = signIn;
+window.signInWithMagicLink = signInWithMagicLink;
 window.signOut = signOut;
 
 if (document.readyState === 'loading') {

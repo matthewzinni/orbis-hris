@@ -1,5 +1,6 @@
 import {
   isAdminUser,
+  isEmployeeUser,
   isSupervisorUser,
   applySupervisorDashboardView,
 } from '../services/access';
@@ -68,6 +69,7 @@ const SECTION_LABELS: Record<string, string> = {
   operationsView: 'Operations',
   careEngagementView: 'Care & Engagement',
   attendanceView: 'Attendance',
+  myTimeOffView: 'My Time Off',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
   settingsView: 'Admin & Settings',
@@ -151,6 +153,17 @@ const APP_SECTIONS: AppSection[] = [
     onEnter: () => {
       if (typeof window.loadAttendance === 'function') {
         void window.loadAttendance();
+      }
+    },
+  },
+  {
+    id: 'myTimeOffView',
+    rootId: 'orbisSectionMyTimeOff',
+    targetId: 'myTimeOffPage',
+    aliases: ['my-time-off', 'timeoff', 'pto'],
+    onEnter: () => {
+      if (typeof window.loadMyTimeOffPortal === 'function') {
+        void window.loadMyTimeOffPortal();
       }
     },
   },
@@ -267,6 +280,10 @@ const ADMIN_ONLY_SECTIONS = new Set([
 export function showAppSection(sectionId: string): boolean {
   let resolvedSectionId = String(sectionId || '').trim();
 
+  if (isEmployeeUser() && resolvedSectionId !== 'myTimeOffView') {
+    resolvedSectionId = 'myTimeOffView';
+  }
+
   if (ADMIN_ONLY_SECTIONS.has(resolvedSectionId) && !isAdminUser()) {
     resolvedSectionId = 'dashboardView';
   }
@@ -317,6 +334,7 @@ export function showAppSection(sectionId: string): boolean {
 }
 
 export function getDefaultAppSectionId(): string {
+  if (isEmployeeUser()) return 'myTimeOffView';
   return 'dashboardView';
 }
 

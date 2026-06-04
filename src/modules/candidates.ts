@@ -143,6 +143,55 @@ function resolveCandidateDepartmentForSave(rawDepartment: unknown): string {
   return String(rawDepartment || '').trim();
 }
 
+const CANDIDATE_DATE_FIELDS = [
+  'applied_date',
+  'interview_date',
+  'target_start_date',
+  'offer_date',
+] as const;
+
+const CANDIDATE_TIME_FIELDS = ['interview_time'] as const;
+
+function normalizeCandidateNames(payload: CandidateRecord): CandidateRecord {
+  let firstName = String(payload.first_name || '').trim();
+  let lastName = String(payload.last_name || '').trim();
+
+  if (!lastName && firstName.includes(' ')) {
+    const parts = firstName.split(/\s+/).filter(Boolean);
+    firstName = parts.shift() || '';
+    lastName = parts.join(' ');
+  }
+
+  return {
+    ...payload,
+    first_name: firstName,
+    last_name: lastName,
+  };
+}
+
+function sanitizeCandidatePayload(payload: CandidateRecord): CandidateRecord {
+  const clean: CandidateRecord = { ...payload };
+
+  for (const key of Object.keys(clean)) {
+    const value = clean[key];
+    if (value !== '') continue;
+
+    if (
+      (CANDIDATE_DATE_FIELDS as readonly string[]).includes(key) ||
+      (CANDIDATE_TIME_FIELDS as readonly string[]).includes(key)
+    ) {
+      clean[key] = null;
+      continue;
+    }
+
+    if (typeof value === 'string') {
+      clean[key] = null;
+    }
+  }
+
+  return clean;
+}
+
 function validateCandidateDepartmentForSave(department: string): boolean {
   const normalized = normalizeDepartment(department);
 
@@ -802,19 +851,16 @@ export async function saveCandidateRecord(): Promise<void> {
         '',
     };
 
-    console.log('[Candidates] Candidate payload:', candidatePayload);
-    console.log('[Candidates] Active inputs:', Array.from(document.querySelectorAll('input, textarea, select')).map((el) => ({
-      id: (el as HTMLInputElement).id,
-      name: (el as HTMLInputElement).name,
-      value: (el as HTMLInputElement).value,
-    })));
+    const normalizedPayload = sanitizeCandidatePayload(normalizeCandidateNames(candidatePayload));
 
-    if (!candidatePayload.first_name && !candidatePayload.last_name) {
-      showToast('Enter candidate information before saving.', 'error');
+    console.log('[Candidates] Candidate payload:', normalizedPayload);
+
+    if (!normalizedPayload.first_name || !normalizedPayload.last_name) {
+      showToast('First and last name are required.', 'error');
       return;
     }
 
-    if (!validateCandidateDepartmentForSave(String(candidatePayload.department || ''))) {
+    if (!validateCandidateDepartmentForSave(String(normalizedPayload.department || ''))) {
       return;
     }
     const existingRows = Array.from(document.querySelectorAll('[data-candidate-id]'));
@@ -823,17 +869,14 @@ export async function saveCandidateRecord(): Promise<void> {
       const text = row.textContent?.toLowerCase() || '';
 
       return (
-        text.includes(candidatePayload.first_name?.toLowerCase() || '') &&
-        text.includes(candidatePayload.last_name?.toLowerCase() || '')
+        text.includes(normalizedPayload.first_name?.toLowerCase() || '') &&
+        text.includes(normalizedPayload.last_name?.toLowerCase() || '')
       );
     });
 
     if (duplicateExists && !currentCandidateId) {
       showToast('Candidate already exists.', 'error');
       return;
-    }
-    if (!currentCandidateId) {
-      currentCandidateId = await resolveCurrentCandidateId();
     }
 
     const saveCandidatePayload = async (payloadToSave: CandidateRecord) => {
@@ -853,12 +896,12 @@ export async function saveCandidateRecord(): Promise<void> {
         .select();
     };
 
-    const shouldConvertToEmployee = candidatePayload.stage === 'Hired';
+    const shouldConvertToEmployee = normalizedPayload.stage === 'Hired';
 
-    const cleanPayload: CandidateRecord = {
-      ...candidatePayload,
-      stage: shouldConvertToEmployee ? 'Offer' : candidatePayload.stage,
-    };
+    const cleanPayload: CandidateRecord = sanitizeCandidatePayload({
+      ...normalizedPayload,
+      stage: shouldConvertToEmployee ? 'Offer' : normalizedPayload.stage,
+    });
 
     let result = await saveCandidatePayload(cleanPayload);
 
@@ -884,7 +927,19 @@ export async function saveCandidateRecord(): Promise<void> {
 
     if (result.error) {
       console.error('Candidate save failed:', result.error);
-      showToast(result.error.message || 'Could not save candidate.', 'error');
+      const code = String(result.error.code || '');
+      const message = String(result.error.message || '');
+      let hint = message || 'Could not save candidate.';
+
+      if (code === '23502' && /last_name|first_name/i.test(message)) {
+        hint = 'First and last name are required.';
+      } else if (code === '22007' || /invalid input syntax for type date|time/i.test(message)) {
+        hint = 'Check applied date and interview date/time fields.';
+      } else if (code === '42501' || /row-level security/i.test(message)) {
+        hint = 'You do not have permission to save candidates in this department.';
+      }
+
+      showToast(hint, 'error');
       return;
     }
 
