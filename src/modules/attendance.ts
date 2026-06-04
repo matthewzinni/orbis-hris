@@ -11,7 +11,7 @@ import { syncEmployeeStatusFromRollCall } from '../services/attendanceStatusSync
 import { isRemoteEmployee } from '../services/attendanceRemoteEmployees';
 import { loadApprovedLeaveOutToday } from '../services/leaveRequests';
 import { employeeDisplayName } from '../services/employeeUtils';
-import { getActiveEmployees } from './employees';
+import { getEmployees, normalizeEmployeeStatus } from './employees';
 
 declare global {
   interface Window {
@@ -149,9 +149,15 @@ function sortEmployeesByName(employees: EmployeeRow[]): EmployeeRow[] {
   );
 }
 
+/** Active + on leave + marked absent today still appear on roll call (save sets status Absent). */
+function isRollCallRosterEmployee(employee: EmployeeRow): boolean {
+  const status = normalizeEmployeeStatus(employee.status);
+  return status === 'active' || status === 'leave' || status === 'absent';
+}
+
 function getRollCallEmployees(): EmployeeRow[] {
-  return sortEmployeesByName(getActiveEmployees()).filter(
-    (employee) => !isRemoteEmployee(employee)
+  return sortEmployeesByName(getEmployees()).filter(
+    (employee) => !isRemoteEmployee(employee) && isRollCallRosterEmployee(employee)
   );
 }
 
@@ -321,11 +327,11 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
   if (!body) return;
 
   const employees = getRollCallEmployees();
-  updateAttendanceKpis(snapshot);
 
   if (!employees.length) {
     body.innerHTML =
       '<tr><td colspan="5" class="empty">No active employees in your roster.</td></tr>';
+    updateAttendanceKpis(snapshot);
     return;
   }
 
@@ -334,6 +340,8 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
   body.innerHTML = employees
     .map((employee) => renderEmployeeChecklistRow(employee, presentKeys, absentKeys))
     .join('');
+
+  updateAttendanceKpis(snapshot);
 }
 
 function renderAttendance(snapshot: AttendanceSummary): void {
@@ -407,7 +415,7 @@ function canViewAttendance(): boolean {
 }
 
 async function ensureEmployeesLoaded(): Promise<void> {
-  if (getActiveEmployees().length) return;
+  if (getEmployees().length) return;
   if (typeof window.loadEmployees === 'function') {
     await window.loadEmployees();
   }
@@ -442,6 +450,7 @@ export async function saveAttendance(): Promise<void> {
       if (typeof window.loadEmployees === 'function') {
         await window.loadEmployees();
       }
+      renderAttendance(snapshot);
       if (typeof window.refreshDashboardKpis === 'function') {
         window.refreshDashboardKpis();
       }

@@ -25,9 +25,43 @@ function isLeaveStatus(status: unknown): boolean {
   return normalized === 'LEAVE' || normalized === 'ON LEAVE';
 }
 
+function personKey(person: AttendancePerson): string {
+  return String(person.employeeId || person.name || '')
+    .trim()
+    .toLowerCase();
+}
+
 function rosterIdFromPerson(person: AttendancePerson): string {
   const id = String(person.employeeId || '').trim();
   return id && id !== '—' ? id : '';
+}
+
+function employeeIdentifierKeys(employee: {
+  id?: string;
+  employee_id?: string;
+  displayId?: string;
+  dbId?: string;
+}): string[] {
+  const keys = new Set<string>();
+  [employee.id, employee.employee_id, employee.displayId, employee.dbId].forEach((value) => {
+    const normalized = String(value || '')
+      .trim()
+      .toLowerCase();
+    if (normalized) keys.add(normalized);
+  });
+  return Array.from(keys);
+}
+
+function isEmployeeInPersonList(
+  employee: { id?: string; employee_id?: string; displayId?: string; dbId?: string },
+  people: AttendancePerson[]
+): boolean {
+  const idKeys = employeeIdentifierKeys(employee);
+  return people.some((person) => {
+    const key = personKey(person);
+    const rosterId = rosterIdFromPerson(person).toLowerCase();
+    return (key && idKeys.includes(key)) || (rosterId && idKeys.includes(rosterId));
+  });
 }
 
 export async function syncEmployeeStatusFromRollCall(
@@ -44,13 +78,6 @@ export async function syncEmployeeStatusFromRollCall(
     leaveToday.map((row) => String(row.employee_id || '').trim()).filter(Boolean)
   );
 
-  const absentIds = new Set(
-    snapshot.absent.map(rosterIdFromPerson).filter(Boolean)
-  );
-  const presentIds = new Set(
-    snapshot.present.map(rosterIdFromPerson).filter(Boolean)
-  );
-
   const result: RollCallStatusSyncResult = {
     markedAbsent: 0,
     markedActive: 0,
@@ -63,9 +90,15 @@ export async function syncEmployeeStatusFromRollCall(
     ).trim();
     if (!id) continue;
 
-    const onLeave = isLeaveStatus(employee.status) || leaveTodayIds.has(id);
+    const onLeave =
+      isLeaveStatus(employee.status) ||
+      leaveTodayIds.has(id) ||
+      employeeIdentifierKeys(employee).some((key) => leaveTodayIds.has(key));
 
-    if (absentIds.has(id)) {
+    const isAbsent = isEmployeeInPersonList(employee, snapshot.absent);
+    const isPresent = isEmployeeInPersonList(employee, snapshot.present);
+
+    if (isAbsent) {
       if (onLeave) {
         result.skippedLeave += 1;
         continue;
@@ -82,7 +115,7 @@ export async function syncEmployeeStatusFromRollCall(
       continue;
     }
 
-    if (presentIds.has(id) && normalizeStatus(employee.status) === 'ABSENT') {
+    if (isPresent && normalizeStatus(employee.status) === 'ABSENT') {
       const { error } = await supabaseClient
         .from('employees')
         .update({ status: 'Active' })
