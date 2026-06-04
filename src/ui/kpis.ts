@@ -9,6 +9,9 @@ import {
   formatEmployeeDueDateLine,
   getEmployeeNextStayInterviewDueDate,
   isActiveDashboardEmployee,
+  isInHouseFteEmployee,
+  inHouseFteInsuranceHeadline,
+  IN_HOUSE_FTE_INSURANCE_THRESHOLD,
   isStayInterviewEligibleEmployee,
   isStayInterviewOverdue,
 } from '../services/employeeUtils';
@@ -212,6 +215,7 @@ function getTurnoverYtd(employees: KpiEmployeeRecord[]): string {
 
 function buildKpiMetrics(employees: KpiEmployeeRecord[]): KpiMetric[] {
   const activeEmployees = employees.filter(isActiveDashboardEmployee);
+  const inHouseFteCount = activeEmployees.filter(isInHouseFteEmployee).length;
   const atRiskEmployees = activeEmployees.filter(isAtRisk);
   const impactPlayers = activeEmployees.filter(isImpactPlayer);
   const anniversaries = getAnniversariesNext30Days(activeEmployees);
@@ -225,9 +229,9 @@ function buildKpiMetrics(employees: KpiEmployeeRecord[]): KpiMetric[] {
     },
     {
       id: 'kFte',
-      label: 'FTE',
-      value: activeEmployees.length,
-      helper: 'Estimated full-time equivalent headcount',
+      label: 'In-House FTE',
+      value: inHouseFteCount,
+      helper: `In-house full-time (excludes contract, part-time, remote, Brent/Trent). ${inHouseFteInsuranceHeadline(inHouseFteCount)}`,
     },
     {
       id: 'kAvgTenure',
@@ -636,6 +640,13 @@ export function buildKpiHoverDetails(): void {
     'No active employees'
   );
 
+  const inHouseFteEmployees = activeEmployees.filter(isInHouseFteEmployee);
+  setKpiCardTooltip(
+    'cardInHouseFte',
+    inHouseFteEmployees.map(employeeDisplayName).sort(compareKpiText),
+    'No in-house FTE employees in scope'
+  );
+
   const departmentCounts = [
     ...new Set(activeEmployees.map(getEmployeeDepartmentLabel).filter(Boolean)),
   ]
@@ -837,9 +848,31 @@ export function renderKpiEmployeeMetrics(): void {
   const turnoverRiskDisplay = `${turnoverRisk.toFixed(1)}%`;
   const turnoverSubtext = `${turnoverRiskContributors} employee${turnoverRiskContributors === 1 ? '' : 's'} with retention signals (low reviews, severe discipline, or operations load)`;
 
+  const inHouseFteEmployees = activeEmployees.filter(isInHouseFteEmployee);
+  const inHouseFteCount = inHouseFteEmployees.length;
+
   setKpiText('kActiveHC', activeEmployees.length);
+  setKpiText('kInHouseFte', inHouseFteCount);
+  setKpiText('kInHouseFteSub', inHouseFteInsuranceHeadline(inHouseFteCount));
   setKpiText('kDepartments', departments.length);
   setKpiText('kOnLeave', onLeave);
+
+  const inHouseFteCard = safeGet('kInHouseFte')?.closest('.kpi-card');
+  if (inHouseFteCard) {
+    inHouseFteCard.classList.remove('good', 'warn', 'alert');
+    if (inHouseFteCount >= IN_HOUSE_FTE_INSURANCE_THRESHOLD) {
+      inHouseFteCard.classList.add('alert');
+    } else if (inHouseFteCount >= IN_HOUSE_FTE_INSURANCE_THRESHOLD - 5) {
+      inHouseFteCard.classList.add('warn');
+    } else {
+      inHouseFteCard.classList.add('good');
+    }
+  }
+
+  const inHouseFteInfo = safeGet('kInHouseFteInfo');
+  if (inHouseFteInfo) {
+    inHouseFteInfo.title = `Active in-house full-time employees (not contract, part-time, overseas/remote, or Brent/Trent). ${inHouseFteInsuranceHeadline(inHouseFteCount)}`;
+  }
 
   if (typeof window.updateTurnoverRiskKpi === 'function') {
     window.updateTurnoverRiskKpi(Number(turnoverRisk.toFixed(1)), turnoverSubtext);

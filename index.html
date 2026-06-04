@@ -230,6 +230,20 @@
             <div class="kpi-value" id="kActiveHC">—</div>
             <div class="kpi-sub">Live workforce snapshot</div>
           </div>
+          <div class="kpi-card good" id="cardInHouseFte">
+            <div class="kpi-label" style="display: flex; align-items: center; gap: 6px">
+              In-House FTE
+              <span
+                class="info-icon"
+                id="kInHouseFteInfo"
+                title="Active employees on payroll in house: excludes contract, part-time, overseas/remote, and Brent/Trent Wynne. Used to track the 50 FTE insurance threshold."
+                style="cursor: help; font-size: 0.8rem; color: var(--muted)"
+                >ⓘ</span
+              >
+            </div>
+            <div class="kpi-value" id="kInHouseFte">—</div>
+            <div class="kpi-sub" id="kInHouseFteSub">Full-time in-house headcount for insurance planning</div>
+          </div>
           <div class="kpi-card good" id="cardDepartments">
             <div class="kpi-label">Departments</div>
             <div class="kpi-value" id="kDepartments">—</div>
@@ -1496,6 +1510,10 @@
               <div class="detail-card">
                 <div class="detail-label">Active headcount</div>
                 <div class="detail-value" id="reportsKpiActiveHc">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">In-house FTE</div>
+                <div class="detail-value" id="reportsKpiInHouseFte">—</div>
               </div>
               <div class="detail-card">
                 <div class="detail-label">Departments</div>

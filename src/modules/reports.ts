@@ -3,6 +3,7 @@ import { isAdminUser } from '../services/access';
 import {
   daysUntilDate,
   employeeDisplayName,
+  countInHouseFteEmployees,
   isActiveDashboardEmployee,
 } from '../services/employeeUtils';
 
@@ -77,8 +78,12 @@ function readKpiText(id: string): string {
 }
 
 function renderReportsMetricSnapshots(): void {
+  const scoped = getScopedEmployees();
+  const inHouseFte = countInHouseFteEmployees(scoped);
+
   const pairs: Array<[string, string]> = [
     ['reportsKpiActiveHc', 'kActiveHC'],
+    ['reportsKpiInHouseFte', 'kInHouseFte'],
     ['reportsKpiDepartments', 'kDepartments'],
     ['reportsKpiTurnoverRisk', 'kTurnoverRisk'],
     ['reportsKpiTurnover', 'kTurnover'],
@@ -96,6 +101,11 @@ function renderReportsMetricSnapshots(): void {
       el.textContent = readKpiText(sourceId);
     }
   });
+
+  const inHouseFteEl = document.getElementById('reportsKpiInHouseFte');
+  if (inHouseFteEl) {
+    inHouseFteEl.textContent = String(inHouseFte);
+  }
 
   const overdue = document.getElementById('reviewDashboardOverdue');
   const dueSoon = document.getElementById('reviewDashboardDueSoon');

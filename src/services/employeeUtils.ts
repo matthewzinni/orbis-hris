@@ -1,3 +1,5 @@
+import { isRemoteEmployee } from './attendanceRemoteEmployees';
+
 export type EmployeeLike = {
   id?: string;
   dbId?: string;
@@ -10,6 +12,8 @@ export type EmployeeLike = {
   displayName?: string;
   status?: string;
   displayStatus?: string;
+  pay_type?: string;
+  payType?: string;
   work_email?: string;
   workEmail?: string;
   personal_email?: string;
@@ -17,6 +21,12 @@ export type EmployeeLike = {
   email?: string;
   [key: string]: unknown;
 };
+
+/** Leadership excluded from in-house FTE insurance headcount (owners). */
+export const IN_HOUSE_FTE_EXCLUDED_EMPLOYEE_IDS = ['BTW1601', 'BTW1602'] as const;
+
+/** Group health plans often change rates at 50+ FTE (ACA / carrier tiers). */
+export const IN_HOUSE_FTE_INSURANCE_THRESHOLD = 50;
 
 export function cleanEmployeeNameValue(value: unknown): string {
   return String(value || '')
@@ -136,6 +146,60 @@ export function isStayInterviewEligibleEmployee(
   employee: EmployeeLike | null | undefined
 ): boolean {
   return isActiveDashboardEmployee(employee) && !isContractEmployee(employee);
+}
+
+export function isPartTimeEmployee(employee: EmployeeLike | null | undefined): boolean {
+  const payType = String(employee?.pay_type || employee?.payType || '')
+    .trim()
+    .toLowerCase();
+  return payType.includes('part');
+}
+
+export function isLeadershipExcludedFromInHouseFte(
+  employee: EmployeeLike | null | undefined
+): boolean {
+  if (!employee) return false;
+
+  const rosterId = String(employee.id || employee.employee_id || employee.displayId || '')
+    .trim()
+    .toUpperCase();
+
+  if (
+    IN_HOUSE_FTE_EXCLUDED_EMPLOYEE_IDS.some(
+      (excludedId) => excludedId.toUpperCase() === rosterId
+    )
+  ) {
+    return true;
+  }
+
+  const name = employeeDisplayName(employee).trim().toLowerCase();
+  return name === 'trent wynne' || name === 'brent wynne';
+}
+
+/**
+ * Active in-house full-time employees for insurance / scalability tracking.
+ * Excludes contract, part-time, overseas/remote, and Brent/Trent Wynne.
+ */
+export function isInHouseFteEmployee(employee: EmployeeLike | null | undefined): boolean {
+  if (!isActiveDashboardEmployee(employee)) return false;
+  if (isContractEmployee(employee)) return false;
+  if (isPartTimeEmployee(employee)) return false;
+  if (isRemoteEmployee(employee)) return false;
+  if (isLeadershipExcludedFromInHouseFte(employee)) return false;
+  return true;
+}
+
+export function countInHouseFteEmployees(employees: EmployeeLike[]): number {
+  if (!Array.isArray(employees)) return 0;
+  return employees.filter(isInHouseFteEmployee).length;
+}
+
+export function inHouseFteInsuranceHeadline(count: number): string {
+  if (count >= IN_HOUSE_FTE_INSURANCE_THRESHOLD) {
+    return `At or above ${IN_HOUSE_FTE_INSURANCE_THRESHOLD} FTE — review insurance tier`;
+  }
+  const remaining = IN_HOUSE_FTE_INSURANCE_THRESHOLD - count;
+  return `${remaining} until ${IN_HOUSE_FTE_INSURANCE_THRESHOLD} FTE insurance threshold`;
 }
 
 /** Matches roll call / stay interview dashboard: due date before today. */
@@ -273,6 +337,10 @@ declare global {
     isActiveDashboardEmployee?: (
       employee: EmployeeLike | null | undefined
     ) => boolean;
+    isInHouseFteEmployee?: (
+      employee: EmployeeLike | null | undefined
+    ) => boolean;
+    countInHouseFteEmployees?: (employees: EmployeeLike[]) => number;
     daysUntilDate?: (
       dateValue: unknown
     ) => number | null;
@@ -287,6 +355,10 @@ window.employeeDisplayName =
 
 window.isActiveDashboardEmployee =
   isActiveDashboardEmployee;
+
+window.isInHouseFteEmployee = isInHouseFteEmployee;
+
+window.countInHouseFteEmployees = countInHouseFteEmployees;
 
 window.daysUntilDate =
   daysUntilDate;
