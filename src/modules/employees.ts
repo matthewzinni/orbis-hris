@@ -131,7 +131,7 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
       : [];
     if (!scoped.length && linkedId) {
       showToast(
-        'Your employee record could not be loaded. Confirm work email on file matches your login.',
+        'Your employee record could not be loaded. Confirm the personal or work email on file matches your login.',
         'error'
       );
     }

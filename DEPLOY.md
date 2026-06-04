@@ -21,7 +21,7 @@ npm run db:status
 After `npm run db:push` (migration `20260608120000_employee_portal_access`):
 
 1. **Supabase Auth** → enable **Email** provider and **Magic Link** (OTP). Add your site URL to **Redirect URLs** (e.g. `https://www.orbis-btw.com/`).
-2. Ensure each employee has a **work email** on their profile (Orbis matches login email to `work_email`, `personal_email`, or `email`).
+2. Ensure each employee has a **personal email** (or work email) on their profile in **Employee Admin**. Orbis matches magic-link login to `personal_email`, `work_email`, or `email` — personal is typical for hourly staff without company addresses.
 3. Optional: pre-create `user_access` rows (faster first login):
 
 ```bash

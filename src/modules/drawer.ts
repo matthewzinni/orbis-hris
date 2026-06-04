@@ -5,7 +5,7 @@ import {
 } from '../ui/drawerUi';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
-import { cleanEmployeeNameValue } from '../services/employeeUtils';
+import { cleanEmployeeNameValue, employeePersonalEmail, employeePortalSignInEmail, employeeWorkEmail } from '../services/employeeUtils';
 import { createDefaultOnboardingTasks } from './onboarding';
 import { createDefaultOffboardingTasks } from './offboarding';
 import {
@@ -348,7 +348,12 @@ function populateDrawer(employee: DrawerEmployeeRecord): void {
 
   setAdminValue('employeeLastNameInput', 'employeeLastName')(employee.last_name || '');
 
-  setValue('employeeEmail', employee.email || '');
+  setAdminValue('employeeWorkEmailInput', 'empWorkEmail', 'workEmail')(
+    employee.work_email || employee.workEmail || ''
+  );
+  setAdminValue('employeePersonalEmailInput', 'empPersonalEmail', 'personalEmail')(
+    employee.personal_email || employee.personalEmail || employee.email || ''
+  );
 
   setValue('employeePhone', employee.phone || '');
 
@@ -453,6 +458,9 @@ function populateDrawerProfileDetails(employee: DrawerEmployeeRecord): void {
     ['Tenure Years', employee.tenureYears || employee.tenure_years],
     ['Benefits Status', employee.benefitsStatus || employee.benefits_status],
     ['Tenure Bracket', employee.tenureBracket || employee.tenure_bracket],
+    ['Work email', employeeWorkEmail(employee) || '—'],
+    ['Personal email', employeePersonalEmail(employee) || '—'],
+    ['PTO portal sign-in', employeePortalSignInEmail(employee) || 'Not set — add personal email in Employee Admin'],
     ['Work location', employee.is_remote ? 'Overseas / remote' : 'In house'],
   ];
 
@@ -877,8 +885,10 @@ export async function saveEmployeeRecord(): Promise<void> {
         'empTenureBracket',
         'tenureBracket'
       ) || null,
-    work_email: getInputValue('empWorkEmail', 'workEmail') || null,
-    personal_email: getInputValue('empPersonalEmail', 'personalEmail') || null,
+    work_email:
+      getInputValue('employeeWorkEmailInput', 'empWorkEmail', 'workEmail') || null,
+    personal_email:
+      getInputValue('employeePersonalEmailInput', 'empPersonalEmail', 'personalEmail') || null,
     phone: getInputValue('empPhone', 'phone') || null,
     notes: getInputValue('empNotes', 'notes') || null,
     termination_date: status === 'TERMINATED' ? terminationDate || null : null,

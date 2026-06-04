@@ -529,6 +529,14 @@ function forcePopulateEmployeeAdminFields(employee) {
         window.syncEmployeeTerminationDateFieldVisibility(status);
     }
     setDrawerAdminField(['empAnniversaryDate', 'anniversaryDate', 'employeeAnniversaryDate', 'employeeAnniversaryInput', 'employeeAnniversaryDateInput', 'anniversaryInput', 'anniversaryDateInput', 'adminAnniversaryDate'], anniversaryDate);
+    setDrawerAdminField(
+        ['employeeWorkEmailInput', 'empWorkEmail', 'workEmail'],
+        employee.work_email || employee.workEmail || ''
+    );
+    setDrawerAdminField(
+        ['employeePersonalEmailInput', 'empPersonalEmail', 'personalEmail'],
+        employee.personal_email || employee.personalEmail || employee.email || ''
+    );
 }
 
 export function ensureEmployeeDrawerVisible(): HTMLElement | null {

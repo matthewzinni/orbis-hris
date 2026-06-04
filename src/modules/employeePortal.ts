@@ -80,7 +80,7 @@ export async function loadMyTimeOffPortal(): Promise<void> {
     if (balanceEl) balanceEl.textContent = '—';
     if (balanceMeta) {
       balanceMeta.textContent =
-        'No employee record is linked to your account. Contact HR to match your login email to your work email.';
+        'No employee record is linked to your account. Contact HR to match your login email to the personal or work email on your profile.';
     }
     if (list) list.innerHTML = '<div class="muted">Unable to load time off.</div>';
     return;

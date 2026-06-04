@@ -73,7 +73,7 @@ export async function signInWithMagicLink(email?: string): Promise<boolean> {
   }
 
   if (!resolvedEmail) {
-    const message = 'Enter your work email to receive a sign-in link.';
+    const message = 'Enter the personal or work email on your employee record to receive a sign-in link.';
     setLoginError(message);
     showToast(message, 'error');
     return false;

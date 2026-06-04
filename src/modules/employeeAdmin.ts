@@ -397,8 +397,10 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
   setField('tenureBracket', values.tenureBracket);
   setField('empWorkEmail', values.workEmail);
   setField('workEmail', values.workEmail);
+  setField('employeeWorkEmailInput', values.workEmail);
   setField('empPersonalEmail', values.personalEmail);
   setField('personalEmail', values.personalEmail);
+  setField('employeePersonalEmailInput', values.personalEmail);
   setField('empPhone', values.phone);
   setField('phone', values.phone);
   setField('empNotes', values.notes);

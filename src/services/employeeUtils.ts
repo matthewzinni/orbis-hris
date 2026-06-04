@@ -10,6 +10,11 @@ export type EmployeeLike = {
   displayName?: string;
   status?: string;
   displayStatus?: string;
+  work_email?: string;
+  workEmail?: string;
+  personal_email?: string;
+  personalEmail?: string;
+  email?: string;
   [key: string]: unknown;
 };
 
@@ -32,6 +37,25 @@ export function employeeDisplayName(employee: EmployeeLike | null | undefined): 
   const last = cleanEmployeeNameValue(employee.last || employee.last_name || '');
 
   return `${first} ${last}`.trim() || 'Employee';
+}
+
+/** Email used for employee PTO portal magic-link sign-in (personal preferred for hourly staff). */
+export function employeePortalSignInEmail(employee: EmployeeLike | null | undefined): string {
+  if (!employee) return '';
+  const personal = String(employee.personal_email || employee.personalEmail || '').trim();
+  const work = String(employee.work_email || employee.workEmail || '').trim();
+  const legacy = String(employee.email || '').trim();
+  return personal || work || legacy;
+}
+
+export function employeeWorkEmail(employee: EmployeeLike | null | undefined): string {
+  if (!employee) return '';
+  return String(employee.work_email || employee.workEmail || '').trim();
+}
+
+export function employeePersonalEmail(employee: EmployeeLike | null | undefined): string {
+  if (!employee) return '';
+  return String(employee.personal_email || employee.personalEmail || '').trim();
 }
 
 /** Sort key for roster lists (last name, then first name). */

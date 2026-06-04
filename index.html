@@ -61,8 +61,8 @@
             </button>
           </div>
           <div class="muted" style="margin-top: 14px">
-            HR and supervisors use password sign-in. Employees can use a one-time email link with the
-            <strong>work email on file</strong> to view PTO and request time off.
+            HR and supervisors use password sign-in. Employees use a one-time email link with the
+            <strong>personal or work email on file</strong> to view PTO and request time off.
           </div>
         </div>
       </div>
@@ -4545,6 +4545,28 @@
                         placeholder="0-6 months, 1-2 years, etc."
                         autocomplete="section-orbis-admin tenure"
                       />
+                    </div>
+                    <div class="field">
+                      <label for="employeeWorkEmailInput">Work email</label>
+                      <input
+                        id="employeeWorkEmailInput"
+                        type="email"
+                        placeholder="Optional — company address"
+                        autocomplete="section-orbis-admin work-email"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="employeePersonalEmailInput">Personal email</label>
+                      <input
+                        id="employeePersonalEmailInput"
+                        type="email"
+                        placeholder="Used for PTO portal sign-in if no work email"
+                        autocomplete="section-orbis-admin home-email"
+                      />
+                      <p class="muted" style="margin: 6px 0 0; font-size: 0.82rem; line-height: 1.45">
+                        Hourly and floor employees usually sign in with this address via
+                        <strong>Email me a sign-in link</strong> on the login page.
+                      </p>
                     </div>
                     <div class="field employee-remote-field">
                       <label class="checkbox-label" for="employeeIsRemoteInput">

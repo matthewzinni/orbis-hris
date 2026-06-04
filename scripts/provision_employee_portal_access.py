@@ -54,8 +54,8 @@ def main() -> int:
 
         emp_id = str(emp.get("id") or "").strip()
         email = (
-            str(emp.get("work_email") or "").strip()
-            or str(emp.get("personal_email") or "").strip()
+            str(emp.get("personal_email") or "").strip()
+            or str(emp.get("work_email") or "").strip()
             or str(emp.get("email") or "").strip()
         ).lower()
         if not emp_id or not email or "@" not in email:
