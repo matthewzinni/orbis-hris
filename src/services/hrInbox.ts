@@ -348,7 +348,13 @@ function isOpenCareStatus(status: unknown): boolean {
 }
 
 function collectCareFollowUpItems(
-  careItems: Array<{ id?: string; employee_id?: string; title?: string; status?: string; follow_up_date?: string }>,
+  careItems: Array<{
+    id?: string;
+    employee_id?: string;
+    need_or_concern?: string;
+    status?: string;
+    follow_up_date?: string;
+  }>,
   followUps: Array<{ id?: string; employee_id?: string; title?: string; status?: string; due_date?: string }>
 ): HrInboxItem[] {
   const items: HrInboxItem[] = [];
@@ -389,7 +395,7 @@ function collectCareFollowUpItems(
     pushCareItem(
       String(item.id || item.employee_id || ''),
       String(item.employee_id || ''),
-      String(item.title || 'Care item'),
+      String(item.need_or_concern || 'Care item'),
       followUp,
       'care-item'
     );
@@ -673,7 +679,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
       .select('id, case_number, title, status, target_completion_date, primary_employee_id, targeted_employee_id'),
     supabaseClient
       .from('care_items')
-      .select('id, employee_id, title, status, follow_up_date'),
+      .select('id, employee_id, need_or_concern, status, follow_up_date'),
     supabaseClient.from('care_follow_ups').select('id, employee_id, title, status, due_date'),
     supabaseClient
       .from('operations_issues')
