@@ -15,6 +15,13 @@ import {
   restoreDrawerLegacyHeader,
   restoreDrawerTabPlacement,
 } from '../ui/drawerIdentityHeader';
+import {
+  clearCandidateResume,
+  isResumeReferenceValid,
+  openCandidateResume,
+  resumeFileLabel,
+  uploadCandidateResume,
+} from '../services/candidateResume';
 
 interface CandidateRecord {
   id?: string;
@@ -26,6 +33,8 @@ interface CandidateRecord {
   stage?: string;
   source?: string;
   notes?: string;
+  resume_url?: string | null;
+  resume_status?: string | null;
   created_at?: string;
   applied_date?: string;
   interview_date?: string;
@@ -83,6 +92,8 @@ declare global {
 
 let currentCandidateId: string | null = null;
 let isCandidateSaveInProgress = false;
+let pendingCandidateResumeFile: File | null = null;
+let candidateResumeUiBound = false;
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -971,9 +982,24 @@ export async function saveCandidateRecord(): Promise<void> {
     if (savedCandidateId) {
       currentCandidateId = savedCandidateId;
       (window as { currentCandidateId?: string | null }).currentCandidateId = savedCandidateId;
+
+      if (pendingCandidateResumeFile) {
+        try {
+          await uploadCandidateResume(savedCandidateId, pendingCandidateResumeFile, null);
+          pendingCandidateResumeFile = null;
+          showToast('Resume attached.');
+        } catch (err) {
+          console.error('[Candidates] Resume upload after save failed:', err);
+          const message = err instanceof Error ? err.message : 'Candidate saved, but resume upload failed.';
+          showToast(message, 'error');
+        }
+      }
+
+      renderCandidateResumeUi(await fetchCandidateById(savedCandidateId));
     } else {
       currentCandidateId = null;
       (window as { currentCandidateId?: string | null }).currentCandidateId = null;
+      renderCandidateResumeUi(null);
     }
 
     const saveButton = safeGet('saveCandidateBtn');
@@ -1384,6 +1410,143 @@ async function fetchCandidateById(candidateId: string): Promise<CandidateRecord 
   return (data as CandidateRecord) || null;
 }
 
+function renderCandidateResumeUi(candidate: CandidateRecord | null): void {
+  const statusEl = safeGet('candidateResumeStatus');
+  const viewBtn = safeGet<HTMLButtonElement>('candidateResumeViewBtn');
+  const removeBtn = safeGet<HTMLButtonElement>('candidateResumeRemoveBtn');
+  const attachBtn = safeGet<HTMLButtonElement>('candidateResumeAttachBtn');
+  const fileInput = safeGet<HTMLInputElement>('candidateResumeInput');
+
+  const resumePath = String(candidate?.resume_url || '').trim();
+  const hasValidResume = isResumeReferenceValid(resumePath);
+  const hasLegacyResume = Boolean(resumePath) && !hasValidResume;
+  const hasPending = Boolean(pendingCandidateResumeFile);
+
+  if (statusEl) {
+    if (hasValidResume) {
+      statusEl.textContent = `Attached: ${resumeFileLabel(resumePath)}`;
+    } else if (hasLegacyResume) {
+      statusEl.textContent =
+        'Previous resume link is invalid — use Attach resume to upload again (PDF or Word).';
+    } else if (hasPending) {
+      statusEl.textContent = `Ready to upload after save: ${pendingCandidateResumeFile?.name || 'Resume'}`;
+    } else if (!currentCandidateId) {
+      statusEl.textContent = 'Save the candidate first, or choose a file to attach after save.';
+    } else {
+      statusEl.textContent = 'No resume attached';
+    }
+  }
+
+  viewBtn?.classList.toggle('hidden', !hasValidResume);
+  removeBtn?.classList.toggle('hidden', !hasValidResume && !hasLegacyResume && !hasPending);
+  if (attachBtn) {
+    attachBtn.textContent = hasValidResume || hasLegacyResume ? 'Replace resume' : 'Attach resume';
+  }
+  if (fileInput) fileInput.value = '';
+}
+
+async function handleCandidateResumeSelected(file: File): Promise<void> {
+  const candidateId = String(currentCandidateId || '').trim();
+
+  if (!candidateId) {
+    pendingCandidateResumeFile = file;
+    renderCandidateResumeUi(null);
+    showToast('Resume will upload when you save this candidate.', 'success');
+    return;
+  }
+
+  try {
+    const existing = await fetchCandidateById(candidateId);
+    await uploadCandidateResume(candidateId, file, existing?.resume_url);
+    pendingCandidateResumeFile = null;
+    const refreshed = await fetchCandidateById(candidateId);
+    renderCandidateResumeUi(refreshed);
+    showToast('Resume attached.');
+  } catch (err) {
+    console.error('[Candidates] Resume attach failed:', err);
+    const message = err instanceof Error ? err.message : 'Could not attach resume.';
+    showToast(
+      message.includes('Bucket') || message.includes('bucket')
+        ? `${message} Run npm run db:push if this is a new environment.`
+        : message,
+      'error'
+    );
+  }
+}
+
+async function handleCandidateResumeRemove(): Promise<void> {
+  const candidateId = String(currentCandidateId || '').trim();
+
+  if (pendingCandidateResumeFile) {
+    pendingCandidateResumeFile = null;
+    renderCandidateResumeUi(null);
+    showToast('Pending resume removed.');
+    return;
+  }
+
+  if (!candidateId) {
+    showToast('No resume to remove.', 'error');
+    return;
+  }
+
+  const candidate = await fetchCandidateById(candidateId);
+
+  if (
+    !(await showOrbisConfirm('Remove the attached resume?', {
+      title: 'Remove resume',
+      confirmLabel: 'Remove',
+      danger: true,
+    }))
+  ) {
+    return;
+  }
+
+  try {
+    await clearCandidateResume(candidateId, candidate?.resume_url);
+    renderCandidateResumeUi(await fetchCandidateById(candidateId));
+    showToast('Resume removed.');
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not remove resume.';
+    showToast(message, 'error');
+  }
+}
+
+function bindCandidateResumeUi(): void {
+  if (candidateResumeUiBound) return;
+  candidateResumeUiBound = true;
+
+  const attachBtn = safeGet<HTMLButtonElement>('candidateResumeAttachBtn');
+  const fileInput = safeGet<HTMLInputElement>('candidateResumeInput');
+  const viewBtn = safeGet<HTMLButtonElement>('candidateResumeViewBtn');
+  const removeBtn = safeGet<HTMLButtonElement>('candidateResumeRemoveBtn');
+
+  attachBtn?.addEventListener('click', () => {
+    fileInput?.click();
+  });
+
+  fileInput?.addEventListener('change', () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    void handleCandidateResumeSelected(file);
+  });
+
+  viewBtn?.addEventListener('click', async () => {
+    const candidate = currentCandidateId
+      ? await fetchCandidateById(currentCandidateId)
+      : null;
+    try {
+      await openCandidateResume(candidate?.resume_url);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not open resume.';
+      showToast(message, 'error');
+    }
+  });
+
+  removeBtn?.addEventListener('click', () => {
+    void handleCandidateResumeRemove();
+  });
+}
+
 function fillCandidateDrawerFields(candidate: CandidateRecord): void {
   const fieldValues: Record<string, string> = {
     candidateFirstNameInput: candidate.first_name || '',
@@ -1410,6 +1573,8 @@ function fillCandidateDrawerFields(candidate: CandidateRecord): void {
     field.dispatchEvent(new Event('input', { bubbles: true }));
     field.dispatchEvent(new Event('change', { bubbles: true }));
   });
+
+  renderCandidateResumeUi(candidate);
 }
 
 export async function openCandidateDrawer(candidateId: string): Promise<void> {
@@ -1456,6 +1621,7 @@ export async function openCandidateDrawer(candidateId: string): Promise<void> {
 
 export function openNewCandidateForm(): void {
   currentCandidateId = null;
+  pendingCandidateResumeFile = null;
 
   const backdrop = safeGet('drawerBackdrop');
   const drawer = safeGet('candidateDrawer');
@@ -1509,6 +1675,7 @@ function bindCandidateDrawerClicks(): void {
 function bindCandidateEvents(): void {
   if ((window as any).__candidateEventsBound) return;
   (window as any).__candidateEventsBound = true;
+  bindCandidateResumeUi();
   bindCandidateDrawerClicks();
 
   document.addEventListener('keydown', (event) => {

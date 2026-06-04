@@ -1951,6 +1951,37 @@
                       <input id="candidateAppliedDateInput" type="date" />
                     </div>
                   </div>
+                  <div class="field candidate-resume-field">
+                    <label for="candidateResumeInput">Resume</label>
+                    <p class="muted candidate-resume-hint" id="candidateResumeStatus">
+                      No resume attached
+                    </p>
+                    <div class="candidate-resume-actions">
+                      <input
+                        id="candidateResumeInput"
+                        type="file"
+                        class="hidden"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      />
+                      <button class="button soft" id="candidateResumeAttachBtn" type="button">
+                        Attach resume
+                      </button>
+                      <button
+                        class="button soft hidden"
+                        id="candidateResumeViewBtn"
+                        type="button"
+                      >
+                        View resume
+                      </button>
+                      <button
+                        class="button soft hidden"
+                        id="candidateResumeRemoveBtn"
+                        type="button"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
                   <div class="field">
                     <label for="candidateNotesInput">Profile Summary</label>
                     <textarea

@@ -1320,6 +1320,18 @@ tr:hover td {
   line-height: 1.25;
 }
 
+.candidate-resume-field .candidate-resume-hint {
+  margin: 4px 0 10px;
+  font-size: 0.85rem;
+}
+
+.candidate-resume-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
 .candidate-actions-row {
   display: flex;
   gap: 10px;
