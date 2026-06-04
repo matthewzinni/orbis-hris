@@ -699,7 +699,7 @@
           <div class="page" id="attendancePage">
             <div class="toolbar attendance-toolbar">
               <div class="toolbar-left">
-                <span class="muted">Check present employees, save — absent sets status to Absent (Leave unchanged)</span>
+                <span class="muted">Check Present or Absent per person, then save (Leave status unchanged)</span>
               </div>
               <div class="toolbar-right attendance-manual-actions">
                 <button class="button primary" id="attendanceSaveBtn" type="button">Save attendance</button>
@@ -717,15 +717,7 @@
               <div class="kpi-card warm-accent">
                 <div class="kpi-label">Absent</div>
                 <div class="kpi-value" id="attendanceAbsentCount">—</div>
-                <div class="kpi-sub">Not checked</div>
-              </div>
-            </div>
-            <div class="card attendance-absent-card hidden" id="attendanceAbsentCard" aria-live="polite">
-              <div class="card-header">Absent today</div>
-              <div class="card-body">
-                <div class="attendance-absent-list" id="attendanceAbsentList">
-                  <div class="muted">No one marked absent.</div>
-                </div>
+                <div class="kpi-sub">Absent box checked</div>
               </div>
             </div>
             <div class="card attendance-roll-call-card">
@@ -744,6 +736,9 @@
                   <button class="button soft" id="attendanceMarkAllPresentBtn" type="button">
                     All present
                   </button>
+                  <button class="button soft" id="attendanceMarkAllAbsentBtn" type="button">
+                    All absent
+                  </button>
                   <button class="button soft" id="attendanceClearAllBtn" type="button">Clear all</button>
                 </div>
               </div>
@@ -753,6 +748,7 @@
                     <thead>
                       <tr>
                         <th class="attendance-check-col">Present</th>
+                        <th class="attendance-check-col">Absent</th>
                         <th>Name</th>
                         <th>ID</th>
                         <th>Department</th>
@@ -760,7 +756,7 @@
                     </thead>
                     <tbody id="attendanceChecklistBody">
                       <tr>
-                        <td colspan="4" class="empty">Loading employees…</td>
+                        <td colspan="5" class="empty">Loading employees…</td>
                       </tr>
                     </tbody>
                   </table>

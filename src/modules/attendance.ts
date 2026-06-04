@@ -173,6 +173,28 @@ function presentKeySet(snapshot: AttendanceSummary): Set<string> {
   return new Set(snapshot.present.map((person) => personKey(person)));
 }
 
+function absentKeySet(snapshot: AttendanceSummary): Set<string> {
+  return new Set(snapshot.absent.map((person) => personKey(person)));
+}
+
+function getRowCheckboxes(row: Element | null): {
+  present: HTMLInputElement | null;
+  absent: HTMLInputElement | null;
+} {
+  if (!row) return { present: null, absent: null };
+  return {
+    present: row.querySelector<HTMLInputElement>('.attendance-present-check'),
+    absent: row.querySelector<HTMLInputElement>('.attendance-absent-check'),
+  };
+}
+
+function syncRowAttendanceClasses(row: Element | null): void {
+  if (!row) return;
+  const { present, absent } = getRowCheckboxes(row);
+  row.classList.toggle('is-present', Boolean(present?.checked));
+  row.classList.toggle('is-absent', Boolean(absent?.checked));
+}
+
 function formatAsOfLabel(asOf: string, timezone?: string): string {
   const date = new Date(asOf);
   if (Number.isNaN(date.getTime())) return asOf;
@@ -191,14 +213,18 @@ function countChecklistFromDom(): { present: number; absent: number } | null {
   const body = safeGet<HTMLTableSectionElement>('attendanceChecklistBody');
   if (!body) return null;
 
-  const rows = body.querySelectorAll<HTMLInputElement>('.attendance-present-check');
-  if (!rows.length) return null;
+  const presentInputs = body.querySelectorAll<HTMLInputElement>('.attendance-present-check');
+  if (!presentInputs.length) return null;
 
   let present = 0;
-  rows.forEach((input) => {
+  let absent = 0;
+  presentInputs.forEach((input) => {
     if (input.checked) present += 1;
   });
-  return { present, absent: rows.length - present };
+  body.querySelectorAll<HTMLInputElement>('.attendance-absent-check').forEach((input) => {
+    if (input.checked) absent += 1;
+  });
+  return { present, absent };
 }
 
 function updateAttendanceKpis(snapshot: AttendanceSummary): void {
@@ -226,13 +252,14 @@ function applyChecklistToSnapshot(): AttendanceSummary {
   getRollCallEmployees().forEach((employee) => {
     const person = personFromEmployee(employee);
     const key = personKey(person);
-    const checkbox = body?.querySelector<HTMLInputElement>(
-      `input.attendance-present-check[data-attendance-key="${CSS.escape(key)}"]`
+    const row = body?.querySelector<HTMLTableRowElement>(
+      `tr.attendance-employee-row[data-attendance-key="${CSS.escape(key)}"]`
     );
+    const { present: presentCheck, absent: absentCheck } = getRowCheckboxes(row);
 
-    if (checkbox?.checked) {
+    if (presentCheck?.checked) {
       present.push(person);
-    } else {
+    } else if (absentCheck?.checked) {
       absent.push(person);
     }
   });
@@ -242,31 +269,45 @@ function applyChecklistToSnapshot(): AttendanceSummary {
   snapshot.asOf = new Date().toISOString();
   snapshot.source = snapshot.source || 'Manual';
   updateAttendanceKpis(snapshot);
-  renderAbsentList(snapshot);
   return snapshot;
 }
 
-function renderEmployeeChecklistRow(employee: EmployeeRow, presentKeys: Set<string>): string {
+function renderEmployeeChecklistRow(
+  employee: EmployeeRow,
+  presentKeys: Set<string>,
+  absentKeys: Set<string>
+): string {
   const person = personFromEmployee(employee);
   const key = personKey(person);
-  const checked = presentKeys.has(key);
+  const isPresent = presentKeys.has(key);
+  const isAbsent = absentKeys.has(key);
   const onLeave = isLeaveProtectedEmployee(employee);
   const classes = ['attendance-employee-row'];
-  if (!checked) classes.push('is-absent');
+  if (isPresent) classes.push('is-present');
+  if (isAbsent) classes.push('is-absent');
   if (onLeave) classes.push('is-on-leave');
 
   const leaveBadge = onLeave
     ? '<span class="badge badge-leave attendance-leave-badge">On leave</span>'
     : '';
 
-  return `<tr class="${classes.join(' ')}">
+  return `<tr class="${classes.join(' ')}" data-attendance-key="${escapeHtml(key)}">
     <td class="attendance-check-cell">
       <input
         type="checkbox"
         class="attendance-present-check"
         data-attendance-key="${escapeHtml(key)}"
-        ${checked ? 'checked' : ''}
+        ${isPresent ? 'checked' : ''}
         aria-label="Present: ${escapeHtml(person.name)}"
+      />
+    </td>
+    <td class="attendance-check-cell">
+      <input
+        type="checkbox"
+        class="attendance-absent-check"
+        data-attendance-key="${escapeHtml(key)}"
+        ${isAbsent ? 'checked' : ''}
+        aria-label="Absent: ${escapeHtml(person.name)}"
       />
     </td>
     <td class="attendance-name-cell">${escapeHtml(person.name)}${leaveBadge}</td>
@@ -275,58 +316,23 @@ function renderEmployeeChecklistRow(employee: EmployeeRow, presentKeys: Set<stri
   </tr>`;
 }
 
-function renderAbsentList(snapshot: AttendanceSummary): void {
-  const card = safeGet('attendanceAbsentCard');
-  const list = safeGet('attendanceAbsentList');
-  if (!card || !list) return;
-
-  const absent = sortPeople(snapshot.absent);
-  const isToday = getSelectedDate() === todayIsoDate();
-
-  if (!absent.length) {
-    card.classList.add('hidden');
-    list.innerHTML = '<div class="muted">No one marked absent.</div>';
-    return;
-  }
-
-  card.classList.remove('hidden');
-  list.innerHTML = absent
-    .map((person) => {
-      const employee = getRollCallEmployees().find(
-        (row) => personKey(personFromEmployee(row)) === personKey(person)
-      );
-      const onLeave = employee ? isLeaveProtectedEmployee(employee) : false;
-      const note = onLeave
-        ? '<span class="attendance-absent-note">On leave — status stays Leave</span>'
-        : isToday
-          ? '<span class="attendance-absent-note">Will set status to Absent on save</span>'
-          : '';
-      return `<div class="attendance-absent-item">
-        <strong>${escapeHtml(person.name)}</strong>
-        <span class="muted">${escapeHtml(person.employeeId)}${person.department ? ` · ${escapeHtml(person.department)}` : ''}</span>
-        ${note}
-      </div>`;
-    })
-    .join('');
-}
-
 function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
   const body = safeGet<HTMLTableSectionElement>('attendanceChecklistBody');
   if (!body) return;
 
   const employees = getRollCallEmployees();
   updateAttendanceKpis(snapshot);
-  renderAbsentList(snapshot);
 
   if (!employees.length) {
     body.innerHTML =
-      '<tr><td colspan="4" class="empty">No active employees in your roster.</td></tr>';
+      '<tr><td colspan="5" class="empty">No active employees in your roster.</td></tr>';
     return;
   }
 
   const presentKeys = presentKeySet(snapshot);
+  const absentKeys = absentKeySet(snapshot);
   body.innerHTML = employees
-    .map((employee) => renderEmployeeChecklistRow(employee, presentKeys))
+    .map((employee) => renderEmployeeChecklistRow(employee, presentKeys, absentKeys))
     .join('');
 }
 
@@ -334,19 +340,52 @@ function renderAttendance(snapshot: AttendanceSummary): void {
   renderAttendanceChecklist(snapshot);
 }
 
-function setAllChecklistChecked(checked: boolean): void {
+function setAllPresentChecked(checked: boolean): void {
   const body = safeGet<HTMLTableSectionElement>('attendanceChecklistBody');
   if (!body) return;
 
   body.querySelectorAll<HTMLInputElement>('.attendance-present-check').forEach((input) => {
     input.checked = checked;
     const row = input.closest('tr.attendance-employee-row');
-    if (row) {
-      row.classList.toggle('is-absent', !checked);
+    if (checked && row) {
+      const absent = getRowCheckboxes(row).absent;
+      if (absent) absent.checked = false;
     }
+    syncRowAttendanceClasses(row);
   });
 
-  applyChecklistToSnapshot();
+  updateAttendanceKpis(ensureWorkingSnapshot());
+}
+
+function setAllAbsentChecked(checked: boolean): void {
+  const body = safeGet<HTMLTableSectionElement>('attendanceChecklistBody');
+  if (!body) return;
+
+  body.querySelectorAll<HTMLInputElement>('.attendance-absent-check').forEach((input) => {
+    input.checked = checked;
+    const row = input.closest('tr.attendance-employee-row');
+    if (checked && row) {
+      const present = getRowCheckboxes(row).present;
+      if (present) present.checked = false;
+    }
+    syncRowAttendanceClasses(row);
+  });
+
+  updateAttendanceKpis(ensureWorkingSnapshot());
+}
+
+function clearAllChecklist(): void {
+  const body = safeGet<HTMLTableSectionElement>('attendanceChecklistBody');
+  if (!body) return;
+
+  body.querySelectorAll<HTMLInputElement>('.attendance-present-check, .attendance-absent-check').forEach(
+    (input) => {
+      input.checked = false;
+      syncRowAttendanceClasses(input.closest('tr.attendance-employee-row'));
+    }
+  );
+
+  updateAttendanceKpis(ensureWorkingSnapshot());
 }
 
 function setSyncLoading(isLoading: boolean): void {
@@ -391,7 +430,6 @@ export async function saveAttendance(): Promise<void> {
     snapshot.source = snapshot.source || 'Manual';
     attendanceCache = snapshot;
     updateAttendanceKpis(snapshot);
-    renderAbsentList(snapshot);
 
     const syncResult = await syncEmployeeStatusFromRollCall(
       snapshot,
@@ -557,11 +595,19 @@ function bindAttendanceUi(): void {
     });
   }
 
-  const markAllBtn = safeGet<HTMLButtonElement>('attendanceMarkAllPresentBtn');
-  if (markAllBtn && markAllBtn.dataset.bound !== '1') {
-    markAllBtn.dataset.bound = '1';
-    markAllBtn.addEventListener('click', () => {
-      setAllChecklistChecked(true);
+  const markAllPresentBtn = safeGet<HTMLButtonElement>('attendanceMarkAllPresentBtn');
+  if (markAllPresentBtn && markAllPresentBtn.dataset.bound !== '1') {
+    markAllPresentBtn.dataset.bound = '1';
+    markAllPresentBtn.addEventListener('click', () => {
+      setAllPresentChecked(true);
+    });
+  }
+
+  const markAllAbsentBtn = safeGet<HTMLButtonElement>('attendanceMarkAllAbsentBtn');
+  if (markAllAbsentBtn && markAllAbsentBtn.dataset.bound !== '1') {
+    markAllAbsentBtn.dataset.bound = '1';
+    markAllAbsentBtn.addEventListener('click', () => {
+      setAllAbsentChecked(true);
     });
   }
 
@@ -569,7 +615,7 @@ function bindAttendanceUi(): void {
   if (clearAllBtn && clearAllBtn.dataset.bound !== '1') {
     clearAllBtn.dataset.bound = '1';
     clearAllBtn.addEventListener('click', () => {
-      setAllChecklistChecked(false);
+      clearAllChecklist();
     });
   }
 
@@ -586,16 +632,29 @@ function bindAttendanceUi(): void {
   if (checklistBody && checklistBody.dataset.bound !== '1') {
     checklistBody.dataset.bound = '1';
     checklistBody.addEventListener('change', (event) => {
-      const target = event.target as HTMLElement | null;
-      if (!target?.classList.contains('attendance-present-check')) return;
-
-      const row = target.closest('tr.attendance-employee-row');
-      const input = target as HTMLInputElement;
-      if (row) {
-        row.classList.toggle('is-absent', !input.checked);
+      const target = event.target as HTMLInputElement | null;
+      if (
+        !target?.classList.contains('attendance-present-check') &&
+        !target?.classList.contains('attendance-absent-check')
+      ) {
+        return;
       }
 
-      applyChecklistToSnapshot();
+      const row = target.closest('tr.attendance-employee-row');
+      if (!row) return;
+
+      const { present, absent } = getRowCheckboxes(row);
+
+      if (target.classList.contains('attendance-present-check') && target.checked && absent) {
+        absent.checked = false;
+      }
+
+      if (target.classList.contains('attendance-absent-check') && target.checked && present) {
+        present.checked = false;
+      }
+
+      syncRowAttendanceClasses(row);
+      updateAttendanceKpis(ensureWorkingSnapshot());
     });
   }
 }
