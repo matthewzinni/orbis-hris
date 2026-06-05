@@ -11,8 +11,7 @@ import {
   applyEmployeePortalView,
   employeeMatchesSupervisorAccess,
   parseSupervisedEmployeeIds,
-  setCurrentUserAccess,
-  fetchUserAccessRowForEmail,
+  getUserRole,
 } from '../services/access';
 
 export type EmployeeRecord = Record<string, unknown>;
@@ -63,25 +62,8 @@ function normalizeRow(employee: EmployeeRecord): EmployeeRecord | null {
 
 export async function loadEmployees(): Promise<EmployeeRecord[]> {
   try {
-    const {
-      data: { user },
-    } = await supabaseClient.auth.getUser();
-
-    const userEmail = String(user?.email || '')
-      .trim()
-      .toLowerCase();
-
-    if (userEmail) {
-      const accessRow = await fetchUserAccessRowForEmail(userEmail);
-
-      if (accessRow) {
-        const role = String(accessRow.role || window.currentUserRole || 'user')
-          .trim()
-          .toLowerCase();
-        setCurrentUserAccess(accessRow, role);
-        console.log('[Access Loaded In loadEmployees]', role, accessRow);
-      }
-    }
+    await getUserRole();
+    console.log('[Access Loaded In loadEmployees]', window.currentUserRole, window.currentUserAccess);
   } catch (accessErr) {
     console.warn('Could not load user access before employee scope.', accessErr);
   }

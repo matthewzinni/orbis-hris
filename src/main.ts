@@ -13,7 +13,7 @@ import './styles/leave-requests.css';
 import './styles/employee-portal.css';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
-import { isEmployeeUser } from './services/access';
+import { getUserRole, isEmployeeUser } from './services/access';
 import {
   signIn,
   signOut,
@@ -297,6 +297,12 @@ function registerLegacyBridges(): void {
 }
 
 async function initializeProtectedModules(): Promise<void> {
+  try {
+    await getUserRole();
+  } catch (roleErr) {
+    console.warn('Could not resolve user role before boot:', roleErr);
+  }
+
   try {
     devLog('Initializing Documents Library...');
     await initializeDocumentsLibrary();

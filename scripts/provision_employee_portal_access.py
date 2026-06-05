@@ -79,6 +79,7 @@ def main() -> int:
             "email": email,
             "display_name": name or None,
             "role": "employee",
+            "supervisor_name": "",
             "linked_employee_id": emp_id,
         }
 

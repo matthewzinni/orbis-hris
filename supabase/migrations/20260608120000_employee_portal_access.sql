@@ -155,11 +155,12 @@ begin
 
   display := trim(coalesce(matched.first_name, '') || ' ' || coalesce(matched.last_name, ''));
 
-  insert into public.user_access (email, display_name, role, linked_employee_id)
+  insert into public.user_access (email, display_name, role, supervisor_name, linked_employee_id)
   values (
     auth_email,
     nullif(display, ''),
     'employee',
+    '',
     matched.id::text
   )
   returning * into existing;
