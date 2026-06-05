@@ -272,6 +272,51 @@ export function clearAuthRedirectParams(): void {
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
+export function showAuthCallbackLoadingState(): void {
+  if (!isAuthRedirectUrl()) return;
+
+  const loginError = document.getElementById('loginError');
+  if (loginError) {
+    loginError.textContent = 'Completing sign-in from your email link…';
+    loginError.classList.remove('hidden');
+  }
+
+  const magicLinkBtn = document.getElementById('loginMagicLinkBtn') as HTMLButtonElement | null;
+  const loginBtn = document.getElementById('loginBtn') as HTMLButtonElement | null;
+  if (magicLinkBtn) magicLinkBtn.disabled = true;
+  if (loginBtn) loginBtn.disabled = true;
+}
+
+function authRedirectFailureMessage(): string {
+  return (
+    'Sign-in link could not be completed. Request a new link, then open it promptly. ' +
+    'If you requested the link on a computer, open the email on that same device, or try copying the link into Safari/Chrome instead of an in-app mail viewer.'
+  );
+}
+
+async function recoverSessionFromAuthRedirect(): Promise<Session | null> {
+  await supabase.auth.initialize();
+
+  const {
+    data: { session: afterInit },
+  } = await supabase.auth.getSession();
+  if (afterInit) {
+    return afterInit;
+  }
+
+  const params = readAuthRedirectParams();
+  const code = params.get('code');
+  if (code) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && data.session) {
+      return data.session;
+    }
+    devLog('Auth code exchange failed:', error?.message || error);
+  }
+
+  return null;
+}
+
 export async function getCurrentSession(): Promise<Session | null> {
   if (!isSupabaseConfigured) {
     return null;
@@ -285,10 +330,10 @@ export async function getCurrentSession(): Promise<Session | null> {
 }
 
 /**
- * Magic-link redirects land with ?code= or #access_token= before the client has a session.
- * Wait briefly for Supabase to finish the exchange instead of showing login immediately.
+ * Magic-link redirects land with tokens in the URL hash (implicit) or ?code= (PKCE)
+ * before the client has a session. Wait for Supabase initialize + exchange.
  */
-export async function waitForAuthSession(timeoutMs = 8000): Promise<Session | null> {
+export async function waitForAuthSession(timeoutMs = 12000): Promise<Session | null> {
   if (!isSupabaseConfigured) {
     return null;
   }
@@ -300,6 +345,11 @@ export async function waitForAuthSession(timeoutMs = 8000): Promise<Session | nu
 
   if (!isAuthRedirectUrl()) {
     return null;
+  }
+
+  const recovered = await recoverSessionFromAuthRedirect();
+  if (recovered) {
+    return recovered;
   }
 
   return new Promise((resolve) => {
@@ -316,19 +366,24 @@ export async function waitForAuthSession(timeoutMs = 8000): Promise<Session | nu
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      devLog('Auth redirect wait event:', event, Boolean(session));
       if (session && AUTH_SESSION_EVENTS.has(event)) {
         finish(session);
       }
     });
 
     const timer = window.setTimeout(() => {
-      void getCurrentSession().then((session) => finish(session));
+      void recoverSessionFromAuthRedirect().then((session) => finish(session));
     }, timeoutMs);
 
-    void getCurrentSession().then((session) => {
+    void recoverSessionFromAuthRedirect().then((session) => {
       if (session) finish(session);
     });
   });
+}
+
+export function readAuthRedirectFailureMessage(): string {
+  return authRedirectFailureMessage();
 }
 
 export function watchAuthState(callback: (event: string, session: unknown) => void) {

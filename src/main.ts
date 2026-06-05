@@ -21,6 +21,9 @@ import {
   waitForAuthSession,
   clearAuthRedirectParams,
   readAuthRedirectError,
+  readAuthRedirectFailureMessage,
+  isAuthRedirectUrl,
+  showAuthCallbackLoadingState,
   initAuthBindings,
 } from './modules/auth';
 import { devLog } from './utils/devLog';
@@ -383,6 +386,10 @@ async function bootAuthenticatedApp(): Promise<void> {
 window.addEventListener('DOMContentLoaded', async () => {
   devLog('Orbis booted via main.ts');
 
+  if (isAuthRedirectUrl()) {
+    showAuthCallbackLoadingState();
+  }
+
   initAuthBindings();
   initAppShell();
   registerLegacyBridges();
@@ -403,12 +410,18 @@ window.addEventListener('DOMContentLoaded', async () => {
 
   if (!session) {
     const redirectError = readAuthRedirectError();
-    if (redirectError) {
-      const loginError = document.getElementById('loginError');
-      if (loginError) {
+    const loginError = document.getElementById('loginError');
+    if (loginError) {
+      if (redirectError) {
         loginError.textContent = redirectError;
+      } else if (isAuthRedirectUrl()) {
+        loginError.textContent = readAuthRedirectFailureMessage();
+      }
+      if (redirectError || isAuthRedirectUrl()) {
         loginError.classList.remove('hidden');
       }
+    }
+    if (redirectError || isAuthRedirectUrl()) {
       clearAuthRedirectParams();
     }
 
