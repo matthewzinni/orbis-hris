@@ -22,6 +22,9 @@ except ImportError:
     print("Install: pip install supabase", file=sys.stderr)
     sys.exit(1)
 
+# Owners / leadership — keep admin user_access; never provision employee portal rows.
+EMPLOYEE_PORTAL_EXCLUDED_IDS = frozenset({"BTW1601", "BTW1602"})
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Provision employee portal user_access rows")
@@ -53,6 +56,12 @@ def main() -> int:
             continue
 
         emp_id = str(emp.get("id") or "").strip()
+        if emp_id in EMPLOYEE_PORTAL_EXCLUDED_IDS:
+            if args.dry_run:
+                print(f"skip leadership (not employee portal): {emp_id}")
+            skipped += 1
+            continue
+
         email = (
             str(emp.get("personal_email") or "").strip()
             or str(emp.get("work_email") or "").strip()
