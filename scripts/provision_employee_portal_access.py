@@ -7,7 +7,7 @@ or HR invites them in Supabase Auth. Orbis auto-links on login when email matche
 
 Usage:
   set -a && source scripts/.env.weekly_report && set +a
-  python scripts/provision_employee_portal_access.py [--dry-run]
+  python3 scripts/provision_employee_portal_access.py [--dry-run]
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ def main() -> int:
 
     res = (
         client.table("employees")
-        .select("id, first_name, last_name, work_email, personal_email, email, status")
+        .select("id, first_name, last_name, work_email, personal_email, status")
         .execute()
     )
     rows = res.data or []

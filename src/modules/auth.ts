@@ -56,6 +56,31 @@ async function enterAuthenticatedApp(): Promise<void> {
   window.location.reload();
 }
 
+function mapMagicLinkAuthError(error: { message?: string; status?: number; code?: string }): string {
+  const message = String(error.message || '').trim();
+  const code = String((error as { code?: string }).code || '').trim();
+  const lower = message.toLowerCase();
+
+  if (
+    code === 'signup_disabled' ||
+    lower.includes('signups not allowed') ||
+    lower.includes('sign in is not available') ||
+    lower.includes('signups not allowed for otp')
+  ) {
+    return (
+      'Employee sign-in is not enabled yet. In Supabase → Authentication → Sign In / Providers → Email, turn on ' +
+      '"Allow new users to sign up" (required for first-time magic links), then save. ' +
+      'Also confirm the Email provider is enabled and https://orbis-btw.com is in Redirect URLs.'
+    );
+  }
+
+  if (lower.includes('redirect') || lower.includes('invalid') && lower.includes('url')) {
+    return 'Sign-in link could not be sent. Add this site URL to Supabase Auth → Redirect URLs, then try again.';
+  }
+
+  return message || 'Could not send sign-in link.';
+}
+
 export async function signInWithMagicLink(email?: string): Promise<boolean> {
   const emailInput = document.querySelector<HTMLInputElement>(
     '#email, #loginEmail, input[name="email"], input[type="email"]'
@@ -85,11 +110,14 @@ export async function signInWithMagicLink(email?: string): Promise<boolean> {
     const redirectTo = `${window.location.origin}${window.location.pathname}`;
     const { error } = await supabase.auth.signInWithOtp({
       email: resolvedEmail,
-      options: { emailRedirectTo: redirectTo },
+      options: {
+        emailRedirectTo: redirectTo,
+        shouldCreateUser: true,
+      },
     });
 
     if (error) {
-      const message = error.message || 'Could not send sign-in link.';
+      const message = mapMagicLinkAuthError(error);
       setLoginError(message);
       showToast(message, 'error');
       return false;

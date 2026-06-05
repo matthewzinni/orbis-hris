@@ -20,14 +20,21 @@ npm run db:status
 
 After `npm run db:push` (migration `20260608120000_employee_portal_access`):
 
-1. **Supabase Auth** → enable **Email** provider and **Magic Link** (OTP). Add your site URL to **Redirect URLs** (e.g. `https://www.orbis-btw.com/`).
-2. Ensure each employee has a **personal email** (or work email) on their profile in **Employee Admin**. Orbis matches magic-link login to `personal_email`, `work_email`, or `email` — personal is typical for hourly staff without company addresses.
-3. Optional: pre-create `user_access` rows (faster first login):
+1. **Supabase Auth** → **Sign In / Providers** → **Email**:
+   - **Enable Email provider**
+   - **Enable Magic Link** (or Email OTP)
+   - **Allow new users to sign up** must be **ON** — first-time employee magic links create an Auth user automatically. If this is off, employees see “Sign in is not available for this instance” / “Signups not allowed”.
+2. **Authentication** → **URL configuration** → add redirect URLs:
+   - `https://www.orbis-btw.com/`
+   - `https://orbis-btw.com/`
+   - `http://localhost:5173/` (local dev)
+4. Ensure each employee has a **personal email** (or work email) on their profile in **Employee Admin**. Orbis matches magic-link login to `personal_email`, `work_email`, or `email` — personal is typical for hourly staff without company addresses.
+5. Optional: pre-create `user_access` rows (faster first login):
 
 ```bash
 set -a && source scripts/.env.weekly_report && set +a
-python scripts/provision_employee_portal_access.py --dry-run
-python scripts/provision_employee_portal_access.py
+python3 scripts/provision_employee_portal_access.py --dry-run
+python3 scripts/provision_employee_portal_access.py
 ```
 
 Employees use **Email me a sign-in link** on the login page (no password). HR/supervisors still use password sign-in. **PTO requests** require approval by the employee’s **direct supervisor** (supervisor role + roster match) or **admin**.
