@@ -28,8 +28,8 @@ After `npm run db:push` (migration `20260608120000_employee_portal_access`):
    - `https://www.orbis-btw.com/`
    - `https://orbis-btw.com/`
    - `http://localhost:5173/` (local dev)
-4. Ensure each employee has a **personal email** (or work email) on their profile in **Employee Admin**. Orbis matches magic-link login to `personal_email`, `work_email`, or `email` — personal is typical for hourly staff without company addresses.
-5. Optional: pre-create `user_access` rows (faster first login):
+3. Ensure each employee has a **personal email** (or work email) on their profile in **Employee Admin**. Orbis matches magic-link login to `personal_email`, `work_email`, or `email` — personal is typical for hourly staff without company addresses.
+4. Optional: pre-create `user_access` rows (faster first login):
 
 ```bash
 set -a && source scripts/.env.weekly_report && set +a
