@@ -23,19 +23,23 @@ After `npm run db:push` (migration `20260608120000_employee_portal_access`):
 1. **Supabase Auth** → **Sign In / Providers** → **Email**:
    - **Enable Email provider**
    - **Enable Magic Link** (or Email OTP)
-   - **Allow new users to sign up** must be **ON** — first-time employee magic links create an Auth user automatically. If this is off, employees see “Sign in is not available for this instance” / “Signups not allowed”.
+   - **Allow new users to sign up** can stay **OFF** if you pre-create Auth users with the script below (recommended). If it is off and an employee has no Auth user yet, magic link will fail until HR runs `provision_employee_auth_users.py`.
 2. **Authentication** → **URL configuration** → add redirect URLs:
    - `https://www.orbis-btw.com/`
    - `https://orbis-btw.com/`
    - `http://localhost:5173/` (local dev)
 3. Ensure each employee has a **personal email** (or work email) on their profile in **Employee Admin**. Orbis matches magic-link login to `personal_email`, `work_email`, or `email` — personal is typical for hourly staff without company addresses.
-4. Optional: pre-create `user_access` rows (faster first login):
+4. Provision employee portal (run after roster emails are set):
 
 ```bash
 set -a && source scripts/.env.weekly_report && set +a
 python3 scripts/provision_employee_portal_access.py --dry-run
 python3 scripts/provision_employee_portal_access.py
+python3 scripts/provision_employee_auth_users.py --dry-run
+python3 scripts/provision_employee_auth_users.py
 ```
+
+Step 1 creates `user_access` (role `employee`). Step 2 creates matching **Supabase Auth** users so magic links work without public sign-up enabled.
 
 Employees use **Email me a sign-in link** on the login page (no password). HR/supervisors still use password sign-in. **PTO requests** require approval by the employee’s **direct supervisor** (supervisor role + roster match) or **admin**.
 
@@ -63,7 +67,7 @@ Local function testing (optional):
 supabase functions serve summarize-stay-interview --env-file supabase/.env.local
 ```
 
-After deploy, sign in on production and use Stay Interviews → **Generate AI summary**. If the secret is missing, the app uses the structured template draft instead.
+After deploy, sign in on production and use Stay Interviews → **Generate AI summary**. Summaries are interpretive (what matters, risks, opportunities, recommended focus) — not data recaps. If the secret is missing, the app uses a structured advisory template instead.
 
 ## Stay interview org themes (Edge Function)
 

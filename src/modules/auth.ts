@@ -75,14 +75,24 @@ function mapMagicLinkAuthError(error: { message?: string; status?: number; code?
   const lower = message.toLowerCase();
 
   if (
+    lower.includes('user not found') ||
+    lower.includes('no user found') ||
+    code === 'user_not_found'
+  ) {
+    return (
+      'No login exists for this email yet. Ask HR to run employee portal setup, or try again after HR has activated your account.'
+    );
+  }
+
+  if (
     code === 'signup_disabled' ||
     lower.includes('signups not allowed') ||
     lower.includes('sign in is not available') ||
     lower.includes('signups not allowed for otp')
   ) {
     return (
-      'Employee sign-in is not enabled yet. In Supabase → Authentication → Sign In / Providers → Email, turn on ' +
-      '"Allow new users to sign up" (required for first-time magic links), then save. ' +
+      'First-time employee login is not activated for this email. HR must run provision_employee_auth_users.py ' +
+      '(or turn on "Allow new users to sign up" in Supabase → Authentication → Email). ' +
       'Also confirm the Email provider is enabled and https://orbis-btw.com is in Redirect URLs.'
     );
   }
@@ -125,7 +135,8 @@ export async function signInWithMagicLink(email?: string): Promise<boolean> {
       email: resolvedEmail,
       options: {
         emailRedirectTo: redirectTo,
-        shouldCreateUser: true,
+        // Auth users are pre-created by HR; avoids requiring public sign-up in Supabase.
+        shouldCreateUser: false,
       },
     });
 

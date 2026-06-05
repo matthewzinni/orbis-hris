@@ -302,6 +302,62 @@ export type ExecutiveInsightLine = {
   text: string;
 };
 
+function departmentForEmployeeId(
+  employeeId: string,
+  employees: Array<Record<string, unknown>>
+): string {
+  const match = employees.find((employee) => getEmployeeRecordId(employee) === employeeId);
+  return match ? getEmployeeDepartment(match) || 'Unassigned' : 'Unassigned';
+}
+
+function aggregateSignalByDepartment(
+  employeeIds: Iterable<string>,
+  employees: Array<Record<string, unknown>>
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const id of employeeIds) {
+    const dept = departmentForEmployeeId(id, employees);
+    counts.set(dept, (counts.get(dept) || 0) + 1);
+  }
+  return counts;
+}
+
+function topDepartmentShare(
+  byDept: Map<string, number>,
+  total: number
+): { department: string; count: number; share: number } | null {
+  if (!total) return null;
+  const sorted = [...byDept.entries()].sort((a, b) => b[1] - a[1]);
+  if (!sorted.length || sorted[0][1] === 0) return null;
+  const [department, count] = sorted[0];
+  return { department, count, share: count / total };
+}
+
+function formatDepartmentPattern(
+  label: string,
+  byDept: Map<string, number>,
+  total: number,
+  interpretiveSuffix: string
+): string | null {
+  if (!total) return null;
+  const top = topDepartmentShare(byDept, total);
+  if (!top || top.count < 2) return null;
+
+  const sharePct = Math.round(top.share * 100);
+  if (sharePct >= 50) {
+    return `${top.department} accounts for ${sharePct}% of ${label}, suggesting ${interpretiveSuffix} rather than isolated individual issues.`;
+  }
+
+  const deptList = [...byDept.entries()]
+    .filter(([, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .map(([name, count]) => `${name} (${count})`)
+    .join(' and ');
+
+  return `${label} cluster in ${deptList} — review whether supervision, workload, or team dynamics are contributing factors.`;
+}
+
 export function buildExecutiveInsightLines(input: {
   activeCount: number;
   departmentCount: number;
@@ -312,71 +368,143 @@ export function buildExecutiveInsightLines(input: {
   openInvestigationCount: number;
   overdueStayCount: number;
   dueSoonStayCount: number;
+  employees?: Array<Record<string, unknown>>;
 }): ExecutiveInsightLine[] {
   const lines: ExecutiveInsightLine[] = [];
   const { context } = input;
+  const employees = input.employees || [];
 
-  lines.push({
-    tone: 'neutral',
-    text: `${input.activeCount} active employees across ${input.departmentCount} department${input.departmentCount === 1 ? '' : 's'}; ${input.onLeaveCount} currently on leave.`,
-  });
+  const disciplineByDept = aggregateSignalByDepartment(
+    context.disciplineOpenByEmployee.keys(),
+    employees
+  );
+  const investigationByDept = aggregateSignalByDepartment(
+    context.openInvestigationEmployeeIds,
+    employees
+  );
+  const overdueStayByDept = aggregateSignalByDepartment(context.stayInterviewOverdueIds, employees);
 
-  const retentionSignals =
-    input.overdueStayCount +
-    input.openDisciplineCount +
-    input.openInvestigationCount +
-    context.openInvestigationEmployeeIds.size;
+  const retentionPressure =
+    input.overdueStayCount + input.openDisciplineCount + input.openInvestigationCount;
 
-  if (retentionSignals > 0) {
-    lines.push({
-      tone: 'attention',
-      text: `Retention attention: ${input.overdueStayCount} overdue stay interview${input.overdueStayCount === 1 ? '' : 's'}, ${input.openDisciplineCount} open discipline case${input.openDisciplineCount === 1 ? '' : 's'}, and ${input.openInvestigationCount} open investigation${input.openInvestigationCount === 1 ? '' : 's'} across the workforce.`,
-    });
-  } else {
+  if (retentionPressure === 0 && input.dueSoonStayCount === 0) {
     lines.push({
       tone: 'positive',
-      text: 'No overdue stay interviews, open discipline cases, or open investigations are currently flagged in Orbis.',
+      text: 'No overdue stay interviews, open severe discipline, or open investigations are flagged — engagement risk appears contained. Prioritize proactive stay conversations and recognition to keep momentum.',
     });
+  } else {
+    const themes: string[] = [];
+
+    const disciplinePattern = formatDepartmentPattern(
+      'current severe discipline cases',
+      disciplineByDept,
+      input.openDisciplineCount,
+      'a potential supervisory consistency, accountability, or workload management pattern'
+    );
+    if (disciplinePattern) themes.push(disciplinePattern);
+
+    const investigationPattern = formatDepartmentPattern(
+      'open investigations',
+      investigationByDept,
+      input.openInvestigationCount,
+      'team dynamics or policy adherence concerns worth leadership attention'
+    );
+    if (investigationPattern) themes.push(investigationPattern);
+
+    if (input.overdueStayCount > 0) {
+      const stayPattern = formatDepartmentPattern(
+        'overdue stay interviews',
+        overdueStayByDept,
+        input.overdueStayCount,
+        'engagement check-ins may be slipping in that area before dissatisfaction surfaces'
+      );
+      themes.push(
+        stayPattern ||
+          `${input.overdueStayCount} overdue stay interview${input.overdueStayCount === 1 ? '' : 's'} — delayed conversations increase blind spots on retention risk.`
+      );
+    }
+
+    if (themes.length) {
+      lines.push({ tone: 'attention', text: themes[0] });
+      themes.slice(1, 2).forEach((text) => lines.push({ tone: 'attention', text }));
+    } else {
+      lines.push({
+        tone: 'attention',
+        text: 'Retention signals are spread across the workforce rather than concentrated in one department — review whether root causes are systemic (communication, scheduling, feedback cadence) vs individual performance.',
+      });
+    }
   }
 
   const opsDepartments = [...context.operationsPressureByDepartment.entries()]
     .filter(([, count]) => count >= 3)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
+    .sort((a, b) => b[1] - a[1]);
 
   if (opsDepartments.length) {
-    const deptList = opsDepartments.map(([name, count]) => `${name} (${count} open)`).join(', ');
+    const [topDept, topCount] = opsDepartments[0];
+    const recurring = context.recurringOperationsByDepartment.get(topDept) || 0;
     lines.push({
       tone: 'attention',
-      text: `Operations load may be affecting retention: elevated open operations issues in ${deptList}.`,
+      text:
+        recurring >= 2
+          ? `${topDept} shows ${topCount} open operations issues including recurring items — a potential burnout or process breakdown signal that may feed attendance and turnover risk if unaddressed.`
+          : `Elevated open operations load in ${topDept} (${topCount} issues) may be creating friction for floor teams; connect with supervisors on root cause before issues shift to discipline or attrition.`,
     });
   }
 
-  const atRiskCount = Object.values(input.atRiskMap).filter(
-    (meta) =>
-      meta.lowReview ||
-      String(meta.manualReason || '').trim() ||
-      meta.disciplineRisk
-  ).length;
+  const atRiskIds = Object.entries(input.atRiskMap).filter(([, meta]) => {
+    return meta.lowReview || String(meta.manualReason || '').trim() || meta.disciplineRisk;
+  });
+  const atRiskCount = atRiskIds.length;
 
   if (atRiskCount) {
+    const reviewDriven = atRiskIds.filter(([, meta]) => meta.lowReview).length;
+    const disciplineDriven = atRiskIds.filter(
+      ([id, meta]) => meta.disciplineRisk || (context.disciplineOpenByEmployee.get(id) || 0) > 0
+    ).length;
+
+    let focus = 'Review the At-Risk roster and assign manager follow-ups within 30 days.';
+    if (reviewDriven >= atRiskCount / 2 && reviewDriven > 0) {
+      focus =
+        'Several at-risk flags tie to performance reviews — consider succession planning, coaching plans, and whether expectations are clear.';
+    } else if (disciplineDriven >= atRiskCount / 2 && disciplineDriven > 0) {
+      focus =
+        'At-risk flags align with discipline history — prioritize consistent corrective action and document whether prior coaching is taking hold (Discipline → Turnover Risk).';
+    }
+
     lines.push({
       tone: 'attention',
-      text: `${atRiskCount} employee${atRiskCount === 1 ? '' : 's'} are flagged at-risk from low review scores, manual HR flags, or severe open discipline (final warning+). Review the At-Risk list for names and departments.`,
+      text: `${atRiskCount} employee${atRiskCount === 1 ? '' : 's'} show compounded retention signals (reviews, manual flags, or severe discipline). ${focus}`,
     });
   } else if (input.dueSoonStayCount > 0) {
     lines.push({
       tone: 'neutral',
-      text: `${input.dueSoonStayCount} stay interview${input.dueSoonStayCount === 1 ? '' : 's'} due within the next 14 days — schedule conversations before they become overdue.`,
+      text: `${input.dueSoonStayCount} stay interview${input.dueSoonStayCount === 1 ? '' : 's'} due within 14 days — scheduling now prevents engagement blind spots and reinforces Care & Engagement → Retention.`,
     });
-  } else {
+  } else if (lines.every((line) => line.tone === 'positive')) {
     lines.push({
       tone: 'positive',
-      text: 'Workforce risk indicators are stable this week. Continue stay interviews and recognition to sustain engagement.',
+      text: 'Workforce risk indicators are stable. Use the window to deepen supervisor feedback rhythms and document what is working well in high-performing teams.',
     });
   }
 
-  return lines;
+  if (input.onLeaveCount > 0 && input.activeCount > 0) {
+    const leaveShare = Math.round((input.onLeaveCount / input.activeCount) * 100);
+    if (leaveShare >= 8) {
+      lines.push({
+        tone: 'neutral',
+        text: `${input.onLeaveCount} employees on leave (${leaveShare}% of active roster) — confirm coverage plans and re-integration conversations so return-to-work friction does not accumulate.`,
+      });
+    }
+  }
+
+  if (!lines.length) {
+    lines.push({
+      tone: 'neutral',
+      text: 'Workforce metrics loaded — generate stay interviews and review department KPIs for emerging patterns.',
+    });
+  }
+
+  return lines.slice(0, 4);
 }
 
 export function computeStayInterviewCareSignals(

@@ -96,51 +96,83 @@ export function buildStayInterviewManagerSummary(
   const [q1, q2, q3, q4, q5, q6, q7] = answers;
   const lines: string[] = [];
 
-  const positives: string[] = [];
-  if (q1) positives.push(`Motivation: ${q1}`);
-  if (q2) positives.push(`Strengths: ${q2}`);
-  if (positives.length) {
-    lines.push('Strengths & engagement', positives.map((p) => `• ${p}`).join('\n'));
-  }
-
-  if (q3) {
-    lines.push('Concerns / stress points', `• ${q3}`);
-  } else {
-    lines.push('Concerns / stress points', '• None noted in interview.');
-  }
-
-  const supportParts: string[] = [];
-  if (q5) supportParts.push(`Support: ${q5}`);
-  if (q4) supportParts.push(`Requested improvements: ${q4}`);
-  if (supportParts.length) {
-    lines.push('Support & role satisfaction', supportParts.map((p) => `• ${p}`).join('\n'));
-  }
-
-  if (q6) {
-    const riskLevel = LOW_RISK_PHRASES.test(q6) ? 'Low apparent risk' : 'Discuss retention factors';
-    lines.push('Retention', `• ${riskLevel} — ${q6}`);
-  }
-
-  const followUps: string[] = [];
-  if (q7) followUps.push(q7);
+  const whatMatters: string[] = [];
   if (q3 && !LOW_RISK_PHRASES.test(q3)) {
-    followUps.push('Follow up on frustrations and whether mitigations are in place.');
+    whatMatters.push(
+      'Frustrations or stress points were raised — treat as an early engagement signal, not a one-off complaint.'
+    );
   }
   if (q6 && !LOW_RISK_PHRASES.test(q6)) {
-    followUps.push('Schedule a check-in on retention factors within 30 days.');
-  }
-  if (followUps.length) {
-    lines.push(
-      'Recommended HR / manager follow-up',
-      followUps.map((f) => `• ${f}`).join('\n')
+    whatMatters.push(
+      'The employee named factors that could influence retention; a timely manager conversation is warranted.'
     );
-  } else if (q7) {
-    lines.push('Recommended HR / manager follow-up', `• ${q7}`);
   }
+  if (q5 && /\b(no|not really|unsupported|lack|never)\b/i.test(q5)) {
+    whatMatters.push(
+      'Support from supervisor or team may be insufficient — investigate whether feedback and visibility gaps are driving dissatisfaction.'
+    );
+  }
+  if (!whatMatters.length && (q1 || q2)) {
+    whatMatters.push(
+      'Overall tone appears constructive — reinforce what is working while confirming no hidden obstacles were missed.'
+    );
+  }
+  if (!whatMatters.length) {
+    whatMatters.push(
+      'Limited detail in responses — schedule a follow-up to draw out engagement and retention themes beyond surface answers.'
+    );
+  }
+
+  lines.push('WHAT MATTERS', whatMatters.map((t) => `• ${t}`).join('\n'));
+
+  const engagement: string[] = [];
+  if (q1) engagement.push(`Motivation: ${q1}`);
+  if (q2) engagement.push(`Role strengths: ${q2}`);
+  if (q5) engagement.push(`Support climate: ${q5}`);
+  lines.push(
+    'ENGAGEMENT SIGNALS',
+    engagement.length
+      ? engagement.map((t) => `• ${t}`).join('\n')
+      : '• No engagement themes captured — probe what the employee values about the role.'
+  );
+
+  const risks: string[] = [];
+  if (q3 && !LOW_RISK_PHRASES.test(q3)) risks.push(`Obstacles: ${q3}`);
+  if (q6 && !LOW_RISK_PHRASES.test(q6)) risks.push(`Retention factors: ${q6}`);
+  lines.push(
+    'RISKS & EARLY WARNINGS',
+    risks.length
+      ? risks.map((t) => `• ${t}`).join('\n')
+      : '• No immediate retention red flags stated — monitor for changes after any role or schedule shifts.'
+  );
+
+  const opportunities: string[] = [];
+  if (q2) opportunities.push(`Build on: ${q2}`);
+  if (q4) opportunities.push(`Quick win requested: ${q4}`);
+  if (q7) opportunities.push(`Employee suggestion: ${q7}`);
+  lines.push(
+    'OPPORTUNITIES',
+    opportunities.length
+      ? opportunities.map((t) => `• ${t}`).join('\n')
+      : '• Confirm recognition and development opportunities with the employee’s supervisor.'
+  );
+
+  const focus: string[] = [];
+  if (q7) focus.push(q7);
+  if (q3 && !LOW_RISK_PHRASES.test(q3)) {
+    focus.push('Manager to follow up on stated frustrations within 14 days and document mitigations.');
+  }
+  if (q6 && !LOW_RISK_PHRASES.test(q6)) {
+    focus.push('HR/manager check-in on retention factors within 30 days.');
+  }
+  if (!focus.length) {
+    focus.push('Share positive themes with the team where appropriate; schedule next stay interview on cadence.');
+  }
+  lines.push('RECOMMENDED FOCUS', focus.map((f) => `• ${f}`).join('\n'));
 
   lines.push(
     '',
-    '(Draft generated from employee responses — review and edit before saving.)'
+    '(Template advisory draft — review and edit before saving. Deploy summarize-stay-interview for richer AI synthesis.)'
   );
 
   return lines.join('\n\n').trim();

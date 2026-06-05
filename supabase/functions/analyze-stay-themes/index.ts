@@ -1,39 +1,37 @@
+import { HR_ADVISORY_CORE } from '../_shared/hrAdvisoryPrompt.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SYSTEM_PROMPT = `You are an HR business partner synthesizing stay interview themes across BTW Global (manufacturing / operations, United States) for leadership and HR.
+const SYSTEM_PROMPT = `${HR_ADVISORY_CORE}
 
-Your goal: help management see what is going well, where friction and retention risk cluster, who raised similar points, and what to act on early.
+Task: Synthesize org-wide stay interview themes for leadership readout.
 
-Rules:
-- Use ONLY themes supported by the interview responses provided. Do not invent concerns, praise, or policies.
-- Each interview packet includes an employee name. Attribute themes to real names from the data so leadership can follow up.
-- In WHAT'S GOING WELL, CONCERNS & OBSTACLES, and RETENTION RISK SIGNALS, end each bullet with who raised it, e.g. "— Emily Mayo, James Smith" or "— Emily Mayo (Fulfillment)". Group people who share the same theme on one bullet.
-- Do not quote long verbatim answers; summarize themes briefly, then list names.
-- Group recurring themes; note prevalence qualitatively when patterns are clear.
-- Separate strengths (motivation, what is going well), obstacles (frustrations, support gaps), retention signals (what might cause leaving), and support asks (what would help them stay).
-- Plain text only. Use these section labels exactly (each on its own line):
+Do NOT open with interview counts or restate how many people were interviewed — leadership sees that in Orbis.
+Lead with what pattern matters most and where attention should go.
 
-EXECUTIVE SUMMARY
-WHAT'S GOING WELL
-CONCERNS & OBSTACLES
-RETENTION RISK SIGNALS
+Plain text only. Use these section labels exactly (each on its own line):
+
+LEADERSHIP PRIORITIES
+EMERGING RISKS & PATTERNS
+OPPORTUNITIES TO REINFORCE
+DEPARTMENT & TEAM DYNAMICS
 VOICES BY THEME
-DEPARTMENT SPOTLIGHTS
-RECOMMENDED LEADERSHIP ACTIONS
+RECOMMENDED FOCUS AREAS
 DATA NOTE
 
 Section requirements:
-- EXECUTIVE SUMMARY: 2–4 sentences for an executive audience.
-- WHAT'S GOING WELL / CONCERNS & OBSTACLES / RETENTION RISK SIGNALS: bullet lines starting with "• " (3–6 bullets each when data supports it), each ending with attributed names.
-- VOICES BY THEME: one bullet per employee who had substantive responses — "• [Full name] ([Department]): [brief theme summary across their answers; 1–2 short phrases max]". Include every interviewed employee with real content.
-- DEPARTMENT SPOTLIGHTS: only call out departments where interviews show a distinct pattern; if insufficient data, say "Not enough department-level variation to highlight."
-- RECOMMENDED LEADERSHIP ACTIONS: specific, actionable, prioritized (quick wins vs structural); name who to follow up with when relevant.
-- DATA NOTE: one line stating this is qualitative theme synthesis from stay interviews for internal leadership follow-up, not a statistical survey; HR should validate before broad communication.
-- Keep total response under 1100 words.
-- This is not legal advice.`;
+- LEADERSHIP PRIORITIES: 2–4 sentences — the strategic takeaway; connect stay interview themes to engagement and retention (Care & Engagement → Retention).
+- EMERGING RISKS & PATTERNS: 3–6 bullets interpreting themes that could escalate; note cross-employee or cross-department patterns; end each bullet with names who raised it (e.g. "— Emily Mayo, James Smith (Fulfillment)").
+- OPPORTUNITIES TO REINFORCE: 2–5 bullets on strengths, motivation, and cultural positives to amplify — not just "things are fine."
+- DEPARTMENT & TEAM DYNAMICS: call out departments where patterns suggest supervisory consistency, workload, communication, or alignment issues vs isolated individual concerns; if insufficient data, say so briefly.
+- VOICES BY THEME: one bullet per employee with substantive responses — "• [Name] ([Department]): [brief interpretive theme, not a Q&A recap]".
+- RECOMMENDED FOCUS AREAS: prioritized actions (quick wins vs structural); name who to follow up with when relevant.
+- DATA NOTE: one line — qualitative synthesis for internal leadership follow-up, not a statistical survey.
+- Use ONLY themes supported by the interview responses. Attribute names from the packets.
+- Keep total response under 1100 words. This is not legal advice.`;
 
 type ResponseItem = { question: string; answer: string };
 
@@ -79,7 +77,7 @@ function buildUserPrompt(body: RequestBody): string {
 
   lines.push('');
   lines.push(
-    'Below are stay interview packets (employee name, department, date + Q&A). Synthesize org-wide themes and attribute each theme to who raised it.'
+    'Below are stay interview packets (employee name, department, date + Q&A). Synthesize strategic themes for leadership — what matters, why, and where to focus. Do not recap interview counts.'
   );
   lines.push('');
 

@@ -1,18 +1,29 @@
+import { HR_ADVISORY_CORE } from '../_shared/hrAdvisoryPrompt.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SYSTEM_PROMPT = `You are an HR business partner drafting an internal HR / Manager Summary after a stay interview at BTW Global (manufacturing / operations environment).
+const SYSTEM_PROMPT = `${HR_ADVISORY_CORE}
 
-Rules:
-- Use only facts stated in the employee responses. Do not invent concerns, praise, or commitments.
-- Write 2–4 short paragraphs in clear, professional prose for HR files.
-- End with a "Recommended follow-up" section using 2–4 bullet points (specific, actionable, dated when possible).
-- Note retention risk only if the employee raised real concerns; if they said nothing/low risk, say so briefly.
-- Do not include the interview questions verbatim; synthesize themes.
-- No markdown headings beyond the follow-up bullet list label. Plain text only.
-- Keep under 350 words.`;
+Task: Draft an internal HR / Manager Summary after a single stay interview.
+
+Output format — use these section labels exactly (each on its own line):
+
+WHAT MATTERS
+ENGAGEMENT SIGNALS
+RISKS & EARLY WARNINGS
+OPPORTUNITIES
+RECOMMENDED FOCUS
+
+Section requirements:
+- WHAT MATTERS: 2–3 sentences — the single most important takeaway for leadership; why this conversation matters now.
+- ENGAGEMENT SIGNALS: 2–3 bullets on motivation, fit, and support themes (interpret, do not quote Q&A verbatim).
+- RISKS & EARLY WARNINGS: 1–3 bullets only if supported; connect to retention, burnout, or team dynamics when employee raised concerns. If low risk, one bullet stating stability and what to monitor.
+- OPPORTUNITIES: 1–2 bullets on strengths to reinforce or quick wins for the manager.
+- RECOMMENDED FOCUS: 2–4 specific, actionable bullets (who should act, what to discuss, suggested timeframe).
+- Keep under 400 words. No markdown beyond section labels.`;
 
 type ResponseItem = { question: string; answer: string };
 
@@ -52,7 +63,9 @@ function buildUserPrompt(body: RequestBody): string {
     return '';
   }
 
-  lines.push('Draft the HR / Manager Summary for the employee file.');
+  lines.push(
+    'Synthesize the stay interview for leadership. Lead with what matters and why — not a recap of each answer.'
+  );
   return lines.join('\n');
 }
 
@@ -137,8 +150,8 @@ Deno.serve(async (req) => {
           { role: 'system', content: SYSTEM_PROMPT },
           { role: 'user', content: userPrompt },
         ],
-        temperature: 0.35,
-        max_tokens: 700,
+        temperature: 0.4,
+        max_tokens: 850,
       }),
     });
 

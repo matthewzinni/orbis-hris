@@ -326,15 +326,31 @@ export function buildStayInterviewOrgThemesTemplate(payload: OrgThemesInvokePayl
     return out;
   };
 
+  const topConcernDept = [...byDept.entries()]
+    .filter(([, counts]) => counts.concerns > 0)
+    .sort((a, b) => b[1].concerns - a[1].concerns)[0];
+
+  const totalConcerns = concerns.length;
+  const leadershipPriority =
+    topConcernDept && totalConcerns >= 2
+      ? `${topConcernDept[0]} surfaced the most obstacle themes in this sample — leadership should explore whether supervision, workload, or communication patterns are driving friction before treating concerns as isolated.`
+      : totalConcerns > 0
+        ? 'Concern themes appear across multiple interviews — look for shared root causes (feedback cadence, clarity, team alignment) rather than case-by-case fixes.'
+        : 'Stay interview tone in this period is largely constructive — reinforce what is working and keep proactive check-ins on the calendar.';
+
   const deptLines: string[] = [];
   [...byDept.entries()]
     .sort((a, b) => b[1].concerns - a[1].concerns)
     .slice(0, 6)
     .forEach(([dept, counts]) => {
-      if (counts.concerns > 0 || counts.positives > 0) {
+      if (counts.concerns > 0) {
+        const share =
+          totalConcerns > 0 ? Math.round((counts.concerns / totalConcerns) * 100) : 0;
         deptLines.push(
-          `• ${dept}: ${counts.positives} positive signal(s), ${counts.concerns} concern/obstacle mention(s) in this sample`
+          `• ${dept}: ${share}% of concern themes in sample — review manager consistency and support in this area`
         );
+      } else if (counts.positives > 0) {
+        deptLines.push(`• ${dept}: engagement signals present — opportunity to replicate practices`);
       }
     });
 
@@ -363,33 +379,35 @@ export function buildStayInterviewOrgThemesTemplate(payload: OrgThemesInvokePayl
   });
 
   const lines: string[] = [
-    'EXECUTIVE SUMMARY',
-    `Template synthesis from ${payload.interviewCount} stay interview(s) between ${payload.dateFrom} and ${payload.dateTo}. Deploy the analyze-stay-themes edge function with OPENAI_API_KEY for richer theme clustering.`,
+    'LEADERSHIP PRIORITIES',
+    `• ${leadershipPriority}`,
     '',
-    "WHAT'S GOING WELL",
-    ...sample(positives).map((t) => `• ${t}`),
+    'EMERGING RISKS & PATTERNS',
+    ...(sample(concerns).length
+      ? sample(concerns).map((t) => `• ${t}`)
+      : ['• No escalating themes identified in this sample — continue monitoring.']),
     '',
-    'CONCERNS & OBSTACLES',
-    ...sample(concerns).map((t) => `• ${t}`),
+    'OPPORTUNITIES TO REINFORCE',
+    ...(sample(positives).length
+      ? sample(positives).map((t) => `• ${t}`)
+      : ['• Capture and share positive themes in team meetings.']),
     '',
-    'RETENTION RISK SIGNALS',
     ...(sample(retention).length
-      ? sample(retention).map((t) => `• ${t}`)
-      : ['• No explicit retention concerns captured in this date range.']),
+      ? ['RETENTION SIGNALS', ...sample(retention).map((t) => `• ${t}`), '']
+      : []),
+    'DEPARTMENT & TEAM DYNAMICS',
+    ...(deptLines.length ? deptLines : ['• Not enough variation to interpret by department.']),
     '',
     'VOICES BY THEME',
     ...voiceLines,
     '',
-    'DEPARTMENT SPOTLIGHTS',
-    ...(deptLines.length ? deptLines : ['• Not enough variation to highlight by department.']),
-    '',
-    'RECOMMENDED LEADERSHIP ACTIONS',
-    '• Review the concern and retention bullets with department leaders; assign owners and dates.',
-    '• Reinforce themes from "going well" in team meetings and recognition.',
-    '• Follow up on support asks (Q7) within 30 days where feasible.',
+    'RECOMMENDED FOCUS AREAS',
+    '• Assign department leaders to follow up on top concern themes within 30 days.',
+    '• Reinforce positive patterns in team huddles and recognition.',
+    '• Connect recurring themes to Care & Engagement actions where appropriate.',
     '',
     'DATA NOTE',
-    `Qualitative rollup from ${payload.interviewCount} interviews (${payload.departmentsRepresented.length} departments). Not a statistical survey — validate with HR before broad distribution.`,
+    `Template advisory rollup (${payload.dateFrom} – ${payload.dateTo}). Deploy analyze-stay-themes for AI synthesis.`,
   ];
 
   return lines.join('\n');

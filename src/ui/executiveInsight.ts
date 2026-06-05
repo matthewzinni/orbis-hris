@@ -76,6 +76,7 @@ export function buildExecutiveInsightFromState(input?: {
     openInvestigationCount,
     overdueStayCount: context.stayInterviewOverdueIds.size,
     dueSoonStayCount: context.stayInterviewDueSoonIds.size,
+    employees: activeEmployees,
   });
 
   return renderExecutiveInsightHtml(lines);

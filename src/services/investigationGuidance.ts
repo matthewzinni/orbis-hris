@@ -176,24 +176,41 @@ export function buildInvestigationGuidanceFallback(
   const hasInterviewNotes = interviews.some((row) => row.notes.trim());
 
   const lines: string[] = [
-    'FINDINGS & RECOMMENDATION',
+    'STRATEGIC READ',
   ];
 
   if (!interviews.length) {
     lines.push(
-      '• Preliminary finding: Inconclusive — no interviews logged in Orbis yet.',
-      '• Complete complainant, respondent, witness, and supervisor interviews before recommending discipline.',
-      '• Recommended outcome: inconclusive pending more evidence'
+      '• No interviews logged in Orbis yet — findings must remain inconclusive until interviews are complete.',
+      '• Before recommending serious discipline, leadership needs documented accounts from complainant, respondent, witnesses, and supervisor.'
     );
   } else if (!hasInterviewNotes) {
     lines.push(
-      `• ${interviews.length} interview(s) logged but notes are empty — add notes and regenerate.`,
-      '• Preliminary finding: Inconclusive until interview content is documented.'
+      `• ${interviews.length} interview(s) are scheduled or logged but notes are empty — the case cannot support a judgment until interview substance is documented.`,
+      '• Priority: capture neutral, detailed notes, then regenerate guidance for an interpretive read on team dynamics and credibility.'
     );
   } else {
+    const category = String(context.category || 'general').replace(/_/g, ' ');
     lines.push(
-      '• AI unavailable — review INTERVIEW ANALYSIS below and enter your judgment manually.',
-      '• Compare accounts for corroboration and contradictions before setting outcome on the Case tab.',
+      `• This ${category} case requires leadership attention beyond the allegation itself — assess whether patterns suggest isolated conduct, supervisory gap, or broader team trust erosion.`,
+      '• Compare interview accounts below for corroboration and contradiction before locking an outcome; premature discipline without pattern analysis increases retaliation and turnover exposure.',
+      '• Preliminary finding: [Substantiated | Partially substantiated | Unsubstantiated | Inconclusive]',
+      '• Recommended outcome: [coaching | corrective_action | policy_reminder | unsubstantiated | etc.]'
+    );
+  }
+
+  lines.push('', 'FINDINGS & RECOMMENDATION');
+
+  if (!interviews.length) {
+    lines.push(
+      '• Preliminary finding: Inconclusive — no interviews logged in Orbis yet.',
+      '• Recommended outcome: inconclusive pending more evidence'
+    );
+  } else if (!hasInterviewNotes) {
+    lines.push('• Preliminary finding: Inconclusive until interview content is documented.');
+  } else {
+    lines.push(
+      '• AI unavailable — enter judgment after reviewing INTERVIEW ANALYSIS below.',
       '• Preliminary finding: [Substantiated | Partially substantiated | Unsubstantiated | Inconclusive]',
       '• Recommended outcome: [coaching | corrective_action | policy_reminder | unsubstantiated | etc.]'
     );
@@ -212,10 +229,17 @@ export function buildInvestigationGuidanceFallback(
         : '(no notes recorded)';
       lines.push(`• ${row.type || 'Interview'}${when}${who}: ${excerpt}`);
     });
-    lines.push('• Compare the accounts above — note alignment with the allegation and conflicts between interviews.');
+    lines.push(
+      '• Compare the accounts above — note alignment with the allegation, credibility themes, and conflicts between interviews.'
+    );
   }
 
   lines.push(
+    '',
+    'TEAM DYNAMICS & RETENTION IMPACT',
+    serious
+      ? '• Open investigations at this severity can affect morale and trust — plan communication, monitor retaliation, and consider whether supervisor coaching or team reset is needed regardless of outcome.'
+      : '• Assess whether unresolved issues could affect team cohesion or retention if left unaddressed.',
     '',
     'NEXT BEST MOVE',
     `• Current status: ${statusLabel(status)}.`,
