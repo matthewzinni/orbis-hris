@@ -13,7 +13,7 @@ import './styles/leave-requests.css';
 import './styles/employee-portal.css';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
-import { getUserRole, isEmployeeUser } from './services/access';
+import { getUserRole, isEmployeeUser, canAccessOrbisApp } from './services/access';
 import {
   signIn,
   signOut,
@@ -172,7 +172,8 @@ bridge.signOut = signOut;
 bridge.showAuthenticatedOrbisView = showAuthenticatedOrbisView;
 bridge.showAuthView = showAuthView;
 bridge.bootstrapOrbisAfterAuth = async () => {
-  await initializeProtectedModules();
+  const bootOk = await initializeProtectedModules();
+  if (!bootOk) return;
   initAppSections();
 };
 
@@ -299,11 +300,29 @@ function registerLegacyBridges(): void {
   globalThis.applyCareEngagementCenterAccess = applyCareEngagementCenterAccess;
 }
 
-async function initializeProtectedModules(): Promise<void> {
+async function initializeProtectedModules(): Promise<boolean> {
+  let role: string | null = null;
   try {
-    await getUserRole();
+    role = await getUserRole();
   } catch (roleErr) {
     console.warn('Could not resolve user role before boot:', roleErr);
+  }
+
+  if (!role || !canAccessOrbisApp()) {
+    const loginError = document.getElementById('loginError');
+    const message =
+      'Your account does not have Orbis access yet. Contact HR to set up your role (admin, supervisor, or employee portal).';
+    if (loginError) {
+      loginError.textContent = message;
+      loginError.classList.remove('hidden');
+    }
+    await supabase.auth.signOut();
+    showAuthView();
+    return false;
+  }
+
+  if (typeof window.applyRolePermissions === 'function') {
+    window.applyRolePermissions();
   }
 
   try {
@@ -330,7 +349,7 @@ async function initializeProtectedModules(): Promise<void> {
       }
     } else {
       console.warn('loadEmployees bridge missing; roster may not populate.');
-      return;
+      return false;
     }
 
     syncEmployeeStateFromWindow();
@@ -345,7 +364,7 @@ async function initializeProtectedModules(): Promise<void> {
       if (typeof bridge.loadMyTimeOffPortal === 'function') {
         await bridge.loadMyTimeOffPortal();
       }
-      return;
+      return true;
     }
 
     applyOperationsCenterAccess();
@@ -357,6 +376,8 @@ async function initializeProtectedModules(): Promise<void> {
   } catch (err) {
     console.error('Employee module failed to load employees:', err);
   }
+
+  return true;
 }
 
 registerLegacyBridges();
@@ -374,7 +395,15 @@ async function bootAuthenticatedApp(): Promise<void> {
     window.showDashboardLoadingSkeletons();
   }
 
-  await initializeProtectedModules();
+  const bootOk = await initializeProtectedModules();
+  if (!bootOk) {
+    authenticatedBootStarted = false;
+    if (typeof window.hideDashboardLoadingSkeletons === 'function') {
+      window.hideDashboardLoadingSkeletons();
+    }
+    return;
+  }
+
   initAppSections();
   markOrbisBootComplete();
 

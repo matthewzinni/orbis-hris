@@ -297,6 +297,34 @@ function authRedirectFailureMessage(): string {
 async function recoverSessionFromAuthRedirect(): Promise<Session | null> {
   await supabase.auth.initialize();
 
+  const params = readAuthRedirectParams();
+
+  const accessToken = params.get('access_token');
+  const refreshToken = params.get('refresh_token');
+  if (accessToken && refreshToken) {
+    const { data, error } = await supabase.auth.setSession({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
+    if (!error && data.session) {
+      return data.session;
+    }
+    devLog('Auth setSession from hash failed:', error?.message || error);
+  }
+
+  const tokenHash = params.get('token_hash');
+  const otpType = params.get('type');
+  if (tokenHash && otpType) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      token_hash: tokenHash,
+      type: otpType as 'email' | 'magiclink' | 'signup' | 'recovery' | 'invite' | 'email_change',
+    });
+    if (!error && data.session) {
+      return data.session;
+    }
+    devLog('Auth verifyOtp failed:', error?.message || error);
+  }
+
   const {
     data: { session: afterInit },
   } = await supabase.auth.getSession();
@@ -304,7 +332,6 @@ async function recoverSessionFromAuthRedirect(): Promise<Session | null> {
     return afterInit;
   }
 
-  const params = readAuthRedirectParams();
   const code = params.get('code');
   if (code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);

@@ -2,6 +2,7 @@ import {
   isAdminUser,
   isEmployeeUser,
   isSupervisorUser,
+  canAccessAppSection,
   applySupervisorDashboardView,
 } from '../services/access';
 
@@ -270,13 +271,6 @@ function activateNavButtons(sectionId: string): void {
   });
 }
 
-const ADMIN_ONLY_SECTIONS = new Set([
-  'careEngagementView',
-  'investigationsView',
-  'reportsView',
-  'settingsView',
-]);
-
 export function showAppSection(sectionId: string): boolean {
   let resolvedSectionId = String(sectionId || '').trim();
 
@@ -284,8 +278,8 @@ export function showAppSection(sectionId: string): boolean {
     resolvedSectionId = 'myTimeOffView';
   }
 
-  if (ADMIN_ONLY_SECTIONS.has(resolvedSectionId) && !isAdminUser()) {
-    resolvedSectionId = 'dashboardView';
+  if (!canAccessAppSection(resolvedSectionId)) {
+    resolvedSectionId = getDefaultAppSectionId();
   }
 
   const section = resolveAppSection(resolvedSectionId);

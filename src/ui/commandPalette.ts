@@ -451,6 +451,8 @@ function getNavigationCommands(): CommandItem[] {
     'action-new-investigation',
     'nav-reports',
     'nav-settings',
+    'nav-candidates',
+    'nav-documents',
   ]);
 
   if (isAdminUser()) {

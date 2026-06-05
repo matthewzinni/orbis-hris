@@ -16,6 +16,30 @@ export type UserAccessRow = {
   can_delete?: boolean;
 };
 
+/** Leadership emails that must remain admin (not employee portal). */
+export const LEADERSHIP_ADMIN_EMAILS = new Set([
+  'matthew.zinni@btwglobal.com',
+  'trent.wynne@btwglobal.com',
+  'brent.wynne@btwglobal.com',
+]);
+
+const ADMIN_ONLY_SECTIONS = new Set([
+  'candidatesView',
+  'documentsView',
+  'investigationsView',
+  'reportsView',
+  'settingsView',
+]);
+
+const SUPERVISOR_SECTIONS = new Set([
+  'dashboardView',
+  'employeesView',
+  'orgChartView',
+  'attendanceView',
+  'operationsView',
+  'careEngagementView',
+]);
+
 export type EmployeeLike = Record<string, unknown>;
 
 let currentUserRole = 'user';
@@ -119,7 +143,7 @@ export async function getUserRole(): Promise<string | null> {
       const accessRole = String(accessRow.role || '')
         .toLowerCase()
         .trim();
-      if (accessRole) {
+      if (accessRole === 'admin' || accessRole === 'supervisor' || accessRole === 'employee') {
         currentUserRole = accessRole;
         window.currentUserRole = currentUserRole;
         window.currentUserAccess = currentUserAccess;
@@ -145,14 +169,22 @@ export async function getUserRole(): Promise<string | null> {
       )
       .filter(Boolean);
 
-    if (roles.includes('admin')) return 'admin';
-    if (roles.includes('supervisor')) return 'supervisor';
-    if (roles.includes('user')) return 'user';
+    if (roles.includes('admin')) {
+      currentUserRole = 'admin';
+      window.currentUserRole = currentUserRole;
+      return 'admin';
+    }
 
-    const resolved = roles[0] || 'user';
-    currentUserRole = resolved;
+    if (roles.includes('supervisor')) {
+      currentUserRole = 'supervisor';
+      window.currentUserRole = currentUserRole;
+      return 'supervisor';
+    }
+
+    currentUserRole = '';
     window.currentUserRole = currentUserRole;
-    return resolved;
+    window.currentUserAccess = null;
+    return null;
   } catch (err) {
     console.error(err);
     return null;
@@ -173,6 +205,58 @@ export function isSupervisorUser(): boolean {
 
 export function isEmployeeUser(): boolean {
   return String(currentUserRole || '').toLowerCase() === 'employee';
+}
+
+export function canAccessOrbisApp(): boolean {
+  return isAdminUser() || isSupervisorUser() || isEmployeeUser();
+}
+
+export function canAccessAppSection(sectionId: string): boolean {
+  const section = String(sectionId || '').trim();
+  if (!section) return false;
+
+  if (isEmployeeUser()) {
+    return section === 'myTimeOffView';
+  }
+
+  if (isAdminUser()) {
+    return section !== 'myTimeOffView';
+  }
+
+  if (isSupervisorUser()) {
+    if (section === 'myTimeOffView') return false;
+    if (ADMIN_ONLY_SECTIONS.has(section)) return false;
+    return SUPERVISOR_SECTIONS.has(section);
+  }
+
+  return false;
+}
+
+export function applyRoleNavigation(): void {
+  const role = String(currentUserRole || '').toLowerCase();
+
+  document.querySelectorAll<HTMLElement>('[data-nav-view]').forEach((button) => {
+    const sectionId = String(button.dataset.navView || '').trim();
+    const allowed = canAccessAppSection(sectionId);
+    button.classList.toggle('hidden', !allowed);
+    (button as HTMLButtonElement).disabled = !allowed;
+  });
+
+  document
+    .querySelectorAll<HTMLElement>('#dashboardQuickLinks [data-nav-view], .orbis-quick-links [data-nav-view]')
+    .forEach((button) => {
+      const sectionId = String(button.dataset.navView || '').trim();
+      const allowed = canAccessAppSection(sectionId);
+      button.classList.toggle('hidden', !allowed);
+      (button as HTMLButtonElement).disabled = !allowed;
+    });
+
+  if (role === 'admin') {
+    document.querySelectorAll('[data-admin-only="true"], .admin-only').forEach((el) => {
+      (el as HTMLElement).classList.remove('hidden');
+      (el as HTMLInputElement).disabled = false;
+    });
+  }
 }
 
 export function getLinkedEmployeeId(): string {
@@ -775,6 +859,8 @@ export function applyRolePermissions(): void {
     window.applyLeaveAccess();
   }
 
+  applyRoleNavigation();
+
   if (isEmployeeUser()) {
     applyEmployeePortalView();
   }
@@ -837,6 +923,9 @@ declare global {
     applyHrInboxAccess?: () => void;
     applyLeaveAccess?: () => void;
     applyEmployeePortalView?: () => void;
+    applyRoleNavigation?: () => void;
+    canAccessOrbisApp?: () => boolean;
+    canAccessAppSection?: (sectionId: string) => boolean;
     isEmployeeUser?: () => boolean;
     getLinkedEmployeeId?: () => string;
     loadMyTimeOffPortal?: () => Promise<void>;
@@ -853,6 +942,9 @@ window.isAdminUser = isAdminUser;
 window.canManageEmployeeRecords = canManageEmployeeRecords;
 window.isSupervisorUser = isSupervisorUser;
 window.isEmployeeUser = isEmployeeUser;
+window.canAccessOrbisApp = canAccessOrbisApp;
+window.canAccessAppSection = canAccessAppSection;
+window.applyRoleNavigation = applyRoleNavigation;
 window.getLinkedEmployeeId = getLinkedEmployeeId;
 window.applyEmployeePortalView = applyEmployeePortalView;
 window.canAccessPerformanceReviews = canAccessPerformanceReviews;

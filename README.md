@@ -39,9 +39,11 @@ Stay interview CSV import: [scripts/README.md](scripts/README.md) (service role 
 
 | Role | Access |
 |------|--------|
-| **admin** | Full HRIS including Care (edit), investigations, reports, settings |
-| **supervisor** | Team roster; Attendance view; Care center **read-only**; no per-employee Care & Support tab |
-| **user** | Read-only directory |
+| **admin** | Full HRIS — Matthew, Trent, Brent, and HR admins |
+| **supervisor** | Team roster, attendance, operations (scoped), care center read-only, leave approvals |
+| **employee** | **My Time Off** portal only (magic link) |
+
+Users without a `user_access` row (admin, supervisor, or employee) cannot use Orbis. Provision supervisors in **Admin & Settings**; run employee portal scripts for hourly staff (see [DEPLOY.md](DEPLOY.md)).
 
 ## Commands
 
