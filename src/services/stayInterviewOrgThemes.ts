@@ -3,6 +3,7 @@ import {
   FunctionsRelayError,
 } from '@supabase/supabase-js';
 import { supabaseClient } from './supabaseClient';
+import { employeeDisplayName } from './employeeUtils';
 import {
   STAY_INTERVIEW_QUESTION_LABELS,
   type StayInterviewSummaryContext,
@@ -51,6 +52,8 @@ type EmployeeRow = Record<string, unknown>;
 
 type OrgThemesInterviewPacket = {
   label: string;
+  employeeName: string;
+  employeeId: string;
   department: string;
   interviewDate: string;
   interviewType: string;
@@ -119,8 +122,8 @@ function buildResponsesFromRow(row: StayInterviewDbRow): { question: string; ans
   return responses;
 }
 
-function getEmployeeDepartmentMap(): Map<string, string> {
-  const map = new Map<string, string>();
+function getEmployeeRosterMap(): Map<string, { department: string; name: string }> {
+  const map = new Map<string, { department: string; name: string }>();
   const roster =
     (window as { EMPLOYEES?: EmployeeRow[] }).EMPLOYEES ||
     (Array.isArray(window.currentEmployeeRoster) ? window.currentEmployeeRoster : []);
@@ -128,11 +131,27 @@ function getEmployeeDepartmentMap(): Map<string, string> {
   roster.forEach((employee) => {
     const id = String(employee.id || employee.employee_id || '').trim();
     if (!id) return;
-    const department = String(employee.department || employee.dept || 'Unassigned').trim() || 'Unassigned';
-    map.set(id, department);
+    const department =
+      String(employee.department || employee.dept || 'Unassigned').trim() || 'Unassigned';
+    map.set(id, { department, name: employeeDisplayName(employee) });
   });
 
   return map;
+}
+
+function resolveInterviewEmployee(
+  employeeId: string,
+  rosterMap: Map<string, { department: string; name: string }>
+): { employeeName: string; department: string } {
+  const roster = rosterMap.get(employeeId);
+  if (roster) {
+    return { employeeName: roster.name, department: roster.department };
+  }
+
+  return {
+    employeeName: employeeId ? `Employee ${employeeId}` : 'Unknown employee',
+    department: 'Unassigned',
+  };
 }
 
 export async function loadStayInterviewOrgThemesPayload(
@@ -160,7 +179,7 @@ export async function loadStayInterviewOrgThemesPayload(
     throw new StayInterviewOrgThemesError(error.message || 'Could not load stay interviews.');
   }
 
-  const deptMap = getEmployeeDepartmentMap();
+  const rosterMap = getEmployeeRosterMap();
   const rows = (data || []) as StayInterviewDbRow[];
 
   const withContent = rows
@@ -174,13 +193,15 @@ export async function loadStayInterviewOrgThemesPayload(
   const selected = withContent.slice(0, maxInterviews);
   const departmentSet = new Set<string>();
 
-  const interviews: OrgThemesInterviewPacket[] = selected.map((item, index) => {
+  const interviews: OrgThemesInterviewPacket[] = selected.map((item) => {
     const employeeId = String(item.row.employee_id || '').trim();
-    const department = deptMap.get(employeeId) || 'Unassigned';
+    const { employeeName, department } = resolveInterviewEmployee(employeeId, rosterMap);
     departmentSet.add(department);
 
     return {
-      label: `Interview ${index + 1}`,
+      label: `${employeeName} (${department})`,
+      employeeName,
+      employeeId,
       department,
       interviewDate: String(item.row.interview_date || '').trim(),
       interviewType: String(item.row.interview_type || '').trim() || 'Stay Interview',
@@ -317,6 +338,30 @@ export function buildStayInterviewOrgThemesTemplate(payload: OrgThemesInvokePayl
       }
     });
 
+  const summarizeVoice = (interview: OrgThemesInterviewPacket): string => {
+    const goingWell = interview.responses
+      .slice(0, 2)
+      .map((item) => item.answer)
+      .filter(Boolean)
+      .join('; ');
+    const concerns = interview.responses
+      .slice(2, 5)
+      .map((item) => item.answer)
+      .filter(Boolean)
+      .join('; ');
+    const retention = interview.responses[5]?.answer || '';
+    const parts: string[] = [];
+    if (goingWell) parts.push(`Going well: ${goingWell}`);
+    if (concerns) parts.push(`Concerns: ${concerns}`);
+    if (retention) parts.push(`Retention: ${retention}`);
+    return parts.join(' | ') || 'No substantive themes captured.';
+  };
+
+  const voiceLines = payload.interviews.map((interview) => {
+    const name = interview.employeeName || interview.label;
+    return `• ${name} (${interview.department}): ${summarizeVoice(interview)}`;
+  });
+
   const lines: string[] = [
     'EXECUTIVE SUMMARY',
     `Template synthesis from ${payload.interviewCount} stay interview(s) between ${payload.dateFrom} and ${payload.dateTo}. Deploy the analyze-stay-themes edge function with OPENAI_API_KEY for richer theme clustering.`,
@@ -331,6 +376,9 @@ export function buildStayInterviewOrgThemesTemplate(payload: OrgThemesInvokePayl
     ...(sample(retention).length
       ? sample(retention).map((t) => `• ${t}`)
       : ['• No explicit retention concerns captured in this date range.']),
+    '',
+    'VOICES BY THEME',
+    ...voiceLines,
     '',
     'DEPARTMENT SPOTLIGHTS',
     ...(deptLines.length ? deptLines : ['• Not enough variation to highlight by department.']),

@@ -67,7 +67,7 @@ After deploy, sign in on production and use Stay Interviews → **Generate AI su
 
 ## Stay interview org themes (Edge Function)
 
-**Reports → Stay interview themes (leadership)** aggregates anonymized Q&A from recent stay interviews and calls `analyze-stay-themes` (same `OPENAI_API_KEY` secret). Use this for management readouts on what is going well, common obstacles, and retention signals.
+**Reports → Stay interview themes (leadership)** aggregates Q&A from recent stay interviews (with employee names for theme attribution) and calls `analyze-stay-themes` (same `OPENAI_API_KEY` secret). Use this for management readouts on what is going well, common obstacles, retention signals, and who to follow up with.
 
 ```bash
 npx supabase functions deploy analyze-stay-themes

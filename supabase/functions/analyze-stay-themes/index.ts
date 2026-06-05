@@ -5,12 +5,14 @@ const corsHeaders = {
 
 const SYSTEM_PROMPT = `You are an HR business partner synthesizing stay interview themes across BTW Global (manufacturing / operations, United States) for leadership and HR.
 
-Your goal: help management see what is going well, where friction and retention risk cluster, and what to act on early — without naming individuals.
+Your goal: help management see what is going well, where friction and retention risk cluster, who raised similar points, and what to act on early.
 
 Rules:
 - Use ONLY themes supported by the interview responses provided. Do not invent concerns, praise, or policies.
-- Do NOT name individual employees. Refer to departments or roles only when the data supports it.
-- Group recurring themes; note prevalence qualitatively (e.g. "several interviews", "a few departments") when patterns are clear.
+- Each interview packet includes an employee name. Attribute themes to real names from the data so leadership can follow up.
+- In WHAT'S GOING WELL, CONCERNS & OBSTACLES, and RETENTION RISK SIGNALS, end each bullet with who raised it, e.g. "— Emily Mayo, James Smith" or "— Emily Mayo (Fulfillment)". Group people who share the same theme on one bullet.
+- Do not quote long verbatim answers; summarize themes briefly, then list names.
+- Group recurring themes; note prevalence qualitatively when patterns are clear.
 - Separate strengths (motivation, what is going well), obstacles (frustrations, support gaps), retention signals (what might cause leaving), and support asks (what would help them stay).
 - Plain text only. Use these section labels exactly (each on its own line):
 
@@ -18,23 +20,27 @@ EXECUTIVE SUMMARY
 WHAT'S GOING WELL
 CONCERNS & OBSTACLES
 RETENTION RISK SIGNALS
+VOICES BY THEME
 DEPARTMENT SPOTLIGHTS
 RECOMMENDED LEADERSHIP ACTIONS
 DATA NOTE
 
 Section requirements:
 - EXECUTIVE SUMMARY: 2–4 sentences for an executive audience.
-- Other sections: bullet lines starting with "• " (3–6 bullets each when data supports it).
+- WHAT'S GOING WELL / CONCERNS & OBSTACLES / RETENTION RISK SIGNALS: bullet lines starting with "• " (3–6 bullets each when data supports it), each ending with attributed names.
+- VOICES BY THEME: one bullet per employee who had substantive responses — "• [Full name] ([Department]): [brief theme summary across their answers; 1–2 short phrases max]". Include every interviewed employee with real content.
 - DEPARTMENT SPOTLIGHTS: only call out departments where interviews show a distinct pattern; if insufficient data, say "Not enough department-level variation to highlight."
-- RECOMMENDED LEADERSHIP ACTIONS: specific, actionable, prioritized (quick wins vs structural).
-- DATA NOTE: one line stating this is qualitative theme synthesis from stay interviews, not a statistical survey; HR should validate before broad communication.
-- Keep total response under 950 words.
+- RECOMMENDED LEADERSHIP ACTIONS: specific, actionable, prioritized (quick wins vs structural); name who to follow up with when relevant.
+- DATA NOTE: one line stating this is qualitative theme synthesis from stay interviews for internal leadership follow-up, not a statistical survey; HR should validate before broad communication.
+- Keep total response under 1100 words.
 - This is not legal advice.`;
 
 type ResponseItem = { question: string; answer: string };
 
 type InterviewPacket = {
   label?: string;
+  employeeName?: string;
+  employeeId?: string;
   department?: string;
   interviewDate?: string;
   interviewType?: string;
@@ -73,18 +79,20 @@ function buildUserPrompt(body: RequestBody): string {
 
   lines.push('');
   lines.push(
-    'Below are anonymized stay interview packets (department + date + Q&A). Synthesize org-wide themes for leadership.'
+    'Below are stay interview packets (employee name, department, date + Q&A). Synthesize org-wide themes and attribute each theme to who raised it.'
   );
   lines.push('');
 
   const interviews = Array.isArray(body.interviews) ? body.interviews : [];
   interviews.forEach((packet, index) => {
-    const label = String(packet?.label || `Interview ${index + 1}`).trim();
+    const employeeName = String(packet?.employeeName || '').trim();
+    const label = String(packet?.label || employeeName || `Interview ${index + 1}`).trim();
     const dept = String(packet?.department || 'Unknown').trim();
     const date = String(packet?.interviewDate || '').trim();
     const type = String(packet?.interviewType || 'Stay Interview').trim();
 
     lines.push(`--- ${label} ---`);
+    if (employeeName) lines.push(`Employee: ${employeeName}`);
     lines.push(`Department: ${dept}`);
     if (date) lines.push(`Date: ${date}`);
     lines.push(`Type: ${type}`);
@@ -195,7 +203,7 @@ Deno.serve(async (req) => {
           { role: 'user', content: userPrompt },
         ],
         temperature: 0.4,
-        max_tokens: 1400,
+        max_tokens: 1800,
       }),
     });
 

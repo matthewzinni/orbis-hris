@@ -79,7 +79,7 @@ function buildEmailBody(report: string, meta: StayThemesEmailMeta): string {
     '',
     `Attached below is the stay interview themes report from Orbis (${sourceLabel}).`,
     `Period: ${meta.dateFrom} through ${meta.dateTo} (${meta.monthsBack} month lookback, ${meta.interviewCount} interview(s) with responses).`,
-    'Individual employee names are not included in this leadership summary.',
+    'Employee names are included with each theme so you can follow up directly where needed.',
     '',
     '---',
     '',

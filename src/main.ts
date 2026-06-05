@@ -18,7 +18,9 @@ import {
   signIn,
   signOut,
   watchAuthState,
-  getCurrentSession,
+  waitForAuthSession,
+  clearAuthRedirectParams,
+  readAuthRedirectError,
   initAuthBindings,
 } from './modules/auth';
 import { devLog } from './utils/devLog';
@@ -350,35 +352,13 @@ async function initializeProtectedModules(): Promise<void> {
 
 registerLegacyBridges();
 
-window.addEventListener('DOMContentLoaded', async () => {
-  devLog('Orbis booted via main.ts');
+let authenticatedBootStarted = false;
 
-  initAuthBindings();
-  initAppShell();
-  registerLegacyBridges();
+async function bootAuthenticatedApp(): Promise<void> {
+  if (authenticatedBootStarted) return;
+  authenticatedBootStarted = true;
 
-  const session = await getCurrentSession();
-  devLog('Current session:', session);
-
-  watchAuthState((event, sessionData) => {
-    devLog('Auth event:', event, sessionData);
-    if (event === 'SIGNED_IN' && sessionData && document.getElementById('appView')?.classList.contains('hidden')) {
-      showAuthenticatedOrbisView();
-      void initializeProtectedModules().then(() => {
-        initAppSections();
-        if (typeof window.hideDashboardLoadingSkeletons === 'function') {
-          window.hideDashboardLoadingSkeletons();
-        }
-      });
-    }
-  });
-
-  if (!session) {
-    devLog('No active session detected. Waiting for sign in...');
-    showAuthView();
-    return;
-  }
-
+  clearAuthRedirectParams();
   showAuthenticatedOrbisView();
 
   if (typeof window.showDashboardLoadingSkeletons === 'function') {
@@ -392,4 +372,44 @@ window.addEventListener('DOMContentLoaded', async () => {
   if (typeof window.hideDashboardLoadingSkeletons === 'function') {
     window.hideDashboardLoadingSkeletons();
   }
+}
+
+window.addEventListener('DOMContentLoaded', async () => {
+  devLog('Orbis booted via main.ts');
+
+  initAuthBindings();
+  initAppShell();
+  registerLegacyBridges();
+
+  watchAuthState((event, sessionData) => {
+    devLog('Auth event:', event, sessionData);
+    if (
+      sessionData &&
+      (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
+      document.getElementById('appView')?.classList.contains('hidden')
+    ) {
+      void bootAuthenticatedApp();
+    }
+  });
+
+  const session = await waitForAuthSession();
+  devLog('Resolved session:', session);
+
+  if (!session) {
+    const redirectError = readAuthRedirectError();
+    if (redirectError) {
+      const loginError = document.getElementById('loginError');
+      if (loginError) {
+        loginError.textContent = redirectError;
+        loginError.classList.remove('hidden');
+      }
+      clearAuthRedirectParams();
+    }
+
+    devLog('No active session detected. Waiting for sign in...');
+    showAuthView();
+    return;
+  }
+
+  await bootAuthenticatedApp();
 });

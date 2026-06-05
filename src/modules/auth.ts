@@ -1,5 +1,18 @@
+import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabaseClient as supabase } from '../services/supabaseClient';
 import { devLog } from '../utils/devLog';
+
+const AUTH_CALLBACK_PARAM_NAMES = [
+  'code',
+  'token_hash',
+  'access_token',
+  'refresh_token',
+  'type',
+  'error',
+  'error_description',
+] as const;
+
+const AUTH_SESSION_EVENTS = new Set(['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED']);
 
 function showToast(message: string, type: 'success' | 'error' = 'success'): void {
   if (typeof window.showToast === 'function') {
@@ -218,7 +231,37 @@ export async function signOut() {
   }
 }
 
-export async function getCurrentSession() {
+function readAuthRedirectParams(): URLSearchParams {
+  const search = new URLSearchParams(window.location.search);
+  const hash = window.location.hash.replace(/^#/, '');
+  const hashParams = new URLSearchParams(hash.includes('=') ? hash : '');
+
+  AUTH_CALLBACK_PARAM_NAMES.forEach((name) => {
+    const hashValue = hashParams.get(name);
+    if (hashValue && !search.has(name)) {
+      search.set(name, hashValue);
+    }
+  });
+
+  return search;
+}
+
+export function isAuthRedirectUrl(): boolean {
+  const params = readAuthRedirectParams();
+  return AUTH_CALLBACK_PARAM_NAMES.some((name) => params.has(name));
+}
+
+export function readAuthRedirectError(): string {
+  const params = readAuthRedirectParams();
+  return String(params.get('error_description') || params.get('error') || '').trim();
+}
+
+export function clearAuthRedirectParams(): void {
+  if (!isAuthRedirectUrl()) return;
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+export async function getCurrentSession(): Promise<Session | null> {
   if (!isSupabaseConfigured) {
     return null;
   }
@@ -228,6 +271,53 @@ export async function getCurrentSession() {
   } = await supabase.auth.getSession();
 
   return session;
+}
+
+/**
+ * Magic-link redirects land with ?code= or #access_token= before the client has a session.
+ * Wait briefly for Supabase to finish the exchange instead of showing login immediately.
+ */
+export async function waitForAuthSession(timeoutMs = 8000): Promise<Session | null> {
+  if (!isSupabaseConfigured) {
+    return null;
+  }
+
+  const existing = await getCurrentSession();
+  if (existing) {
+    return existing;
+  }
+
+  if (!isAuthRedirectUrl()) {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const finish = (session: Session | null) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      subscription.unsubscribe();
+      resolve(session);
+    };
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && AUTH_SESSION_EVENTS.has(event)) {
+        finish(session);
+      }
+    });
+
+    const timer = window.setTimeout(() => {
+      void getCurrentSession().then((session) => finish(session));
+    }, timeoutMs);
+
+    void getCurrentSession().then((session) => {
+      if (session) finish(session);
+    });
+  });
 }
 
 export function watchAuthState(callback: (event: string, session: unknown) => void) {

@@ -21,7 +21,15 @@ const fallbackKey =
 
 export const supabaseClient = createClient(
   isSupabaseConfigured ? supabaseUrl : fallbackUrl,
-  isSupabaseConfigured ? supabaseAnonKey : fallbackKey
+  isSupabaseConfigured ? supabaseAnonKey : fallbackKey,
+  {
+    auth: {
+      detectSessionInUrl: true,
+      persistSession: true,
+      autoRefreshToken: true,
+      flowType: 'pkce',
+    },
+  }
 );
 export const supabase = supabaseClient;
 
