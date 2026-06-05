@@ -151,14 +151,10 @@ function emailOrgThemesToLeadership(): void {
   }
 
   try {
-    const { usedFallback } = openStayThemesLeadershipEmail(text, lastThemesEmailMeta);
-    if (usedFallback.length) {
-      showToast(
-        `Opening email (default address used for ${usedFallback.join(', ')} — set work email in Orbis if needed).`
-      );
-    } else {
-      showToast('Opening email to Trent and Brent with the themes report.');
-    }
+    const { recipients, senderEmail } = openStayThemesLeadershipEmail(text, lastThemesEmailMeta);
+    showToast(
+      `Opening email to ${recipients.join(', ')} (Cc: ${senderEmail}).`
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Could not open email.';
     showToast(message, 'error');
