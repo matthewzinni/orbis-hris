@@ -21,8 +21,7 @@ function showToast(message: string, type: 'success' | 'error' = 'success'): void
 }
 
 function setLoginLoading(loading: boolean): void {
-  const btn = document.getElementById('loginBtn') as HTMLButtonElement | null;
-  const registerBtn = document.getElementById('registerBtn') as HTMLButtonElement | null;
+  const btn = document.getElementById('authSubmitBtn') as HTMLButtonElement | null;
   const email = document.getElementById('loginEmail') as HTMLInputElement | null;
   const password = document.getElementById('loginPassword') as HTMLInputElement | null;
   const confirm = document.getElementById('registerPasswordConfirm') as HTMLInputElement | null;
@@ -31,13 +30,12 @@ function setLoginLoading(loading: boolean): void {
   const busy = loading;
   if (btn) {
     btn.disabled = busy;
-    btn.textContent = busy && authMode === 'signin' ? 'Signing in…' : 'Sign In';
-    btn.setAttribute('aria-busy', busy && authMode === 'signin' ? 'true' : 'false');
-  }
-  if (registerBtn) {
-    registerBtn.disabled = busy;
-    registerBtn.textContent = busy && authMode === 'register' ? 'Creating account…' : 'Create account';
-    registerBtn.setAttribute('aria-busy', busy && authMode === 'register' ? 'true' : 'false');
+    if (busy) {
+      btn.textContent = authMode === 'register' ? 'Creating account…' : 'Signing in…';
+    } else {
+      btn.textContent = authMode === 'register' ? 'Create account' : 'Sign in';
+    }
+    btn.setAttribute('aria-busy', busy ? 'true' : 'false');
   }
 
   if (email) email.disabled = busy;
@@ -103,18 +101,21 @@ async function enterAuthenticatedApp(): Promise<void> {
 export function setAuthMode(mode: AuthMode): void {
   authMode = mode;
 
-  const signInPanel = document.getElementById('authSignInPanel');
   const registerPanel = document.getElementById('authRegisterPanel');
   const signInTab = document.getElementById('authTabSignIn');
   const registerTab = document.getElementById('authTabRegister');
+  const submitBtn = document.getElementById('authSubmitBtn') as HTMLButtonElement | null;
 
-  signInPanel?.classList.toggle('hidden', mode !== 'signin');
   registerPanel?.classList.toggle('hidden', mode !== 'register');
 
   signInTab?.classList.toggle('active', mode === 'signin');
   registerTab?.classList.toggle('active', mode === 'register');
   signInTab?.setAttribute('aria-selected', mode === 'signin' ? 'true' : 'false');
   registerTab?.setAttribute('aria-selected', mode === 'register' ? 'true' : 'false');
+
+  if (submitBtn) {
+    submitBtn.textContent = mode === 'register' ? 'Create account' : 'Sign in';
+  }
 
   const password = document.getElementById('loginPassword') as HTMLInputElement | null;
   const passwordLabel = document.querySelector<HTMLLabelElement>('label[for="loginPassword"]');
@@ -434,25 +435,21 @@ export async function waitForAuthSession(timeoutMs = 8000): Promise<Session | nu
 
 /** Wire login / register / logout without inline HTML handlers. */
 export function initAuthBindings(): void {
-  const loginBtn = document.getElementById('loginBtn');
-  const registerBtn = document.getElementById('registerBtn');
+  const submitBtn = document.getElementById('authSubmitBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const email = document.getElementById('loginEmail');
   const password = document.getElementById('loginPassword');
   const signInTab = document.getElementById('authTabSignIn');
   const registerTab = document.getElementById('authTabRegister');
 
-  if (loginBtn && loginBtn.getAttribute('data-auth-bound') !== '1') {
-    loginBtn.setAttribute('data-auth-bound', '1');
-    loginBtn.addEventListener('click', () => {
-      void signIn();
-    });
-  }
-
-  if (registerBtn && registerBtn.getAttribute('data-auth-bound') !== '1') {
-    registerBtn.setAttribute('data-auth-bound', '1');
-    registerBtn.addEventListener('click', () => {
-      void registerAccount();
+  if (submitBtn && submitBtn.getAttribute('data-auth-bound') !== '1') {
+    submitBtn.setAttribute('data-auth-bound', '1');
+    submitBtn.addEventListener('click', () => {
+      if (authMode === 'register') {
+        void registerAccount();
+      } else {
+        void signIn();
+      }
     });
   }
 
