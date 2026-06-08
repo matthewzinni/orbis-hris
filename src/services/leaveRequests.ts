@@ -223,7 +223,22 @@ export async function createLeaveRequest(draft: LeaveRequestDraft): Promise<Leav
     throw new Error(error.message || 'Could not create leave request.');
   }
 
-  return mapRow((data || {}) as Record<string, unknown>);
+  const record = mapRow((data || {}) as Record<string, unknown>);
+
+  void supabaseClient.functions
+    .invoke('notify-leave-request', {
+      body: { leave_request_id: record.id },
+    })
+    .then(({ error: notifyErr }) => {
+      if (notifyErr) {
+        console.warn('[LeaveRequests] Notification email skipped:', notifyErr.message);
+      }
+    })
+    .catch((notifyErr) => {
+      console.warn('[LeaveRequests] Notification email failed:', notifyErr);
+    });
+
+  return record;
 }
 
 export async function approveLeaveRequest(

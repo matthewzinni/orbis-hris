@@ -42,6 +42,26 @@ After `npm run db:push` (migration `20260611120000_account_registration_approval
 
 **PTO requests** require approval by the employee’s **direct supervisor** or **admin**.
 
+## Time off email notifications (Edge Function)
+
+When an employee submits PTO, Orbis calls `notify-leave-request`. It emails leadership admins and the employee’s **supervisor** (from roster + `user_access`).
+
+Set the same SMTP credentials you use for the weekly HR report:
+
+```bash
+supabase secrets set SMTP_HOST=smtp.gmail.com
+supabase secrets set SMTP_PORT=587
+supabase secrets set SMTP_USER=your-hr-mailbox@btwglobal.com
+supabase secrets set SMTP_PASS=your-google-app-password
+supabase secrets set MAIL_FROM=your-hr-mailbox@btwglobal.com
+# Optional extra recipients (comma-separated)
+supabase secrets set NOTIFY_LEAVE_EXTRA_EMAILS=
+
+supabase functions deploy notify-leave-request
+```
+
+If SMTP secrets are missing, requests still save and appear in **HR Inbox** — email is skipped.
+
 ## Stay interview AI summary (Edge Function)
 
 The **Generate AI summary** button calls `summarize-stay-interview`. The OpenAI key must live in Supabase secrets (never in `VITE_*`).

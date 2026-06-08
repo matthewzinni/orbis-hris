@@ -17,6 +17,7 @@ scripts/output/
 .env
 .env.local
 .env.*.local
+mobile/.env
 supabase/.branches
 supabase/.temp
 .mcp-*.json

@@ -137,14 +137,24 @@ function collectWorkspaceAlerts(): WorkspaceAlert[] {
   const inboxItems =
     typeof window.getHrInboxItems === 'function' ? window.getHrInboxItems() : window.__hrInboxCache;
 
-  if (isAdminUser() && inboxItems !== undefined) {
-    return summarizeHrInboxForAlerts(inboxItems).map((alert) => ({
+  if ((isAdminUser() || isSupervisorUser()) && inboxItems !== undefined) {
+    const inboxAlerts = summarizeHrInboxForAlerts(inboxItems).map((alert) => ({
       id: alert.id,
       label: alert.label,
       detail: alert.detail,
       count: alert.count,
       viewId: alert.viewId,
     }));
+
+    if (isSupervisorUser() && !isAdminUser()) {
+      const supervisorKinds = new Set([
+        'leave-requests-pending',
+        'payroll-handoffs-pending',
+      ]);
+      return inboxAlerts.filter((alert) => supervisorKinds.has(alert.id));
+    }
+
+    return inboxAlerts;
   }
 
   return collectWorkspaceAlertsFromDom();
