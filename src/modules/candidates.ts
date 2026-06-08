@@ -5,6 +5,7 @@ import {
   isSupervisorUser,
 } from '../services/access';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
+import { employeePortalSignInEmail } from '../services/employeeUtils';
 import { logNewHirePayrollHandoff } from '../services/payrollHandoff';
 import { renderDashboardRetryState } from '../ui/dashboardRetry';
 import { showOrbisConfirm } from '../ui/confirmModal';
@@ -42,6 +43,7 @@ interface CandidateRecord {
   interview_type?: string;
   interview_status?: string;
   interview_notes?: string;
+  linked_employee_id?: string | null;
   [key: string]: unknown;
 }
 
@@ -83,6 +85,7 @@ declare global {
     closeEmployeeDrawer?: () => void;
     switchCandidateTab?: (tabName: string) => void;
     openNewCandidateForm?: () => void;
+    createCandidateFromEmployee?: () => Promise<void>;
     inviteCandidateToInterview?: () => void;
     setText?: (id: string, value: unknown) => void;
     todayInputValue?: () => string;
@@ -91,6 +94,7 @@ declare global {
 }
 
 let currentCandidateId: string | null = null;
+let currentLinkedEmployeeId: string | null = null;
 let isCandidateSaveInProgress = false;
 let pendingCandidateResumeFile: File | null = null;
 let candidateResumeUiBound = false;
@@ -125,6 +129,52 @@ function escapeHtml(value: unknown): string {
 
 function nl2br(value: unknown): string {
   return escapeHtml(value).replace(/\n/g, '<br>');
+}
+
+function resolveEmployeeRosterId(employee: Record<string, unknown> | null | undefined): string {
+  return String(
+    employee?.id || employee?.employee_id || employee?.dbId || employee?.displayId || ''
+  ).trim();
+}
+
+function getLinkedEmployeeIdFromDrawer(): string {
+  return (
+    getInputValue('candidateLinkedEmployeeIdInput') || String(currentLinkedEmployeeId || '').trim()
+  );
+}
+
+function isInternalCandidate(candidate: CandidateRecord | null | undefined): boolean {
+  return Boolean(String(candidate?.linked_employee_id || '').trim());
+}
+
+function internalCandidateNameLabel(row: CandidateRecord): string {
+  const name =
+    `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Unnamed Candidate';
+  if (!isInternalCandidate(row)) return name;
+  return `${name} (Internal)`;
+}
+
+function updateConvertCandidateButtonLabel(candidate: CandidateRecord | null): void {
+  const button = safeGet<HTMLButtonElement>('convertCandidateFromDrawerBtn');
+  if (!button) return;
+  button.textContent = isInternalCandidate(candidate)
+    ? 'Complete Internal Move'
+    : 'Convert to Employee';
+}
+
+function renderInternalCandidateBanner(candidate: CandidateRecord | null): void {
+  const banner = safeGet('candidateInternalBanner');
+  if (!banner) return;
+
+  const linkedId = String(candidate?.linked_employee_id || getLinkedEmployeeIdFromDrawer() || '').trim();
+  if (!linkedId) {
+    banner.classList.add('hidden');
+    banner.textContent = '';
+    return;
+  }
+
+  banner.classList.remove('hidden');
+  banner.innerHTML = `Internal candidate linked to employee <strong>${escapeHtml(linkedId)}</strong>. Enter the <em>target</em> position and department below.`;
 }
 
 function normalizeDepartment(value: unknown): string {
@@ -539,7 +589,7 @@ export async function loadCandidates(): Promise<void> {
             <tr data-candidate-id="${escapeHtml(row.id || '')}">
               <td>
                 <button class="link-button" type="button" data-edit-candidate-id="${escapeHtml(row.id || '')}">
-                  ${escapeHtml(`${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Unnamed Candidate')}
+                  ${escapeHtml(internalCandidateNameLabel(row))}
                 </button>
               </td>
               <td>${escapeHtml(row.position || '')}</td>
@@ -554,7 +604,11 @@ export async function loadCandidates(): Promise<void> {
                   data-move-candidate-id="${escapeHtml(row.id || '')}"
                   data-next-stage="${escapeHtml(getNextCandidateStage(row.stage))}"
                 >
-                  ${getNextCandidateStage(row.stage) === 'Hired' ? 'Hire' : 'Move'}
+                  ${getNextCandidateStage(row.stage) === 'Hired'
+                    ? isInternalCandidate(row)
+                      ? 'Complete Move'
+                      : 'Hire'
+                    : 'Move'}
                 </button>
 
                 <button class="button danger sm" type="button" data-delete-candidate-id="${escapeHtml(row.id || '')}">
@@ -572,7 +626,7 @@ export async function loadCandidates(): Promise<void> {
             <div class="history-item" data-candidate-id="${escapeHtml(row.id || '')}">
               <div class="history-top">
                 <div>
-                  <strong>${escapeHtml(`${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Unnamed Candidate')}</strong>
+                  <strong>${escapeHtml(internalCandidateNameLabel(row))}</strong>
                   <span>${escapeHtml(row.position || '')}</span>
                 </div>
 
@@ -584,7 +638,11 @@ export async function loadCandidates(): Promise<void> {
                     data-move-candidate-id="${escapeHtml(row.id || '')}"
                     data-next-stage="${escapeHtml(getNextCandidateStage(row.stage))}"
                   >
-                    ${getNextCandidateStage(row.stage) === 'Hired' ? 'Hire' : 'Move'}
+                    ${getNextCandidateStage(row.stage) === 'Hired'
+                    ? isInternalCandidate(row)
+                      ? 'Complete Move'
+                      : 'Hire'
+                    : 'Move'}
                   </button>
                   <button class="button danger sm" type="button" data-delete-candidate-id="${escapeHtml(row.id || '')}">Delete</button>
                 </div>
@@ -874,16 +932,47 @@ export async function saveCandidateRecord(): Promise<void> {
     if (!validateCandidateDepartmentForSave(String(normalizedPayload.department || ''))) {
       return;
     }
+
+    const linkedEmployeeId = getLinkedEmployeeIdFromDrawer();
+    if (linkedEmployeeId) {
+      normalizedPayload.linked_employee_id = linkedEmployeeId;
+      normalizedPayload.source =
+        String(normalizedPayload.source || '').trim() || 'Internal';
+
+      if (!String(normalizedPayload.position || '').trim()) {
+        showToast('Enter the target position for this internal candidate.', 'error');
+        return;
+      }
+    }
+
+    if (!currentCandidateId && linkedEmployeeId) {
+      const { data: openPipeline, error: pipelineError } = await supabaseClient
+        .from('candidates')
+        .select('id, position, stage')
+        .eq('linked_employee_id', linkedEmployeeId)
+        .neq('stage', 'Hired')
+        .limit(1);
+
+      if (pipelineError) {
+        console.warn('[Candidates] Could not check internal pipeline duplicate:', pipelineError);
+      } else if (openPipeline?.length) {
+        showToast('This employee already has an open candidate record for another position.', 'error');
+        return;
+      }
+    }
+
     const existingRows = Array.from(document.querySelectorAll('[data-candidate-id]'));
 
-    const duplicateExists = existingRows.some((row) => {
-      const text = row.textContent?.toLowerCase() || '';
+    const duplicateExists =
+      !linkedEmployeeId &&
+      existingRows.some((row) => {
+        const text = row.textContent?.toLowerCase() || '';
 
-      return (
-        text.includes(normalizedPayload.first_name?.toLowerCase() || '') &&
-        text.includes(normalizedPayload.last_name?.toLowerCase() || '')
-      );
-    });
+        return (
+          text.includes(normalizedPayload.first_name?.toLowerCase() || '') &&
+          text.includes(normalizedPayload.last_name?.toLowerCase() || '')
+        );
+      });
 
     if (duplicateExists && !currentCandidateId) {
       showToast('Candidate already exists.', 'error');
@@ -996,6 +1085,9 @@ export async function saveCandidateRecord(): Promise<void> {
       }
 
       renderCandidateResumeUi(await fetchCandidateById(savedCandidateId));
+      const savedCandidate = await fetchCandidateById(savedCandidateId);
+      renderInternalCandidateBanner(savedCandidate);
+      updateConvertCandidateButtonLabel(savedCandidate);
     } else {
       currentCandidateId = null;
       (window as { currentCandidateId?: string | null }).currentCandidateId = null;
@@ -1077,6 +1169,62 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
   if (!canAccessCandidate(data as CandidateRecord)) {
     showToast('Candidate not found.', 'error');
     return false;
+  }
+
+  const linkedEmployeeId = String(data.linked_employee_id || '').trim();
+  if (linkedEmployeeId) {
+    const { data: linkedEmployee, error: linkedError } = await supabaseClient
+      .from('employees')
+      .select('id, first_name, last_name, position, department')
+      .eq('id', linkedEmployeeId)
+      .maybeSingle();
+
+    if (linkedError || !linkedEmployee) {
+      showToast('Linked employee not found on the roster.', 'error');
+      return false;
+    }
+
+    const updates: Record<string, string> = {};
+    const newPosition = String(data.position || '').trim();
+    const newDepartment = String(data.department || '').trim();
+
+    if (newPosition && newPosition !== String(linkedEmployee.position || '').trim()) {
+      updates.position = newPosition;
+    }
+    if (newDepartment && newDepartment !== String(linkedEmployee.department || '').trim()) {
+      updates.department = newDepartment;
+    }
+
+    if (Object.keys(updates).length) {
+      const { error: updateError } = await supabaseClient
+        .from('employees')
+        .update(updates)
+        .eq('id', linkedEmployeeId);
+
+      if (updateError) {
+        console.error('Could not update linked employee role:', updateError);
+        showToast(updateError.message || 'Could not update employee role.', 'error');
+        return false;
+      }
+    }
+
+    await supabaseClient.from('candidates').update({ stage: 'Hired' }).eq('id', candidateId);
+
+    showToast(
+      Object.keys(updates).length
+        ? 'Internal move complete — employee role updated.'
+        : 'Internal move complete — candidate marked hired.'
+    );
+
+    await refreshCandidatesUi();
+
+    if (typeof window.loadEmployees === 'function') {
+      await window.loadEmployees();
+    } else if (typeof window.loadAllDashboardData === 'function') {
+      await window.loadAllDashboardData();
+    }
+
+    return true;
   }
 
   const existingEmployee = await supabaseClient
@@ -1210,6 +1358,7 @@ window.closeActiveDrawer = closeActiveDrawer;
 window.isCandidateDrawerOpen = isCandidateDrawerOpen;
 window.switchCandidateTab = switchCandidateTab;
 window.openNewCandidateForm = openNewCandidateForm;
+window.createCandidateFromEmployee = createCandidateFromEmployee;
 window.inviteCandidateToInterview = inviteCandidateToInterview;
 
 window.convertCurrentCandidateToEmployee = async function convertCurrentCandidateToEmployee(): Promise<void> {
@@ -1277,7 +1426,11 @@ function renderCandidateDrawerIdentityHeader(candidate: CandidateRecord | null):
     `${firstName} ${lastName}`.trim() || (candidate?.id ? 'Candidate' : 'New Candidate');
   const position = String(candidate?.position || 'Candidate');
   const stage = String(candidate?.stage || 'Applied');
-  const subtitle = candidate?.id ? `${position} • ${stage}` : 'Create candidate record';
+  const linkedId = String(candidate?.linked_employee_id || getLinkedEmployeeIdFromDrawer() || '').trim();
+  const internalSuffix = linkedId ? ` • Internal (${linkedId})` : '';
+  const subtitle = candidate?.id ? `${position} • ${stage}${internalSuffix}` : linkedId
+    ? `Internal candidate for ${linkedId}`
+    : 'Create candidate record';
   const statusLabel = candidate?.id ? stage : 'Draft';
   const initial = displayName.charAt(0).toUpperCase() || 'C';
 
@@ -1372,6 +1525,10 @@ export function closeCandidateDrawer(): void {
 
   document.body.style.overflow = '';
   currentCandidateId = null;
+  currentLinkedEmployeeId = null;
+  setInputValue('candidateLinkedEmployeeIdInput', '');
+  renderInternalCandidateBanner(null);
+  updateConvertCandidateButtonLabel(null);
 }
 
 export function closeActiveDrawer(): void {
@@ -1548,6 +1705,9 @@ function bindCandidateResumeUi(): void {
 }
 
 function fillCandidateDrawerFields(candidate: CandidateRecord): void {
+  const linkedEmployeeId = String(candidate.linked_employee_id || '').trim();
+  currentLinkedEmployeeId = linkedEmployeeId || null;
+
   const fieldValues: Record<string, string> = {
     candidateFirstNameInput: candidate.first_name || '',
     candidateLastNameInput: candidate.last_name || '',
@@ -1564,6 +1724,7 @@ function fillCandidateDrawerFields(candidate: CandidateRecord): void {
     candidateInterviewType: String(candidate.interview_type || ''),
     candidateInterviewStatus: String(candidate.interview_status || ''),
     candidateInterviewNotes: String(candidate.interview_notes || ''),
+    candidateLinkedEmployeeIdInput: linkedEmployeeId,
   };
 
   Object.entries(fieldValues).forEach(([id, value]) => {
@@ -1575,6 +1736,8 @@ function fillCandidateDrawerFields(candidate: CandidateRecord): void {
   });
 
   renderCandidateResumeUi(candidate);
+  renderInternalCandidateBanner(candidate);
+  updateConvertCandidateButtonLabel(candidate);
 }
 
 export async function openCandidateDrawer(candidateId: string): Promise<void> {
@@ -1621,6 +1784,7 @@ export async function openCandidateDrawer(candidateId: string): Promise<void> {
 
 export function openNewCandidateForm(): void {
   currentCandidateId = null;
+  currentLinkedEmployeeId = null;
   pendingCandidateResumeFile = null;
 
   const backdrop = safeGet('drawerBackdrop');
@@ -1646,6 +1810,125 @@ export function openNewCandidateForm(): void {
   switchCandidateTab('profile');
   applyDrawerOpenStyles(drawer, backdrop);
   renderCandidateDrawerIdentityHeader(null);
+}
+
+export async function createCandidateFromEmployee(
+  employeeInput?: Record<string, unknown> | null
+): Promise<void> {
+  if (!isAdminUser()) {
+    showToast('Only admins can add employees to the candidate pipeline.', 'error');
+    return;
+  }
+
+  const employee =
+    employeeInput ||
+    ((window as { currentEmployee?: Record<string, unknown> | null }).currentEmployee ?? null);
+
+  if (!employee) {
+    showToast('Open an employee record first.', 'error');
+    return;
+  }
+
+  const rosterId = resolveEmployeeRosterId(employee);
+  if (!rosterId) {
+    showToast('Employee ID is required.', 'error');
+    return;
+  }
+
+  const { data: openPipeline, error: pipelineError } = await supabaseClient
+    .from('candidates')
+    .select('id, position, stage')
+    .eq('linked_employee_id', rosterId)
+    .neq('stage', 'Hired')
+    .order('created_at', { ascending: false })
+    .limit(1);
+
+  if (pipelineError) {
+    console.error('[Candidates] Could not check existing internal pipeline:', pipelineError);
+    showToast('Could not check for an existing candidate record.', 'error');
+    return;
+  }
+
+  if (openPipeline?.length) {
+    const existing = openPipeline[0];
+    const label = `${existing.position || 'new role'} (${existing.stage || 'Applied'})`;
+    const openExisting = await showOrbisConfirm(
+      `${employeeDisplayNameFromRecord(employee)} already has an open candidate record: ${label}. Open it instead?`,
+      {
+        title: 'Existing internal candidate',
+        confirmLabel: 'Open record',
+      }
+    );
+
+    if (openExisting) {
+      await openCandidateDrawer(String(existing.id || ''));
+    }
+    return;
+  }
+
+  const firstName = String(employee.first_name || employee.first || '').trim();
+  const lastName = String(employee.last_name || employee.last || '').trim();
+  const currentPosition = String(employee.position || '').trim();
+  const currentDepartment = String(employee.department || '').trim();
+  const email = employeePortalSignInEmail(employee);
+  const phone = String(employee.phone || '').trim();
+  const summaryParts = [
+    'Internal candidate for a new position.',
+    currentPosition || currentDepartment
+      ? `Current role: ${[currentPosition, currentDepartment].filter(Boolean).join(' • ')}.`
+      : '',
+  ].filter(Boolean);
+
+  currentLinkedEmployeeId = rosterId;
+  currentCandidateId = null;
+  pendingCandidateResumeFile = null;
+
+  const employeeDrawer = safeGet('employeeDrawer');
+  if (employeeDrawer) {
+    employeeDrawer.classList.remove('open');
+    employeeDrawer.classList.add('hidden');
+    employeeDrawer.setAttribute('aria-hidden', 'true');
+    employeeDrawer.style.setProperty('display', 'none', 'important');
+  }
+
+  const backdrop = safeGet('drawerBackdrop');
+  const drawer = safeGet('candidateDrawer');
+  if (!drawer) {
+    console.error('candidateDrawer not found');
+    return;
+  }
+
+  restoreDrawerTabPlacement('candidateDrawer');
+
+  fillCandidateDrawerFields({
+    first_name: firstName,
+    last_name: lastName,
+    email,
+    phone,
+    position: '',
+    department: '',
+    stage: 'Applied',
+    source: 'Internal',
+    applied_date: todayInputValue(),
+    notes: summaryParts.join(' '),
+    linked_employee_id: rosterId,
+  });
+
+  switchCandidateTab('profile');
+  applyDrawerOpenStyles(drawer, backdrop);
+  renderCandidateDrawerIdentityHeader({
+    first_name: firstName,
+    last_name: lastName,
+    linked_employee_id: rosterId,
+  });
+
+  showToast('Enter the target position and department, then save the candidate.');
+}
+
+function employeeDisplayNameFromRecord(employee: Record<string, unknown>): string {
+  const first = String(employee.first_name || employee.first || '').trim();
+  const last = String(employee.last_name || employee.last || '').trim();
+  return `${first} ${last}`.trim() || String(employee.id || 'Employee');
 }
 
 function bindCandidateDrawerClicks(): void {

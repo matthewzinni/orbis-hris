@@ -2065,6 +2065,8 @@
               <div class="card">
                 <div class="card-header">Candidate Record</div>
                 <div class="card-body">
+                  <input id="candidateLinkedEmployeeIdInput" type="hidden" value="" />
+                  <div class="candidate-internal-banner hidden" id="candidateInternalBanner"></div>
                   <div class="two-col">
                     <div class="field">
                       <label for="candidateFirstNameInput">First Name</label>
@@ -4744,6 +4746,14 @@
                       onclick="openNewEmployeeForm()"
                     >
                       New Employee
+                    </button>
+                    <button
+                      class="button soft admin-only hidden"
+                      id="addEmployeeAsCandidateBtn"
+                      type="button"
+                      onclick="createCandidateFromEmployee()"
+                    >
+                      Add as Candidate
                     </button>
                     <button
                       class="button danger"
