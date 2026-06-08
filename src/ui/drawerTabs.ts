@@ -107,6 +107,10 @@ function runEmployeeTabSideEffects(tabName: string): void {
     window.currentEmployee &&
     typeof window.forcePopulateEmployeeAdminPanel === 'function'
   ) {
+    if (typeof window.applyAddEmployeeAsCandidateAccess === 'function') {
+      window.applyAddEmployeeAsCandidateAccess();
+    }
+
     setTimeout(() => {
       if (window.isCreatingEmployee || !window.currentEmployee) {
         return;

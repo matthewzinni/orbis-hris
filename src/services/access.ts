@@ -573,6 +573,35 @@ export function applyRoleLocks(): void {
     el.disabled = locked;
     el.title = locked ? 'Locked: admin access required' : '';
   });
+
+  applyAddEmployeeAsCandidateAccess();
+}
+
+export function applyAddEmployeeAsCandidateAccess(): void {
+  const section = safeGet('employeeInternalMobilitySection');
+  const button = safeGet('addEmployeeAsCandidateBtn') as HTMLButtonElement | null;
+  if (!section && !button) return;
+
+  const show =
+    isAdminUser() &&
+    !Boolean(window.isCreatingEmployee) &&
+    Boolean(window.currentEmployee);
+
+  if (section) {
+    section.classList.toggle('hidden', !show);
+  }
+
+  if (button) {
+    button.classList.toggle('hidden', !show);
+    button.disabled = !show;
+    if (show) {
+      button.removeAttribute('title');
+    } else {
+      button.title = isAdminUser()
+        ? 'Open a saved employee record to add them as a candidate'
+        : 'Admin access required';
+    }
+  }
 }
 
 export function ensureDeleteEmployeeButton(): HTMLButtonElement | null {
@@ -697,7 +726,7 @@ export function applyRolePermissions(): void {
   if (supervisorMode) {
     document
       .querySelectorAll(
-        '#deleteEmployeeBtn, #terminateEmployeeBtn, .delete-btn, .danger-delete, [data-delete-review-id], [data-admin-only="true"]'
+        '#deleteEmployeeBtn, #terminateEmployeeBtn, #addEmployeeAsCandidateBtn, #employeeInternalMobilitySection, .delete-btn, .danger-delete, [data-delete-review-id], [data-admin-only="true"]'
       )
       .forEach((el) => {
         (el as HTMLElement).classList.add('hidden');
@@ -1036,6 +1065,7 @@ declare global {
     currentFilteredEmployees?: unknown[];
     isActiveDashboardEmployee?: (employee: EmployeeLike) => boolean;
     applyRoleLocks?: () => void;
+    applyAddEmployeeAsCandidateAccess?: () => void;
     applyRolePermissions?: () => void;
     ensureDeleteEmployeeButton?: () => HTMLButtonElement | null;
     runDeleteEmployee?: () => void;
@@ -1076,5 +1106,6 @@ window.applyAdminDashboardView = applyAdminDashboardView;
 window.applySupervisorDashboardView = applySupervisorDashboardView;
 window.clearOrbisSessionState = clearOrbisSessionState;
 window.applyRoleLocks = applyRoleLocks;
+window.applyAddEmployeeAsCandidateAccess = applyAddEmployeeAsCandidateAccess;
 window.applyRolePermissions = applyRolePermissions;
 window.ensureDeleteEmployeeButton = ensureDeleteEmployeeButton;

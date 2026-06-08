@@ -4731,6 +4731,28 @@
                     </div>
                     <div id="payrollHandoffList"></div>
                   </div>
+                  <div
+                    class="admin-only hidden"
+                    id="employeeInternalMobilitySection"
+                    data-admin-only="true"
+                    style="margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px"
+                  >
+                    <div style="font-weight: 800; margin-bottom: 8px; color: var(--navy)">
+                      Internal mobility
+                    </div>
+                    <p class="muted" style="margin: 0 0 12px; font-size: 0.88rem; line-height: 1.45">
+                      Add this employee to the candidate pipeline for another position without creating a
+                      duplicate roster record.
+                    </p>
+                    <button
+                      class="button soft"
+                      id="addEmployeeAsCandidateBtn"
+                      type="button"
+                      onclick="createCandidateFromEmployee()"
+                    >
+                      Add as Candidate
+                    </button>
+                  </div>
                   <div class="button-row" style="margin-top: 8px">
                     <button
                       class="button primary"
@@ -4746,14 +4768,6 @@
                       onclick="openNewEmployeeForm()"
                     >
                       New Employee
-                    </button>
-                    <button
-                      class="button soft admin-only hidden"
-                      id="addEmployeeAsCandidateBtn"
-                      type="button"
-                      onclick="createCandidateFromEmployee()"
-                    >
-                      Add as Candidate
                     </button>
                     <button
                       class="button danger"
