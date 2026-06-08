@@ -9,12 +9,31 @@ export type UserAccessRow = {
   display_name?: string;
   role?: string;
   supervisor_name?: string;
-  /** When non-empty, supervisor roster + RLS are limited to these employees.id (UUID) values. */
+  /** When non-empty, supervisor roster + RLS are limited to these employees.id values. */
   supervised_employee_ids?: string[] | null;
-  /** employees.id for role=employee (self-service PTO portal). */
+  /** employees.id for role=user (self-service PTO portal). */
   linked_employee_id?: string | null;
   can_delete?: boolean;
+  approval_status?: 'pending' | 'approved' | 'rejected' | string;
 };
+
+export type OrbisAccessState = 'approved' | 'pending' | 'rejected' | 'none';
+
+function normalizeOrbisRole(role: string): string {
+  const value = String(role || '').trim().toLowerCase();
+  if (value === 'employee') return 'user';
+  return value;
+}
+
+export function getAccessApprovalStatus(
+  row: UserAccessRow | null | undefined
+): OrbisAccessState {
+  const status = String(row?.approval_status || 'approved').trim().toLowerCase();
+  if (status === 'pending') return 'pending';
+  if (status === 'rejected') return 'rejected';
+  if (status === 'approved') return 'approved';
+  return 'none';
+}
 
 /** Leadership emails that must remain admin (not employee portal). */
 export const LEADERSHIP_ADMIN_EMAILS = new Set([
@@ -74,7 +93,7 @@ export async function fetchUserAccessRowForEmail(email: string): Promise<UserAcc
   if (!normalized) return null;
 
   const select =
-    'email, display_name, role, supervisor_name, supervised_employee_ids, linked_employee_id, can_delete';
+    'email, display_name, role, supervisor_name, supervised_employee_ids, linked_employee_id, can_delete, approval_status';
 
   // Prefer SECURITY DEFINER RPC: matches auth.users.email to user_access so RLS/casing
   // on the table cannot hide the row when JWT email differs from stored user_access.email.
@@ -127,23 +146,28 @@ export async function getUserRole(): Promise<string | null> {
 
     currentUserAccess = null;
 
-    let accessRow = await fetchUserAccessRowForEmail(userEmail);
-
-    if (!accessRow) {
-      const { data: linked, error: linkErr } = await supabaseClient.rpc(
-        'orbis_ensure_employee_portal_access'
-      );
-      if (!linkErr && linked) {
-        accessRow = (Array.isArray(linked) ? linked[0] : linked) as UserAccessRow;
-      }
-    }
+    const accessRow = await fetchUserAccessRowForEmail(userEmail);
 
     if (accessRow) {
       currentUserAccess = accessRow;
-      const accessRole = String(accessRow.role || '')
-        .toLowerCase()
-        .trim();
-      if (accessRole === 'admin' || accessRole === 'supervisor' || accessRole === 'employee') {
+      const approval = getAccessApprovalStatus(accessRow);
+
+      if (approval === 'pending') {
+        currentUserRole = 'pending';
+        window.currentUserRole = currentUserRole;
+        window.currentUserAccess = currentUserAccess;
+        return 'pending';
+      }
+
+      if (approval === 'rejected') {
+        currentUserRole = 'rejected';
+        window.currentUserRole = currentUserRole;
+        window.currentUserAccess = currentUserAccess;
+        return 'rejected';
+      }
+
+      const accessRole = normalizeOrbisRole(String(accessRow.role || ''));
+      if (accessRole === 'admin' || accessRole === 'supervisor' || accessRole === 'user') {
         currentUserRole = accessRole;
         window.currentUserRole = currentUserRole;
         window.currentUserAccess = currentUserAccess;
@@ -203,19 +227,24 @@ export function isSupervisorUser(): boolean {
   return String(currentUserRole || '').toLowerCase() === 'supervisor';
 }
 
+/** PTO portal role (user = self-service time off only). */
 export function isEmployeeUser(): boolean {
-  return String(currentUserRole || '').toLowerCase() === 'employee';
+  return normalizeOrbisRole(currentUserRole) === 'user';
+}
+
+export function isPortalUser(): boolean {
+  return isEmployeeUser();
 }
 
 export function canAccessOrbisApp(): boolean {
-  return isAdminUser() || isSupervisorUser() || isEmployeeUser();
+  return isAdminUser() || isSupervisorUser() || isPortalUser();
 }
 
 export function canAccessAppSection(sectionId: string): boolean {
   const section = String(sectionId || '').trim();
   if (!section) return false;
 
-  if (isEmployeeUser()) {
+  if (isPortalUser()) {
     return section === 'myTimeOffView';
   }
 
@@ -364,24 +393,14 @@ export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | 
     return false;
   }
 
-  const employeeSupervisor = String(employee?.supervisor || employee?.displaySupervisor || '')
-    .trim()
-    .toLowerCase();
+  const employeeSupervisor = String(employee?.supervisor || employee?.displaySupervisor || '');
 
   if (!employeeSupervisor) {
     console.warn('[Supervisor Match Fail] No supervisor on employee:', employee);
     return false;
   }
 
-  const compactAccessName = supervisorName.replace(/[^a-z0-9]/g, '');
-  const compactEmployeeSupervisor = employeeSupervisor.replace(/[^a-z0-9]/g, '');
-
-  return (
-    employeeSupervisor.includes(supervisorName) ||
-    supervisorName.includes(employeeSupervisor) ||
-    compactEmployeeSupervisor.includes(compactAccessName) ||
-    compactAccessName.includes(compactEmployeeSupervisor)
-  );
+  return supervisorNameMatches(employeeSupervisor, supervisorName);
 }
 
 export function applyAdminDashboardView(): void {
@@ -861,9 +880,113 @@ export function applyRolePermissions(): void {
 
   applyRoleNavigation();
 
-  if (isEmployeeUser()) {
+  if (isPortalUser()) {
     applyEmployeePortalView();
   }
+}
+
+function supervisorNameMatches(rosterSupervisor: string, accessSupervisor: string): boolean {
+  const supervisorName = String(accessSupervisor || '').trim().toLowerCase();
+  const employeeSupervisor = String(rosterSupervisor || '').trim().toLowerCase();
+
+  if (!supervisorName || !employeeSupervisor) return false;
+
+  const compactAccessName = supervisorName.replace(/[^a-z0-9]/g, '');
+  const compactEmployeeSupervisor = employeeSupervisor.replace(/[^a-z0-9]/g, '');
+
+  return (
+    employeeSupervisor.includes(supervisorName) ||
+    supervisorName.includes(employeeSupervisor) ||
+    compactEmployeeSupervisor.includes(compactAccessName) ||
+    compactAccessName.includes(compactEmployeeSupervisor)
+  );
+}
+
+/** Employee ids whose roster supervisor field matches this supervisor name. */
+export async function resolveDirectReportIdsForSupervisorName(
+  supervisorName: string
+): Promise<string[]> {
+  const needle = String(supervisorName || '').trim();
+  if (!needle) return [];
+
+  const { data, error } = await supabaseClient
+    .from('employees')
+    .select('id, supervisor, status');
+
+  if (error || !data?.length) return [];
+
+  return data
+    .filter((row) => {
+      const status = String((row as { status?: string }).status || '')
+        .trim()
+        .toUpperCase();
+      if (status === 'TERMINATED' || status === 'INACTIVE') return false;
+      return supervisorNameMatches(String((row as { supervisor?: string }).supervisor || ''), needle);
+    })
+    .map((row) => String((row as { id?: string }).id || '').trim())
+    .filter(Boolean);
+}
+
+export async function resolveEmployeeRosterName(employeeId: string): Promise<string> {
+  const id = String(employeeId || '').trim();
+  if (!id) return '';
+
+  const { data } = await supabaseClient
+    .from('employees')
+    .select('first_name, last_name')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (!data) return '';
+
+  return `${String(data.first_name || '').trim()} ${String(data.last_name || '').trim()}`.trim();
+}
+
+/** Suggest supervisor_name + direct report ids when approving a roster supervisor. */
+export async function resolveSupervisorScopeForEmployee(
+  employeeId: string
+): Promise<{ supervisor_name: string; supervised_employee_ids: string[] }> {
+  const rosterName = await resolveEmployeeRosterName(employeeId);
+  if (!rosterName) {
+    return { supervisor_name: '', supervised_employee_ids: [] };
+  }
+
+  const supervised_employee_ids = await resolveDirectReportIdsForSupervisorName(rosterName);
+  return { supervisor_name: rosterName, supervised_employee_ids };
+}
+
+/** Match roster employee id (BTW code) from login email for user-role PTO linking. */
+export async function resolveLinkedEmployeeIdForEmail(email: string): Promise<string | null> {
+  const normalized = String(email || '').trim().toLowerCase();
+  if (!normalized) return null;
+
+  const { data, error } = await supabaseClient
+    .from('employees')
+    .select('id, work_email, personal_email, status');
+
+  if (error || !data?.length) {
+    return null;
+  }
+
+  const matches = data.filter((row) => {
+    const fields = [
+      (row as { work_email?: string }).work_email,
+      (row as { personal_email?: string }).personal_email,
+    ];
+    return fields.some((value) => String(value || '').trim().toLowerCase() === normalized);
+  });
+
+  if (!matches.length) return null;
+
+  const active = matches.find((row) => {
+    const status = String((row as { status?: string }).status || '')
+      .trim()
+      .toUpperCase();
+    return status !== 'TERMINATED' && status !== 'INACTIVE';
+  });
+
+  const pick = active || matches[0];
+  return String((pick as { id?: string }).id || '').trim() || null;
 }
 
 function applyPerformanceReviewTabAccess(employee?: EmployeeLike | null): void {

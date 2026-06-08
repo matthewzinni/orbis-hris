@@ -2,17 +2,14 @@ import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabaseClient as supabase } from '../services/supabaseClient';
 import { devLog } from '../utils/devLog';
 
-const AUTH_CALLBACK_PARAM_NAMES = [
-  'code',
-  'token_hash',
-  'access_token',
-  'refresh_token',
-  'type',
-  'error',
-  'error_description',
-] as const;
+type AuthMode = 'signin' | 'register';
 
-const AUTH_SESSION_EVENTS = new Set(['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED']);
+let authMode: AuthMode = 'signin';
+let registeringAccount = false;
+
+export function isRegisteringAccount(): boolean {
+  return registeringAccount;
+}
 
 function showToast(message: string, type: 'success' | 'error' = 'success'): void {
   if (typeof window.showToast === 'function') {
@@ -25,17 +22,28 @@ function showToast(message: string, type: 'success' | 'error' = 'success'): void
 
 function setLoginLoading(loading: boolean): void {
   const btn = document.getElementById('loginBtn') as HTMLButtonElement | null;
+  const registerBtn = document.getElementById('registerBtn') as HTMLButtonElement | null;
   const email = document.getElementById('loginEmail') as HTMLInputElement | null;
   const password = document.getElementById('loginPassword') as HTMLInputElement | null;
+  const confirm = document.getElementById('registerPasswordConfirm') as HTMLInputElement | null;
+  const displayName = document.getElementById('registerDisplayName') as HTMLInputElement | null;
 
+  const busy = loading;
   if (btn) {
-    btn.disabled = loading;
-    btn.textContent = loading ? 'Signing in…' : 'Sign In';
-    btn.setAttribute('aria-busy', loading ? 'true' : 'false');
+    btn.disabled = busy;
+    btn.textContent = busy && authMode === 'signin' ? 'Signing in…' : 'Sign In';
+    btn.setAttribute('aria-busy', busy && authMode === 'signin' ? 'true' : 'false');
+  }
+  if (registerBtn) {
+    registerBtn.disabled = busy;
+    registerBtn.textContent = busy && authMode === 'register' ? 'Creating account…' : 'Create account';
+    registerBtn.setAttribute('aria-busy', busy && authMode === 'register' ? 'true' : 'false');
   }
 
-  if (email) email.disabled = loading;
-  if (password) password.disabled = loading;
+  if (email) email.disabled = busy;
+  if (password) password.disabled = busy;
+  if (confirm) confirm.disabled = busy;
+  if (displayName) displayName.disabled = busy;
 }
 
 function setLoginError(message: string): void {
@@ -50,6 +58,29 @@ function setLoginError(message: string): void {
     el.textContent = '';
     el.classList.add('hidden');
   }
+}
+
+function readAuthFields(): {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  displayName: string;
+} {
+  const emailInput = document.querySelector<HTMLInputElement>(
+    '#email, #loginEmail, input[name="email"], input[type="email"]'
+  );
+  const passwordInput = document.querySelector<HTMLInputElement>(
+    '#password, #loginPassword, input[name="password"], input[type="password"]'
+  );
+  const confirmInput = document.getElementById('registerPasswordConfirm') as HTMLInputElement | null;
+  const displayInput = document.getElementById('registerDisplayName') as HTMLInputElement | null;
+
+  return {
+    email: String(emailInput?.value || '').trim(),
+    password: String(passwordInput?.value || '').trim(),
+    confirmPassword: String(confirmInput?.value || '').trim(),
+    displayName: String(displayInput?.value || '').trim(),
+  };
 }
 
 async function enterAuthenticatedApp(): Promise<void> {
@@ -69,47 +100,36 @@ async function enterAuthenticatedApp(): Promise<void> {
   window.location.reload();
 }
 
-function mapMagicLinkAuthError(error: { message?: string; status?: number; code?: string }): string {
-  const message = String(error.message || '').trim();
-  const code = String((error as { code?: string }).code || '').trim();
-  const lower = message.toLowerCase();
+export function setAuthMode(mode: AuthMode): void {
+  authMode = mode;
 
-  if (
-    lower.includes('user not found') ||
-    lower.includes('no user found') ||
-    code === 'user_not_found'
-  ) {
-    return (
-      'No login exists for this email yet. Ask HR to run employee portal setup, or try again after HR has activated your account.'
-    );
+  const signInPanel = document.getElementById('authSignInPanel');
+  const registerPanel = document.getElementById('authRegisterPanel');
+  const signInTab = document.getElementById('authTabSignIn');
+  const registerTab = document.getElementById('authTabRegister');
+
+  signInPanel?.classList.toggle('hidden', mode !== 'signin');
+  registerPanel?.classList.toggle('hidden', mode !== 'register');
+
+  signInTab?.classList.toggle('active', mode === 'signin');
+  registerTab?.classList.toggle('active', mode === 'register');
+  signInTab?.setAttribute('aria-selected', mode === 'signin' ? 'true' : 'false');
+  registerTab?.setAttribute('aria-selected', mode === 'register' ? 'true' : 'false');
+
+  const password = document.getElementById('loginPassword') as HTMLInputElement | null;
+  const passwordLabel = document.querySelector<HTMLLabelElement>('label[for="loginPassword"]');
+  if (password) {
+    password.autocomplete = mode === 'register' ? 'new-password' : 'current-password';
+    password.placeholder = mode === 'register' ? 'At least 8 characters' : 'Password';
+  }
+  if (passwordLabel) {
+    passwordLabel.textContent = 'Password';
   }
 
-  if (
-    code === 'signup_disabled' ||
-    lower.includes('signups not allowed') ||
-    lower.includes('sign in is not available') ||
-    lower.includes('signups not allowed for otp')
-  ) {
-    return (
-      'First-time employee login is not activated for this email. HR must run provision_employee_auth_users.py ' +
-      '(or turn on "Allow new users to sign up" in Supabase → Authentication → Email). ' +
-      'Also confirm the Email provider is enabled and https://orbis-btw.com is in Redirect URLs.'
-    );
-  }
-
-  if (lower.includes('redirect') || lower.includes('invalid') && lower.includes('url')) {
-    return 'Sign-in link could not be sent. Add this site URL to Supabase Auth → Redirect URLs, then try again.';
-  }
-
-  return message || 'Could not send sign-in link.';
+  setLoginError('');
 }
 
-export async function signInWithMagicLink(email?: string): Promise<boolean> {
-  const emailInput = document.querySelector<HTMLInputElement>(
-    '#email, #loginEmail, input[name="email"], input[type="email"]'
-  );
-  const resolvedEmail = String(email || emailInput?.value || '').trim();
-
+export async function registerAccount(): Promise<boolean> {
   setLoginError('');
 
   if (!isSupabaseConfigured) {
@@ -120,58 +140,125 @@ export async function signInWithMagicLink(email?: string): Promise<boolean> {
     return false;
   }
 
-  if (!resolvedEmail) {
-    const message = 'Enter the personal or work email on your employee record to receive a sign-in link.';
+  const { email, password, confirmPassword, displayName } = readAuthFields();
+
+  if (!email || !password) {
+    const message = 'Enter your email and a password.';
+    setLoginError(message);
+    showToast(message, 'error');
+    return false;
+  }
+
+  if (password.length < 8) {
+    const message = 'Password must be at least 8 characters.';
+    setLoginError(message);
+    showToast(message, 'error');
+    return false;
+  }
+
+  if (password !== confirmPassword) {
+    const message = 'Passwords do not match.';
     setLoginError(message);
     showToast(message, 'error');
     return false;
   }
 
   setLoginLoading(true);
+  registeringAccount = true;
 
-  try {
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
-    const { error } = await supabase.auth.signInWithOtp({
-      email: resolvedEmail,
-      options: {
-        emailRedirectTo: redirectTo,
-        // Auth users are pre-created by HR; avoids requiring public sign-up in Supabase.
-        shouldCreateUser: false,
-      },
+  const finishPendingRequest = async (): Promise<boolean> => {
+    const { error: regErr } = await supabase.rpc('orbis_register_account_request', {
+      p_display_name: displayName || null,
     });
 
-    if (error) {
-      const message = mapMagicLinkAuthError(error);
+    if (regErr) {
+      console.error('Account request registration failed:', regErr);
+      await supabase.auth.signOut();
+      const message = regErr.message || 'Could not submit your access request. Contact HR.';
       setLoginError(message);
       showToast(message, 'error');
       return false;
     }
 
-    const message = `Sign-in link sent to ${resolvedEmail}. Check your inbox (and spam).`;
+    await supabase.auth.signOut();
+
+    const message =
+      'Account created. An HR admin must approve your access and set your permission level ' +
+      '(user, supervisor, or admin) before you can sign in.';
     setLoginError(message);
     showToast(message, 'success');
+    setAuthMode('signin');
     return true;
+  };
+
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: displayName ? { display_name: displayName } : undefined,
+      },
+    });
+
+    if (error) {
+      const raw = error.message || 'Could not create account.';
+      if (/signups?\s+not\s+allowed/i.test(raw)) {
+        const message =
+          'Self-registration is turned off in Supabase. Enable Authentication → Providers → ' +
+          'Email → Allow new users to sign up, then try again.';
+        setLoginError(message);
+        showToast(message, 'error');
+        return false;
+      }
+
+      if (/already registered|already been registered/i.test(raw)) {
+        const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (signInErr || !signInData.session) {
+          const message =
+            'This email is already registered. Sign in with your password, or contact HR for help.';
+          setLoginError(message);
+          showToast(message, 'error');
+          return false;
+        }
+
+        return finishPendingRequest();
+      }
+
+      setLoginError(raw);
+      showToast(raw, 'error');
+      return false;
+    }
+
+    if (!data.session) {
+      const message =
+        'Account created. Check your email to confirm your address, then sign in. ' +
+        'An admin must still approve your Orbis access before you can use the app.';
+      setLoginError(message);
+      showToast(message, 'success');
+      setAuthMode('signin');
+      return true;
+    }
+
+    return finishPendingRequest();
   } catch (err) {
-    console.error('Magic link failed:', err);
-    setLoginError('Could not send sign-in link. Please try again.');
-    showToast('Could not send sign-in link. Please try again.', 'error');
+    console.error('Registration failed:', err);
+    setLoginError('Could not create account. Please try again.');
+    showToast('Could not create account. Please try again.', 'error');
     return false;
   } finally {
+    registeringAccount = false;
     setLoginLoading(false);
   }
 }
 
 export async function signIn(email?: string, password?: string) {
-  const emailInput = document.querySelector<HTMLInputElement>(
-    '#email, #loginEmail, input[name="email"], input[type="email"]'
-  );
-
-  const passwordInput = document.querySelector<HTMLInputElement>(
-    '#password, #loginPassword, input[name="password"], input[type="password"]'
-  );
-
-  const resolvedEmail = String(email || emailInput?.value || '').trim();
-  const resolvedPassword = String(password || passwordInput?.value || '').trim();
+  const fields = readAuthFields();
+  const resolvedEmail = String(email || fields.email).trim();
+  const resolvedPassword = String(password || fields.password).trim();
 
   setLoginError('');
 
@@ -200,6 +287,47 @@ export async function signIn(email?: string, password?: string) {
 
     if (error) {
       const message = error.message || 'Sign in failed.';
+      setLoginError(message);
+      showToast(message, 'error');
+      return null;
+    }
+
+    const role = typeof window.getUserRole === 'function' ? await window.getUserRole() : null;
+
+    if (role === 'pending') {
+      await supabase.auth.signOut();
+      const message =
+        'Your account is waiting for admin approval. You will be able to sign in after HR approves your access.';
+      setLoginError(message);
+      showToast(message, 'error');
+      return null;
+    }
+
+    if (role === 'rejected') {
+      await supabase.auth.signOut();
+      const message = 'This account request was rejected. Contact HR if you believe this is an error.';
+      setLoginError(message);
+      showToast(message, 'error');
+      return null;
+    }
+
+    if (!role) {
+      const { error: regErr } = await supabase.rpc('orbis_register_account_request', {
+        p_display_name: null,
+      });
+
+      if (!regErr) {
+        await supabase.auth.signOut();
+        const message =
+          'Access request submitted. An HR admin must approve your account before you can sign in.';
+        setLoginError(message);
+        showToast(message, 'success');
+        return null;
+      }
+
+      await supabase.auth.signOut();
+      const message =
+        'No approved Orbis access for this account. Contact HR or use Create account if you are new.';
       setLoginError(message);
       showToast(message, 'error');
       return null;
@@ -242,108 +370,6 @@ export async function signOut() {
   }
 }
 
-function readAuthRedirectParams(): URLSearchParams {
-  const search = new URLSearchParams(window.location.search);
-  const hash = window.location.hash.replace(/^#/, '');
-  const hashParams = new URLSearchParams(hash.includes('=') ? hash : '');
-
-  AUTH_CALLBACK_PARAM_NAMES.forEach((name) => {
-    const hashValue = hashParams.get(name);
-    if (hashValue && !search.has(name)) {
-      search.set(name, hashValue);
-    }
-  });
-
-  return search;
-}
-
-export function isAuthRedirectUrl(): boolean {
-  const params = readAuthRedirectParams();
-  return AUTH_CALLBACK_PARAM_NAMES.some((name) => params.has(name));
-}
-
-export function readAuthRedirectError(): string {
-  const params = readAuthRedirectParams();
-  return String(params.get('error_description') || params.get('error') || '').trim();
-}
-
-export function clearAuthRedirectParams(): void {
-  if (!isAuthRedirectUrl()) return;
-  window.history.replaceState({}, document.title, window.location.pathname);
-}
-
-export function showAuthCallbackLoadingState(): void {
-  if (!isAuthRedirectUrl()) return;
-
-  const loginError = document.getElementById('loginError');
-  if (loginError) {
-    loginError.textContent = 'Completing sign-in from your email link…';
-    loginError.classList.remove('hidden');
-  }
-
-  const magicLinkBtn = document.getElementById('loginMagicLinkBtn') as HTMLButtonElement | null;
-  const loginBtn = document.getElementById('loginBtn') as HTMLButtonElement | null;
-  if (magicLinkBtn) magicLinkBtn.disabled = true;
-  if (loginBtn) loginBtn.disabled = true;
-}
-
-function authRedirectFailureMessage(): string {
-  return (
-    'Sign-in link could not be completed. Request a new link, then open it promptly. ' +
-    'If you requested the link on a computer, open the email on that same device, or try copying the link into Safari/Chrome instead of an in-app mail viewer.'
-  );
-}
-
-async function recoverSessionFromAuthRedirect(): Promise<Session | null> {
-  await supabase.auth.initialize();
-
-  const params = readAuthRedirectParams();
-
-  const accessToken = params.get('access_token');
-  const refreshToken = params.get('refresh_token');
-  if (accessToken && refreshToken) {
-    const { data, error } = await supabase.auth.setSession({
-      access_token: accessToken,
-      refresh_token: refreshToken,
-    });
-    if (!error && data.session) {
-      return data.session;
-    }
-    devLog('Auth setSession from hash failed:', error?.message || error);
-  }
-
-  const tokenHash = params.get('token_hash');
-  const otpType = params.get('type');
-  if (tokenHash && otpType) {
-    const { data, error } = await supabase.auth.verifyOtp({
-      token_hash: tokenHash,
-      type: otpType as 'email' | 'magiclink' | 'signup' | 'recovery' | 'invite' | 'email_change',
-    });
-    if (!error && data.session) {
-      return data.session;
-    }
-    devLog('Auth verifyOtp failed:', error?.message || error);
-  }
-
-  const {
-    data: { session: afterInit },
-  } = await supabase.auth.getSession();
-  if (afterInit) {
-    return afterInit;
-  }
-
-  const code = params.get('code');
-  if (code) {
-    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error && data.session) {
-      return data.session;
-    }
-    devLog('Auth code exchange failed:', error?.message || error);
-  }
-
-  return null;
-}
-
 export async function getCurrentSession(): Promise<Session | null> {
   if (!isSupabaseConfigured) {
     return null;
@@ -356,11 +382,23 @@ export async function getCurrentSession(): Promise<Session | null> {
   return session;
 }
 
-/**
- * Magic-link redirects land with tokens in the URL hash (implicit) or ?code= (PKCE)
- * before the client has a session. Wait for Supabase initialize + exchange.
- */
-export async function waitForAuthSession(timeoutMs = 12000): Promise<Session | null> {
+export function watchAuthState(
+  callback: (event: string, session: Session | null) => void
+): { unsubscribe: () => void } {
+  if (!isSupabaseConfigured) {
+    return { unsubscribe: () => {} };
+  }
+
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((event, session) => {
+    callback(event, session);
+  });
+
+  return { unsubscribe: () => subscription.unsubscribe() };
+}
+
+export async function waitForAuthSession(timeoutMs = 8000): Promise<Session | null> {
   if (!isSupabaseConfigured) {
     return null;
   }
@@ -368,15 +406,6 @@ export async function waitForAuthSession(timeoutMs = 12000): Promise<Session | n
   const existing = await getCurrentSession();
   if (existing) {
     return existing;
-  }
-
-  if (!isAuthRedirectUrl()) {
-    return null;
-  }
-
-  const recovered = await recoverSessionFromAuthRedirect();
-  if (recovered) {
-    return recovered;
   }
 
   return new Promise((resolve) => {
@@ -393,45 +422,25 @@ export async function waitForAuthSession(timeoutMs = 12000): Promise<Session | n
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      devLog('Auth redirect wait event:', event, Boolean(session));
-      if (session && AUTH_SESSION_EVENTS.has(event)) {
+      devLog('Auth wait event:', event, Boolean(session));
+      if (session && (event === 'INITIAL_SESSION' || event === 'SIGNED_IN')) {
         finish(session);
       }
     });
 
-    const timer = window.setTimeout(() => {
-      void recoverSessionFromAuthRedirect().then((session) => finish(session));
-    }, timeoutMs);
-
-    void recoverSessionFromAuthRedirect().then((session) => {
-      if (session) finish(session);
-    });
+    const timer = window.setTimeout(() => finish(null), timeoutMs);
   });
 }
 
-export function readAuthRedirectFailureMessage(): string {
-  return authRedirectFailureMessage();
-}
-
-export function watchAuthState(callback: (event: string, session: unknown) => void) {
-  if (!isSupabaseConfigured) {
-    return { data: { subscription: { unsubscribe: () => undefined } } };
-  }
-
-  return supabase.auth.onAuthStateChange((event, session) => {
-    devLog('Auth state changed:', event);
-    callback(event, session);
-  });
-}
-
-/** Wire login / logout without inline HTML handlers. */
+/** Wire login / register / logout without inline HTML handlers. */
 export function initAuthBindings(): void {
   const loginBtn = document.getElementById('loginBtn');
+  const registerBtn = document.getElementById('registerBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const email = document.getElementById('loginEmail');
   const password = document.getElementById('loginPassword');
-
-  const magicLinkBtn = document.getElementById('loginMagicLinkBtn');
+  const signInTab = document.getElementById('authTabSignIn');
+  const registerTab = document.getElementById('authTabRegister');
 
   if (loginBtn && loginBtn.getAttribute('data-auth-bound') !== '1') {
     loginBtn.setAttribute('data-auth-bound', '1');
@@ -440,17 +449,31 @@ export function initAuthBindings(): void {
     });
   }
 
-  if (magicLinkBtn && magicLinkBtn.getAttribute('data-auth-bound') !== '1') {
-    magicLinkBtn.setAttribute('data-auth-bound', '1');
-    magicLinkBtn.addEventListener('click', () => {
-      void signInWithMagicLink();
+  if (registerBtn && registerBtn.getAttribute('data-auth-bound') !== '1') {
+    registerBtn.setAttribute('data-auth-bound', '1');
+    registerBtn.addEventListener('click', () => {
+      void registerAccount();
     });
+  }
+
+  if (signInTab && signInTab.getAttribute('data-auth-bound') !== '1') {
+    signInTab.setAttribute('data-auth-bound', '1');
+    signInTab.addEventListener('click', () => setAuthMode('signin'));
+  }
+
+  if (registerTab && registerTab.getAttribute('data-auth-bound') !== '1') {
+    registerTab.setAttribute('data-auth-bound', '1');
+    registerTab.addEventListener('click', () => setAuthMode('register'));
   }
 
   const onEnter = (event: KeyboardEvent) => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
-    void signIn();
+    if (authMode === 'register') {
+      void registerAccount();
+    } else {
+      void signIn();
+    }
   };
 
   if (email && email.getAttribute('data-auth-bound') !== '1') {
@@ -463,28 +486,39 @@ export function initAuthBindings(): void {
     password.addEventListener('keydown', onEnter);
   }
 
+  const confirmPassword = document.getElementById('registerPasswordConfirm');
+  if (confirmPassword && confirmPassword.getAttribute('data-auth-bound') !== '1') {
+    confirmPassword.setAttribute('data-auth-bound', '1');
+    confirmPassword.addEventListener('keydown', onEnter);
+  }
+
   if (logoutBtn && logoutBtn.getAttribute('data-auth-bound') !== '1') {
     logoutBtn.setAttribute('data-auth-bound', '1');
     logoutBtn.addEventListener('click', () => {
       void signOut();
     });
   }
+
+  setAuthMode('signin');
 }
 
 declare global {
   interface Window {
     signIn?: typeof signIn;
-    signInWithMagicLink?: typeof signInWithMagicLink;
+    registerAccount?: typeof registerAccount;
+    setAuthMode?: typeof setAuthMode;
     signOut?: typeof signOut;
     showAuthenticatedOrbisView?: () => void;
     showAuthView?: () => void;
     bootstrapOrbisAfterAuth?: () => Promise<void>;
     clearOrbisSessionState?: () => void;
+    getUserRole?: () => Promise<string | null>;
   }
 }
 
 window.signIn = signIn;
-window.signInWithMagicLink = signInWithMagicLink;
+window.registerAccount = registerAccount;
+window.setAuthMode = setAuthMode;
 window.signOut = signOut;
 
 if (document.readyState === 'loading') {

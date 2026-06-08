@@ -46,23 +46,66 @@
               autocomplete="current-password"
             />
           </div>
+          <div class="auth-mode-tabs" role="tablist" aria-label="Sign in or register">
+            <button
+              class="auth-mode-tab active"
+              id="authTabSignIn"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="authSignInPanel"
+            >
+              Sign in
+            </button>
+            <button
+              class="auth-mode-tab"
+              id="authTabRegister"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="authRegisterPanel"
+            >
+              Create account
+            </button>
+          </div>
+          <div id="authSignInPanel" class="auth-mode-panel">
+            <div style="margin-top: 18px">
+              <button class="button primary" id="loginBtn" type="button">Sign In</button>
+            </div>
+          </div>
+          <div id="authRegisterPanel" class="auth-mode-panel hidden">
+            <div class="field">
+              <label for="registerDisplayName">Your name (optional)</label>
+              <input
+                id="registerDisplayName"
+                type="text"
+                placeholder="First and last name"
+                autocomplete="name"
+              />
+            </div>
+            <div class="field">
+              <label for="registerPasswordConfirm">Confirm password</label>
+              <input
+                id="registerPasswordConfirm"
+                type="password"
+                placeholder="Re-enter password"
+                autocomplete="new-password"
+              />
+            </div>
+            <div style="margin-top: 18px">
+              <button class="button primary" id="registerBtn" type="button">Create account</button>
+            </div>
+          </div>
           <div
             id="loginError"
             class="login-error hidden"
             role="alert"
             aria-live="polite"
           ></div>
-          <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px">
-            <button class="button primary" id="loginBtn" type="button">
-              Sign In
-            </button>
-            <button class="button soft" id="loginMagicLinkBtn" type="button">
-              Email me a sign-in link
-            </button>
-          </div>
           <div class="muted" style="margin-top: 14px">
-            HR and supervisors use password sign-in. Employees use a one-time email link with the
-            <strong>personal or work email on file</strong> to view PTO and request time off.
+            New users create an account with email and password. An <strong>admin must approve</strong>
+            your access and choose your level: <strong>user</strong> (PTO for your email only),
+            <strong>supervisor</strong> (direct reports), or <strong>admin</strong> (full HRIS).
           </div>
         </div>
       </div>
@@ -1875,9 +1918,45 @@
               </div>
               <div class="layout layout-settings">
                 <div class="stack">
+                  <div class="card" id="settingsPendingApprovalsCard">
+                    <div class="card-header">
+                      <span>Pending account requests</span>
+                      <span class="muted" id="settingsPendingApprovalsCount">Loading...</span>
+                    </div>
+                    <div class="card-body">
+                      <p class="muted" style="margin: 0 0 12px">
+                        Employees already on the roster sign up with the same personal or work email on file
+                        (e.g. Ryan Bird uses <strong>r.tbird10@gmail.com</strong> → links to <strong>BTW2105</strong>).
+                        You choose access: <strong>user</strong> (only their PTO),
+                        <strong>supervisor</strong> (direct reports), or <strong>admin</strong> (everything).
+                      </p>
+                      <div
+                        id="settingsPendingApprovalForm"
+                        class="settings-pending-approval-form hidden"
+                        hidden
+                      ></div>
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Email</th>
+                              <th>Name</th>
+                              <th>Linked employee</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody id="settingsPendingApprovalsBody">
+                            <tr>
+                              <td colspan="4" class="empty">Loading pending requests...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
                   <div class="card">
                     <div class="card-header">
-                      <span>User access</span>
+                      <span>Approved user access</span>
                       <span class="muted" id="settingsUserAccessCount">Loading...</span>
                     </div>
                     <div class="card-body">
@@ -1888,15 +1967,17 @@
                               <th>Email</th>
                               <th>Display name</th>
                               <th>Role</th>
+                              <th>Status</th>
+                              <th>PTO employee ID</th>
                               <th>Supervisor</th>
-                              <th>Roster UUIDs</th>
+                              <th>Team IDs</th>
                               <th>Can delete</th>
                               <th>Actions</th>
                             </tr>
                           </thead>
                           <tbody id="settingsUserAccessBody">
                             <tr>
-                              <td colspan="7" class="empty">Loading user access...</td>
+                              <td colspan="9" class="empty">Loading user access...</td>
                             </tr>
                           </tbody>
                         </table>

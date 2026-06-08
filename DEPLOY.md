@@ -16,32 +16,31 @@ npm run db:push
 npm run db:status
 ```
 
-## Employee PTO portal (self-service)
+## Account registration & approval
 
-After `npm run db:push` (migration `20260608120000_employee_portal_access`):
+After `npm run db:push` (migration `20260611120000_account_registration_approval`):
 
 1. **Supabase Auth** → **Sign In / Providers** → **Email**:
    - **Enable Email provider**
-   - **Enable Magic Link** (or Email OTP)
-   - **Allow new users to sign up** can stay **OFF** if you pre-create Auth users with the script below (recommended). If it is off and an employee has no Auth user yet, magic link will fail until HR runs `provision_employee_auth_users.py`.
-2. **Authentication** → **URL configuration** → add redirect URLs:
+   - **Allow new users to sign up** → **ON** (users self-register from the Orbis login screen)
+   - Optional: disable **Confirm email** for faster internal rollout (otherwise users confirm email before admin approval)
+2. **Authentication** → **URL configuration** → add:
    - `https://www.orbis-btw.com/`
    - `https://orbis-btw.com/`
    - `http://localhost:5173/` (local dev)
-3. Ensure each employee has a **personal email** (or work email) on their profile in **Employee Admin**. Orbis matches magic-link login to `personal_email`, `work_email`, or `email` — personal is typical for hourly staff without company addresses.
-4. Provision employee portal (run after roster emails are set):
 
-```bash
-set -a && source scripts/.env.weekly_report && set +a
-python3 scripts/provision_employee_portal_access.py --dry-run
-python3 scripts/provision_employee_portal_access.py
-python3 scripts/provision_employee_auth_users.py --dry-run
-python3 scripts/provision_employee_auth_users.py
-```
+### Flow
 
-Step 1 creates `user_access` (role `employee`). Step 2 creates matching **Supabase Auth** users so magic links work without public sign-up enabled.
+1. User clicks **Create account** → email + password.
+2. Orbis creates a **pending** `user_access` row (`orbis_register_account_request`).
+3. Admin opens **Admin & Settings** → **Pending account requests** → **Review & approve**.
+4. Admin sets role:
+   - **user** — PTO portal only (`linked_employee_id` should match roster email, e.g. `BTW2105`)
+   - **supervisor** — direct reports (`supervised_employee_ids` or supervisor name match)
+   - **admin** — full HRIS
+5. User signs in with password after approval.
 
-Employees use **Email me a sign-in link** on the login page (no password). HR/supervisors still use password sign-in. **PTO requests** require approval by the employee’s **direct supervisor** (supervisor role + roster match) or **admin**.
+**PTO requests** require approval by the employee’s **direct supervisor** or **admin**.
 
 ## Stay interview AI summary (Edge Function)
 

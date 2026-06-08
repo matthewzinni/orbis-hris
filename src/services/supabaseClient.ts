@@ -27,9 +27,7 @@ export const supabaseClient = createClient(
       detectSessionInUrl: true,
       persistSession: true,
       autoRefreshToken: true,
-      // Implicit flow: magic links work when opened from email on any device/browser.
-      // PKCE requires the same browser that clicked "Email me a sign-in link".
-      flowType: 'implicit',
+      flowType: 'pkce',
     },
   }
 );

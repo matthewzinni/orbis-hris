@@ -583,26 +583,49 @@ body.authenticated #appView {
 .settings-inline-select {
   width: 100%;
   min-width: 0;
-  padding: 6px 8px;
+  padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   font-size: 0.875rem;
-  background: #fff;
+  background: var(--space-input-bg, #fff);
+  color: var(--text);
   pointer-events: auto;
   position: relative;
-  z-index: 2;
+  z-index: 4;
 }
 
 .settings-inline-input[readonly] {
-  background: #f1f5f9;
+  background: var(--surface-muted, #f1f5f9);
   color: var(--muted);
   cursor: not-allowed;
 }
 
-.settings-user-edit-row .settings-inline-input:not([readonly]),
-.settings-user-edit-row .settings-inline-select {
-  background: #fff;
+.settings-pending-approval-form {
+  margin: 0 0 16px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface-muted, #f4f6f8);
+}
+
+.settings-pending-approval-form-title {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--text);
+}
+
+.settings-pending-approval-form .settings-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.settings-pending-approval-form .settings-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .settings-user-edit-row .settings-delete-check {

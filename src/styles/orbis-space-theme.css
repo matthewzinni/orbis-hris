@@ -172,6 +172,39 @@ body.authenticated .settings-inline-input[readonly] {
   color: var(--muted);
 }
 
+body.authenticated .settings-user-edit-row td {
+  position: relative;
+  z-index: 2;
+  vertical-align: top;
+  background: rgba(18, 30, 52, 0.96);
+}
+
+body.authenticated .settings-user-edit-row .settings-inline-input,
+body.authenticated .settings-user-edit-row .settings-inline-select,
+body.authenticated .settings-user-edit-row textarea.settings-inline-input {
+  background: var(--space-input-bg);
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+body.authenticated .settings-pending-approval-form {
+  border-color: var(--line-strong);
+  background: rgba(14, 24, 42, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+body.authenticated .settings-pending-approval-form .field input,
+body.authenticated .settings-pending-approval-form .field select,
+body.authenticated .settings-pending-approval-form .field textarea {
+  width: 100%;
+  pointer-events: auto;
+}
+
+body.authenticated .settings-pending-approval-form .field input[readonly] {
+  opacity: 0.85;
+  cursor: default;
+}
+
 body.authenticated .table-wrap,
 body.authenticated .mini-table-wrap {
   background: var(--card);

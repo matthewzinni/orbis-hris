@@ -49,7 +49,7 @@ export function employeeDisplayName(employee: EmployeeLike | null | undefined): 
   return `${first} ${last}`.trim() || 'Employee';
 }
 
-/** Email used for employee PTO portal magic-link sign-in (personal preferred for hourly staff). */
+/** Email used for employee PTO portal account linking (personal preferred for hourly staff). */
 export function employeePortalSignInEmail(employee: EmployeeLike | null | undefined): string {
   if (!employee) return '';
   const personal = String(employee.personal_email || employee.personalEmail || '').trim();

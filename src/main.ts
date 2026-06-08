@@ -19,11 +19,7 @@ import {
   signOut,
   watchAuthState,
   waitForAuthSession,
-  clearAuthRedirectParams,
-  readAuthRedirectError,
-  readAuthRedirectFailureMessage,
-  isAuthRedirectUrl,
-  showAuthCallbackLoadingState,
+  isRegisteringAccount,
   initAuthBindings,
 } from './modules/auth';
 import { devLog } from './utils/devLog';
@@ -308,10 +304,35 @@ async function initializeProtectedModules(): Promise<boolean> {
     console.warn('Could not resolve user role before boot:', roleErr);
   }
 
+  if (role === 'pending') {
+    const loginError = document.getElementById('loginError');
+    const message =
+      'Your account is waiting for admin approval. You can sign in after HR approves your access.';
+    if (loginError) {
+      loginError.textContent = message;
+      loginError.classList.remove('hidden');
+    }
+    await supabase.auth.signOut();
+    showAuthView();
+    return false;
+  }
+
+  if (role === 'rejected') {
+    const loginError = document.getElementById('loginError');
+    const message = 'This account request was rejected. Contact HR if you need access.';
+    if (loginError) {
+      loginError.textContent = message;
+      loginError.classList.remove('hidden');
+    }
+    await supabase.auth.signOut();
+    showAuthView();
+    return false;
+  }
+
   if (!role || !canAccessOrbisApp()) {
     const loginError = document.getElementById('loginError');
     const message =
-      'Your account does not have Orbis access yet. Contact HR to set up your role (admin, supervisor, or employee portal).';
+      'No approved Orbis access for this account. Use Create account or contact HR.';
     if (loginError) {
       loginError.textContent = message;
       loginError.classList.remove('hidden');
@@ -388,7 +409,6 @@ async function bootAuthenticatedApp(): Promise<void> {
   if (authenticatedBootStarted) return;
   authenticatedBootStarted = true;
 
-  clearAuthRedirectParams();
   showAuthenticatedOrbisView();
 
   if (typeof window.showDashboardLoadingSkeletons === 'function') {
@@ -415,16 +435,15 @@ async function bootAuthenticatedApp(): Promise<void> {
 window.addEventListener('DOMContentLoaded', async () => {
   devLog('Orbis booted via main.ts');
 
-  if (isAuthRedirectUrl()) {
-    showAuthCallbackLoadingState();
-  }
-
   initAuthBindings();
   initAppShell();
   registerLegacyBridges();
 
   watchAuthState((event, sessionData) => {
     devLog('Auth event:', event, sessionData);
+    if (isRegisteringAccount()) {
+      return;
+    }
     if (
       sessionData &&
       (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
@@ -438,22 +457,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   devLog('Resolved session:', session);
 
   if (!session) {
-    const redirectError = readAuthRedirectError();
-    const loginError = document.getElementById('loginError');
-    if (loginError) {
-      if (redirectError) {
-        loginError.textContent = redirectError;
-      } else if (isAuthRedirectUrl()) {
-        loginError.textContent = readAuthRedirectFailureMessage();
-      }
-      if (redirectError || isAuthRedirectUrl()) {
-        loginError.classList.remove('hidden');
-      }
-    }
-    if (redirectError || isAuthRedirectUrl()) {
-      clearAuthRedirectParams();
-    }
-
     devLog('No active session detected. Waiting for sign in...');
     showAuthView();
     return;
