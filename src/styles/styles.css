@@ -544,6 +544,7 @@ input[type="search"] {
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
+  -webkit-overflow-scrolling: touch;
 }
 
 #employeeDrawer .drawer-body > .tabs,
@@ -581,10 +582,11 @@ input[type="search"] {
   border-bottom: 1px solid rgba(226, 232, 240, 0.9);
 }
 
-#employeeDrawer > .drawer-body,
-#candidateDrawer > .drawer-body {
-  flex: 1 1 auto;
-  min-height: 0;
+#candidateDrawer.open,
+#candidateDrawer:not(.hidden) {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 100dvh;
 }
 
 /* Operations issue drawer — scrollable body + pinned save actions */

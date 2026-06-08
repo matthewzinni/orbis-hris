@@ -1404,7 +1404,8 @@ function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null
   drawer.classList.remove('hidden');
   drawer.removeAttribute('hidden');
   drawer.setAttribute('aria-hidden', 'false');
-  drawer.style.setProperty('display', 'block', 'important');
+  drawer.style.setProperty('display', 'flex', 'important');
+  drawer.style.setProperty('flex-direction', 'column', 'important');
   drawer.style.setProperty('visibility', 'visible', 'important');
   drawer.style.setProperty('opacity', '1', 'important');
   drawer.style.setProperty('pointer-events', 'auto', 'important');
@@ -1413,8 +1414,10 @@ function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null
   drawer.style.setProperty('right', '0', 'important');
   drawer.style.setProperty('bottom', '0', 'important');
   drawer.style.setProperty('height', '100vh', 'important');
+  drawer.style.setProperty('max-height', '100dvh', 'important');
   drawer.style.setProperty('width', 'min(760px, 92vw)', 'important');
   drawer.style.setProperty('max-width', '92vw', 'important');
+  drawer.style.setProperty('overflow', 'hidden', 'important');
   drawer.style.setProperty('transform', 'translateX(0)', 'important');
   drawer.style.setProperty('z-index', '99999', 'important');
 }
