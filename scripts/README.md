@@ -26,20 +26,43 @@ Override recipients and schedule in `scripts/.env.weekly_report`:
 ```env
 MAIL_TO=you@btwglobal.com,other@btwglobal.com
 WEEKLY_REPORT_DAY_OF_WEEK=1
-WEEKLY_REPORT_HOUR=8
+WEEKLY_REPORT_HOUR=13
 WEEKLY_REPORT_MINUTE=0
 ```
 
 (`DAY_OF_WEEK`: 0=Sun, 1=Mon, … 6=Sat — local Mac time.)
 
-### Schedule (automatic weekly send)
+### Schedule (recommended: GitHub Actions — Mac can sleep)
+
+The workflow `.github/workflows/weekly-orbis-report.yml` sends every **Monday at 1:00 PM US Eastern** from GitHub’s servers. Your Mac does **not** need to be on.
+
+1. One-time: push the workflow to GitHub, then load secrets from your local env file:
+
+```bash
+chmod +x scripts/setup_github_weekly_report_secrets.sh
+./scripts/setup_github_weekly_report_secrets.sh
+```
+
+2. Test immediately:
+
+```bash
+gh workflow run weekly-orbis-report.yml
+```
+
+3. View runs: GitHub → **Actions** → **Weekly Orbis HR Report**.
+
+The script **retries SMTP up to 5 times** (5 minutes apart) before failing. In winter (EST), edit the workflow cron from `0 17 * * 1` to `0 18 * * 1` so it stays 1:00 PM local.
+
+Required GitHub secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM`, `MAIL_TO`, `ORBIS_APP_URL`.
+
+### Schedule (optional: Mac cron — Mac must be awake)
 
 ```bash
 chmod +x scripts/run_weekly_report.sh scripts/install_weekly_report_cron.sh
 ./scripts/install_weekly_report_cron.sh
 ```
 
-This installs cron using `WEEKLY_REPORT_*` from `.env.weekly_report` (default **Monday 8:00 AM**). Logs: `scripts/logs/weekly_report.log`.
+Uses `WEEKLY_REPORT_*` from `.env.weekly_report` (default **Monday 1:00 PM** local). Logs: `scripts/logs/weekly_report.log`. Prefer GitHub Actions if the laptop is often asleep.
 
 Manual send anytime:
 

@@ -1,0 +1,36 @@
+# Weekly Orbis HR email — runs in the cloud (no Mac awake required).
+# Schedule: Monday 1:00 PM US Eastern (17:00 UTC during EDT; change to 18:00 UTC in winter/EST).
+# Retries: Python script retries SMTP up to 5 times; this job retries the whole run once more if needed.
+
+name: Weekly Orbis HR Report
+
+on:
+  schedule:
+    - cron: '0 17 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: weekly-orbis-report
+  cancel-in-progress: false
+
+jobs:
+  send-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send weekly HR email (with retries)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          ORBIS_APP_URL: ${{ secrets.ORBIS_APP_URL }}
+          WEEKLY_REPORT_MAX_ATTEMPTS: '5'
+          WEEKLY_REPORT_RETRY_WAIT_SECONDS: '300'
+        run: python3 scripts/weekly_orbis_report_email.py

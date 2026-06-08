@@ -15,7 +15,7 @@ Usage:
   python3 scripts/weekly_orbis_report_email.py --dry-run   # print HTML, do not send
   python3 scripts/weekly_orbis_report_email.py
 
-Schedule (macOS cron — every Monday 8:00 AM local):
+Schedule (macOS cron — every Monday 1:00 PM local, see .env.weekly_report):
   0 8 * * 1 cd /path/to/Orbis && /usr/bin/python3 scripts/weekly_orbis_report_email.py >> scripts/logs/weekly_report.log 2>&1
 """
 
@@ -26,6 +26,7 @@ import json
 import os
 import smtplib
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -103,7 +104,11 @@ def bootstrap_config() -> None:
         if value and not os.environ.get(key):
             os.environ[key] = value
 
-    load_dotenv_file(weekly_env_path(), force_from_file=True)
+    # In GitHub Actions, secrets come from the workflow env — do not override with a missing local file.
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        load_dotenv_file(weekly_env_path(), override=False)
+    else:
+        load_dotenv_file(weekly_env_path(), force_from_file=True)
     load_dotenv_file(os.path.join(repo_root, ".env"))
 
 
@@ -780,6 +785,38 @@ def send_email(subject: str, html_body: str, mail_to: list[str]) -> None:
         raise RuntimeError(f"SMTP login failed for {smtp_user}: {err}") from err
 
 
+def send_email_with_retries(
+    subject: str,
+    html_body: str,
+    mail_to: list[str],
+    *,
+    max_attempts: int | None = None,
+    wait_seconds: int | None = None,
+) -> None:
+    attempts = max_attempts or int(os.environ.get("WEEKLY_REPORT_MAX_ATTEMPTS", "5"))
+    pause = wait_seconds or int(os.environ.get("WEEKLY_REPORT_RETRY_WAIT_SECONDS", "300"))
+    last_err: RuntimeError | None = None
+
+    for attempt in range(1, attempts + 1):
+        try:
+            send_email(subject, html_body, mail_to)
+            if attempt > 1:
+                print(f"Sent on attempt {attempt}/{attempts}")
+            return
+        except RuntimeError as err:
+            if str(err) == "M365_SMTP_DISABLED":
+                raise
+            last_err = err
+            if attempt >= attempts:
+                break
+            eprint(f"Send failed (attempt {attempt}/{attempts}): {err}")
+            eprint(f"Retrying in {pause}s…")
+            time.sleep(pause)
+
+    if last_err:
+        raise last_err
+
+
 def main() -> None:
     bootstrap_config()
 
@@ -842,7 +879,7 @@ def main() -> None:
         )
 
     try:
-        send_email(subject, html, mail_to)
+        send_email_with_retries(subject, html, mail_to)
         print(f"Sent weekly report to {', '.join(mail_to)}")
     except RuntimeError as err:
         if str(err) != "M365_SMTP_DISABLED":

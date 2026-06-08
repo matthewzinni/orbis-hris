@@ -16,9 +16,9 @@ fi
 
 chmod +x "$RUNNER"
 
-# Defaults: Monday 8:00 AM local
+# Defaults: Monday 1:00 PM local (13:00)
 minute=0
-hour=8
+hour=13
 dow=1
 
 while IFS= read -r line || [[ -n "$line" ]]; do
