@@ -27,6 +27,20 @@ function showToast(message: string, type = 'success'): void {
   console.log(`[${type}] ${message}`);
 }
 
+function formatEmployeeAdminDateInput(value: unknown): string {
+  if (!value) return '';
+  const raw = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return '';
+}
+
 function getCurrentEmployee(): EmployeeRow | null {
   return (window.currentEmployee as EmployeeRow | null) || null;
 }
@@ -304,10 +318,10 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
     payType: normalized.pay_type || '',
     standardHours: normalized.standard_hours || '',
     benefitsStatus: normalized.benefits_status || '',
-    hireDate: normalized.hire_date || '',
-    terminationDate: normalized.termination_date || '',
-    nextReviewDate: normalized.next_review_date || '',
-    anniversaryDate: normalized.anniversary_date || '',
+    hireDate: formatEmployeeAdminDateInput(normalized.hire_date || ''),
+    terminationDate: formatEmployeeAdminDateInput(normalized.termination_date || ''),
+    nextReviewDate: formatEmployeeAdminDateInput(normalized.next_review_date || ''),
+    anniversaryDate: formatEmployeeAdminDateInput(normalized.anniversary_date || ''),
     tenureBracket: normalized.tenure_bracket || '',
     workEmail: normalized.work_email || '',
     personalEmail: normalized.personal_email || '',

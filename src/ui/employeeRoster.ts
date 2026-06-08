@@ -297,6 +297,20 @@ function getEmployeePublicId(employee, fallbackName = '') {
     ).trim();
 }
 
+function formatRosterDateForInput(value: unknown): string {
+    if (!value) return '';
+    const raw = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+        const year = parsed.getFullYear();
+        const month = String(parsed.getMonth() + 1).padStart(2, '0');
+        const day = String(parsed.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+    return '';
+}
+
 function getEmployeeAdminScope(): ParentNode {
     if (typeof window.getEmployeeAdminPanel === 'function') {
         const panel = window.getEmployeeAdminPanel();
@@ -388,11 +402,14 @@ function populateEmployeeAdminFallback(employee) {
     setByLabelText('STANDARD HOURS', valueFrom('standard_hours', 'standardHours'));
     setByPlaceholder('Benefits status', valueFrom('benefits_status', 'benefitsStatus'));
     setByLabelText('BENEFITS STATUS', valueFrom('benefits_status', 'benefitsStatus'));
-    const hireDateValue = valueFrom('hire_date', 'hireDate');
-    const nextReviewValue = valueFrom('next_review_date', 'nextReviewDate');
-    const dateInputs = Array.from(adminScope.querySelectorAll('input[type="date"]'));
-    if (dateInputs[0]) dateInputs[0].value = hireDateValue || '';
-    if (dateInputs[1]) dateInputs[1].value = nextReviewValue || '';
+    const hireDateValue = formatRosterDateForInput(valueFrom('hire_date', 'hireDate'));
+    const nextReviewValue = formatRosterDateForInput(valueFrom('next_review_date', 'nextReviewDate'));
+    const anniversaryValue = formatRosterDateForInput(valueFrom('anniversary_date', 'anniversaryDate'));
+    const terminationValue = formatRosterDateForInput(valueFrom('termination_date', 'terminationDate'));
+    setBySelector('#employeeHireDateInput', hireDateValue);
+    setBySelector('#employeeNextReviewInput', nextReviewValue);
+    setBySelector('#employeeAnniversaryDateInput', anniversaryValue);
+    setBySelector('#employeeTerminationDateInput', terminationValue);
     const statusValue = formatRosterStatus(valueFrom('status', 'displayStatus') || 'Active');
     const statusSelect = Array.from(adminScope.querySelectorAll('select')).find(select => {
         return Array.from(select.options || []).some(option => option.textContent.trim().toLowerCase() === 'active' || option.textContent.trim().toLowerCase() === 'inactive');
@@ -430,9 +447,10 @@ function populateEmployeeAdminByVisibleOrder(employee) {
         'pay type': employee.pay_type || employee.payType || '',
         'standard hours': employee.standard_hours || employee.standardHours || '',
         'benefits status': employee.benefits_status || employee.benefitsStatus || '',
-        'hire date': employee.hire_date || employee.hireDate || employee.displayHireDate || '',
-        'next review date': employee.next_review_date || employee.nextReviewDate || '',
-        'anniversary date': employee.anniversary_date || employee.anniversaryDate || '',
+        'hire date': formatRosterDateForInput(employee.hire_date || employee.hireDate || employee.displayHireDate || ''),
+        'next review date': formatRosterDateForInput(employee.next_review_date || employee.nextReviewDate || ''),
+        'next stay interview date': formatRosterDateForInput(employee.next_review_date || employee.nextReviewDate || ''),
+        'anniversary date': formatRosterDateForInput(employee.anniversary_date || employee.anniversaryDate || ''),
         'tenure bracket': employee.tenure_bracket || employee.tenureBracket || ''
     };
     const isVisible = (el) => {
@@ -493,14 +511,9 @@ function populateEmployeeAdminByVisibleOrder(employee) {
     setValue(fieldByLabel('BENEFITS STATUS'), valuesByLabel['benefits status']);
     setValue(fieldByLabel('HIRE DATE'), valuesByLabel['hire date']);
     setValue(fieldByLabel('NEXT REVIEW DATE'), valuesByLabel['next review date']);
+    setValue(fieldByLabel('NEXT STAY INTERVIEW DATE'), valuesByLabel['next stay interview date']);
     setValue(fieldByLabel('ANNIVERSARY DATE'), valuesByLabel['anniversary date']);
     setValue(fieldByLabel('TENURE BRACKET'), valuesByLabel['tenure bracket']);
-    const adminFields = Array.from(adminScope.querySelectorAll('input, select, textarea')).filter(isVisible);
-    if (adminFields[0] && valuesByLabel['employee id']) {
-        setValue(adminFields[0], valuesByLabel['employee id']);
-        lockEmployeeIdField(adminFields[0]);
-    }
-    if (adminFields[1]) setValue(adminFields[1], valuesByLabel['status']);
 }
 
 function lockEmployeeIdField(field) {

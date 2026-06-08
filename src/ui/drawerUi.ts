@@ -460,32 +460,8 @@ function forcePopulateVisibleEmployeeAdminPanel(employee) {
 
     if (!panel) return;
 
-    const fields = Array.from(panel.querySelectorAll('input, select, textarea'));
-
-    const values = [
-        getDrawerHeaderEmployeeId() || getTrustedEmployeeDisplayId(employee),
-        employee.status || 'Active',
-        cleanDrawerEmployeeNameValue(employee.first || employee.first_name || ''),
-        cleanDrawerEmployeeNameValue(employee.last || employee.last_name || ''),
-        employee.dept || employee.department || '',
-        employee.position || '',
-        employee.supervisor || '',
-        employee.payType || employee.pay_type || '',
-        employee.stdHours || employee.standard_hours || '',
-        employee.benefitsStatus || employee.benefits_status || '',
-        formatDrawerDateForInput(employee.hireDate || employee.hire_date || ''),
-        formatDrawerDateForInput(employee.nextReview || employee.next_review || employee.next_review_date || ''),
-        getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee)),
-        employee.tenureBracket || employee.tenure_bracket || ''
-    ];
-
-    fields.forEach((field, index) => {
-        if (index >= values.length) return;
-
-        field.value = values[index] || '';
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        field.dispatchEvent(new Event('change', { bubbles: true }));
-    });
+    // Field-by-id/label population runs in forcePopulateEmployeeAdminFields above.
+    // Avoid index-based assignment here — extra date/checkbox fields caused invalid values.
 }
 
 function forcePopulateEmployeeAdminFields(employee) {
