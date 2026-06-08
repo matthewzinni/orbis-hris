@@ -26,6 +26,7 @@ function setLoginLoading(loading: boolean): void {
   const password = document.getElementById('loginPassword') as HTMLInputElement | null;
   const confirm = document.getElementById('registerPasswordConfirm') as HTMLInputElement | null;
   const displayName = document.getElementById('registerDisplayName') as HTMLInputElement | null;
+  const modeToggle = document.getElementById('authModeToggle') as HTMLButtonElement | null;
 
   const busy = loading;
   if (btn) {
@@ -42,6 +43,7 @@ function setLoginLoading(loading: boolean): void {
   if (password) password.disabled = busy;
   if (confirm) confirm.disabled = busy;
   if (displayName) displayName.disabled = busy;
+  if (modeToggle) modeToggle.disabled = busy;
 }
 
 function setLoginError(message: string): void {
@@ -102,19 +104,21 @@ export function setAuthMode(mode: AuthMode): void {
   authMode = mode;
 
   const registerPanel = document.getElementById('authRegisterPanel');
-  const signInTab = document.getElementById('authTabSignIn');
-  const registerTab = document.getElementById('authTabRegister');
   const submitBtn = document.getElementById('authSubmitBtn') as HTMLButtonElement | null;
+  const modeToggle = document.getElementById('authModeToggle') as HTMLButtonElement | null;
 
   registerPanel?.classList.toggle('hidden', mode !== 'register');
 
-  signInTab?.classList.toggle('active', mode === 'signin');
-  registerTab?.classList.toggle('active', mode === 'register');
-  signInTab?.setAttribute('aria-selected', mode === 'signin' ? 'true' : 'false');
-  registerTab?.setAttribute('aria-selected', mode === 'register' ? 'true' : 'false');
-
   if (submitBtn) {
     submitBtn.textContent = mode === 'register' ? 'Create account' : 'Sign in';
+  }
+
+  if (modeToggle) {
+    modeToggle.textContent =
+      mode === 'register'
+        ? 'Already have an account? Sign in'
+        : 'Need an account? Create one';
+    modeToggle.setAttribute('aria-pressed', mode === 'register' ? 'true' : 'false');
   }
 
   const password = document.getElementById('loginPassword') as HTMLInputElement | null;
@@ -439,8 +443,7 @@ export function initAuthBindings(): void {
   const logoutBtn = document.getElementById('logoutBtn');
   const email = document.getElementById('loginEmail');
   const password = document.getElementById('loginPassword');
-  const signInTab = document.getElementById('authTabSignIn');
-  const registerTab = document.getElementById('authTabRegister');
+  const modeToggle = document.getElementById('authModeToggle');
 
   if (submitBtn && submitBtn.getAttribute('data-auth-bound') !== '1') {
     submitBtn.setAttribute('data-auth-bound', '1');
@@ -453,14 +456,11 @@ export function initAuthBindings(): void {
     });
   }
 
-  if (signInTab && signInTab.getAttribute('data-auth-bound') !== '1') {
-    signInTab.setAttribute('data-auth-bound', '1');
-    signInTab.addEventListener('click', () => setAuthMode('signin'));
-  }
-
-  if (registerTab && registerTab.getAttribute('data-auth-bound') !== '1') {
-    registerTab.setAttribute('data-auth-bound', '1');
-    registerTab.addEventListener('click', () => setAuthMode('register'));
+  if (modeToggle && modeToggle.getAttribute('data-auth-bound') !== '1') {
+    modeToggle.setAttribute('data-auth-bound', '1');
+    modeToggle.addEventListener('click', () => {
+      setAuthMode(authMode === 'register' ? 'signin' : 'register');
+    });
   }
 
   const onEnter = (event: KeyboardEvent) => {

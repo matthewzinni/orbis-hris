@@ -46,28 +46,6 @@
               autocomplete="current-password"
             />
           </div>
-          <div class="auth-mode-tabs" role="tablist" aria-label="Sign in or register">
-            <button
-              class="auth-mode-tab active"
-              id="authTabSignIn"
-              type="button"
-              role="tab"
-              aria-selected="true"
-              aria-controls="authRegisterPanel"
-            >
-              Sign in
-            </button>
-            <button
-              class="auth-mode-tab"
-              id="authTabRegister"
-              type="button"
-              role="tab"
-              aria-selected="false"
-              aria-controls="authRegisterPanel"
-            >
-              Create account
-            </button>
-          </div>
           <div id="authRegisterPanel" class="auth-mode-panel hidden">
             <div class="field">
               <label for="registerDisplayName">Your name (optional)</label>
@@ -88,9 +66,16 @@
               />
             </div>
           </div>
-          <div style="margin-top: 18px">
-            <button class="button primary" id="authSubmitBtn" type="button">Sign in</button>
+          <div class="auth-submit-row">
+            <button class="button primary auth-submit-btn" id="authSubmitBtn" type="button">
+              Sign in
+            </button>
           </div>
+          <p class="auth-mode-switch">
+            <button class="auth-mode-link" id="authModeToggle" type="button">
+              Need an account? Create one
+            </button>
+          </p>
           <div
             id="loginError"
             class="login-error hidden"

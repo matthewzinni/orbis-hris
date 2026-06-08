@@ -114,6 +114,36 @@
   border-color: rgba(79, 140, 255, 0.55);
 }
 
+.auth-submit-row {
+  margin-top: 18px;
+}
+
+.auth-submit-btn {
+  width: 100%;
+}
+
+.auth-mode-switch {
+  margin: 12px 0 0;
+  text-align: center;
+}
+
+.auth-mode-link {
+  border: 0;
+  background: transparent;
+  color: #2563eb;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-mode-link:hover {
+  color: #1d4ed8;
+}
+
 .auth-mode-panel.hidden {
   display: none;
 }
