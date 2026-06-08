@@ -95,6 +95,7 @@ declare global {
 
 let currentCandidateId: string | null = null;
 let currentLinkedEmployeeId: string | null = null;
+let resumeEmployeeDrawerOnCandidateClose = false;
 let isCandidateSaveInProgress = false;
 let pendingCandidateResumeFile: File | null = null;
 let candidateResumeUiBound = false;
@@ -129,6 +130,28 @@ function escapeHtml(value: unknown): string {
 
 function nl2br(value: unknown): string {
   return escapeHtml(value).replace(/\n/g, '<br>');
+}
+
+function releaseDrawerScrollLock(): void {
+  document.body.classList.remove('orbis-drawer-open', 'orbis-modal-open');
+  document.body.style.removeProperty('overflow');
+}
+
+function employeeDrawerIsOpen(drawer: HTMLElement | null): boolean {
+  if (!drawer) return false;
+  if (drawer.classList.contains('hidden')) return false;
+  if (drawer.getAttribute('aria-hidden') === 'true') return false;
+  return drawer.classList.contains('open');
+}
+
+function hideEmployeeDrawerForCandidate(): void {
+  const employeeDrawer = safeGet('employeeDrawer');
+  if (!employeeDrawer) return;
+
+  employeeDrawer.classList.remove('open');
+  employeeDrawer.classList.add('hidden');
+  employeeDrawer.setAttribute('aria-hidden', 'true');
+  employeeDrawer.style.setProperty('display', 'none', 'important');
 }
 
 function resolveEmployeeRosterId(employee: Record<string, unknown> | null | undefined): string {
@@ -1420,6 +1443,7 @@ function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null
   drawer.style.setProperty('overflow', 'hidden', 'important');
   drawer.style.setProperty('transform', 'translateX(0)', 'important');
   drawer.style.setProperty('z-index', '99999', 'important');
+  document.body.classList.add('orbis-drawer-open');
 }
 
 function renderCandidateDrawerIdentityHeader(candidate: CandidateRecord | null): void {
@@ -1520,12 +1544,26 @@ export function closeCandidateDrawer(): void {
     drawer.removeAttribute('style');
   }
 
+  releaseDrawerScrollLock();
+
   if (employeeDrawer) {
-    employeeDrawer.classList.remove('hidden');
-    employeeDrawer.style.removeProperty('display');
-    employeeDrawer.removeAttribute('aria-hidden');
+    if (resumeEmployeeDrawerOnCandidateClose) {
+      employeeDrawer.classList.remove('hidden');
+      employeeDrawer.style.removeProperty('display');
+      employeeDrawer.classList.add('open');
+      employeeDrawer.setAttribute('aria-hidden', 'false');
+      document.body.classList.add('orbis-drawer-open');
+    } else {
+      hideEmployeeDrawerForCandidate();
+      if (typeof window.closeEmployeeDrawer === 'function') {
+        window.closeEmployeeDrawer();
+      }
+    }
+  } else if (!resumeEmployeeDrawerOnCandidateClose && typeof window.closeEmployeeDrawer === 'function') {
+    window.closeEmployeeDrawer();
   }
 
+  resumeEmployeeDrawerOnCandidateClose = false;
   document.body.style.overflow = '';
   currentCandidateId = null;
   currentLinkedEmployeeId = null;
@@ -1754,12 +1792,8 @@ export async function openCandidateDrawer(candidateId: string): Promise<void> {
   currentCandidateId = String(candidate.id);
 
   const employeeDrawer = safeGet('employeeDrawer');
-  if (employeeDrawer) {
-    employeeDrawer.classList.remove('open');
-    employeeDrawer.classList.add('hidden');
-    employeeDrawer.setAttribute('aria-hidden', 'true');
-    employeeDrawer.style.setProperty('display', 'none', 'important');
-  }
+  resumeEmployeeDrawerOnCandidateClose = employeeDrawerIsOpen(employeeDrawer);
+  hideEmployeeDrawerForCandidate();
 
   const backdrop = safeGet('drawerBackdrop');
   const drawer = safeGet('candidateDrawer');
@@ -1885,14 +1919,9 @@ export async function createCandidateFromEmployee(
   currentLinkedEmployeeId = rosterId;
   currentCandidateId = null;
   pendingCandidateResumeFile = null;
+  resumeEmployeeDrawerOnCandidateClose = false;
 
-  const employeeDrawer = safeGet('employeeDrawer');
-  if (employeeDrawer) {
-    employeeDrawer.classList.remove('open');
-    employeeDrawer.classList.add('hidden');
-    employeeDrawer.setAttribute('aria-hidden', 'true');
-    employeeDrawer.style.setProperty('display', 'none', 'important');
-  }
+  hideEmployeeDrawerForCandidate();
 
   const backdrop = safeGet('drawerBackdrop');
   const drawer = safeGet('candidateDrawer');
