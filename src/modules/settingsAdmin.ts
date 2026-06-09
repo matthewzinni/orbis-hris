@@ -262,7 +262,7 @@ function renderPendingApprovalForm(row: UserAccessRow): void {
         <label>Access level</label>
         <select data-field="role">${renderRoleOptions(role)}</select>
         <p class="muted" style="margin: 6px 0 0; font-size: 0.82rem">
-          <strong>user</strong> = My Time Off only ·
+          <strong>user</strong> = My Profile + Tasks &amp; Acknowledgments + Directory + My Time Off ·
           <strong>supervisor</strong> = direct reports ·
           <strong>admin</strong> = full HRIS
         </p>

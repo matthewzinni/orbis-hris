@@ -79,6 +79,16 @@
   color: var(--muted, #6b7280);
 }
 
+.org-chart-node--readonly .org-chart-node-card {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
 @media print {
   body.org-chart-print-mode #authView,
   body.org-chart-print-mode .orbis-sidebar,

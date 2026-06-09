@@ -2,6 +2,7 @@
 // User access / role scoping (from js/app.js)
 // ============================================
 
+import { applyPayrollReliefLinks } from '../brand/payrollPortal';
 import { supabaseClient } from './supabaseClient';
 
 export type UserAccessRow = {
@@ -41,6 +42,16 @@ export const LEADERSHIP_ADMIN_EMAILS = new Set([
   'trent.wynne@btwglobal.com',
   'brent.wynne@btwglobal.com',
 ]);
+
+const EMPLOYEE_PORTAL_SECTIONS = new Set([
+  'myProfileView',
+  'myTasksView',
+  'myDirectoryView',
+  'myTimeOffView',
+]);
+
+/** Employee-portal sections admins may use alongside full HRIS access. */
+const ADMIN_PORTAL_SECTIONS = new Set(['myTasksView', 'myDirectoryView']);
 
 const ADMIN_ONLY_SECTIONS = new Set([
   'candidatesView',
@@ -171,6 +182,7 @@ export async function getUserRole(): Promise<string | null> {
         currentUserRole = accessRole;
         window.currentUserRole = currentUserRole;
         window.currentUserAccess = currentUserAccess;
+        await ensureLinkedEmployeeRecord();
         return accessRole;
       }
     }
@@ -236,6 +248,38 @@ export function isPortalUser(): boolean {
   return isEmployeeUser();
 }
 
+/** Self-service profile / tasks / PTO for employees and supervisors linked to a roster record. */
+export function hasPersonalEmployeePortal(): boolean {
+  if (isEmployeeUser()) return true;
+  if (!getLinkedEmployeeId()) return false;
+  return isSupervisorUser();
+}
+
+export async function ensureLinkedEmployeeRecord(): Promise<string | null> {
+  const existing = getLinkedEmployeeId();
+  if (existing) return existing;
+
+  if (!currentUserAccess) return null;
+
+  const role = normalizeOrbisRole(String(currentUserAccess.role || ''));
+  if (role !== 'user' && role !== 'supervisor' && role !== 'admin') return null;
+
+  const { data, error } = await supabaseClient.rpc('orbis_link_my_employee_record');
+
+  if (error) {
+    console.warn('[Access] Could not link employee record:', error.message || error);
+    return null;
+  }
+
+  const employeeId = String(data || '').trim();
+  if (employeeId) {
+    currentUserAccess.linked_employee_id = employeeId;
+    window.currentUserAccess = currentUserAccess;
+  }
+
+  return employeeId || null;
+}
+
 export function canAccessOrbisApp(): boolean {
   return isAdminUser() || isSupervisorUser() || isPortalUser();
 }
@@ -245,15 +289,17 @@ export function canAccessAppSection(sectionId: string): boolean {
   if (!section) return false;
 
   if (isPortalUser()) {
-    return section === 'myTimeOffView';
+    return EMPLOYEE_PORTAL_SECTIONS.has(section);
   }
 
   if (isAdminUser()) {
-    return section !== 'myTimeOffView';
+    if (ADMIN_PORTAL_SECTIONS.has(section)) return true;
+    return !EMPLOYEE_PORTAL_SECTIONS.has(section);
   }
 
   if (isSupervisorUser()) {
-    if (section === 'myTimeOffView') return false;
+    if (EMPLOYEE_PORTAL_SECTIONS.has(section) && hasPersonalEmployeePortal()) return true;
+    if (EMPLOYEE_PORTAL_SECTIONS.has(section)) return false;
     if (ADMIN_ONLY_SECTIONS.has(section)) return false;
     return SUPERVISOR_SECTIONS.has(section);
   }
@@ -280,6 +326,12 @@ export function applyRoleNavigation(): void {
       (button as HTMLButtonElement).disabled = !allowed;
     });
 
+  document.querySelectorAll<HTMLElement>('[data-personal-portal-link]').forEach((element) => {
+    const sectionId = String(element.dataset.navView || '').trim();
+    const allowed = sectionId ? canAccessAppSection(sectionId) : hasPersonalEmployeePortal();
+    element.classList.toggle('hidden', !allowed);
+  });
+
   if (role === 'admin') {
     document.querySelectorAll('[data-admin-only="true"], .admin-only').forEach((el) => {
       (el as HTMLElement).classList.remove('hidden');
@@ -297,25 +349,26 @@ export function applyEmployeePortalView(): void {
 
   document.getElementById('supervisorBanner')?.remove();
 
-  const name = currentUserAccess?.display_name || 'My Time Off';
+  const name = currentUserAccess?.display_name || 'My Profile';
   const title = safeGet('dashboardTitle');
   if (title) title.textContent = name;
 
-  const myTimeOffNav = document.getElementById('navMyTimeOff');
-  if (myTimeOffNav) {
-    myTimeOffNav.classList.remove('hidden');
-    myTimeOffNav.classList.add('active');
-    myTimeOffNav.setAttribute('aria-current', 'page');
-  }
-
   document.querySelectorAll('.orbis-sidebar-nav .orbis-nav-item').forEach((button) => {
     const view = String((button as HTMLElement).dataset.navView || '');
-    const allowed = view === 'myTimeOffView';
-    if (view !== 'myTimeOffView') {
-      (button as HTMLElement).classList.add('hidden');
-      (button as HTMLButtonElement).disabled = true;
+    const allowed = EMPLOYEE_PORTAL_SECTIONS.has(view);
+    (button as HTMLElement).classList.toggle('hidden', !allowed);
+    (button as HTMLButtonElement).disabled = !allowed;
+    if (!allowed) {
+      button.classList.remove('active');
+      button.removeAttribute('aria-current');
     }
   });
+
+  const myProfileNav = document.getElementById('navMyProfile');
+  if (myProfileNav) {
+    myProfileNav.classList.add('active');
+    myProfileNav.setAttribute('aria-current', 'page');
+  }
 
   document.querySelectorAll('[data-employee-portal-hide="true"]').forEach((el) => {
     (el as HTMLElement).classList.add('hidden');
@@ -908,6 +961,7 @@ export function applyRolePermissions(): void {
   }
 
   applyRoleNavigation();
+  applyPayrollReliefLinks();
 
   if (isPortalUser()) {
     applyEmployeePortalView();

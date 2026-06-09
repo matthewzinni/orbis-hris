@@ -41,7 +41,7 @@ Stay interview CSV import: [scripts/README.md](scripts/README.md) (service role 
 |------|--------|
 | **admin** | Full HRIS — you choose who gets this in Admin & Settings |
 | **supervisor** | Direct reports only — roster, attendance, leave approvals, operations (scoped) |
-| **user** | **My Time Off** only — PTO tied to their login email / linked employee ID |
+| **user** | **My Profile**, **Tasks & Acknowledgments**, **My Time Off** |
 
 New staff use **Create account** on the login screen (email + password). An admin must **approve** the request and set the role. Users without an approved `user_access` row cannot use Orbis.
 

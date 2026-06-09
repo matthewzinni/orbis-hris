@@ -72,6 +72,28 @@ Manual send anytime:
 
 ---
 
+## HR compliance audit (`hr_audit_report.py`)
+
+Writes a per-employee CSV (default `tools/hr_audit_report.csv`) for active roster employees:
+
+| Column | Meaning |
+|--------|---------|
+| Missing Emergency Contact | No row in `emergency_contacts` |
+| Missing Documents | No row in `employee_documents` |
+| Review Due (30 days) | `next_review_date` is overdue or due within 30 days |
+| Open Discipline | Open `discipline_reports` |
+
+Uses the same Supabase credentials as the weekly report.
+
+```bash
+set -a && source scripts/.env.weekly_report && set +a
+python3 scripts/hr_audit_report.py
+python3 scripts/hr_audit_report.py --stdout   # print CSV to terminal
+python3 scripts/hr_audit_report.py -o /tmp/orbis_audit.csv
+```
+
+---
+
 ## Import stay interviews (`import_stay_interviews.py`)
 
 Bulk-insert rows into `public.stay_interviews` and attach them to employees using the same `employee_id` value the app uses: **`employees.id`** (Orbis `dbId`).

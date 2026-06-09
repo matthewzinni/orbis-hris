@@ -7,7 +7,7 @@ import {
   type LeaveRequestRecord,
   type LeaveType,
 } from '../services/leaveRequests';
-import { getLinkedEmployeeId, isEmployeeUser } from '../services/access';
+import { getLinkedEmployeeId, hasPersonalEmployeePortal } from '../services/access';
 import {
   formatPtoHours,
   loadEmployeePtoSnapshot,
@@ -69,7 +69,7 @@ function renderMyLeaveRow(record: LeaveRequestRecord): string {
 }
 
 export async function loadMyTimeOffPortal(): Promise<void> {
-  if (!isEmployeeUser()) return;
+  if (!hasPersonalEmployeePortal()) return;
 
   const employeeId = getLinkedEmployeeId();
   const balanceEl = safeGet('myTimeOffBalanceValue');

@@ -26,6 +26,11 @@ declare global {
     loadHrInbox?: (force?: boolean) => Promise<void>;
     loadOrgChart?: () => Promise<void>;
     renderOrgChart?: () => void;
+    loadMyProfilePortal?: () => Promise<void>;
+    loadMyTasksPortal?: () => Promise<void>;
+    loadMyHandbookPortal?: () => Promise<void>;
+    loadMyDirectoryPortal?: () => Promise<void>;
+    loadMyTimeOffPortal?: () => Promise<void>;
   }
 }
 
@@ -70,6 +75,9 @@ const SECTION_LABELS: Record<string, string> = {
   operationsView: 'Operations',
   careEngagementView: 'Care & Engagement',
   attendanceView: 'Attendance',
+  myProfileView: 'My Profile',
+  myTasksView: 'Tasks & Acknowledgments',
+  myDirectoryView: 'Directory',
   myTimeOffView: 'My Time Off',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
@@ -154,6 +162,39 @@ const APP_SECTIONS: AppSection[] = [
     onEnter: () => {
       if (typeof window.loadAttendance === 'function') {
         void window.loadAttendance();
+      }
+    },
+  },
+  {
+    id: 'myProfileView',
+    rootId: 'orbisSectionMyProfile',
+    targetId: 'myProfilePage',
+    aliases: ['my-profile', 'profile'],
+    onEnter: () => {
+      if (typeof window.loadMyProfilePortal === 'function') {
+        void window.loadMyProfilePortal();
+      }
+    },
+  },
+  {
+    id: 'myTasksView',
+    rootId: 'orbisSectionMyTasks',
+    targetId: 'myTasksPage',
+    aliases: ['tasks', 'acknowledgments', 'handbook', 'my-handbook', 'policies'],
+    onEnter: () => {
+      if (typeof window.loadMyTasksPortal === 'function') {
+        void window.loadMyTasksPortal();
+      }
+    },
+  },
+  {
+    id: 'myDirectoryView',
+    rootId: 'orbisSectionMyDirectory',
+    targetId: 'myDirectoryPage',
+    aliases: ['directory', 'org-chart', 'orgchart', 'company-directory'],
+    onEnter: () => {
+      if (typeof window.loadMyDirectoryPortal === 'function') {
+        void window.loadMyDirectoryPortal();
       }
     },
   },
@@ -274,8 +315,8 @@ function activateNavButtons(sectionId: string): void {
 export function showAppSection(sectionId: string): boolean {
   let resolvedSectionId = String(sectionId || '').trim();
 
-  if (isEmployeeUser() && resolvedSectionId !== 'myTimeOffView') {
-    resolvedSectionId = 'myTimeOffView';
+  if (isEmployeeUser() && !canAccessAppSection(resolvedSectionId)) {
+    resolvedSectionId = 'myProfileView';
   }
 
   if (!canAccessAppSection(resolvedSectionId)) {
@@ -328,7 +369,7 @@ export function showAppSection(sectionId: string): boolean {
 }
 
 export function getDefaultAppSectionId(): string {
-  if (isEmployeeUser()) return 'myTimeOffView';
+  if (isEmployeeUser()) return 'myProfileView';
   return 'dashboardView';
 }
 

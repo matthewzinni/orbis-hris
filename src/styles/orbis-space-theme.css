@@ -484,6 +484,61 @@ body.authenticated .document-category {
   color: #93c5fd;
 }
 
+body.authenticated .employee-portal-page .card-body,
+body.authenticated .employee-portal-page .employee-portal-help,
+body.authenticated .employee-portal-page .employee-portal-task-empty {
+  color: var(--muted);
+}
+
+body.authenticated .employee-portal-onboarding-row,
+body.authenticated .employee-portal-task-row,
+body.authenticated .employee-portal-ec-card,
+body.authenticated .employee-directory-card,
+body.authenticated .employee-portal-page .leave-request-row {
+  background: var(--surface-muted);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+body.authenticated .employee-portal-onboarding-row span,
+body.authenticated .employee-portal-task-row strong {
+  color: var(--text);
+}
+
+body.authenticated .employee-portal-task-detail {
+  color: var(--muted);
+}
+
+body.authenticated .employee-portal-onboarding-progress-track {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.authenticated .employee-portal-ec-card.is-active {
+  background: var(--accent-blue-soft);
+  border-color: rgba(79, 140, 255, 0.45);
+}
+
+body.authenticated .employee-portal-page .input,
+body.authenticated .employee-portal-page textarea.input,
+body.authenticated .employee-portal-page select.input {
+  background: var(--space-input-bg);
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+body.authenticated .employee-portal-page .detail-card {
+  background: var(--surface-muted);
+  border-color: var(--line);
+}
+
+body.authenticated .employee-portal-page .detail-label {
+  color: var(--muted);
+}
+
+body.authenticated .employee-portal-page .detail-value {
+  color: var(--text);
+}
+
 body.authenticated .documents-toolbar input,
 body.authenticated .documents-toolbar select {
   background: var(--space-input-bg);

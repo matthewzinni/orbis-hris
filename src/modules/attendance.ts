@@ -1,7 +1,6 @@
 import { isAdminUser, isSupervisorUser } from '../services/access';
 import {
   AttendanceSyncError,
-  fetchIntuitAttendanceSnapshot,
   loadManualAttendanceSnapshot,
   saveManualAttendanceSnapshot,
   type AttendancePerson,
@@ -396,13 +395,6 @@ function clearAllChecklist(): void {
   updateAttendanceKpis(ensureWorkingSnapshot());
 }
 
-function setSyncLoading(isLoading: boolean): void {
-  const syncBtn = safeGet<HTMLButtonElement>('attendanceSyncBtn');
-  if (!syncBtn) return;
-  syncBtn.disabled = isLoading || attendanceSaving;
-  syncBtn.textContent = isLoading ? 'Syncing…' : 'Sync from Intuit';
-}
-
 function setSaveLoading(isLoading: boolean): void {
   const saveBtn = safeGet<HTMLButtonElement>('attendanceSaveBtn');
   if (!saveBtn) return;
@@ -510,7 +502,6 @@ export async function loadAttendance(force = false): Promise<void> {
   }
 
   attendanceLoading = true;
-  setSyncLoading(true);
 
   try {
     await ensureEmployeesLoaded();
@@ -545,40 +536,6 @@ export async function loadAttendance(force = false): Promise<void> {
     renderAttendance(attendanceCache);
   } finally {
     attendanceLoading = false;
-    setSyncLoading(false);
-  }
-}
-
-async function syncFromIntuit(): Promise<void> {
-  if (!canViewAttendance()) return;
-  if (attendanceLoading) return;
-
-  attendanceLoading = true;
-  setSyncLoading(true);
-
-  try {
-    await refreshLeaveTodayCache();
-    const snapshot = await fetchIntuitAttendanceSnapshot();
-    attendanceCache = filterSnapshotForRollCall({
-      ...snapshot,
-      present: sortPeople(snapshot.present),
-      absent: sortPeople(snapshot.absent),
-    });
-    attendanceCacheDate = getSelectedDate();
-    renderAttendance(attendanceCache);
-    showToast('Loaded from Intuit. Click Save attendance to keep this day.', 'success');
-  } catch (error) {
-    const message =
-      error instanceof AttendanceSyncError
-        ? error.message
-        : error instanceof Error
-          ? error.message
-          : 'Could not sync attendance.';
-    console.error('[Attendance] Sync failed:', error);
-    showToast(message, 'error');
-  } finally {
-    attendanceLoading = false;
-    setSyncLoading(false);
   }
 }
 
@@ -586,14 +543,6 @@ function bindAttendanceUi(): void {
   const dateInput = safeGet<HTMLInputElement>('attendanceDateInput');
   if (dateInput && !dateInput.value) {
     dateInput.value = todayIsoDate();
-  }
-
-  const syncBtn = safeGet<HTMLButtonElement>('attendanceSyncBtn');
-  if (syncBtn && syncBtn.dataset.bound !== '1') {
-    syncBtn.dataset.bound = '1';
-    syncBtn.addEventListener('click', () => {
-      void syncFromIntuit();
-    });
   }
 
   const saveBtn = safeGet<HTMLButtonElement>('attendanceSaveBtn');

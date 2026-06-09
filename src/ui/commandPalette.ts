@@ -76,7 +76,7 @@ const ACTION_COMMANDS: CommandItem[] = [
     kind: 'action',
     title: 'Go to Attendance',
     subtitle: 'Navigation',
-    searchText: 'attendance present absent workforce intuit',
+    searchText: 'attendance present absent workforce roll call',
     run: () => switchMainView('attendanceView'),
   },
   {

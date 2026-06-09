@@ -84,7 +84,7 @@
           ></div>
           <div class="muted" style="margin-top: 14px">
             New users create an account with email and password. An <strong>admin must approve</strong>
-            your access and choose your level: <strong>user</strong> (PTO for your email only),
+            your access and choose your level: <strong>user</strong> (your profile + PTO),
             <strong>supervisor</strong> (direct reports), or <strong>admin</strong> (full HRIS).
           </div>
         </div>
@@ -115,6 +115,30 @@
               aria-current="page"
             >
               Dashboard
+            </button>
+            <button
+              class="orbis-nav-item hidden"
+              type="button"
+              data-nav-view="myProfileView"
+              id="navMyProfile"
+            >
+              My Profile
+            </button>
+            <button
+              class="orbis-nav-item hidden"
+              type="button"
+              data-nav-view="myTasksView"
+              id="navMyTasks"
+            >
+              Tasks &amp; Acknowledgments
+            </button>
+            <button
+              class="orbis-nav-item hidden"
+              type="button"
+              data-nav-view="myDirectoryView"
+              id="navMyDirectory"
+            >
+              Directory
             </button>
             <button
               class="orbis-nav-item hidden"
@@ -196,6 +220,18 @@
               Admin
             </button>
           </nav>
+          <div class="orbis-sidebar-utilities">
+            <a
+              class="orbis-sidebar-external-link"
+              id="payrollReliefSidebarLink"
+              data-payroll-relief-link
+              href="https://login.accountantsoffice.com/login?firmCode=KATYL8287&amp;returnurl=https%3A%2F%2FEmployeeCenter.payrollrelief.com%2Faccount%2Flogin"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Payroll &amp; pay stubs
+            </a>
+          </div>
           <p class="orbis-sidebar-footer">Copyright © 2026 | BTW Global, LLC</p>
         </aside>
         <div class="orbis-workspace">
@@ -236,6 +272,16 @@
                   </div>
                 </div>
               </div>
+              <a
+                class="button soft orbis-payroll-topbar-link"
+                id="payrollReliefTopbarLink"
+                data-payroll-relief-link
+                href="https://login.accountantsoffice.com/login?firmCode=KATYL8287&amp;returnurl=https%3A%2F%2FEmployeeCenter.payrollrelief.com%2Faccount%2Flogin"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Payroll
+              </a>
               <button
                 type="button"
                 class="button soft"
@@ -374,9 +420,38 @@
                     Document Library
                   </button>
                   <button
-                    class="button soft"
+                    class="button soft hidden"
                     type="button"
-                    data-nav-view="operationsView"
+                    data-nav-view="myTasksView"
+                    data-personal-portal-link
+                  >
+                    My Tasks &amp; Handbook
+                  </button>
+                  <button
+                    class="button soft hidden"
+                    type="button"
+                    data-nav-view="myProfileView"
+                    data-personal-portal-link
+                  >
+                    My Profile
+                  </button>
+                  <button
+                    class="button soft hidden"
+                    type="button"
+                    data-nav-view="myDirectoryView"
+                    data-personal-portal-link
+                  >
+                    Directory
+                  </button>
+                  <button
+                    class="button soft hidden"
+                    type="button"
+                    data-nav-view="myTimeOffView"
+                    data-personal-portal-link
+                  >
+                    My Time Off
+                  </button>
+                  <button class="button soft" type="button" data-nav-view="operationsView"
                     data-operations-access
                   >
                     Operations Center
@@ -750,6 +825,222 @@
         </section>
 
         <section
+          id="orbisSectionMyProfile"
+          class="orbis-app-section hidden"
+          data-section="myProfileView"
+          aria-hidden="true"
+        >
+          <div class="page employee-portal-page" id="myProfilePage">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Your job details and contact information</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <span id="myProfilePageTitle">My Profile</span>
+              </div>
+              <div class="card-body employee-portal-body">
+                <div class="detail-grid" id="myProfileReadOnlyGrid">
+                  <div class="muted">Loading…</div>
+                </div>
+                <form id="myProfileContactForm" class="employee-portal-form" autocomplete="off">
+                  <h3 class="employee-portal-section-title">Contact info you can update</h3>
+                  <div class="field-grid two-col">
+                    <div class="field">
+                      <label for="myProfilePhoneInput">Mobile / phone</label>
+                      <input class="input" id="myProfilePhoneInput" type="tel" autocomplete="tel" />
+                    </div>
+                    <div class="field">
+                      <label for="myProfilePersonalEmailInput">Personal email</label>
+                      <input
+                        class="input"
+                        id="myProfilePersonalEmailInput"
+                        type="email"
+                        autocomplete="email"
+                      />
+                    </div>
+                  </div>
+                  <p class="muted employee-portal-help">
+                    Job title, department, and supervisor are managed by HR. Update your phone and
+                    personal email here so we can reach you.
+                  </p>
+                  <button class="button primary" id="myProfileSaveBtn" type="button">
+                    Save contact info
+                  </button>
+                </form>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header employee-portal-ec-header">
+                <span>Emergency contacts</span>
+                <button class="button soft" id="myEcAddBtn" type="button">+ Add contact</button>
+              </div>
+              <div class="card-body employee-portal-body">
+                <div class="employee-portal-ec-layout">
+                  <div class="employee-portal-ec-list-wrap">
+                    <div id="myEcList" class="employee-portal-ec-list">
+                      <div class="muted">Loading…</div>
+                    </div>
+                  </div>
+                  <form id="myEcForm" class="employee-portal-form" autocomplete="off">
+                    <div class="field">
+                      <label for="myEcName">Contact name</label>
+                      <input class="input" id="myEcName" type="text" required />
+                    </div>
+                    <div class="field">
+                      <label for="myEcRelationship">Relationship</label>
+                      <input class="input" id="myEcRelationship" type="text" placeholder="Spouse, parent, etc." />
+                    </div>
+                    <div class="field-grid two-col">
+                      <div class="field">
+                        <label for="myEcPhone">Phone</label>
+                        <input class="input" id="myEcPhone" type="tel" />
+                      </div>
+                      <div class="field">
+                        <label for="myEcAltPhone">Alternate phone</label>
+                        <input class="input" id="myEcAltPhone" type="tel" />
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label for="myEcNotes">Notes (optional)</label>
+                      <textarea class="input" id="myEcNotes" rows="2"></textarea>
+                    </div>
+                    <div class="employee-portal-ec-actions">
+                      <button class="button primary" id="myEcSaveBtn" type="button">Save contact</button>
+                      <button class="button danger hidden" id="myEcDeleteBtn" type="button">
+                        Delete
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="orbisSectionMyTasks"
+          class="orbis-app-section hidden"
+          data-section="myTasksView"
+          aria-hidden="true"
+        >
+          <div class="page employee-portal-page" id="myTasksPage">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Pending tasks, handbook review, and signed acknowledgments</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Needs your attention</div>
+              <div class="card-body">
+                <div id="myTasksPendingList" class="employee-portal-task-list">
+                  <div class="muted">Loading tasks…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Employee handbook</div>
+              <div class="card-body">
+                <p class="muted employee-portal-help">
+                  Read the BTW handbook, then acknowledge it above when you are done.
+                </p>
+                <div id="myTasksHandbookList">
+                  <div class="muted">Loading handbook…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Onboarding checklist</div>
+              <div class="card-body employee-portal-body">
+                <p class="muted employee-portal-help">
+                  Mark each item complete after you sign and return the form to HR.
+                </p>
+                <div class="employee-portal-onboarding-summary">
+                  <span id="myTasksOnboardingSummary" class="muted"></span>
+                  <div class="employee-portal-onboarding-progress-track">
+                    <div class="employee-portal-onboarding-progress-bar" id="myTasksOnboardingProgress"></div>
+                  </div>
+                </div>
+                <div id="myTasksOnboardingList" class="employee-portal-onboarding-list">
+                  <div class="muted">Loading…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Completed acknowledgments</div>
+              <div class="card-body">
+                <div id="myTasksCompletedList" class="employee-portal-task-list">
+                  <div class="muted">Loading…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="orbisSectionMyDirectory"
+          class="orbis-app-section hidden"
+          data-section="myDirectoryView"
+          aria-hidden="true"
+        >
+          <div class="page employee-portal-page" id="myDirectoryPage">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Company directory — names, titles, and departments only</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header employee-directory-header">
+                <span>Directory</span>
+                <span class="muted" id="myDirectorySummary"></span>
+              </div>
+              <div class="card-body employee-portal-body">
+                <div class="employee-directory-toolbar">
+                  <input
+                    class="input employee-directory-search"
+                    id="myDirectorySearchInput"
+                    type="search"
+                    placeholder="Search by name, department, title, or supervisor…"
+                    autocomplete="off"
+                  />
+                  <div class="employee-directory-view-toggle" role="tablist" aria-label="Directory view">
+                    <button
+                      class="button soft active"
+                      id="myDirectoryViewListBtn"
+                      type="button"
+                      role="tab"
+                      aria-selected="true"
+                    >
+                      List
+                    </button>
+                    <button
+                      class="button soft"
+                      id="myDirectoryViewChartBtn"
+                      type="button"
+                      role="tab"
+                      aria-selected="false"
+                    >
+                      Org chart
+                    </button>
+                  </div>
+                </div>
+                <div id="myDirectoryListPanel">
+                  <div id="myDirectoryList" class="employee-directory-list">
+                    <div class="muted">Loading directory…</div>
+                  </div>
+                </div>
+                <div id="myDirectoryChartPanel" class="hidden">
+                  <div id="myDirectoryChart" class="org-chart-tree employee-directory-chart">
+                    <div class="muted">Loading org chart…</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
           id="orbisSectionMyTimeOff"
           class="orbis-app-section hidden"
           data-section="myTimeOffView"
@@ -759,6 +1050,18 @@
             <div class="toolbar">
               <div class="toolbar-left">
                 <span class="muted">View your PTO balance and submit requests for supervisor approval</span>
+              </div>
+              <div class="toolbar-right">
+                <a
+                  class="button soft employee-portal-payroll-link toolbar-more-item"
+                  id="myTimeOffPayrollLink"
+                  data-payroll-relief-link
+                  href="https://login.accountantsoffice.com/login?firmCode=KATYL8287&amp;returnurl=https%3A%2F%2FEmployeeCenter.payrollrelief.com%2Faccount%2Flogin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Payroll &amp; pay stubs
+                </a>
               </div>
             </div>
             <div class="kpi-grid compact-grid">
@@ -829,9 +1132,6 @@
               </div>
               <div class="toolbar-right attendance-manual-actions">
                 <button class="button primary" id="attendanceSaveBtn" type="button">Save attendance</button>
-                <button class="button soft" id="attendanceSyncBtn" type="button" title="Requires Intuit Workforce API access">
-                  Sync from Intuit
-                </button>
               </div>
             </div>
             <div class="kpi-grid compact-grid">
