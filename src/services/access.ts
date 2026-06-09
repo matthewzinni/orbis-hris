@@ -183,6 +183,9 @@ export async function getUserRole(): Promise<string | null> {
         window.currentUserRole = currentUserRole;
         window.currentUserAccess = currentUserAccess;
         await ensureLinkedEmployeeRecord();
+        if (accessRole === 'supervisor') {
+          await ensureSupervisorEmployeeScope();
+        }
         return accessRole;
       }
     }
@@ -278,6 +281,32 @@ export async function ensureLinkedEmployeeRecord(): Promise<string | null> {
   }
 
   return employeeId || null;
+}
+
+/** Refresh explicit supervisor team ids from roster supervisor field when a stale list exists. */
+export async function ensureSupervisorEmployeeScope(): Promise<string[] | null> {
+  if (!isSupervisorUser() || !currentUserAccess) return null;
+
+  const current = parseSupervisedEmployeeIds(currentUserAccess);
+  if (!current.length) return null;
+
+  const { data, error } = await supabaseClient.rpc('orbis_sync_my_supervisor_scope');
+
+  if (error) {
+    console.warn('[Access] Could not sync supervisor scope:', error.message || error);
+    return null;
+  }
+
+  const synced = Array.isArray(data)
+    ? data.map((id) => String(id || '').trim()).filter(Boolean)
+    : [];
+
+  if (synced.length) {
+    currentUserAccess.supervised_employee_ids = synced;
+    window.currentUserAccess = currentUserAccess;
+  }
+
+  return synced.length ? synced : null;
 }
 
 export function canAccessOrbisApp(): boolean {

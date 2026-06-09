@@ -1,4 +1,4 @@
--- Orbis: Kyle Hodges — supervisor over Ryan Bird (BTW2105)
+-- Orbis: Kyle Hodges — supervisor over Business Development direct reports
 -- Run in Supabase SQL Editor or via service role after auth user exists for work email.
 
 begin;
@@ -22,14 +22,18 @@ values (
   'Kyle Hodges',
   'supervisor',
   'Kyle Hodges',
-  array['BTW2105']::text[],
+  (
+    select coalesce(array_agg(e.id::text), array[]::text[])
+    from public.employees e
+    where upper(trim(coalesce(e.status, ''))) not in ('TERMINATED', 'INACTIVE')
+      and trim(coalesce(e.supervisor, '')) = 'Kyle Hodges'
+  ),
   false
 );
 
--- Ryan Bird already has supervisor = 'Kyle Hodges' on employees; normalize if needed:
 update public.employees
 set supervisor = 'Kyle Hodges'
-where id = 'BTW2105'
+where id in ('BTW2105', 'BTW2301', 'BTW2402', 'BTW2610')
   and trim(coalesce(supervisor, '')) <> 'Kyle Hodges';
 
 commit;
