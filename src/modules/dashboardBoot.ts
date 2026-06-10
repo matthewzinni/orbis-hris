@@ -1185,6 +1185,10 @@ function finalizeDashboardLoad(syncStatus: DashboardSyncStatus, syncedAt: Date):
     void window.loadHrInbox(true);
   }
 
+  if (typeof window.loadManagerHome === 'function') {
+    void window.loadManagerHome(true);
+  }
+
   if (typeof window.updateWorkspaceAlerts === 'function') {
     window.updateWorkspaceAlerts();
   }

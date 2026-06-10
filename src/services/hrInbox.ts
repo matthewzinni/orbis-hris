@@ -3,7 +3,12 @@
  */
 
 import { supabaseClient } from './supabaseClient';
-import { isAdminUser, isSupervisorUser } from './access';
+import { employeeMatchesSupervisorAccess, isAdminUser, isSupervisorUser } from './access';
+import {
+  loadPolicyCampaignInboxAssignments,
+  type PolicyCampaign,
+  type PolicyCampaignAssignment,
+} from './policyCampaigns';
 import {
   daysUntilDate,
   employeeDisplayName,
@@ -48,7 +53,8 @@ export type HrInboxKind =
   | 'operations'
   | 'payroll_handoff'
   | 'offboarding'
-  | 'leave_request';
+  | 'leave_request'
+  | 'policy_campaign';
 
 export type HrInboxRoute =
   | { type: 'employee'; employeeId: string; drawerTab?: string }
@@ -89,6 +95,7 @@ const KIND_LABELS: Record<HrInboxKind, string> = {
   payroll_handoff: 'Payroll handoff',
   offboarding: 'Offboarding',
   leave_request: 'Time off',
+  policy_campaign: 'Policy acknowledgment',
 };
 
 type EmployeeLike = Record<string, unknown>;
@@ -189,7 +196,14 @@ function daysSinceHire(employee: EmployeeLike): number | null {
 }
 
 function collectOnboardingItems(
-  tasks: Array<{ id: string; employee_id?: string; task_name?: string; status?: string }>,
+  tasks: Array<{
+    id: string;
+    employee_id?: string;
+    task_name?: string;
+    status?: string;
+    due_date?: string | null;
+    assigned_to?: string | null;
+  }>,
   employees: EmployeeLike[]
 ): HrInboxItem[] {
   const items: HrInboxItem[] = [];
@@ -206,7 +220,10 @@ function collectOnboardingItems(
     keys.forEach((key) => employeeByRosterId.set(key, employee));
   });
 
-  const pendingByEmployee = new Map<string, Array<{ id: string; task_name?: string }>>();
+  const pendingByEmployee = new Map<
+    string,
+    Array<{ id: string; task_name?: string; due_date?: string | null; assigned_to?: string | null }>
+  >();
 
   tasks.forEach((task) => {
     if (String(task.status || '').toLowerCase() === 'completed') return;
@@ -224,7 +241,12 @@ function collectOnboardingItems(
     if (!drawerId) return;
 
     const bucket = pendingByEmployee.get(drawerId) || [];
-    bucket.push({ id: task.id, task_name: task.task_name });
+    bucket.push({
+      id: task.id,
+      task_name: task.task_name,
+      due_date: task.due_date,
+      assigned_to: task.assigned_to,
+    });
     pendingByEmployee.set(drawerId, bucket);
   });
 
@@ -252,16 +274,65 @@ function collectOnboardingItems(
     }
 
     pendingTasks.forEach((task) => {
+      const taskName = String(task.task_name || 'Task').trim() || 'Pending task';
+      const dueRaw = task.due_date || employee.hire_date || employee.hireDate;
+      const days = daysUntilDate(dueRaw);
+      const isI9 = taskName === 'I-9';
+      const assignee = String(task.assigned_to || '').trim();
+
       items.push({
         id: `onboarding:${task.id}`,
         kind: 'onboarding',
-        severity: isNewHire ? 'due_soon' : 'info',
+        severity: severityFromDays(days, isNewHire ? 'due_soon' : 'info'),
         employeeName: name,
-        dueDate: isoDateFromValue(employee.hire_date || employee.hireDate),
-        title: `Onboarding — ${name}`,
-        detail: String(task.task_name || 'Task').trim() || 'Pending task',
+        dueDate: isoDateFromValue(dueRaw),
+        title: isI9 ? `I-9 due — ${name}` : `Onboarding — ${name}`,
+        detail: [
+          taskName,
+          assignee ? `Assigned to ${assignee === 'employee' ? 'new hire' : assignee}` : '',
+          isI9 && days !== null && days < 0 ? 'Section 2 verification overdue' : '',
+        ]
+          .filter(Boolean)
+          .join(' · '),
         route: { type: 'employee', employeeId, drawerTab: 'onboarding' },
       });
+    });
+  });
+
+  return items;
+}
+
+function collectPolicyCampaignItems(
+  rows: Array<PolicyCampaignAssignment & { campaign: PolicyCampaign }>,
+  supervisorOnly = false
+): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  rows.forEach((row) => {
+    const employee = resolveEmployee(row.employee_id);
+    if (!employee) return;
+    if (supervisorOnly && !employeeMatchesSupervisorAccess(employee)) return;
+
+    const employeeId = drawerEmployeeId(employee);
+    if (!employeeId) return;
+
+    const name = employeeDisplayName(employee);
+    const days = daysUntilDate(row.due_date);
+    const isOverdue = row.status === 'overdue' || (days !== null && days < 0);
+    const campaignTitle = String(row.campaign?.title || 'Policy campaign').trim();
+    const documentTitle = String(row.campaign?.document_title || '').trim();
+
+    items.push({
+      id: `policy-campaign:${row.id}`,
+      kind: 'policy_campaign',
+      severity: isOverdue ? 'overdue' : severityFromDays(days, 'due_soon'),
+      employeeName: name,
+      dueDate: isoDateFromValue(row.due_date),
+      title: isOverdue ? `Policy ack overdue — ${name}` : `Policy acknowledgment — ${name}`,
+      detail: [campaignTitle, documentTitle, isOverdue ? 'Escalate to employee and manager' : '']
+        .filter(Boolean)
+        .join(' · '),
+      route: { type: 'view', viewId: 'documentsView' },
     });
   });
 
@@ -654,8 +725,18 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
   const pendingLeavePromise = loadPendingLeaveRequests();
 
   if (isSupervisorUser() && !isAdminUser()) {
-    const pendingLeave = await pendingLeavePromise;
-    return sortHrInboxItems(collectLeaveRequestItems(pendingLeave));
+    const [pendingLeave, policyAssignments] = await Promise.all([
+      pendingLeavePromise,
+      loadPolicyCampaignInboxAssignments().catch((err) => {
+        console.warn('[HrInbox] Could not load policy campaigns:', err);
+        return [];
+      }),
+    ]);
+
+    return sortHrInboxItems([
+      ...collectLeaveRequestItems(pendingLeave),
+      ...collectPolicyCampaignItems(policyAssignments, true),
+    ]);
   }
 
   const [
@@ -668,8 +749,11 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     operationsRes,
     payrollHandoffs,
     pendingLeave,
+    policyAssignments,
   ] = await Promise.all([
-    supabaseClient.from('onboarding_tasks').select('id, employee_id, task_name, status'),
+    supabaseClient
+      .from('onboarding_tasks')
+      .select('id, employee_id, task_name, status, due_date, assigned_to'),
     supabaseClient.from('offboarding_tasks').select('id, employee_id, task_name, status'),
     supabaseClient
       .from('discipline_reports')
@@ -686,6 +770,10 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
       .select('id, title, status, due_date, department'),
     payrollHandoffsPromise,
     pendingLeavePromise,
+    loadPolicyCampaignInboxAssignments().catch((err) => {
+      console.warn('[HrInbox] Could not load policy campaigns:', err);
+      return [];
+    }),
   ]);
 
   const queryErrors = [
@@ -712,6 +800,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     ...collectOperationsItems(operationsRes.data || []),
     ...collectPayrollHandoffItems(payrollHandoffs),
     ...collectLeaveRequestItems(pendingLeave),
+    ...collectPolicyCampaignItems(policyAssignments),
   ];
 
   return sortHrInboxItems(merged);
@@ -776,8 +865,36 @@ export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSum
     });
   }
 
+  const policyOverdue = items.filter(
+    (item) => item.kind === 'policy_campaign' && item.severity === 'overdue'
+  ).length;
+  if (policyOverdue > 0) {
+    alerts.push({
+      id: 'policy-campaign-overdue',
+      label: 'Policy acknowledgments overdue',
+      detail: `${policyOverdue} employee${policyOverdue === 1 ? '' : 's'} past due on policy campaigns`,
+      count: policyOverdue,
+      viewId: 'documentsView',
+    });
+  }
+
+  const onboardingOverdue = items.filter(
+    (item) =>
+      (item.kind === 'onboarding' || item.kind === 'new_hire') && item.severity === 'overdue'
+  ).length;
+  if (onboardingOverdue > 0) {
+    alerts.push({
+      id: 'onboarding-overdue',
+      label: 'Onboarding overdue',
+      detail: `${onboardingOverdue} task${onboardingOverdue === 1 ? '' : 's'} past due (check I-9 deadlines)`,
+      count: onboardingOverdue,
+      viewId: 'dashboardView',
+    });
+  }
+
   const onboarding = items.filter(
-    (item) => item.kind === 'onboarding' || item.kind === 'new_hire'
+    (item) =>
+      (item.kind === 'onboarding' || item.kind === 'new_hire') && item.severity !== 'overdue'
   ).length;
   if (onboarding > 0) {
     alerts.push({

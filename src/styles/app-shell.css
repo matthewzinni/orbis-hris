@@ -1404,6 +1404,14 @@ tr:hover td {
   margin-top: 8px;
 }
 
+.candidate-summary-email-row {
+  align-items: center;
+}
+
+.candidate-summary-email-hint {
+  font-size: 0.88rem;
+}
+
 .candidate-internal-banner {
   margin-bottom: 14px;
   padding: 12px 14px;

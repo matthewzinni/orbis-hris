@@ -442,6 +442,165 @@ export function canAccessPerformanceReviews(employee?: EmployeeLike | null): boo
   return false;
 }
 
+/** Employee Admin tab + flags: admins always; supervisors only for their direct reports. */
+export function canEditEmployeeAdmin(employee?: EmployeeLike | null): boolean {
+  if (Boolean(window.isCreatingEmployee)) return false;
+
+  if (isAdminUser()) return true;
+
+  if (isSupervisorUser()) {
+    const target =
+      employee ?? (window.currentEmployee as EmployeeLike | null | undefined) ?? null;
+    return employeeMatchesSupervisorAccess(target);
+  }
+
+  return false;
+}
+
+const EMPLOYEE_ADMIN_FIELD_IDS = [
+  'empId',
+  'employeeId',
+  'empEmployeeId',
+  'employeeIdInput',
+  'empStatus',
+  'status',
+  'employeeStatusInput',
+  'empFirstName',
+  'firstName',
+  'employeeFirstName',
+  'employeeFirstNameInput',
+  'empLastName',
+  'lastName',
+  'employeeLastName',
+  'employeeLastNameInput',
+  'empDepartment',
+  'department',
+  'employeeDepartment',
+  'employeeDepartmentInput',
+  'empPosition',
+  'position',
+  'employeePosition',
+  'employeePositionInput',
+  'empSupervisor',
+  'supervisor',
+  'employeeSupervisor',
+  'employeeSupervisorInput',
+  'empPayType',
+  'payType',
+  'employeePayTypeInput',
+  'empStandardHours',
+  'standardHours',
+  'employeeStandardHoursInput',
+  'empBenefitsStatus',
+  'benefitsStatus',
+  'employeeBenefitsStatusInput',
+  'empHireDate',
+  'hireDate',
+  'employeeHireDateInput',
+  'employeeTerminationDateInput',
+  'employeeTerminationDate',
+  'empTerminationDate',
+  'terminationDate',
+  'empNextReviewDate',
+  'nextReviewDate',
+  'employeeNextReviewInput',
+  'empAnniversaryDate',
+  'anniversaryDate',
+  'employeeAnniversaryDateInput',
+  'empTenureBracket',
+  'tenureBracket',
+  'employeeTenureBracketInput',
+  'empWorkEmail',
+  'workEmail',
+  'employeeWorkEmailInput',
+  'empPersonalEmail',
+  'personalEmail',
+  'employeePersonalEmailInput',
+  'empPhone',
+  'phone',
+  'empNotes',
+  'notes',
+  'atRiskReasonInput',
+  'impactPlayerReasonInput',
+];
+
+const EMPLOYEE_ID_FIELD_IDS = [
+  'empId',
+  'employeeId',
+  'empEmployeeId',
+  'employeeIdInput',
+];
+
+const EMPLOYEE_FLAG_BUTTON_IDS = [
+  'markAtRiskBtn',
+  'clearAtRiskBtn',
+  'markImpactPlayerBtn',
+  'clearImpactPlayerBtn',
+];
+
+function setEmployeeAdminFieldsLocked(locked: boolean, lockTitle: string): void {
+  const lockMessage =
+    lockTitle ||
+    'Locked: you can only edit employee admin for people on your team';
+
+  EMPLOYEE_ADMIN_FIELD_IDS.forEach((id) => {
+    const field = safeGet(id) as HTMLInputElement | HTMLTextAreaElement | null;
+    if (!field) return;
+    field.disabled = locked;
+    field.readOnly = locked;
+    if (locked) {
+      field.title = lockMessage;
+    } else {
+      field.removeAttribute('title');
+    }
+  });
+
+  const adminPanel = document.getElementById('tab-employee');
+  adminPanel
+    ?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+      'input, select, textarea'
+    )
+    .forEach((field) => {
+      field.disabled = locked;
+      field.readOnly = locked;
+      if (locked) {
+        field.title = lockMessage;
+      } else {
+        field.removeAttribute('title');
+      }
+    });
+}
+
+function setSupervisorEmployeeIdFieldsLocked(): void {
+  if (!isSupervisorUser()) return;
+
+  const lockMessage = 'Employee ID can only be changed by HR administrators';
+  EMPLOYEE_ID_FIELD_IDS.forEach((id) => {
+    const field = safeGet(id) as HTMLInputElement | null;
+    if (!field) return;
+    field.disabled = true;
+    field.readOnly = true;
+    field.title = lockMessage;
+  });
+}
+
+function setEmployeeFlagButtonsLocked(locked: boolean, lockTitle: string): void {
+  const lockMessage =
+    lockTitle || 'Locked: you can only change flags for people on your team';
+
+  EMPLOYEE_FLAG_BUTTON_IDS.forEach((id) => {
+    const btn = safeGet(id) as HTMLButtonElement | null;
+    if (!btn) return;
+    btn.disabled = locked;
+    btn.classList.toggle('hidden', locked);
+    if (locked) {
+      btn.title = lockMessage;
+    } else {
+      btn.removeAttribute('title');
+    }
+  });
+}
+
 /** Normalize UUID list from user_access (PostgREST may return string[] or JSON). */
 export function parseSupervisedEmployeeIds(access: UserAccessRow | null | undefined): string[] {
   const raw = access?.supervised_employee_ids;
@@ -487,6 +646,7 @@ export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | 
 
 export function applyAdminDashboardView(): void {
   document.getElementById('supervisorBanner')?.remove();
+  window.applyManagerHomeAccess?.();
 
   const currentView = String(window.currentMainView || 'dashboardView');
   const dashboardTitle = safeGet('dashboardTitle');
@@ -603,8 +763,10 @@ export function applySupervisorDashboardView(): void {
     (el as HTMLInputElement).disabled = true;
   });
 
+  window.applyManagerHomeAccess?.();
+
   const existingBanner = document.getElementById('supervisorBanner');
-  if (!existingBanner) {
+  if (!existingBanner && !document.getElementById('managerHomeCard')) {
     const banner = document.createElement('div');
     banner.id = 'supervisorBanner';
     banner.style.padding = '10px';
@@ -817,110 +979,6 @@ export function applyRolePermissions(): void {
           'Locked: supervisors cannot delete or terminate records';
       });
 
-    const employeeAdminFieldIds = [
-      'empId',
-      'employeeId',
-      'empEmployeeId',
-      'employeeIdInput',
-      'empStatus',
-      'status',
-      'employeeStatusInput',
-      'empFirstName',
-      'firstName',
-      'employeeFirstName',
-      'employeeFirstNameInput',
-      'empLastName',
-      'lastName',
-      'employeeLastName',
-      'employeeLastNameInput',
-      'empDepartment',
-      'department',
-      'employeeDepartment',
-      'employeeDepartmentInput',
-      'empPosition',
-      'position',
-      'employeePosition',
-      'employeePositionInput',
-      'empSupervisor',
-      'supervisor',
-      'employeeSupervisor',
-      'employeeSupervisorInput',
-      'empPayType',
-      'payType',
-      'employeePayTypeInput',
-      'empStandardHours',
-      'standardHours',
-      'employeeStandardHoursInput',
-      'empBenefitsStatus',
-      'benefitsStatus',
-      'employeeBenefitsStatusInput',
-      'empHireDate',
-      'hireDate',
-      'employeeHireDateInput',
-      'employeeTerminationDateInput',
-      'employeeTerminationDate',
-      'empTerminationDate',
-      'terminationDate',
-      'empNextReviewDate',
-      'nextReviewDate',
-      'employeeNextReviewInput',
-      'empAnniversaryDate',
-      'anniversaryDate',
-      'employeeAnniversaryDateInput',
-      'empTenureBracket',
-      'tenureBracket',
-      'employeeTenureBracketInput',
-      'empWorkEmail',
-      'workEmail',
-      'employeeWorkEmailInput',
-      'empPersonalEmail',
-      'personalEmail',
-      'employeePersonalEmailInput',
-      'empPhone',
-      'phone',
-      'empNotes',
-      'notes',
-      'atRiskReasonInput',
-      'impactPlayerReasonInput',
-    ];
-
-    employeeAdminFieldIds.forEach((id) => {
-      const field = safeGet(id) as HTMLInputElement | null;
-      if (!field) return;
-      field.disabled = true;
-      field.readOnly = true;
-      field.title = 'Locked: supervisors cannot edit core employee profile fields';
-    });
-
-    const adminPanel = document.getElementById('tab-employee');
-    adminPanel
-      ?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
-        'input, select, textarea'
-      )
-      .forEach((field) => {
-        field.disabled = true;
-        field.readOnly = true;
-        field.title = 'Locked: supervisors cannot edit core employee profile fields';
-      });
-
-    ['markAtRiskBtn', 'clearAtRiskBtn', 'markImpactPlayerBtn', 'clearImpactPlayerBtn'].forEach(
-      (id) => {
-        const btn = safeGet(id) as HTMLButtonElement | null;
-        if (!btn) return;
-        btn.disabled = true;
-        btn.classList.add('hidden');
-        btn.title = 'Locked: supervisors cannot change HR flags';
-      }
-    );
-
-    const saveEmployeeBtn = safeGet('saveEmployeeBtn') as HTMLButtonElement | null;
-    if (saveEmployeeBtn) {
-      saveEmployeeBtn.disabled = true;
-      saveEmployeeBtn.classList.add('hidden');
-      saveEmployeeBtn.title =
-        'Locked: supervisors cannot edit core employee profile fields';
-    }
-
     const newEmployeeBtn =
       (safeGet('newEmployeeBtn') as HTMLButtonElement | null) ||
       (document.querySelector(
@@ -933,13 +991,6 @@ export function applyRolePermissions(): void {
       newEmployeeBtn.title = 'Locked: supervisors cannot create employee records';
     }
   } else {
-    const saveEmployeeBtn = safeGet('saveEmployeeBtn') as HTMLButtonElement | null;
-    if (saveEmployeeBtn) {
-      saveEmployeeBtn.classList.remove('hidden');
-      saveEmployeeBtn.disabled = false;
-      saveEmployeeBtn.removeAttribute('title');
-    }
-
     const newEmployeeBtn =
       (safeGet('newEmployeeBtn') as HTMLButtonElement | null) ||
       (document.querySelector(
@@ -951,27 +1002,42 @@ export function applyRolePermissions(): void {
       newEmployeeBtn.disabled = false;
       newEmployeeBtn.removeAttribute('title');
     }
+  }
 
-    const adminPanel = document.getElementById('tab-employee');
-    adminPanel
-      ?.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
-        'input, select, textarea'
-      )
-      .forEach((field) => {
-        field.disabled = false;
-        field.readOnly = false;
-        field.removeAttribute('title');
-      });
+  const canEditAdmin = canEditEmployeeAdmin(currentEmployee as EmployeeLike | null | undefined);
+  const saveEmployeeBtn = safeGet('saveEmployeeBtn') as HTMLButtonElement | null;
 
-    ['markAtRiskBtn', 'clearAtRiskBtn', 'markImpactPlayerBtn', 'clearImpactPlayerBtn'].forEach(
-      (id) => {
-        const btn = safeGet(id) as HTMLButtonElement | null;
-        if (!btn) return;
-        btn.disabled = false;
-        btn.classList.remove('hidden');
-        btn.removeAttribute('title');
-      }
+  if (canEditAdmin) {
+    setEmployeeAdminFieldsLocked(false, '');
+    setEmployeeFlagButtonsLocked(false, '');
+    setSupervisorEmployeeIdFieldsLocked();
+
+    if (saveEmployeeBtn) {
+      saveEmployeeBtn.classList.remove('hidden');
+      saveEmployeeBtn.disabled = false;
+      saveEmployeeBtn.removeAttribute('title');
+    }
+  } else {
+    setEmployeeAdminFieldsLocked(
+      true,
+      supervisorMode
+        ? 'Locked: you can only edit employee admin for people on your team'
+        : 'Locked: admin access required'
     );
+    setEmployeeFlagButtonsLocked(
+      true,
+      supervisorMode
+        ? 'Locked: you can only change flags for people on your team'
+        : 'Locked: admin access required'
+    );
+
+    if (saveEmployeeBtn) {
+      saveEmployeeBtn.disabled = true;
+      saveEmployeeBtn.classList.add('hidden');
+      saveEmployeeBtn.title = supervisorMode
+        ? 'Locked: you can only edit employee admin for people on your team'
+        : 'Locked: admin access required';
+    }
   }
 
   applyRoleLocks();
@@ -1141,6 +1207,7 @@ declare global {
     canManageEmployeeRecords?: () => boolean;
     isSupervisorUser?: () => boolean;
     canAccessPerformanceReviews?: (employee?: EmployeeLike | null) => boolean;
+    canEditEmployeeAdmin?: (employee?: EmployeeLike | null) => boolean;
     employeeMatchesSupervisorAccess?: (employee: EmployeeLike) => boolean;
     applyAdminDashboardView?: () => void;
     applySupervisorDashboardView?: () => void;
@@ -1184,6 +1251,7 @@ window.applyRoleNavigation = applyRoleNavigation;
 window.getLinkedEmployeeId = getLinkedEmployeeId;
 window.applyEmployeePortalView = applyEmployeePortalView;
 window.canAccessPerformanceReviews = canAccessPerformanceReviews;
+window.canEditEmployeeAdmin = canEditEmployeeAdmin;
 window.employeeMatchesSupervisorAccess = employeeMatchesSupervisorAccess;
 window.applyAdminDashboardView = applyAdminDashboardView;
 window.applySupervisorDashboardView = applySupervisorDashboardView;

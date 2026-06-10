@@ -759,6 +759,7 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
         ...(isTerminated
             ? [['Termination Date', formatDrawerDateForDisplay(terminationDate)]]
             : []),
+        ['Phone', employee.phone || '—'],
         ['Next Stay Interview', formatDrawerDateForDisplay(employee.nextReview || employee.next_review || employee.next_review_date)],
         ['Anniversary', formatDrawerDateForDisplay(getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee)))],
         ['Tenure Months', employee.tenureMonths || employee.tenure_months],

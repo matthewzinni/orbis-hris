@@ -93,6 +93,20 @@ create policy orbis_employees_update_admin
   using (public.orbis_is_admin())
   with check (public.orbis_is_admin());
 
+drop policy if exists orbis_employees_update_supervisor on public.employees;
+create policy orbis_employees_update_supervisor
+  on public.employees
+  for update
+  to authenticated
+  using (
+    public.orbis_is_supervisor()
+    and public.orbis_supervisor_sees_employee(employees)
+  )
+  with check (
+    public.orbis_is_supervisor()
+    and public.orbis_supervisor_sees_employee(employees)
+  );
+
 drop policy if exists orbis_employees_delete_admin on public.employees;
 create policy orbis_employees_delete_admin
   on public.employees

@@ -1,3 +1,5 @@
+import { buildMailtoUrl } from '../utils/mailto';
+
 export type StayThemesEmailMeta = {
   monthsBack: number;
   interviewCount: number;
@@ -65,13 +67,11 @@ export function buildStayThemesLeadershipMailto(
   const { recipients, senderEmail } = resolveStayThemesLeadershipEmails();
   const subject = `Stay Interview Themes (${meta.dateFrom} – ${meta.dateTo}) | BTW Global`;
   const body = buildEmailBody(report, meta);
-  const to = recipients.join(',');
-  const params = new URLSearchParams({
+  const mailtoUrl = buildMailtoUrl(recipients, {
     cc: senderEmail,
     subject,
     body,
   });
-  const mailtoUrl = `mailto:${to}?${params.toString()}`;
 
   return { mailtoUrl, recipients, senderEmail };
 }

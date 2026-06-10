@@ -1,0 +1,120 @@
+.policy-campaigns-panel {
+  margin-bottom: 1.5rem;
+}
+
+.policy-campaigns-panel .card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.policy-campaigns-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.policy-campaign-card {
+  border: 1px solid var(--orbis-border, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.policy-campaign-card--overdue {
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.policy-campaign-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.policy-campaign-card h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+}
+
+.policy-campaign-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.policy-campaign-progress {
+  margin-top: 0.75rem;
+}
+
+.policy-campaign-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.policy-campaign-progress-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #22c55e);
+}
+
+.policy-campaign-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.policy-campaign-roster {
+  margin-top: 1rem;
+  border-top: 1px solid var(--orbis-border, rgba(255, 255, 255, 0.08));
+  padding-top: 0.75rem;
+}
+
+.policy-campaign-roster table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.policy-campaign-roster th,
+.policy-campaign-roster td {
+  text-align: left;
+  padding: 0.45rem 0.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.policy-campaign-editor {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--orbis-border, rgba(255, 255, 255, 0.08));
+}
+
+.policy-campaign-target-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.policy-campaign-checkbox-list {
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.policy-campaign-checkbox-list label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}

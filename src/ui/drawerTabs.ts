@@ -55,8 +55,7 @@ function shouldResetEntryTabForm(
   if (tabName === 'meetings' && window.currentMeetingId) return false;
   if (tabName === 'reviews' && window.currentReviewId) return false;
   if (tabName === 'stay-interviews' && window.currentStayInterviewId) return false;
-  if (tabName === 'emergency' && window.currentEmergencyContactId) return false;
-  return ['incidents', 'discipline', 'notes', 'meetings', 'reviews', 'stay-interviews', 'emergency'].includes(
+  return ['incidents', 'discipline', 'notes', 'meetings', 'reviews', 'stay-interviews'].includes(
     tabName
   );
 }

@@ -64,7 +64,7 @@
 .employee-portal-ec-card {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--line, #e2e8f0);
@@ -72,7 +72,6 @@
   background: var(--surface-muted, #f8fafc);
   color: var(--text, inherit);
   text-align: left;
-  cursor: pointer;
   transition:
     border-color 0.15s ease,
     background 0.15s ease;
@@ -80,6 +79,19 @@
 
 .employee-portal-ec-card:hover {
   border-color: var(--line-strong, #cbd5e1);
+}
+
+.employee-portal-ec-card-select {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
 .employee-portal-ec-card.is-active {
@@ -90,14 +102,38 @@
 
 .employee-portal-ec-card-top {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .employee-portal-ec-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.ec-priority-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.ec-priority-actions-label {
+  font-size: 0.78rem;
+  margin-right: 2px;
+}
+
+.ec-priority-btn.is-active {
+  opacity: 0.72;
+  cursor: default;
+}
+
+.ec-priority-card .ec-priority-actions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line, #e2e8f0);
 }
 
 @media (max-width: 860px) {

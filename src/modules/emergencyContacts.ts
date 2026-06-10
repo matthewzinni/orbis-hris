@@ -1,3 +1,12 @@
+import {
+  emergencyContactPriorityLabel,
+  emergencyContactRank,
+  compactEmergencyContactPriorities,
+  getNextEmergencyContactPriority,
+  reorderEmergencyContactPriority,
+  renderEmergencyContactPriorityButtons,
+  sortEmergencyContacts,
+} from '../services/emergencyContactPriority';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
@@ -10,6 +19,7 @@ interface EmergencyContactRecord {
   alternate_phone?: string;
   notes?: string;
   created_at?: string;
+  priority_order?: number | null;
   [key: string]: unknown;
 }
 
@@ -29,6 +39,7 @@ declare global {
     loadEmergencyContacts?: (employeeId: string) => Promise<void>;
     saveEmergencyContact?: () => Promise<void>;
     deleteEmergencyContact?: () => Promise<void>;
+    setEmergencyContactPriority?: (contactId: string, rank: number) => Promise<void>;
     resetEmergencyContactForm?: () => void;
 
     showToast?: (message: string, type?: string) => void;
@@ -167,7 +178,8 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
       .from('emergency_contacts')
       .select('*')
       .in('employee_id', idsToSearch)
-      .order('created_at', { ascending: false });
+      .order('priority_order', { ascending: true })
+      .order('created_at', { ascending: true });
 
     if (error) {
       console.error('[EmergencyContacts] Load failed:', error);
@@ -175,7 +187,7 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
       return;
     }
 
-    const rows = (data || []) as EmergencyContactRecord[];
+    const rows = sortEmergencyContacts((data || []) as EmergencyContactRecord[]);
 
     if (!rows.length) {
       resetEmergencyContactForm();
@@ -191,12 +203,15 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
     }
 
     const selectedId = window.currentEmergencyContactId;
+    const selectedRow =
+      selectedId && rows.some((row) => String(row.id) === String(selectedId))
+        ? rows.find((row) => String(row.id) === String(selectedId))
+        : rows[0];
 
-    if (
-      !selectedId ||
-      !rows.some((row) => String(row.id) === String(selectedId))
-    ) {
+    if (!selectedRow) {
       resetEmergencyContactForm();
+    } else {
+      populateEmergencyContactForm(selectedRow);
     }
 
     target.innerHTML = `
@@ -205,31 +220,40 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
         <button class="button soft" id="addEmergencyContactBtn" type="button">+ Add New</button>
       </div>
       ${rows
-        .map(
-          (row, index) => `
-        <div class="history-item" data-ec-id="${escapeHtml(row.id || '')}" style="cursor:pointer; ${String(window.currentEmergencyContactId) === String(row.id) ? 'border:1px solid var(--blue, #2e75b6);' : ''}">
+        .map((row) => {
+          const rank = emergencyContactRank(row, rows);
+          const priorityLabel = emergencyContactPriorityLabel(rank);
+          const isSelected = String(selectedRow?.id) === String(row.id);
+          return `
+        <div class="history-item ec-priority-card" data-ec-id="${escapeHtml(row.id || '')}" style="cursor:pointer; ${isSelected ? 'border:1px solid var(--blue, #2e75b6);' : ''}">
           <div class="history-top">
             <div>
               <div class="history-title">${escapeHtml(row.contact_name || 'Emergency Contact')}</div>
               <div class="history-date">${escapeHtml(row.relationship || '')}</div>
             </div>
-            <span class="badge badge-soft">${index === 0 ? 'Primary' : 'Contact'}</span>
+            <span class="badge ${rank === 1 ? 'badge-active' : 'badge-soft'}">${escapeHtml(priorityLabel)}</span>
           </div>
           <div class="history-body">
             <strong>Phone:</strong> ${escapeHtml(row.phone || '')}<br>
             <strong>Alternate:</strong> ${escapeHtml(row.alternate_phone || '')}<br><br>
             <strong>Notes:</strong><br>${nl2br(row.notes || '')}
           </div>
+          <div class="ec-priority-actions">
+            <span class="ec-priority-actions-label muted">Set priority</span>
+            ${renderEmergencyContactPriorityButtons(String(row.id || ''), rank, rows.length, 'ec-priority-id')}
+          </div>
         </div>
-      `
-        )
+      `;
+        })
         .join('')}
     `;
 
     bindAddEmergencyContactButton();
 
     target.querySelectorAll<HTMLElement>('[data-ec-id]').forEach((card) => {
-      card.addEventListener('click', () => {
+      card.addEventListener('click', (event) => {
+        if ((event.target as HTMLElement).closest('.ec-priority-btn')) return;
+
         const row = rows.find((item) => String(item.id) === String(card.dataset.ecId));
 
         if (!row) return;
@@ -241,6 +265,19 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
         });
 
         card.style.border = '1px solid var(--blue, #2e75b6)';
+      });
+    });
+
+    target.querySelectorAll<HTMLButtonElement>('[data-ec-priority-id]').forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const contactId = String(button.dataset.ecPriorityId || '').trim();
+        const rank = Number(button.dataset.ecPriority || 0);
+        if (!contactId || !rank) return;
+
+        void setEmergencyContactPriority(contactId, rank);
       });
     });
 
@@ -286,7 +323,12 @@ export async function saveEmergencyContact(): Promise<void> {
         })
         .eq('id', contactId)
         .eq('employee_id', employeeId)
-    : await supabaseClient.from('emergency_contacts').insert([payload]);
+    : await supabaseClient.from('emergency_contacts').insert([
+        {
+          ...payload,
+          priority_order: await getNextEmergencyContactPriority(employeeId),
+        },
+      ]);
 
   if (result.error) {
     console.error('[EmergencyContacts] Save failed:', result.error);
@@ -301,6 +343,27 @@ export async function saveEmergencyContact(): Promise<void> {
 
   resetEmergencyContactForm();
   await loadEmergencyContacts(employeeId);
+}
+
+export async function setEmergencyContactPriority(
+  contactId: string,
+  targetRank: number
+): Promise<void> {
+  const employeeId = getResolvedEmployeeId();
+
+  if (!employeeId) {
+    showToast('No employee selected.', 'error');
+    return;
+  }
+
+  try {
+    await reorderEmergencyContactPriority(employeeId, contactId, targetRank);
+    showToast(`Contact set as ${emergencyContactPriorityLabel(targetRank).toLowerCase()}.`);
+    await loadEmergencyContacts(employeeId);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not update contact priority.';
+    showToast(message, 'error');
+  }
 }
 
 export async function deleteEmergencyContact(): Promise<void> {
@@ -336,6 +399,11 @@ export async function deleteEmergencyContact(): Promise<void> {
   resetEmergencyContactForm();
 
   if (employeeId) {
+    try {
+      await compactEmergencyContactPriorities(employeeId);
+    } catch (err) {
+      console.warn('[EmergencyContacts] Could not compact priorities after delete:', err);
+    }
     await loadEmergencyContacts(employeeId);
   }
 }
@@ -343,4 +411,5 @@ export async function deleteEmergencyContact(): Promise<void> {
 window.loadEmergencyContacts = loadEmergencyContacts;
 window.saveEmergencyContact = saveEmergencyContact;
 window.deleteEmergencyContact = deleteEmergencyContact;
+window.setEmergencyContactPriority = setEmergencyContactPriority;
 window.resetEmergencyContactForm = resetEmergencyContactForm;

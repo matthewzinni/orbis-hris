@@ -1,9 +1,11 @@
 import { supabaseClient } from '../services/supabaseClient';
 import {
+  getCurrentUserAccess,
   getSupervisorDepartmentScope,
   isAdminUser,
   isSupervisorUser,
 } from '../services/access';
+import { openCandidateSummaryLeadershipEmail } from '../services/candidateSummaryEmail';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
 import { employeePortalSignInEmail } from '../services/employeeUtils';
 import { logNewHirePayrollHandoff } from '../services/payrollHandoff';
@@ -87,6 +89,7 @@ declare global {
     openNewCandidateForm?: () => void;
     createCandidateFromEmployee?: () => Promise<void>;
     inviteCandidateToInterview?: () => void;
+    emailCandidateSummaryToLeadership?: () => Promise<void>;
     setText?: (id: string, value: unknown) => void;
     todayInputValue?: () => string;
     closeDrawer?: () => void;
@@ -456,6 +459,89 @@ function buildInterviewInviteMailto(candidate: CandidateRecord): string {
 
 function shouldOpenInterviewTab(stage: unknown): boolean {
   return String(stage || '').trim().toLowerCase() === 'interviewing';
+}
+
+async function loadCandidateNotesForEmail(candidateId: string): Promise<
+  Array<{ note_date?: string | null; note_type?: string | null; note_text?: string | null }>
+> {
+  const id = String(candidateId || '').trim();
+  if (!id) return [];
+
+  const { data, error } = await supabaseClient
+    .from('candidate_notes')
+    .select('note_date, note_type, note_text')
+    .eq('candidate_id', id)
+    .order('note_date', { ascending: false })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.warn('[Candidates] Could not load notes for email:', error);
+    return [];
+  }
+
+  return (data || []) as Array<{
+    note_date?: string | null;
+    note_type?: string | null;
+    note_text?: string | null;
+  }>;
+}
+
+export async function emailCandidateSummaryToLeadership(): Promise<void> {
+  const drawerValues = getCandidateDrawerValues();
+  const profileSummary =
+    getInputValue('candidateNotesInput', 'candidateNotes') || drawerValues.notes || '';
+
+  if (!String(profileSummary || '').trim()) {
+    showToast('Add a profile summary before emailing leadership.', 'error');
+    return;
+  }
+
+  const candidateId = String((await resolveCurrentCandidateId()) || '').trim();
+  const notes = candidateId ? await loadCandidateNotesForEmail(candidateId) : [];
+
+  const access = getCurrentUserAccess();
+  const senderEmail = String(access?.email || '').trim() || undefined;
+  const senderName = String(access?.display_name || '').trim() || undefined;
+
+  try {
+    const { recipients, senderEmail: ccEmail } = openCandidateSummaryLeadershipEmail({
+      firstName:
+        getInputValue('candidateFirstNameInput', 'candidateFirstName') ||
+        drawerValues.first_name ||
+        '',
+      lastName:
+        getInputValue('candidateLastNameInput', 'candidateLastName') ||
+        drawerValues.last_name ||
+        '',
+      email: getInputValue('candidateEmailInput', 'candidateEmail') || drawerValues.email || '',
+      phone: getInputValue('candidatePhoneInput', 'candidatePhone') || drawerValues.phone || '',
+      position:
+        getInputValue('candidatePositionInput', 'candidatePosition') ||
+        drawerValues.position ||
+        '',
+      department:
+        getInputValue('candidateDepartmentInput', 'candidateDepartment') ||
+        drawerValues.department ||
+        '',
+      stage: getInputValue('candidateStageInput', 'candidateStage') || drawerValues.stage || '',
+      source: getInputValue('candidateSourceInput', 'candidateSource') || drawerValues.source || '',
+      appliedDate:
+        getInputValue('candidateAppliedDateInput', 'candidateAppliedDate') ||
+        drawerValues.applied_date ||
+        '',
+      profileSummary: String(profileSummary).trim(),
+      interviewNotes:
+        getInputValue('candidateInterviewNotes') || drawerValues.interview_notes || '',
+      notes,
+      senderEmail,
+      senderName,
+    });
+
+    showToast(`Opening email to ${recipients.join(', ')} (Cc: ${ccEmail}).`);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not open email.';
+    showToast(message, 'error');
+  }
 }
 
 export function inviteCandidateToInterview(): void {
@@ -1210,12 +1296,24 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
     const updates: Record<string, string> = {};
     const newPosition = String(data.position || '').trim();
     const newDepartment = String(data.department || '').trim();
+    const candidatePhone = String(data.phone || '').trim();
+    const candidateEmail = String(data.email || '').trim().toLowerCase();
 
     if (newPosition && newPosition !== String(linkedEmployee.position || '').trim()) {
       updates.position = newPosition;
     }
     if (newDepartment && newDepartment !== String(linkedEmployee.department || '').trim()) {
       updates.department = newDepartment;
+    }
+    if (candidatePhone) {
+      updates.phone = candidatePhone;
+    }
+    if (candidateEmail) {
+      if (candidateEmail.endsWith('@btwglobal.com')) {
+        updates.work_email = candidateEmail;
+      } else {
+        updates.personal_email = candidateEmail;
+      }
     }
 
     if (Object.keys(updates).length) {
@@ -1280,16 +1378,27 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
     return true;
   }
 
-  const employeePayload = {
+  const candidateEmail = String(data.email || '').trim().toLowerCase();
+  const candidatePhone = String(data.phone || '').trim();
+
+  const employeePayload: Record<string, unknown> = {
     id: await generateAvailableEmployeeId(),
     first_name: data.first_name || '',
     last_name: data.last_name || '',
-    phone: data.phone || '',
+    phone: candidatePhone,
     position: data.position || '',
     department: data.department || '',
     status: 'Active',
     hire_date: new Date().toISOString().slice(0, 10),
   };
+
+  if (candidateEmail) {
+    if (candidateEmail.endsWith('@btwglobal.com')) {
+      employeePayload.work_email = candidateEmail;
+    } else {
+      employeePayload.personal_email = candidateEmail;
+    }
+  }
 
   const cleanEmployeePayload: Record<string, unknown> = {
     ...employeePayload,
@@ -1383,6 +1492,7 @@ window.switchCandidateTab = switchCandidateTab;
 window.openNewCandidateForm = openNewCandidateForm;
 window.createCandidateFromEmployee = createCandidateFromEmployee;
 window.inviteCandidateToInterview = inviteCandidateToInterview;
+window.emailCandidateSummaryToLeadership = emailCandidateSummaryToLeadership;
 
 window.convertCurrentCandidateToEmployee = async function convertCurrentCandidateToEmployee(): Promise<void> {
   const candidateId = await resolveCurrentCandidateId();
@@ -2027,6 +2137,10 @@ function bindCandidateEvents(): void {
       undefined;
 
     void deleteCandidateRecord(explicitId);
+  });
+
+  document.getElementById('emailCandidateSummaryBtn')?.addEventListener('click', () => {
+    void emailCandidateSummaryToLeadership();
   });
 
   document.addEventListener('change', (event) => {

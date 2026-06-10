@@ -1,3 +1,9 @@
+import {
+  compactEmergencyContactPriorities,
+  getNextEmergencyContactPriority,
+  reorderEmergencyContactPriority,
+  sortEmergencyContacts,
+} from './emergencyContactPriority';
 import { supabaseClient } from './supabaseClient';
 
 export type MyProfileRecord = {
@@ -16,17 +22,18 @@ export type MyProfileRecord = {
 };
 
 export type MyEmergencyContactRecord = {
-  id: string;
+  id: string | number;
   employee_id?: string | null;
   contact_name?: string | null;
   relationship?: string | null;
   phone?: string | null;
   alternate_phone?: string | null;
   notes?: string | null;
+  priority_order?: number | null;
 };
 
 const PROFILE_SELECT =
-  'id, first_name, last_name, department, position, supervisor, phone, work_email, personal_email, email, is_remote, status';
+  'id, first_name, last_name, department, position, supervisor, phone, work_email, personal_email, is_remote, status';
 
 export async function loadMyProfile(employeeId: string): Promise<MyProfileRecord | null> {
   const id = String(employeeId || '').trim();
@@ -67,15 +74,18 @@ export async function loadMyEmergencyContacts(employeeId: string): Promise<MyEme
 
   const { data, error } = await supabaseClient
     .from('emergency_contacts')
-    .select('id, employee_id, contact_name, relationship, phone, alternate_phone, notes, created_at')
+    .select(
+      'id, employee_id, contact_name, relationship, phone, alternate_phone, notes, created_at, priority_order'
+    )
     .eq('employee_id', id)
-    .order('created_at', { ascending: false });
+    .order('priority_order', { ascending: true })
+    .order('created_at', { ascending: true });
 
   if (error) {
     throw new Error(error.message || 'Could not load emergency contacts.');
   }
 
-  return (data || []) as MyEmergencyContactRecord[];
+  return sortEmergencyContacts((data || []) as MyEmergencyContactRecord[]);
 }
 
 export async function saveMyEmergencyContact(input: {
@@ -104,14 +114,30 @@ export async function saveMyEmergencyContact(input: {
   const contactId = String(input.contactId || '').trim();
   const result = contactId
     ? await supabaseClient.from('emergency_contacts').update(payload).eq('id', contactId)
-    : await supabaseClient.from('emergency_contacts').insert([payload]);
+    : await supabaseClient.from('emergency_contacts').insert([
+        {
+          ...payload,
+          priority_order: await getNextEmergencyContactPriority(employeeId),
+        },
+      ]);
 
   if (result.error) {
     throw new Error(result.error.message || 'Could not save emergency contact.');
   }
 }
 
-export async function deleteMyEmergencyContact(contactId: string): Promise<void> {
+export async function setMyEmergencyContactPriority(
+  employeeId: string,
+  contactId: string,
+  targetRank: number
+): Promise<void> {
+  await reorderEmergencyContactPriority(employeeId, contactId, targetRank);
+}
+
+export async function deleteMyEmergencyContact(
+  contactId: string,
+  employeeId?: string
+): Promise<void> {
   const id = String(contactId || '').trim();
   if (!id) {
     throw new Error('No emergency contact selected.');
@@ -121,5 +147,10 @@ export async function deleteMyEmergencyContact(contactId: string): Promise<void>
 
   if (error) {
     throw new Error(error.message || 'Could not delete emergency contact.');
+  }
+
+  const scopedEmployeeId = String(employeeId || '').trim();
+  if (scopedEmployeeId) {
+    await compactEmergencyContactPriorities(scopedEmployeeId);
   }
 }

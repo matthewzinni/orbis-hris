@@ -7,6 +7,8 @@ import {
   getHandbookDocumentUrl,
   type HandbookDocument,
 } from '../services/employeeHandbook';
+import { recordPolicyCampaignAcknowledgment } from '../services/policyCampaigns';
+import { supabaseClient } from '../services/supabaseClient';
 import {
   loadEmployeeTasksSnapshot,
   recordHandbookAcknowledgment,
@@ -14,14 +16,22 @@ import {
   toggleEmployeeOnboardingTask,
   type EmployeeTaskItem,
 } from '../services/employeeTasks';
+import {
+  isOnboardingTaskCompleted,
+  onboardingDueBadgeLabel,
+  onboardingDueStatus,
+} from '../services/onboardingWorkflow';
 
 declare global {
   interface Window {
     loadMyTasksPortal?: () => Promise<void>;
     toggleMyOnboardingTask?: (taskId: string, isComplete: boolean) => Promise<void>;
     acknowledgeHandbookFromPortal?: (documentId: string) => Promise<void>;
+    acknowledgePolicyFromPortal?: (assignmentId: string, documentId?: string) => Promise<void>;
   }
 }
+
+let cachedPolicyDocs: HandbookDocument[] = [];
 
 let cachedHandbookDocs: HandbookDocument[] = [];
 
@@ -74,12 +84,16 @@ function renderTaskRow(item: EmployeeTaskItem, pending: boolean): string {
             ? `<a class="button primary sm" href="${esc(item.actionUrl)}" target="_blank" rel="noopener noreferrer">${esc(item.actionLabel || 'Open')}</a>`
             : item.kind === 'handbook_ack' && item.documentLibraryId
               ? `<button type="button" class="button primary sm" data-ack-handbook="${esc(item.documentLibraryId)}">${esc(item.actionLabel || 'Acknowledge')}</button>`
-              : ''
+              : item.kind === 'policy_ack' && item.policyCampaignAssignmentId
+                ? `<button type="button" class="button primary sm" data-ack-policy="${esc(item.policyCampaignAssignmentId)}" data-policy-doc="${esc(item.documentLibraryId || '')}">${esc(item.actionLabel || 'Acknowledge')}</button>`
+                : ''
         }
         ${
           item.kind === 'handbook_ack' && item.documentLibraryId
             ? `<button type="button" class="button soft sm" data-handbook-view="${esc(item.documentLibraryId)}">Read handbook</button>`
-            : ''
+            : item.kind === 'policy_ack' && item.documentLibraryId
+              ? `<button type="button" class="button soft sm" data-policy-view="${esc(item.documentLibraryId)}">Read policy</button>`
+              : ''
         }
       `
     : `<span class="badge badge-active">Done</span>`;
@@ -135,6 +149,59 @@ async function downloadHandbookDocument(doc: HandbookDocument): Promise<void> {
   link.click();
 }
 
+async function loadPolicyDocument(documentId: string): Promise<HandbookDocument | null> {
+  const cached = cachedPolicyDocs.find((item) => item.id === documentId);
+  if (cached) return cached;
+
+  const { data, error } = await supabaseClient
+    .from('document_library')
+    .select(
+      'id, title, category, description, file_url, file_name, version, language, effective_date, is_active, created_at'
+    )
+    .eq('id', documentId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  const doc = data as HandbookDocument;
+  cachedPolicyDocs.push(doc);
+  return doc;
+}
+
+async function openPolicyDocument(documentId: string): Promise<void> {
+  const doc = await loadPolicyDocument(documentId);
+  if (!doc) {
+    showToast('Could not open the policy document.', 'error');
+    return;
+  }
+
+  const url = await getHandbookDocumentUrl(doc, false);
+  if (!url) {
+    showToast('Could not open the policy document.', 'error');
+    return;
+  }
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function bindPolicyActions(): void {
+  const root = safeGet('myTasksPage');
+  if (!root) return;
+
+  root.querySelectorAll<HTMLButtonElement>('[data-policy-view]').forEach((button) => {
+    button.addEventListener('click', () => {
+      void openPolicyDocument(button.dataset.policyView || '');
+    });
+  });
+
+  root.querySelectorAll<HTMLButtonElement>('[data-ack-policy]').forEach((button) => {
+    button.addEventListener('click', () => {
+      void acknowledgePolicyFromPortal(
+        button.dataset.ackPolicy || '',
+        button.dataset.policyDoc || undefined
+      );
+    });
+  });
+}
+
 function bindHandbookActions(docs: HandbookDocument[]): void {
   const root = safeGet('myTasksPage');
   if (!root) return;
@@ -161,7 +228,12 @@ function bindHandbookActions(docs: HandbookDocument[]): void {
 }
 
 function renderOnboardingChecklist(
-  tasks: Array<{ id: string; task_name?: string; status?: string }>
+  tasks: Array<{
+    id: string;
+    task_name?: string;
+    status?: string;
+    due_date?: string | null;
+  }>
 ): void {
   const container = safeGet('myTasksOnboardingList');
   const summary = safeGet('myTasksOnboardingSummary');
@@ -182,18 +254,35 @@ function renderOnboardingChecklist(
   const percent = Math.round((completed / tasks.length) * 100);
 
   container.innerHTML = tasks
-    .map(
-      (task) => `
-        <label class="employee-portal-onboarding-row">
+    .map((task) => {
+      const completed = isOnboardingTaskCompleted(task.status);
+      const dueStatus = onboardingDueStatus(task.due_date);
+      const dueClass =
+        dueStatus === 'overdue'
+          ? 'badge badge-absent'
+          : dueStatus === 'due_soon'
+            ? 'badge badge-leave'
+            : 'badge badge-soft';
+      const dueBadge = completed
+        ? '<span class="badge badge-active">Completed</span>'
+        : task.due_date
+          ? `<span class="${dueClass}">${esc(onboardingDueBadgeLabel(task.due_date))}</span>`
+          : '';
+
+      return `
+        <label class="employee-portal-onboarding-row${completed ? ' is-complete' : ''}">
           <input
             type="checkbox"
             data-onboarding-task-id="${esc(task.id)}"
-            ${String(task.status || '').toLowerCase() === 'completed' ? 'checked' : ''}
+            ${completed ? 'checked' : ''}
           />
-          <span>${esc(task.task_name || 'Onboarding task')}</span>
+          <span class="employee-portal-onboarding-row-main">
+            <strong>${esc(task.task_name || 'Onboarding task')}</strong>
+            ${dueBadge}
+          </span>
         </label>
-      `
-    )
+      `;
+    })
     .join('');
 
   container.querySelectorAll<HTMLInputElement>('[data-onboarding-task-id]').forEach((input) => {
@@ -219,6 +308,40 @@ function renderCompletedAcknowledgments(items: EmployeeTaskItem[]): void {
   }
 
   container.innerHTML = completed.map((item) => renderTaskRow(item, false)).join('');
+}
+
+export async function acknowledgePolicyFromPortal(
+  assignmentId: string,
+  documentId?: string
+): Promise<void> {
+  const employeeId = getLinkedEmployeeId();
+  if (!employeeId || !assignmentId) {
+    showToast('Could not acknowledge policy.', 'error');
+    return;
+  }
+
+  if (documentId) {
+    await openPolicyDocument(documentId);
+  }
+
+  const ok =
+    typeof window.showOrbisConfirm === 'function'
+      ? await window.showOrbisConfirm(
+          'Confirm you have read and understand this policy. Your acknowledgment is recorded for compliance.',
+          { title: 'Acknowledge policy', confirmLabel: 'I acknowledge' }
+        )
+      : window.confirm('Confirm you have read and understand this policy.');
+
+  if (!ok) return;
+
+  try {
+    await recordPolicyCampaignAcknowledgment({ employeeId, assignmentId });
+    showToast('Policy acknowledgment saved.');
+    await loadMyTasksPortal();
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not save acknowledgment.';
+    showToast(message, 'error');
+  }
 }
 
 export async function acknowledgeHandbookFromPortal(documentId: string): Promise<void> {
@@ -307,6 +430,7 @@ export async function loadMyTasksPortal(): Promise<void> {
     }
 
     bindHandbookActions(snapshot.handbookDocuments);
+    bindPolicyActions();
     renderOnboardingChecklist(snapshot.onboardingTasks);
     renderCompletedAcknowledgments(snapshot.completed);
   } catch (err) {
@@ -319,6 +443,7 @@ export async function loadMyTasksPortal(): Promise<void> {
 window.loadMyTasksPortal = loadMyTasksPortal;
 window.toggleMyOnboardingTask = toggleMyOnboardingTask;
 window.acknowledgeHandbookFromPortal = acknowledgeHandbookFromPortal;
+window.acknowledgePolicyFromPortal = acknowledgePolicyFromPortal;
 
 // Legacy alias for prior handbook-only loader
 window.loadMyHandbookPortal = loadMyTasksPortal;

@@ -78,14 +78,8 @@ export function resetDrawerEntryForms(): void {
   setFieldValue('stayQ6', '');
   setFieldValue('stayQ7', '');
   setFieldValue('stayManagerSummary', '');
-  setFieldValue('ecName', '');
-  setFieldValue('ecRelationship', '');
-  setFieldValue('ecPhone', '');
-  setFieldValue('ecAltPhone', '');
-  setFieldValue('ecNotes', '');
 
   window.currentDisciplineReportId = null;
-  window.currentEmergencyContactId = null;
   window.currentIncidentReportId = null;
   window.currentStayInterviewId = null;
   window.currentNoteId = null;
@@ -98,6 +92,10 @@ export function resetDrawerForms(): void {
   const preserveCreateMode = Boolean(window.isCreatingEmployee);
 
   resetDrawerEntryForms();
+
+  if (typeof window.resetEmergencyContactForm === 'function') {
+    window.resetEmergencyContactForm();
+  }
 
   setFieldValue('atRiskReasonInput', '');
   setFieldValue('impactPlayerReasonInput', '');
@@ -139,6 +137,7 @@ declare global {
     getEmployeeAdminPanel?: () => HTMLElement | null;
     resetDrawerEntryForms?: () => void;
     resetDrawerForms?: () => void;
+    resetEmergencyContactForm?: () => void;
     currentDisciplineReportId?: string | null;
     currentNoteId?: string | null;
     currentMeetingId?: string | null;

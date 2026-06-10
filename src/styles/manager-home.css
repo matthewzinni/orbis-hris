@@ -1,0 +1,146 @@
+.manager-home-card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.manager-home-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.manager-home-summary {
+  margin: 0 0 16px;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.manager-home-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.manager-home-metric {
+  padding: 12px 14px;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+  background: var(--surface-muted, #f8fafc);
+}
+
+.manager-home-metric-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.manager-home-metric-label {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: var(--muted, #64748b);
+}
+
+.manager-home-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.manager-home-panel-title {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.manager-home-attention-list,
+.manager-home-out-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.manager-home-attention-item,
+.manager-home-out-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 12px;
+  background: var(--surface-muted, #f8fafc);
+  color: inherit;
+  text-align: left;
+}
+
+.manager-home-out-item {
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.manager-home-out-item:hover {
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.manager-home-attention-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.manager-home-attention-title {
+  font-weight: 600;
+}
+
+.manager-home-attention-detail {
+  font-size: 0.88rem;
+}
+
+.manager-home-attention-actions,
+.manager-home-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.manager-home-roster-row {
+  cursor: pointer;
+}
+
+.manager-home-roster-row:hover td {
+  background: rgba(59, 130, 246, 0.06);
+}
+
+.manager-home-empty {
+  padding: 8px 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 960px) {
+  .manager-home-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+body.authenticated .manager-home-attention-item,
+body.authenticated .manager-home-out-item,
+body.authenticated .manager-home-metric {
+  background: var(--surface-muted);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+body.authenticated .manager-home-metric-label,
+body.authenticated .manager-home-attention-detail {
+  color: var(--muted);
+}

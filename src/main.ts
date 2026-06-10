@@ -11,6 +11,9 @@ import './styles/hr-inbox.css';
 import './styles/payroll-handoff.css';
 import './styles/leave-requests.css';
 import './styles/employee-portal.css';
+import './styles/manager-home.css';
+import './styles/onboarding.css';
+import './styles/policy-campaigns.css';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
 import { getUserRole, isEmployeeUser, canAccessOrbisApp } from './services/access';
@@ -57,6 +60,7 @@ import './modules/employees';
 import './modules/orgChart';
 import './modules/attendance';
 import './modules/dashboardBoot';
+import './modules/managerHome';
 import './ui/executiveInsight';
 import './ui/dashboardDisclosure';
 import './ui/employeeDrawerRiskSignals';
@@ -72,6 +76,10 @@ import './ui/badges';
 import './ui/employeeForm';
 
 import { initializeDocumentsLibrary } from './modules/documents';
+import {
+  initializePolicyCampaignsAdmin,
+  loadPolicyCampaignsAdmin,
+} from './modules/policyCampaigns';
 import {
   saveReviewRecord,
   loadEmployeeReviews,
@@ -352,6 +360,8 @@ async function initializeProtectedModules(): Promise<boolean> {
   try {
     devLog('Initializing Documents Library...');
     await initializeDocumentsLibrary();
+    initializePolicyCampaignsAdmin();
+    void loadPolicyCampaignsAdmin();
     devLog('Documents Library initialized successfully');
   } catch (err) {
     console.error('Documents Library failed to initialize:', err);

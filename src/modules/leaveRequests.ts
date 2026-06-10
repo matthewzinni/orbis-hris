@@ -21,7 +21,11 @@ import {
   loadEmployeePtoSnapshot,
   ptoPanelHeaderLabel,
 } from '../services/ptoBalance';
-import { isAdminUser } from '../services/access';
+import {
+  employeeMatchesSupervisorAccess,
+  isAdminUser,
+  isSupervisorUser,
+} from '../services/access';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
 declare global {
@@ -428,7 +432,12 @@ export async function renderOutTodayCard(): Promise<void> {
   card.classList.remove('hidden');
 
   try {
-    const rows = await loadApprovedLeaveOutToday();
+    let rows = await loadApprovedLeaveOutToday();
+    if (isSupervisorUser()) {
+      rows = rows.filter((row) =>
+        employeeMatchesSupervisorAccess({ id: String(row.employee_id || '').trim() })
+      );
+    }
     if (!rows.length) {
       list.innerHTML = '<div class="muted">Everyone scheduled is expected in today.</div>';
       return;

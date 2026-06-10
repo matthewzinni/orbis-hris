@@ -96,7 +96,7 @@ export function initializeDocumentsLibrary(): void {
   console.log('Documents Library initializing...');
   injectDocumentUploadModalStyles();
   bindDocumentEvents();
-  loadDocuments();
+  void loadDocuments();
 }
 
 export function setDocumentFilters(filters: Partial<DocumentFilters>): void {

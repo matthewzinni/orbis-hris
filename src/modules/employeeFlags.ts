@@ -1,5 +1,6 @@
 // Manual at-risk / impact player flags (employee admin drawer)
 
+import { canEditEmployeeAdmin } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { recordAuditEvent } from '../services/auditTrail';
 
@@ -39,6 +40,21 @@ function todayInputValue(): string {
 
 function getCurrentEmployee(): EmployeeRow | null {
   return (window.currentEmployee as EmployeeRow | null) || null;
+}
+
+function ensureCanEditEmployeeFlags(): EmployeeRow | null {
+  const currentEmployee = getCurrentEmployee();
+  if (!currentEmployee) {
+    showToast('Open an employee first.', 'error');
+    return null;
+  }
+
+  if (!canEditEmployeeAdmin(currentEmployee)) {
+    showToast('You can only change flags for people on your team.', 'error');
+    return null;
+  }
+
+  return currentEmployee;
 }
 
 function getEmployeeDbId(employee: EmployeeRow): string {
@@ -191,12 +207,8 @@ export async function loadEmployeeManualImpactPlayer(employeeId: string): Promis
 }
 
 export async function markEmployeeAtRisk(): Promise<void> {
-  const currentEmployee = getCurrentEmployee();
-
-  if (!currentEmployee) {
-    showToast('Open an employee first.', 'error');
-    return;
-  }
+  const currentEmployee = ensureCanEditEmployeeFlags();
+  if (!currentEmployee) return;
 
   const reason = String((safeGet('atRiskReasonInput') as HTMLTextAreaElement | null)?.value || '').trim();
 
@@ -245,12 +257,8 @@ export async function markEmployeeAtRisk(): Promise<void> {
 }
 
 export async function clearAtRiskStatus(): Promise<void> {
-  const currentEmployee = getCurrentEmployee();
-
-  if (!currentEmployee) {
-    showToast('Open an employee first.', 'error');
-    return;
-  }
+  const currentEmployee = ensureCanEditEmployeeFlags();
+  if (!currentEmployee) return;
 
   const employeeDbId = getEmployeeDbId(currentEmployee);
   const { error } = await supabaseClient.from('employee_notes').insert([
@@ -278,12 +286,8 @@ export async function clearAtRiskStatus(): Promise<void> {
 }
 
 export async function markImpactPlayer(): Promise<void> {
-  const currentEmployee = getCurrentEmployee();
-
-  if (!currentEmployee) {
-    showToast('Open an employee first.', 'error');
-    return;
-  }
+  const currentEmployee = ensureCanEditEmployeeFlags();
+  if (!currentEmployee) return;
 
   const reason = String(
     (safeGet('impactPlayerReasonInput') as HTMLTextAreaElement | null)?.value || ''
@@ -333,12 +337,8 @@ export async function markImpactPlayer(): Promise<void> {
 }
 
 export async function clearImpactPlayerStatus(): Promise<void> {
-  const currentEmployee = getCurrentEmployee();
-
-  if (!currentEmployee) {
-    showToast('Open an employee first.', 'error');
-    return;
-  }
+  const currentEmployee = ensureCanEditEmployeeFlags();
+  if (!currentEmployee) return;
 
   const employeeDbId = getEmployeeDbId(currentEmployee);
   const { error } = await supabaseClient.from('employee_notes').insert([

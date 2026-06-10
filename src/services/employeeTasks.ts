@@ -5,6 +5,15 @@ import {
   syncStandardOnboardingTasks,
   STANDARD_ONBOARDING_TASKS,
 } from './onboardingStandard';
+import {
+  isOnboardingPortalVisible,
+  isOnboardingTaskCompleted,
+  onboardingAssigneeLabel,
+  onboardingDueBadgeLabel,
+  onboardingPortalDetail,
+  type OnboardingTaskRecord,
+} from './onboardingWorkflow';
+import { loadEmployeePolicyCampaignAssignments } from './policyCampaigns';
 import { supabaseClient } from './supabaseClient';
 
 export type EmployeeTaskKind =
@@ -24,6 +33,7 @@ export type EmployeeTaskItem = {
   onboardingTaskId?: string;
   signatureToken?: string;
   documentLibraryId?: string;
+  policyCampaignAssignmentId?: string;
   completedAt?: string | null;
 };
 
@@ -31,7 +41,7 @@ export type EmployeeTasksSnapshot = {
   pending: EmployeeTaskItem[];
   completed: EmployeeTaskItem[];
   handbookDocuments: HandbookDocument[];
-  onboardingTasks: Array<{ id: string; task_name?: string; status?: string }>;
+  onboardingTasks: OnboardingTaskRecord[];
   acknowledgments: Array<{
     id: string;
     acknowledgment_type?: string;
@@ -45,10 +55,6 @@ const SIGNATURE_LABELS: Record<string, string> = {
   incident: 'Incident acknowledgment',
   review: 'Performance review acknowledgment',
 };
-
-function isCompletedStatus(status: unknown): boolean {
-  return String(status || '').trim().toLowerCase() === 'completed';
-}
 
 function formatDateLabel(value: string | null | undefined): string {
   const raw = String(value || '').trim();
@@ -72,9 +78,16 @@ export async function loadEmployeeTasksSnapshot(employeeId: string): Promise<Emp
 
   await syncStandardOnboardingTasks(id);
 
-  const [handbookDocuments, onboardingRes, signatureRes, acknowledgmentRes] = await Promise.all([
+  const [handbookDocuments, campaignAssignments, onboardingRes, signatureRes, acknowledgmentRes] =
+    await Promise.all([
     loadHandbookDocuments(),
-    supabaseClient.from('onboarding_tasks').select('id, task_name, status').eq('employee_id', id),
+    loadEmployeePolicyCampaignAssignments(id).catch(() => []),
+    supabaseClient
+      .from('onboarding_tasks')
+      .select(
+        'id, task_name, status, due_date, assigned_to, show_in_portal, completed_at, created_at'
+      )
+      .eq('employee_id', id),
     supabaseClient
       .from('signature_requests')
       .select('id, token, form_type, signer_role, status, created_at, signed_at, expires_at')
@@ -98,22 +111,35 @@ export async function loadEmployeeTasksSnapshot(employeeId: string): Promise<Emp
     throw new Error(acknowledgmentRes.error.message || 'Could not load acknowledgments.');
   }
 
-  const onboardingTasks = sortOnboardingTasksByStandard(onboardingRes.data || []);
+  const allOnboardingTasks = sortOnboardingTasksByStandard(
+    (onboardingRes.data || []) as OnboardingTaskRecord[]
+  );
+  const onboardingTasks = allOnboardingTasks.filter((task) => isOnboardingPortalVisible(task));
   const acknowledgments = acknowledgmentRes.data || [];
   const pending: EmployeeTaskItem[] = [];
   const completed: EmployeeTaskItem[] = [];
 
   onboardingTasks.forEach((task) => {
     const taskName = String(task.task_name || 'Onboarding task').trim();
+    const completedTask = isOnboardingTaskCompleted(task.status);
+    const dueLine = task.due_date
+      ? onboardingDueBadgeLabel(task.due_date)
+      : '';
+    const assigneeLine =
+      task.assigned_to && task.assigned_to !== 'employee'
+        ? `Owner: ${onboardingAssigneeLabel(task.assigned_to)}`
+        : '';
+
     const item: EmployeeTaskItem = {
       id: `onboarding:${task.id}`,
       kind: 'onboarding',
       title: taskName,
-      detail: isCompletedStatus(task.status)
-        ? 'Marked complete on your checklist'
-        : 'Complete and return to HR, then mark done below',
-      status: isCompletedStatus(task.status) ? 'completed' : 'pending',
+      detail: completedTask
+        ? `Marked complete ${formatDateLabel(task.completed_at) || 'on your checklist'}`
+        : [onboardingPortalDetail(task), dueLine, assigneeLine].filter(Boolean).join(' · '),
+      status: completedTask ? 'completed' : 'pending',
       onboardingTaskId: task.id,
+      completedAt: task.completed_at ? String(task.completed_at) : null,
     };
 
     if (item.status === 'pending') pending.push(item);
@@ -143,6 +169,31 @@ export async function loadEmployeeTasksSnapshot(employeeId: string): Promise<Emp
 
     if (item.status === 'pending') pending.push(item);
     else if (status === 'signed') completed.push(item);
+  });
+
+  campaignAssignments.forEach((assignment) => {
+    const campaign = assignment.campaign;
+    if (!campaign) return;
+
+    const overdue = assignment.status === 'overdue';
+    const dueLine = assignment.due_date
+      ? overdue
+        ? `Overdue since ${formatDateLabel(assignment.due_date)}`
+        : `Due ${formatDateLabel(assignment.due_date)}`
+      : '';
+
+    pending.push({
+      id: `policy-campaign:${assignment.id}`,
+      kind: 'policy_ack',
+      title: `Acknowledge ${campaign.document_title || campaign.title}`,
+      detail: [campaign.title, dueLine, 'Read the policy, then confirm you received and reviewed it']
+        .filter(Boolean)
+        .join(' · '),
+      status: 'pending',
+      documentLibraryId: campaign.document_library_id || undefined,
+      policyCampaignAssignmentId: assignment.id,
+      actionLabel: 'Acknowledge policy',
+    });
   });
 
   handbookDocuments.forEach((doc) => {
@@ -224,7 +275,10 @@ export async function toggleEmployeeOnboardingTask(
 ): Promise<void> {
   const { error } = await supabaseClient
     .from('onboarding_tasks')
-    .update({ status: isComplete ? 'Completed' : 'Pending' })
+    .update({
+      status: isComplete ? 'Completed' : 'Pending',
+      completed_at: isComplete ? new Date().toISOString() : null,
+    })
     .eq('id', taskId)
     .eq('employee_id', employeeId);
 

@@ -402,6 +402,8 @@ function populateEmployeeAdminFallback(employee) {
     setByLabelText('STANDARD HOURS', valueFrom('standard_hours', 'standardHours'));
     setByPlaceholder('Benefits status', valueFrom('benefits_status', 'benefitsStatus'));
     setByLabelText('BENEFITS STATUS', valueFrom('benefits_status', 'benefitsStatus'));
+    setByLabelText('PHONE', valueFrom('phone'));
+    setByPlaceholder('Mobile or primary phone', valueFrom('phone'));
     const hireDateValue = formatRosterDateForInput(valueFrom('hire_date', 'hireDate'));
     const nextReviewValue = formatRosterDateForInput(valueFrom('next_review_date', 'nextReviewDate'));
     const anniversaryValue = formatRosterDateForInput(valueFrom('anniversary_date', 'anniversaryDate'));
@@ -451,7 +453,8 @@ function populateEmployeeAdminByVisibleOrder(employee) {
         'next review date': formatRosterDateForInput(employee.next_review_date || employee.nextReviewDate || ''),
         'next stay interview date': formatRosterDateForInput(employee.next_review_date || employee.nextReviewDate || ''),
         'anniversary date': formatRosterDateForInput(employee.anniversary_date || employee.anniversaryDate || ''),
-        'tenure bracket': employee.tenure_bracket || employee.tenureBracket || ''
+        'tenure bracket': employee.tenure_bracket || employee.tenureBracket || '',
+        'phone': employee.phone || ''
     };
     const isVisible = (el) => {
         if (!el) return false;

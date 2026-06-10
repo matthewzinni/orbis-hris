@@ -1,11 +1,21 @@
-import { getLinkedEmployeeId, hasPersonalEmployeePortal } from '../services/access';
+import {
+  ensureLinkedEmployeeRecord,
+  getLinkedEmployeeId,
+  hasPersonalEmployeePortal,
+} from '../services/access';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  emergencyContactPriorityLabel,
+  emergencyContactRank,
+  renderEmergencyContactPriorityButtons,
+} from '../services/emergencyContactPriority';
 import {
   deleteMyEmergencyContact,
   loadMyEmergencyContacts,
   loadMyProfile,
   saveMyEmergencyContact,
   saveMyProfileContactFields,
+  setMyEmergencyContactPriority,
   type MyEmergencyContactRecord,
   type MyProfileRecord,
 } from '../services/employeeSelfService';
@@ -115,7 +125,7 @@ export function resetMyEmergencyContactForm(): void {
 }
 
 function populateEmergencyContactForm(record: MyEmergencyContactRecord): void {
-  currentMyEmergencyContactId = record.id;
+  currentMyEmergencyContactId = contactIdKey(record.id);
 
   const name = safeGet<HTMLInputElement>('myEcName');
   const relationship = safeGet<HTMLInputElement>('myEcRelationship');
@@ -132,6 +142,10 @@ function populateEmergencyContactForm(record: MyEmergencyContactRecord): void {
   safeGet('myEcDeleteBtn')?.classList.remove('hidden');
 }
 
+function contactIdKey(id: string | number | undefined): string {
+  return String(id ?? '');
+}
+
 function renderEmergencyContactList(rows: MyEmergencyContactRecord[]): void {
   const list = safeGet('myEcList');
   if (!list) return;
@@ -143,34 +157,88 @@ function renderEmergencyContactList(rows: MyEmergencyContactRecord[]): void {
   }
 
   list.innerHTML = rows
-    .map(
-      (row) => `
-        <button
-          class="employee-portal-ec-card${currentMyEmergencyContactId === row.id ? ' is-active' : ''}"
-          type="button"
-          data-my-ec-id="${esc(row.id)}"
-        >
-          <div class="employee-portal-ec-card-top">
-            <strong>${esc(row.contact_name || 'Emergency contact')}</strong>
-            <span class="muted">${esc(row.relationship || '')}</span>
+    .map((row) => {
+      const rowId = contactIdKey(row.id);
+      const rank = emergencyContactRank(row, rows);
+      const priorityLabel = emergencyContactPriorityLabel(rank);
+      const isActive = contactIdKey(currentMyEmergencyContactId) === rowId;
+
+      return `
+        <div class="employee-portal-ec-card${isActive ? ' is-active' : ''}">
+          <button class="employee-portal-ec-card-select" type="button" data-my-ec-id="${esc(rowId)}">
+            <div class="employee-portal-ec-card-top">
+              <strong>${esc(row.contact_name || 'Emergency contact')}</strong>
+              <span class="badge ${rank === 1 ? 'badge-active' : 'badge-soft'}">${esc(priorityLabel)}</span>
+            </div>
+            <div class="muted">${esc(row.relationship || '')}</div>
+            <div class="muted">${esc(row.phone || '')}</div>
+          </button>
+          <div class="ec-priority-actions">
+            <span class="ec-priority-actions-label muted">Set priority</span>
+            ${renderEmergencyContactPriorityButtons(rowId, rank, rows.length, 'my-ec-priority-id')}
           </div>
-          <div class="muted">${esc(row.phone || '')}</div>
-        </button>
-      `
-    )
+        </div>
+      `;
+    })
     .join('');
 
   list.querySelectorAll<HTMLButtonElement>('[data-my-ec-id]').forEach((button) => {
     button.addEventListener('click', () => {
-      const row = rows.find((item) => item.id === button.dataset.myEcId);
+      const row = rows.find((item) => contactIdKey(item.id) === button.dataset.myEcId);
       if (!row) return;
       populateEmergencyContactForm(row);
       list.querySelectorAll('.employee-portal-ec-card').forEach((card) => {
         card.classList.remove('is-active');
       });
-      button.classList.add('is-active');
+      button.closest('.employee-portal-ec-card')?.classList.add('is-active');
     });
   });
+
+  list.querySelectorAll<HTMLButtonElement>('[data-my-ec-priority-id]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      const contactId = String(button.dataset.myEcPriorityId || '').trim();
+      const rank = Number(button.dataset.ecPriority || 0);
+      if (!contactId || !rank) return;
+
+      void setMyEmergencyContactPriorityPortal(contactId, rank);
+    });
+  });
+
+  const activeRow =
+    (currentMyEmergencyContactId &&
+      rows.find((item) => contactIdKey(item.id) === contactIdKey(currentMyEmergencyContactId))) ||
+    rows[0];
+
+  if (activeRow) {
+    populateEmergencyContactForm(activeRow);
+    list
+      .querySelector<HTMLButtonElement>(`[data-my-ec-id="${contactIdKey(activeRow.id)}"]`)
+      ?.closest('.employee-portal-ec-card')
+      ?.classList.add('is-active');
+  }
+}
+
+async function setMyEmergencyContactPriorityPortal(
+  contactId: string,
+  targetRank: number
+): Promise<void> {
+  const employeeId = getLinkedEmployeeId();
+  if (!employeeId) {
+    showToast('Your employee record is not linked. Contact HR.', 'error');
+    return;
+  }
+
+  try {
+    await setMyEmergencyContactPriority(employeeId, contactId, targetRank);
+    showToast(`Contact set as ${emergencyContactPriorityLabel(targetRank).toLowerCase()}.`);
+    await loadEmergencyContactsSection(employeeId);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not update contact priority.';
+    showToast(message, 'error');
+  }
 }
 
 async function loadEmergencyContactsSection(employeeId: string): Promise<void> {
@@ -184,7 +252,11 @@ async function loadEmergencyContactsSection(employeeId: string): Promise<void> {
 export async function loadMyProfilePortal(): Promise<void> {
   if (!hasPersonalEmployeePortal()) return;
 
-  const employeeId = getLinkedEmployeeId();
+  let employeeId = getLinkedEmployeeId();
+  if (!employeeId) {
+    employeeId = (await ensureLinkedEmployeeRecord()) || '';
+  }
+
   const readOnly = safeGet('myProfileReadOnlyGrid');
   const ecList = safeGet('myEcList');
 
@@ -201,20 +273,33 @@ export async function loadMyProfilePortal(): Promise<void> {
 
   if (readOnly) readOnly.innerHTML = '<div class="muted">Loading…</div>';
 
+  let profileError: unknown = null;
+
   try {
     const profile = await loadMyProfile(employeeId);
     if (!profile) {
       if (readOnly) readOnly.innerHTML = '<div class="muted">Profile not found.</div>';
-      return;
+    } else {
+      renderReadOnlyDetails(profile);
+      populateContactFields(profile);
     }
+  } catch (err) {
+    profileError = err;
+    console.error('[MyProfilePortal] profile load failed:', err);
+    if (readOnly) readOnly.innerHTML = '<div class="muted">Could not load your profile.</div>';
+  }
 
-    renderReadOnlyDetails(profile);
-    populateContactFields(profile);
+  try {
     await loadEmergencyContactsSection(employeeId);
   } catch (err) {
-    console.error('[MyProfilePortal]', err);
-    if (readOnly) readOnly.innerHTML = '<div class="muted">Could not load your profile.</div>';
+    console.error('[MyProfilePortal] emergency contacts load failed:', err);
     if (ecList) ecList.innerHTML = '<div class="muted">Could not load emergency contacts.</div>';
+    if (!profileError) {
+      showToast('Could not load emergency contacts.', 'error');
+    }
+  }
+
+  if (profileError) {
     showToast('Could not load profile.', 'error');
   }
 }
@@ -283,7 +368,7 @@ export async function deleteMyEmergencyContactPortal(): Promise<void> {
   }
 
   try {
-    await deleteMyEmergencyContact(currentMyEmergencyContactId);
+    await deleteMyEmergencyContact(currentMyEmergencyContactId, employeeId);
     showToast('Emergency contact deleted.');
     resetMyEmergencyContactForm();
     if (employeeId) await loadEmergencyContactsSection(employeeId);

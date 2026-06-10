@@ -7,7 +7,12 @@ import { showOrbisConfirm } from '../ui/confirmModal';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
 import { cleanEmployeeNameValue, employeePersonalEmail, employeePortalSignInEmail, employeeWorkEmail } from '../services/employeeUtils';
 import { createDefaultOnboardingTasks } from './onboarding';
+import { syncStandardOnboardingTasks } from '../services/onboardingStandard';
 import { createDefaultOffboardingTasks } from './offboarding';
+import {
+  canEditEmployeeAdmin,
+  isAdminUser,
+} from '../services/access';
 import {
   employeeToPayrollSnapshot,
   logNewHirePayrollHandoff,
@@ -355,7 +360,7 @@ function populateDrawer(employee: DrawerEmployeeRecord): void {
     employee.personal_email || employee.personalEmail || employee.email || ''
   );
 
-  setValue('employeePhone', employee.phone || '');
+  setAdminValue('employeePhoneInput', 'empPhone', 'phone')(employee.phone || '');
 
   setAdminValue('employeeDepartmentInput', 'employeeDepartment')(employee.department || '');
 
@@ -458,6 +463,7 @@ function populateDrawerProfileDetails(employee: DrawerEmployeeRecord): void {
     ['Tenure Years', employee.tenureYears || employee.tenure_years],
     ['Benefits Status', employee.benefitsStatus || employee.benefits_status],
     ['Tenure Bracket', employee.tenureBracket || employee.tenure_bracket],
+    ['Phone', employee.phone || '—'],
     ['Work email', employeeWorkEmail(employee) || '—'],
     ['Personal email', employeePersonalEmail(employee) || '—'],
     ['PTO portal sign-in', employeePortalSignInEmail(employee) || 'Not set — add personal email in Employee Admin'],
@@ -750,6 +756,16 @@ export async function saveEmployeeRecord(): Promise<void> {
   const isCreating =
     Boolean(window.isCreatingEmployee) || !originalRecordId;
 
+  if (isCreating && !isAdminUser()) {
+    showToast('Only HR administrators can create new employee records.', 'error');
+    return;
+  }
+
+  if (!canEditEmployeeAdmin(window.currentEmployee as DrawerEmployeeRecord | null)) {
+    showToast('You do not have permission to edit this employee record.', 'error');
+    return;
+  }
+
   let editedEmployeeId = getInputValue(
     'employeeIdInput',
     'employeeId',
@@ -889,7 +905,7 @@ export async function saveEmployeeRecord(): Promise<void> {
       getInputValue('employeeWorkEmailInput', 'empWorkEmail', 'workEmail') || null,
     personal_email:
       getInputValue('employeePersonalEmailInput', 'empPersonalEmail', 'personalEmail') || null,
-    phone: getInputValue('empPhone', 'phone') || null,
+    phone: getInputValue('employeePhoneInput', 'empPhone', 'phone') || null,
     notes: getInputValue('empNotes', 'notes') || null,
     termination_date: status === 'TERMINATED' ? terminationDate || null : null,
     is_remote: Boolean(safeGet<HTMLInputElement>('employeeIsRemoteInput')?.checked),
@@ -975,6 +991,11 @@ export async function saveEmployeeRecord(): Promise<void> {
 
   const isEmployeeIdChanging = editedEmployeeId !== originalRecordId;
 
+  if (isEmployeeIdChanging && !isAdminUser()) {
+    showToast('Employee ID can only be changed by HR administrators.', 'error');
+    return;
+  }
+
   console.log('[Drawer] Saving employee:', {
     originalRecordId,
     editedEmployeeId,
@@ -1013,6 +1034,14 @@ export async function saveEmployeeRecord(): Promise<void> {
   }
 
   showToast('Employee saved.');
+
+  if (payload.hire_date) {
+    try {
+      await syncStandardOnboardingTasks(editedEmployeeId);
+    } catch (err) {
+      console.warn('[Drawer] Onboarding due date refresh failed:', err);
+    }
+  }
 
   if (status === 'TERMINATED' && statusBefore !== 'TERMINATED') {
     try {

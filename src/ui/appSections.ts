@@ -94,6 +94,9 @@ const APP_SECTIONS: AppSection[] = [
       if (typeof window.loadHrInbox === 'function') {
         void window.loadHrInbox();
       }
+      if (typeof window.loadManagerHome === 'function') {
+        void window.loadManagerHome();
+      }
       if (typeof window.updateWorkspaceAlerts === 'function') {
         window.updateWorkspaceAlerts();
       }
@@ -138,6 +141,9 @@ const APP_SECTIONS: AppSection[] = [
     onEnter: () => {
       if (typeof window.loadDocuments === 'function') {
         void window.loadDocuments();
+      }
+      if (typeof window.loadPolicyCampaignsAdmin === 'function') {
+        void window.loadPolicyCampaignsAdmin();
       }
     },
   },

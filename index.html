@@ -303,6 +303,77 @@
           aria-hidden="false"
         >
           <div class="page" id="dashboardTop">
+            <div class="card hidden manager-home-card" id="managerHomeCard" data-supervisor-dashboard-only>
+              <div class="card-header">
+                <span>Manager Home</span>
+                <div class="manager-home-header-actions">
+                  <button class="button soft sm" id="managerHomeAttendanceBtn" type="button">
+                    Team attendance
+                  </button>
+                  <button class="button soft sm" id="managerHomeRosterBtn" type="button">
+                    Full roster
+                  </button>
+                  <button class="button soft sm" id="managerHomeRefreshBtn" type="button">Refresh</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <p class="muted manager-home-summary" id="managerHomeSummary">Loading your team…</p>
+                <div class="manager-home-metrics">
+                  <div class="manager-home-metric">
+                    <div class="manager-home-metric-value" id="managerHomeMetricTeamValue">—</div>
+                    <div class="manager-home-metric-label" id="managerHomeMetricTeamLabel">Team members</div>
+                  </div>
+                  <div class="manager-home-metric">
+                    <div class="manager-home-metric-value" id="managerHomeMetricOutValue">—</div>
+                    <div class="manager-home-metric-label" id="managerHomeMetricOutLabel">Out today</div>
+                  </div>
+                  <div class="manager-home-metric">
+                    <div class="manager-home-metric-value" id="managerHomeMetricStayValue">—</div>
+                    <div class="manager-home-metric-label" id="managerHomeMetricStayLabel">Stay interviews overdue</div>
+                  </div>
+                  <div class="manager-home-metric">
+                    <div class="manager-home-metric-value" id="managerHomeMetricLeaveValue">—</div>
+                    <div class="manager-home-metric-label" id="managerHomeMetricLeaveLabel">Pending leave</div>
+                  </div>
+                </div>
+                <div class="manager-home-grid">
+                  <section class="manager-home-panel">
+                    <h3 class="manager-home-panel-title">Needs your attention</h3>
+                    <div class="manager-home-attention-list" id="managerHomeAttentionList">
+                      <div class="muted">Loading…</div>
+                    </div>
+                  </section>
+                  <section class="manager-home-panel">
+                    <h3 class="manager-home-panel-title">Out today</h3>
+                    <div class="manager-home-out-list" id="managerHomeOutTodayList">
+                      <div class="muted">Loading…</div>
+                    </div>
+                  </section>
+                </div>
+                <section class="manager-home-panel">
+                  <h3 class="manager-home-panel-title">Team roster</h3>
+                  <div class="mini-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>Department</th>
+                          <th>Position</th>
+                          <th>Status</th>
+                          <th>Stay interview</th>
+                        </tr>
+                      </thead>
+                      <tbody id="managerHomeRosterBody">
+                        <tr>
+                          <td colspan="5" class="empty">Loading team…</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+            </div>
+            <div id="dashboardLegacyKpiGrid">
             <div class="kpi-grid dashboard-kpi-grid">
           <div class="kpi-card" id="cardActiveHC">
             <div class="kpi-label">Active Headcount</div>
@@ -395,7 +466,8 @@
             </div>
           </div>
         </div>
-            <div class="card dashboard-quick-links" id="dashboardQuickLinks">
+            </div>
+            <div class="card dashboard-quick-links" id="dashboardQuickLinks" data-supervisor-dashboard-hide="true">
               <div class="card-header">Quick Links</div>
               <div class="card-body">
                 <div class="dashboard-quick-links-grid">
@@ -476,7 +548,7 @@
                 </div>
               </div>
             </div>
-            <div class="card hidden" id="hrInboxCard" data-hr-inbox-access>
+            <div class="card hidden" id="hrInboxCard" data-hr-inbox-access data-supervisor-dashboard-hide="true">
               <div class="card-header hr-inbox-header">
                 <div>
                   <span>HR Inbox</span>
@@ -519,7 +591,7 @@
                 </div>
               </div>
             </div>
-            <div class="card hidden" id="hrInboxOutTodayCard" data-leave-access>
+            <div class="card hidden" id="hrInboxOutTodayCard" data-leave-access data-supervisor-dashboard-hide="true">
               <div class="card-header">Out today</div>
               <div class="card-body">
                 <p class="muted" style="margin: 0 0 8px; font-size: 0.82rem">
@@ -530,7 +602,7 @@
                 </div>
               </div>
             </div>
-        <div class="layout layout-dashboard-overview">
+        <div class="layout layout-dashboard-overview" id="dashboardLegacyOverview" data-supervisor-dashboard-hide="true">
           <div class="stack">
             <div class="card">
               <div class="card-header">Leadership Snapshot</div>
@@ -1800,6 +1872,22 @@
             </select>
           </div>
 
+          <div id="policyCampaignsPanel" class="card policy-campaigns-panel hidden admin-only" data-admin-only>
+            <div class="card-header policy-campaigns-panel">
+              <div>
+                <h2 style="margin: 0 0 0.25rem">Policy acknowledgment campaigns</h2>
+                <p class="muted" style="margin: 0">
+                  Assign handbook or policy documents by department and role. Track completion and escalate overdue acknowledgments.
+                </p>
+              </div>
+              <button id="policyCampaignNewBtn" class="button primary" type="button">New campaign</button>
+            </div>
+            <div class="card-body">
+              <div id="policyCampaignsList"></div>
+              <div id="policyCampaignEditor" class="hidden"></div>
+            </div>
+          </div>
+
           <div id="documentsList" class="documents-grid"></div>
         </section>
         </section>
@@ -2434,6 +2522,14 @@
                       rows="4"
                       placeholder="Short pipeline summary saved on the candidate profile..."
                     ></textarea>
+                  </div>
+                  <div class="candidate-actions-row candidate-summary-email-row">
+                    <button class="button soft" id="emailCandidateSummaryBtn" type="button">
+                      Email Trent &amp; Brent
+                    </button>
+                    <span class="muted candidate-summary-email-hint">
+                      Sends profile summary and notes to leadership (Cc: you).
+                    </span>
                   </div>
                   <div class="candidate-actions-row">
                     <button class="button primary" id="saveCandidateBtn" type="button">
@@ -4541,8 +4637,14 @@
                 <div class="card-header">Onboarding checklist</div>
                 <div class="card-body">
                   <p class="muted" style="margin: 0 0 10px; font-size: 0.82rem; line-height: 1.45">
-                    Standard packet: W-4, I-9, and Standalone Form Packet.
+                    Standard packet: W-4, NC-4, I-9, and Standalone Form Packet. I-9 is due within 3
+                    business days of hire. Tasks marked “Show in employee portal” appear in My Tasks.
                   </p>
+                  <div
+                    id="onboardingI9Banner"
+                    class="onboarding-i9-banner hidden"
+                    role="status"
+                  ></div>
                   <div id="onboardingSummary" class="muted">Loading onboarding...</div>
                   <div
                     style="
@@ -4675,6 +4777,7 @@
                       <select id="docType">
                         <option value="">Select document type</option>
                         <option value="W-4">W-4</option>
+                        <option value="NC-4">NC-4</option>
                         <option value="I-9">I-9</option>
                         <option value="Standalone Form Packet">Standalone Form Packet</option>
                         <option value="Handbook Acknowledgment">Handbook Acknowledgment</option>
@@ -4959,6 +5062,15 @@
                         <strong>Email me a sign-in link</strong> on the login page.
                       </p>
                     </div>
+                    <div class="field">
+                      <label for="employeePhoneInput">Phone</label>
+                      <input
+                        id="employeePhoneInput"
+                        type="tel"
+                        placeholder="Mobile or primary phone"
+                        autocomplete="section-orbis-admin tel"
+                      />
+                    </div>
                     <div class="field employee-remote-field">
                       <label class="checkbox-label" for="employeeIsRemoteInput">
                         <input id="employeeIsRemoteInput" type="checkbox" />
@@ -5112,7 +5224,8 @@
                     </div>
                   </div>
                   <div class="muted" style="margin-top: 10px">
-                    Authorized users can create, update, and delete employee records from here.
+                    HR administrators can create, update, and delete employee records. Supervisors can
+                    update employee admin and flags for their direct reports.
                   </div>
                 </div>
               </div>

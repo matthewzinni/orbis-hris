@@ -2,9 +2,18 @@
  * Standard new-hire onboarding checklist (company-wide).
  */
 
+import {
+  buildOnboardingTaskDefaults,
+  type OnboardingTaskRecord,
+} from './onboardingWorkflow';
 import { supabaseClient } from './supabaseClient';
 
-export const STANDARD_ONBOARDING_TASKS = ['W-4', 'I-9', 'Standalone Form Packet'] as const;
+export const STANDARD_ONBOARDING_TASKS = [
+  'W-4',
+  'NC-4',
+  'I-9',
+  'Standalone Form Packet',
+] as const;
 
 export type StandardOnboardingTask = (typeof STANDARD_ONBOARDING_TASKS)[number];
 
@@ -13,6 +22,8 @@ const STANDARD_SET = new Set<string>(STANDARD_ONBOARDING_TASKS);
 /** Legacy task names → current standard name (or remove via LEGACY_REMOVE). */
 export const LEGACY_ONBOARDING_RENAMES: Record<string, StandardOnboardingTask> = {
   'Complete W-4': 'W-4',
+  'Complete NC-4': 'NC-4',
+  'NC 4': 'NC-4',
   'Complete I-9': 'I-9',
 };
 
@@ -21,13 +32,6 @@ export const LEGACY_ONBOARDING_REMOVE = [
   'Safety Training',
   'Set Up System Access',
 ] as const;
-
-type OnboardingTaskRow = {
-  id: string;
-  employee_id?: string;
-  task_name?: string;
-  status?: string;
-};
 
 export function isStandardOnboardingTaskName(name: unknown): boolean {
   return STANDARD_SET.has(String(name || '').trim());
@@ -53,9 +57,60 @@ function isCompletedStatus(status: unknown): boolean {
   return String(status || '').trim().toLowerCase() === 'completed';
 }
 
-function pickRowToKeep(rows: OnboardingTaskRow[]): OnboardingTaskRow {
+function pickRowToKeep(rows: OnboardingTaskRecord[]): OnboardingTaskRecord {
   const completed = rows.find((row) => isCompletedStatus(row.status));
   return completed || rows[0];
+}
+
+async function loadEmployeeHireDate(employeeId: string): Promise<string | null> {
+  const { data, error } = await supabaseClient
+    .from('employees')
+    .select('hire_date')
+    .eq('id', employeeId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('[Onboarding] Could not load hire date:', error);
+    return null;
+  }
+
+  return data?.hire_date ? String(data.hire_date).slice(0, 10) : null;
+}
+
+async function backfillOnboardingDefaults(
+  rows: OnboardingTaskRecord[],
+  hireDate: string | null
+): Promise<void> {
+  if (!hireDate) return;
+
+  const updates = rows
+    .map((row) => {
+      if (!row.id) return null;
+
+      const taskName = String(row.task_name || '').trim();
+      if (!isStandardOnboardingTaskName(taskName)) return null;
+
+      const defaults = buildOnboardingTaskDefaults(taskName, hireDate);
+      const patch: Record<string, unknown> = {};
+
+      if (!row.due_date && defaults.due_date) patch.due_date = defaults.due_date;
+      if (!row.assigned_to && defaults.assigned_to) patch.assigned_to = defaults.assigned_to;
+      if (row.show_in_portal === null || row.show_in_portal === undefined) {
+        patch.show_in_portal = defaults.show_in_portal;
+      }
+
+      if (!Object.keys(patch).length) return null;
+      return supabaseClient.from('onboarding_tasks').update(patch).eq('id', row.id);
+    })
+    .filter(Boolean);
+
+  if (!updates.length) return;
+
+  const results = await Promise.all(updates);
+  const failed = results.find((result) => result?.error);
+  if (failed?.error) {
+    console.warn('[Onboarding] Could not backfill task defaults:', failed.error);
+  }
 }
 
 /**
@@ -66,9 +121,11 @@ export async function syncStandardOnboardingTasks(employeeId: string): Promise<v
   const id = String(employeeId || '').trim();
   if (!id) return;
 
+  const hireDate = await loadEmployeeHireDate(id);
+
   const { data, error } = await supabaseClient
     .from('onboarding_tasks')
-    .select('id, employee_id, task_name, status')
+    .select('id, employee_id, task_name, status, due_date, assigned_to, show_in_portal')
     .eq('employee_id', id);
 
   if (error) {
@@ -76,7 +133,7 @@ export async function syncStandardOnboardingTasks(employeeId: string): Promise<v
     return;
   }
 
-  const rows = (data || []) as OnboardingTaskRow[];
+  const rows = (data || []) as OnboardingTaskRecord[];
 
   for (const row of rows) {
     const name = String(row.task_name || '').trim();
@@ -90,7 +147,7 @@ export async function syncStandardOnboardingTasks(employeeId: string): Promise<v
 
   const { data: refreshed, error: refreshError } = await supabaseClient
     .from('onboarding_tasks')
-    .select('id, employee_id, task_name, status')
+    .select('id, employee_id, task_name, status, due_date, assigned_to, show_in_portal')
     .eq('employee_id', id);
 
   if (refreshError) {
@@ -98,7 +155,7 @@ export async function syncStandardOnboardingTasks(employeeId: string): Promise<v
     return;
   }
 
-  const current = (refreshed || []) as OnboardingTaskRow[];
+  const current = (refreshed || []) as OnboardingTaskRecord[];
   const removeIds = new Set<string>();
 
   current.forEach((row) => {
@@ -112,7 +169,7 @@ export async function syncStandardOnboardingTasks(employeeId: string): Promise<v
 
   const surviving = current.filter((row) => row.id && !removeIds.has(row.id));
 
-  const byName = new Map<string, OnboardingTaskRow[]>();
+  const byName = new Map<string, OnboardingTaskRecord[]>();
   surviving.forEach((row) => {
     const name = String(row.task_name || '').trim();
     if (!name || !isStandardOnboardingTaskName(name)) {
@@ -150,7 +207,20 @@ export async function syncStandardOnboardingTasks(employeeId: string): Promise<v
         employee_id: id,
         task_name: taskName,
         status: 'Pending',
+        ...buildOnboardingTaskDefaults(taskName, hireDate),
       }))
     );
   }
+
+  const { data: finalRows, error: finalError } = await supabaseClient
+    .from('onboarding_tasks')
+    .select('id, employee_id, task_name, status, due_date, assigned_to, show_in_portal')
+    .eq('employee_id', id);
+
+  if (finalError) {
+    console.warn('[Onboarding] Could not reload tasks for backfill:', finalError);
+    return;
+  }
+
+  await backfillOnboardingDefaults((finalRows || []) as OnboardingTaskRecord[], hireDate);
 }
