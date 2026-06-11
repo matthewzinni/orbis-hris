@@ -40,7 +40,7 @@ function normalizePerson(input: unknown): AttendancePerson | null {
   };
 }
 
-function normalizePeopleList(value: unknown): AttendancePerson[] {
+export function normalizePeopleList(value: unknown): AttendancePerson[] {
   if (!Array.isArray(value)) return [];
   return value
     .map(normalizePerson)

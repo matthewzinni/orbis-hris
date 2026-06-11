@@ -115,3 +115,32 @@ body.authenticated #attendancePage .attendance-checklist-table tbody tr.attendan
 #attendancePage .attendance-checklist-table tbody tr.is-on-leave.is-absent td:not(.attendance-check-cell) {
   opacity: 0.92;
 }
+
+#attendancePage .attendance-absence-report-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#attendancePage .attendance-absence-report-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+}
+
+#attendancePage .attendance-absence-report-table {
+  width: 100%;
+}
+
+#attendancePage .attendance-absence-report-row {
+  cursor: pointer;
+}
+
+#attendancePage .attendance-absence-report-row:hover {
+  background: rgba(56, 189, 248, 0.06);
+}
+
+#attendancePage .attendance-absence-dates {
+  font-size: 0.86rem;
+  white-space: normal;
+}

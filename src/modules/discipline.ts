@@ -251,7 +251,7 @@ export async function loadEmployeeDiscipline(employeeId: string): Promise<void> 
             ${
               row.employee_signature
                 ? ''
-                : `<button class="button soft sm" type="button" data-sign-discipline-id="${escapeHtml(row.id || '')}">Request signature</button>`
+                : `<button class="button soft sm" type="button" data-sign-discipline-id="${escapeHtml(row.id || '')}">Generate PDF</button>`
             }
             <button class="button danger sm" type="button" data-delete-discipline-id="${escapeHtml(row.id || '')}">Delete</button>
           </div>
@@ -281,29 +281,17 @@ export async function loadEmployeeDiscipline(employeeId: string): Promise<void> 
     target.querySelectorAll<HTMLButtonElement>('[data-sign-discipline-id]').forEach((button) => {
       button.addEventListener('click', async () => {
         const recordId = button.dataset.signDisciplineId;
-        const record = rows.find((row) => String(row.id) === String(recordId));
-        if (!recordId || !record) return;
+        if (!recordId) return;
 
-        const employee = getCurrentEmployee();
-        const employeeId = String(record.employee_id || getEmployeeId(employee) || '').trim();
-        if (!employeeId) {
-          showToast('Employee context is missing for this record.', 'error');
-          return;
-        }
-
-        const signerName = [employee?.first_name || employee?.first, employee?.last_name || employee?.last]
-          .filter(Boolean)
-          .join(' ')
-          .trim();
-
-        if (typeof window.requestEmployeeSignatureLink === 'function') {
-          await window.requestEmployeeSignatureLink(
-            'discipline',
-            recordId,
-            employeeId,
-            signerName,
-            String((employee as { email?: string })?.email || '').trim() || undefined
+        try {
+          const { openErAcknowledgmentPdf } = await import('../services/erAcknowledgmentPdf');
+          await openErAcknowledgmentPdf('discipline', recordId);
+          showToast(
+            'PDF downloaded. Open it in Acrobat Reader or Preview and use the signature field to sign.'
           );
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Could not generate PDF.';
+          showToast(message, 'error');
         }
       });
     });

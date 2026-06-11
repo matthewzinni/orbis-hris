@@ -36,6 +36,7 @@
     "vite": "^8.0.10"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.4"
+    "@supabase/supabase-js": "^2.105.4",
+    "pdf-lib": "^1.17.1"
   }
 }

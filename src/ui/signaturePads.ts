@@ -3,7 +3,8 @@
  */
 
 import '../styles/signature-field.css';
-import { copySigningLink, createSignatureRequest, type SignatureFormType } from '../services/signatureRequests';
+import { createSignatureRequest, type SignatureFormType } from '../services/signatureRequests';
+import { openErAcknowledgmentPdf } from '../services/erAcknowledgmentPdf';
 
 const initializedPads = new Set<string>();
 
@@ -256,13 +257,18 @@ function mountSignatureControls(
     const remoteRow = document.createElement('div');
     remoteRow.className = 'signature-remote-row';
     remoteRow.innerHTML = `
-      <button type="button" class="button soft sm signature-send-link-btn">Send signing link</button>
-      <span class="muted" style="font-size:12px;">Employee signs via unique link (no login).</span>
+      <button type="button" class="button soft sm signature-generate-pdf-btn">Generate PDF</button>
+      <button type="button" class="button soft sm signature-queue-portal-btn">Add to My Tasks</button>
+      <span class="muted" style="font-size:12px;">PDF includes fillable signature fields. Portal employees can also sign in My Tasks.</span>
     `;
     controls.appendChild(remoteRow);
 
-    remoteRow.querySelector('.signature-send-link-btn')?.addEventListener('click', () => {
-      void handleSendSigningLink(options.signerRole || 'employee');
+    remoteRow.querySelector('.signature-generate-pdf-btn')?.addEventListener('click', () => {
+      void handleGenerateAcknowledgmentPdf();
+    });
+
+    remoteRow.querySelector('.signature-queue-portal-btn')?.addEventListener('click', () => {
+      void handleQueuePortalSignature(options.signerRole || 'employee');
     });
   }
 
@@ -270,15 +276,36 @@ function mountSignatureControls(
   canvas.dataset.signatureEnhanced = 'true';
 }
 
-async function handleSendSigningLink(signerRole: 'employee' | 'manager' | 'witness'): Promise<void> {
+async function handleGenerateAcknowledgmentPdf(): Promise<void> {
   const context = getSignatureRequestContext();
   if (!context?.recordId) {
-    window.showToast?.('Save the form first, then send a signing link.', 'error');
+    window.showToast?.('Save the form first, then generate the PDF.', 'error');
     return;
   }
 
   try {
-    const { signingUrl } = await createSignatureRequest({
+    await openErAcknowledgmentPdf(context.formType, context.recordId);
+    window.showToast?.(
+      'PDF downloaded. Open it in Acrobat Reader or Preview and use the signature field to sign.',
+      'success'
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not generate PDF.';
+    window.showToast?.(message, 'error');
+  }
+}
+
+async function handleQueuePortalSignature(
+  signerRole: 'employee' | 'manager' | 'witness'
+): Promise<void> {
+  const context = getSignatureRequestContext();
+  if (!context?.recordId) {
+    window.showToast?.('Save the form first, then queue employee signature.', 'error');
+    return;
+  }
+
+  try {
+    await createSignatureRequest({
       formType: context.formType,
       recordId: context.recordId,
       employeeId: context.employeeId,
@@ -286,11 +313,9 @@ async function handleSendSigningLink(signerRole: 'employee' | 'manager' | 'witne
       signerName: context.signerName,
       signerEmail: context.signerEmail,
     });
-
-    await copySigningLink(signingUrl);
-    window.showToast?.('Signing link copied to clipboard.', 'success');
+    window.showToast?.('Added to employee My Tasks for in-app signing.', 'success');
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Could not create signing link.';
+    const message = err instanceof Error ? err.message : 'Could not queue signature.';
     window.showToast?.(message, 'error');
   }
 }
@@ -498,7 +523,7 @@ window.requestEmployeeSignatureLink = async (
     signerName,
     signerEmail,
   });
-  await handleSendSigningLink('employee');
+  await handleGenerateAcknowledgmentPdf();
 };
 
 document.addEventListener('DOMContentLoaded', () => {

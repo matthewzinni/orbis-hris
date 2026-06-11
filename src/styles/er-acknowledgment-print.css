@@ -1,0 +1,49 @@
+.er-ack-print-document {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  color: #1f2937;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+  background: #fff;
+}
+
+@media print {
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.orbis-printing-acknowledgment > *:not(#printArea) {
+    display: none !important;
+  }
+
+  body.orbis-printing-acknowledgment #printArea,
+  body.orbis-printing-acknowledgment #printArea.hidden {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+  }
+
+  body.orbis-printing-acknowledgment #printContent {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .er-ack-print-document {
+    max-width: none;
+    padding: 0;
+  }
+
+  @page {
+    size: letter;
+    margin: 0.6in;
+  }
+}

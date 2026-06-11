@@ -1,0 +1,90 @@
+#erSigningBackdrop.open,
+.er-ack-pdf-sign-backdrop.open {
+  display: flex;
+}
+
+.er-signing-dialog {
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  margin: auto;
+  padding: 1.25rem 1.35rem 1.5rem;
+}
+
+.er-signing-meta {
+  margin: 0.25rem 0 1rem;
+  font-size: 0.9rem;
+}
+
+.er-signing-summary {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  margin-bottom: 1rem;
+}
+
+.er-signing-agree {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  font-size: 0.92rem;
+  margin-bottom: 0.5rem;
+}
+
+.er-signing-field-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted, #94a3b8);
+  margin-bottom: 0.35rem;
+}
+
+.er-signing-signature-controls {
+  margin-top: 0.75rem;
+}
+
+.er-signing-preview {
+  margin-top: 0.75rem;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.er-signing-preview img {
+  max-width: 100%;
+  max-height: 140px;
+}
+
+.er-signing-actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.er-signing-success,
+.er-signing-error {
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+.er-signing-success {
+  color: #027a48;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+}
+
+.er-signing-error {
+  color: #b42318;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.24);
+}

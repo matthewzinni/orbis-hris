@@ -1,5 +1,11 @@
 import { isAdminUser, isSupervisorUser } from '../services/access';
 import {
+  ATTENDANCE_LOOKBACK_DAYS,
+  ATTENDANCE_REPEAT_ABSENCE_MIN,
+  loadRepeatedAbsenceReport,
+  type AbsenceRollupRow,
+} from '../services/attendanceAbsenceReport';
+import {
   AttendanceSyncError,
   loadManualAttendanceSnapshot,
   saveManualAttendanceSnapshot,
@@ -232,6 +238,80 @@ function countChecklistFromDom(): { present: number; absent: number } | null {
   return { present, absent };
 }
 
+function formatAbsenceDates(dates: string[]): string {
+  if (!dates.length) return '—';
+  if (dates.length <= 4) {
+    return dates
+      .map((date) => {
+        const parsed = new Date(`${date}T12:00:00`);
+        if (Number.isNaN(parsed.getTime())) return date;
+        return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      })
+      .join(', ');
+  }
+
+  const shown = dates.slice(0, 3).map((date) => {
+    const parsed = new Date(`${date}T12:00:00`);
+    if (Number.isNaN(parsed.getTime())) return date;
+    return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  });
+
+  return `${shown.join(', ')} +${dates.length - 3} more`;
+}
+
+function renderAbsenceReportRows(rows: AbsenceRollupRow[]): void {
+  const body = safeGet<HTMLTableSectionElement>('attendanceAbsenceReportBody');
+  const countEl = safeGet('attendanceRepeatAbsenceCount');
+  if (!body) return;
+
+  if (countEl) countEl.textContent = String(rows.length);
+
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="5" class="empty">No employees with ${ATTENDANCE_REPEAT_ABSENCE_MIN} or more absences in the past ${ATTENDANCE_LOOKBACK_DAYS} days.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = rows
+    .map(
+      (row) => `
+        <tr
+          class="attendance-absence-report-row"
+          data-attendance-open-employee="${escapeHtml(row.employeeId)}"
+          tabindex="0"
+          role="button"
+        >
+          <td><strong>${escapeHtml(row.name)}</strong></td>
+          <td>${escapeHtml(row.employeeId)}</td>
+          <td>${escapeHtml(row.department || '—')}</td>
+          <td><span class="badge badge-absent">${row.absenceCount}</span></td>
+          <td class="muted attendance-absence-dates">${escapeHtml(formatAbsenceDates(row.absenceDates))}</td>
+        </tr>
+      `
+    )
+    .join('');
+}
+
+async function loadAbsenceReportPanel(): Promise<void> {
+  const body = safeGet<HTMLTableSectionElement>('attendanceAbsenceReportBody');
+  if (!body || !canViewAttendance()) return;
+
+  body.innerHTML = '<tr><td colspan="5" class="empty">Loading absence report…</td></tr>';
+
+  try {
+    await ensureEmployeesLoaded();
+    const rows = await loadRepeatedAbsenceReport({
+      roster: getEmployees(),
+    });
+    renderAbsenceReportRows(rows);
+  } catch (error) {
+    console.error('[Attendance] Absence report failed:', error);
+    body.innerHTML =
+      '<tr><td colspan="5" class="empty">Could not load repeated absence report.</td></tr>';
+    const countEl = safeGet('attendanceRepeatAbsenceCount');
+    if (countEl) countEl.textContent = '—';
+  }
+}
+
 function updateAttendanceKpis(snapshot: AttendanceSummary): void {
   const presentCount = safeGet('attendancePresentCount');
   const absentCount = safeGet('attendanceAbsentCount');
@@ -459,6 +539,7 @@ export async function saveAttendance(): Promise<void> {
       toast += ` ${syncResult.skippedLeave} on leave (unchanged).`;
     }
     showToast(toast);
+    void loadAbsenceReportPanel();
   } catch (error) {
     const message =
       error instanceof AttendanceSyncError
@@ -498,6 +579,7 @@ export async function loadAttendance(force = false): Promise<void> {
   const date = getSelectedDate();
   if (!force && attendanceCache && attendanceCacheDate === date) {
     renderAttendance(attendanceCache);
+    void loadAbsenceReportPanel();
     return;
   }
 
@@ -516,12 +598,14 @@ export async function loadAttendance(force = false): Promise<void> {
       });
       attendanceCacheDate = date;
       renderAttendance(attendanceCache);
+      void loadAbsenceReportPanel();
       return;
     }
 
     attendanceCache = emptySnapshot();
     attendanceCacheDate = date;
     renderAttendance(attendanceCache);
+    void loadAbsenceReportPanel();
   } catch (error) {
     const message =
       error instanceof AttendanceSyncError
@@ -534,6 +618,7 @@ export async function loadAttendance(force = false): Promise<void> {
     attendanceCache = emptySnapshot();
     attendanceCacheDate = date;
     renderAttendance(attendanceCache);
+    void loadAbsenceReportPanel();
   } finally {
     attendanceLoading = false;
   }
@@ -583,6 +668,42 @@ function bindAttendanceUi(): void {
       attendanceCache = null;
       attendanceCacheDate = null;
       void loadAttendance(true);
+    });
+  }
+
+  const absenceRefreshBtn = safeGet<HTMLButtonElement>('attendanceAbsenceReportRefreshBtn');
+  if (absenceRefreshBtn && absenceRefreshBtn.dataset.bound !== '1') {
+    absenceRefreshBtn.dataset.bound = '1';
+    absenceRefreshBtn.addEventListener('click', () => {
+      void loadAbsenceReportPanel();
+    });
+  }
+
+  const absenceReportBody = safeGet<HTMLTableSectionElement>('attendanceAbsenceReportBody');
+  if (absenceReportBody && absenceReportBody.dataset.bound !== '1') {
+    absenceReportBody.dataset.bound = '1';
+    absenceReportBody.addEventListener('click', (event) => {
+      const row = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[data-attendance-open-employee]'
+      );
+      const employeeId = row?.dataset.attendanceOpenEmployee || '';
+      if (!employeeId || employeeId === '—') return;
+      if (typeof window.openEmployeeDrawer === 'function') {
+        void window.openEmployeeDrawer(employeeId);
+      }
+    });
+    absenceReportBody.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      const row = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+        '[data-attendance-open-employee]'
+      );
+      if (!row) return;
+      event.preventDefault();
+      const employeeId = row.dataset.attendanceOpenEmployee || '';
+      if (!employeeId || employeeId === '—') return;
+      if (typeof window.openEmployeeDrawer === 'function') {
+        void window.openEmployeeDrawer(employeeId);
+      }
     });
   }
 

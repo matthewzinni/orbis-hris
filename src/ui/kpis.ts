@@ -908,6 +908,10 @@ export function renderKpiEmployeeMetrics(): void {
 
   updateTurnoverRateKpis(employees);
   buildKpiHoverDetails();
+
+  if (typeof window.renderDashboardCharts === 'function') {
+    window.renderDashboardCharts(employees);
+  }
 }
 
 function isOpenDisciplineReport(status: unknown): boolean {

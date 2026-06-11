@@ -22,7 +22,7 @@ function getSigningFunctionBaseUrl(): string {
 
 export function buildPublicSigningUrl(token: string): string {
   const origin = String(window.location.origin || '').replace(/\/$/, '');
-  return `${origin}/sign.html?token=${encodeURIComponent(token)}`;
+  return `${origin}/?signToken=${encodeURIComponent(token)}`;
 }
 
 export async function createSignatureRequest(

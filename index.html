@@ -336,6 +336,7 @@
                     <div class="manager-home-metric-label" id="managerHomeMetricLeaveLabel">Pending leave</div>
                   </div>
                 </div>
+                <div class="manager-home-charts" id="managerHomeCharts" aria-label="Team charts"></div>
                 <div class="manager-home-grid">
                   <section class="manager-home-panel">
                     <h3 class="manager-home-panel-title">Needs your attention</h3>
@@ -466,6 +467,18 @@
             </div>
           </div>
         </div>
+            </div>
+            <div
+              class="card dashboard-charts-card"
+              id="dashboardChartsCard"
+              data-supervisor-dashboard-hide="true"
+            >
+              <div class="card-header">Workforce visuals</div>
+              <div class="card-body">
+                <div class="dashboard-charts-grid" id="dashboardChartsGrid">
+                  <div class="muted">Loading charts…</div>
+                </div>
+              </div>
             </div>
             <div class="card dashboard-quick-links" id="dashboardQuickLinks" data-supervisor-dashboard-hide="true">
               <div class="card-header">Quick Links</div>
@@ -1216,6 +1229,44 @@
                 <div class="kpi-label">Absent</div>
                 <div class="kpi-value" id="attendanceAbsentCount">—</div>
                 <div class="kpi-sub">Absent box checked</div>
+              </div>
+              <div class="kpi-card alert">
+                <div class="kpi-label">Repeat absences</div>
+                <div class="kpi-value" id="attendanceRepeatAbsenceCount">—</div>
+                <div class="kpi-sub">2+ absences in the past 4 weeks</div>
+              </div>
+            </div>
+            <div class="card attendance-absence-report-card" id="attendanceAbsenceReportCard">
+              <div class="card-header attendance-absence-report-header">
+                <div>
+                  <span>Repeated absences</span>
+                  <p class="muted attendance-absence-report-sub">
+                    Employees marked absent on 2 or more roll calls in the past 4 weeks.
+                  </p>
+                </div>
+                <button class="button soft sm" id="attendanceAbsenceReportRefreshBtn" type="button">
+                  Refresh
+                </button>
+              </div>
+              <div class="card-body">
+                <div class="table-wrap">
+                  <table class="attendance-absence-report-table">
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>ID</th>
+                        <th>Department</th>
+                        <th>Absences</th>
+                        <th>Dates absent</th>
+                      </tr>
+                    </thead>
+                    <tbody id="attendanceAbsenceReportBody">
+                      <tr>
+                        <td colspan="5" class="empty">Loading absence report…</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
             <div class="card attendance-roll-call-card">
@@ -5232,6 +5283,19 @@
             </section>
           </div>
         </aside>
+    </div>
+    <div class="orbis-confirm-backdrop" id="erSigningBackdrop" role="presentation">
+      <div
+        class="card er-signing-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="erSigningTitle"
+        aria-describedby="erSigningMeta"
+      >
+        <h2 id="erSigningTitle" style="margin: 0 0 0.25rem">Document acknowledgment</h2>
+        <p class="muted er-signing-meta" id="erSigningMeta"></p>
+        <div id="erSigningBody"></div>
+      </div>
     </div>
     <div class="orbis-confirm-backdrop" id="orbisConfirmBackdrop" role="presentation">
       <div

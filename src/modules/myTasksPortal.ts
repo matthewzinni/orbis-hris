@@ -80,13 +80,15 @@ function renderTaskRow(item: EmployeeTaskItem, pending: boolean): string {
   const actions = pending
     ? `
         ${
-          item.actionUrl
-            ? `<a class="button primary sm" href="${esc(item.actionUrl)}" target="_blank" rel="noopener noreferrer">${esc(item.actionLabel || 'Open')}</a>`
-            : item.kind === 'handbook_ack' && item.documentLibraryId
-              ? `<button type="button" class="button primary sm" data-ack-handbook="${esc(item.documentLibraryId)}">${esc(item.actionLabel || 'Acknowledge')}</button>`
-              : item.kind === 'policy_ack' && item.policyCampaignAssignmentId
-                ? `<button type="button" class="button primary sm" data-ack-policy="${esc(item.policyCampaignAssignmentId)}" data-policy-doc="${esc(item.documentLibraryId || '')}">${esc(item.actionLabel || 'Acknowledge')}</button>`
-                : ''
+          item.kind === 'signature' && item.signatureToken
+            ? `<button type="button" class="button primary sm" data-sign-er="${esc(item.signatureToken)}">${esc(item.actionLabel || 'Review & sign')}</button>`
+            : item.actionUrl
+              ? `<a class="button primary sm" href="${esc(item.actionUrl)}" target="_blank" rel="noopener noreferrer">${esc(item.actionLabel || 'Open')}</a>`
+              : item.kind === 'handbook_ack' && item.documentLibraryId
+                ? `<button type="button" class="button primary sm" data-ack-handbook="${esc(item.documentLibraryId)}">${esc(item.actionLabel || 'Acknowledge')}</button>`
+                : item.kind === 'policy_ack' && item.policyCampaignAssignmentId
+                  ? `<button type="button" class="button primary sm" data-ack-policy="${esc(item.policyCampaignAssignmentId)}" data-policy-doc="${esc(item.documentLibraryId || '')}">${esc(item.actionLabel || 'Acknowledge')}</button>`
+                  : ''
         }
         ${
           item.kind === 'handbook_ack' && item.documentLibraryId
@@ -180,6 +182,23 @@ async function openPolicyDocument(documentId: string): Promise<void> {
     return;
   }
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function bindSignatureActions(): void {
+  const root = safeGet('myTasksPage');
+  if (!root) return;
+
+  root.querySelectorAll<HTMLButtonElement>('[data-sign-er]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const token = button.dataset.signEr || '';
+      if (!token) return;
+      if (typeof window.openErSigningModal === 'function') {
+        void window.openErSigningModal(token);
+        return;
+      }
+      showToast('Signing is not available. Refresh and try again.', 'error');
+    });
+  });
 }
 
 function bindPolicyActions(): void {
@@ -430,6 +449,7 @@ export async function loadMyTasksPortal(): Promise<void> {
     }
 
     bindHandbookActions(snapshot.handbookDocuments);
+    bindSignatureActions();
     bindPolicyActions();
     renderOnboardingChecklist(snapshot.onboardingTasks);
     renderCompletedAcknowledgments(snapshot.completed);

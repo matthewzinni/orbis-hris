@@ -1,4 +1,3 @@
-import { buildPublicSigningUrl } from './signatureRequests';
 import { loadHandbookDocuments, type HandbookDocument } from './employeeHandbook';
 import {
   sortOnboardingTasksByStandard,
@@ -161,8 +160,8 @@ export async function loadEmployeeTasksSnapshot(employeeId: string): Promise<Emp
             ? `Signed ${formatDateLabel(row.signed_at) || ''}`.trim()
             : String(row.status || 'Updated'),
       status: status === 'signed' ? 'completed' : 'pending',
-      actionLabel: status === 'pending' ? 'Sign now' : undefined,
-      actionUrl: status === 'pending' && row.token ? buildPublicSigningUrl(String(row.token)) : undefined,
+      actionLabel: status === 'pending' ? 'Review & sign' : undefined,
+      actionUrl: undefined,
       signatureToken: row.token ? String(row.token) : undefined,
       completedAt: row.signed_at ? String(row.signed_at) : null,
     };

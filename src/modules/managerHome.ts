@@ -1,4 +1,6 @@
-import { isSupervisorUser } from '../services/access';
+import { employeeMatchesSupervisorAccess, isSupervisorUser } from '../services/access';
+import { getEmployees } from './employees';
+import { renderManagerHomeCharts } from '../ui/dashboardCharts';
 import {
   buildManagerHomeSnapshot,
   type ManagerAttentionItem,
@@ -140,6 +142,9 @@ function renderSnapshot(snapshot: ManagerHomeSnapshot): void {
         .join('');
     }
   }
+
+  const team = getEmployees().filter((employee) => employeeMatchesSupervisorAccess(employee));
+  renderManagerHomeCharts(snapshot, team as Array<Record<string, unknown>>);
 
   const rosterBody = safeGet('managerHomeRosterBody');
   if (rosterBody) {

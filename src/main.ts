@@ -14,6 +14,10 @@ import './styles/employee-portal.css';
 import './styles/manager-home.css';
 import './styles/onboarding.css';
 import './styles/policy-campaigns.css';
+import './styles/dashboard-charts.css';
+import './styles/er-signing-modal.css';
+import './styles/er-acknowledgment-print.css';
+import './ui/dashboardCharts';
 import './utils/helpers';
 import { supabase } from './services/supabaseClient';
 import { getUserRole, isEmployeeUser, canAccessOrbisApp } from './services/access';
@@ -55,6 +59,7 @@ import './modules/leaveRequests';
 import './modules/employeePortal';
 import './modules/myProfilePortal';
 import './modules/myTasksPortal';
+import { bootErSigningFromUrl } from './modules/erSigningModal';
 import './modules/myDirectoryPortal';
 import './modules/employees';
 import './modules/orgChart';
@@ -451,6 +456,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   initAuthBindings();
   initAppShell();
   registerLegacyBridges();
+  bootErSigningFromUrl();
 
   watchAuthState((event, sessionData) => {
     devLog('Auth event:', event, sessionData);
