@@ -11,11 +11,18 @@
 }
 
 /* Default: mobile layout (sidebar hidden until desktop breakpoint) */
+body[data-layout='mobile'] {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
 body[data-layout='mobile'] .orbis-app-shell {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
   min-height: 100dvh;
+  max-width: 100%;
+  min-width: 0;
 }
 
 body[data-layout='mobile'] .orbis-sidebar {
@@ -73,13 +80,88 @@ body[data-layout='mobile'] .orbis-topbar-right .button {
 body[data-layout='mobile'] .orbis-app-main {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: 12px 14px calc(16px + var(--mobile-safe-bottom));
 }
 
+body[data-layout='mobile'] .orbis-app-section,
+body[data-layout='mobile'] .page,
+body[data-layout='mobile'] .layout,
+body[data-layout='mobile'] .stack,
+body[data-layout='mobile'] .card,
+body[data-layout='mobile'] .card-body {
+  max-width: 100%;
+  min-width: 0;
+}
+
 body[data-layout='mobile'] .page {
   padding: 0;
+}
+
+/* Tables scroll inside their card — never widen the page */
+body[data-layout='mobile'] .mini-table-wrap,
+body[data-layout='mobile'] .table-wrap:not(.orbis-desktop-module-table) {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body[data-layout='mobile'] .card-header,
+body[data-layout='mobile'] .orbis-disclosure-header,
+body[data-layout='mobile'] .hr-inbox-header {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+body[data-layout='mobile'] .insight-line {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+body[data-layout='mobile'] .detail-grid,
+body[data-layout='mobile'] .dashboard-charts-grid,
+body[data-layout='mobile'] .reports-metric-grid {
+  grid-template-columns: 1fr;
+}
+
+body[data-layout='mobile'] .dashboard-chart-body {
+  flex-wrap: wrap;
+}
+
+body[data-layout='mobile'] .dashboard-quick-links-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+body[data-layout='mobile'] .dashboard-quick-links-grid .button {
+  width: 100%;
+  min-height: var(--mobile-tap-min);
+}
+
+body[data-layout='mobile'] .kpi-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px;
+  overflow: visible;
+}
+
+body[data-layout='mobile'] .kpi-grid .kpi-card {
+  min-width: 0;
+  margin: 0;
+}
+
+body[data-layout='mobile'] #dashboardLegacyKpiGrid,
+body[data-layout='mobile'] .dashboard-kpi-grid {
+  max-width: 100%;
+  min-width: 0;
 }
 
 /* Bottom tab bar */
@@ -88,7 +170,8 @@ body[data-layout='mobile'] .page {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 50;
+  z-index: 100;
+  pointer-events: auto;
   display: none;
   align-items: stretch;
   justify-content: space-around;
@@ -147,7 +230,7 @@ body[data-layout='mobile'] .orbis-mobile-tabbar:not(.hidden) {
 .orbis-mobile-sheet {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 110;
   pointer-events: none;
   visibility: hidden;
 }
@@ -342,7 +425,7 @@ body[data-layout='mobile'] #mobileEmployeeRosterList:not(.hidden) {
   height: 44px;
   border-radius: 12px;
   background: var(--blue-light);
-  color: var(--navy);
+  color: var(--accent-blue, var(--blue));
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.03em;
@@ -362,7 +445,7 @@ body[data-layout='mobile'] #mobileEmployeeRosterList:not(.hidden) {
 
 .orbis-mobile-roster-name {
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text);
   line-height: 1.25;
 }
 
@@ -470,8 +553,8 @@ body[data-layout='mobile'] #employeeDrawer.open {
   top: 0;
   right: 0;
   left: 0;
-  width: 100vw;
-  max-width: 100vw;
+  width: 100%;
+  max-width: 100%;
   height: 100dvh;
   box-shadow: none;
   z-index: 95;
@@ -526,26 +609,7 @@ body[data-layout='mobile'] #employeeDrawer .field textarea {
   font-size: 16px;
 }
 
-/* Home — KPI carousel + stacked cards */
-body[data-layout='mobile'] .orbis-mobile-kpi-carousel {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-}
-
-body[data-layout='mobile'] .orbis-mobile-kpi-carousel::-webkit-scrollbar {
-  display: none;
-}
-
-body[data-layout='mobile'] .orbis-mobile-kpi-carousel .kpi-card {
-  flex: 0 0 min(78vw, 280px);
-  margin: 0;
-}
-
+/* Home — stacked cards */
 body[data-layout='mobile'] .orbis-mobile-home .card {
   margin-bottom: 12px;
 }
@@ -560,13 +624,9 @@ body[data-layout='mobile'] .orbis-mobile-home .manager-home-grid {
   grid-template-columns: 1fr;
 }
 
-body[data-layout='mobile'] .orbis-mobile-home .mini-table-wrap {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-body[data-layout='mobile'] .orbis-mobile-home .mini-table-wrap table {
-  min-width: 560px;
+body[data-layout='mobile'] .orbis-mobile-home .mini-table-wrap table,
+body[data-layout='mobile'] #dashboardTop .mini-table-wrap table {
+  min-width: 520px;
 }
 
 body[data-layout='mobile'] .employee-directory-list {
@@ -651,7 +711,7 @@ body[data-layout='mobile'] .orbis-mobile-portal-quicklinks.hidden {
   border: 1px solid var(--line);
   border-radius: var(--mobile-radius);
   background: var(--card);
-  color: var(--navy);
+  color: var(--text);
   font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
@@ -707,7 +767,7 @@ body[data-layout='mobile'] .orbis-mobile-portal-quicklinks.hidden {
 .orbis-mobile-hr-task-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text);
   line-height: 1.3;
 }
 
@@ -826,7 +886,7 @@ body[data-layout='mobile'] #activityPage .mobile-activity-toolbar {
 .orbis-mobile-activity-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text);
   line-height: 1.3;
 }
 
@@ -941,7 +1001,7 @@ body[data-layout='mobile'] #orbisAlertsPanel {
 
 .orbis-mobile-notification-label {
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text);
 }
 
 .orbis-mobile-notification-detail {
@@ -991,7 +1051,7 @@ body[data-layout='mobile'] .orbis-desktop-module-table {
 
 .orbis-mobile-module-card-title {
   font-weight: 700;
-  color: var(--navy);
+  color: var(--text);
   line-height: 1.3;
 }
 
@@ -1077,7 +1137,7 @@ body[data-layout='mobile'] .orbis-mobile-settings-nav:not(.hidden) {
   border-radius: var(--mobile-radius);
   background: var(--card);
   font-weight: 600;
-  color: var(--navy);
+  color: var(--text);
   text-align: left;
   cursor: pointer;
 }
@@ -1116,20 +1176,10 @@ body[data-layout='mobile'] #reportsMetricGrid {
 body[data-layout='mobile'] #operationsKpiGrid,
 body[data-layout='mobile'] #investigationsKpiGrid,
 body[data-layout='mobile'] .care-kpi-grid {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 10px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
-  padding-bottom: 4px;
-}
-
-body[data-layout='mobile'] #operationsKpiGrid .kpi-card,
-body[data-layout='mobile'] #investigationsKpiGrid .kpi-card,
-body[data-layout='mobile'] .care-kpi-grid .kpi-card {
-  flex: 0 0 min(78vw, 280px);
-  scroll-snap-align: start;
+  overflow: visible;
 }
 
 body[data-layout='mobile'] #orbisSectionOperations .stack,

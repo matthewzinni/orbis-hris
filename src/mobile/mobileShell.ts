@@ -116,6 +116,49 @@ function closeMoreSheet(): void {
   document.body.classList.remove('orbis-mobile-sheet-open');
 }
 
+function closeAllMobileSheets(): void {
+  closeMoreSheet();
+
+  ['orbisMobileNotificationsSheet', 'orbisMobileRosterFilterSheet'].forEach((id) => {
+    const sheet = document.getElementById(id);
+    if (!sheet) return;
+    sheet.classList.remove('open');
+    sheet.setAttribute('aria-hidden', 'true');
+  });
+
+  document.body.classList.remove('orbis-mobile-sheet-open');
+}
+
+function clearIdleDrawerBackdrop(): void {
+  const backdrop = document.getElementById('drawerBackdrop');
+  if (!backdrop?.classList.contains('open')) return;
+
+  const drawerOpen = document.querySelector(
+    '#employeeDrawer.open, #candidateDrawer.open, .drawer.open'
+  );
+  if (!drawerOpen) {
+    backdrop.classList.remove('open');
+    backdrop.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function handleMobileTabPress(tabButton: HTMLElement): void {
+  clearIdleDrawerBackdrop();
+  closeAllMobileSheets();
+
+  const tabId = tabButton.dataset.mobileTab as MobileTabId | undefined;
+  if (tabId === 'more') {
+    openMoreSheet();
+    syncActiveTab(String(window.currentMainView || ''));
+    return;
+  }
+
+  const sectionId = tabButton.dataset.navView || '';
+  if (sectionId) {
+    switchMainView(sectionId);
+  }
+}
+
 function refreshShell(): void {
   const mobile = isMobileLayout();
   const appView = document.getElementById('appView');
@@ -132,37 +175,43 @@ function refreshShell(): void {
   }
 }
 
+function bindMobileTabBarEvents(): void {
+  const tabBar = document.getElementById('orbisMobileTabBar');
+  if (!tabBar || tabBar.dataset.shellBound === '1') return;
+  tabBar.dataset.shellBound = '1';
+
+  tabBar.addEventListener('click', (event) => {
+    if (!isMobileLayout()) return;
+
+    const tabButton = (event.target as HTMLElement | null)?.closest(
+      '.orbis-mobile-tab'
+    ) as HTMLElement | null;
+    if (!tabButton) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    handleMobileTabPress(tabButton);
+  });
+}
+
 function bindMobileShellEvents(): void {
   if ((window as { __mobileShellBound?: boolean }).__mobileShellBound) return;
   (window as { __mobileShellBound?: boolean }).__mobileShellBound = true;
+
+  bindMobileTabBarEvents();
 
   document.addEventListener('click', (event) => {
     if (!isMobileLayout()) return;
 
     const target = event.target as HTMLElement | null;
-    const tabButton = target?.closest('#orbisMobileTabBar .orbis-mobile-tab') as HTMLElement | null;
-    if (tabButton) {
-      event.preventDefault();
-      const tabId = tabButton.dataset.mobileTab as MobileTabId | undefined;
-      if (tabId === 'more') {
-        openMoreSheet();
-        syncActiveTab(String(window.currentMainView || ''));
-        return;
-      }
-      const sectionId = tabButton.dataset.navView || '';
-      if (sectionId) {
-        closeMoreSheet();
-        switchMainView(sectionId);
-      }
-      return;
-    }
 
     const moreItem = target?.closest('#orbisMobileMoreNav .orbis-mobile-more-item') as HTMLElement | null;
     if (moreItem) {
       event.preventDefault();
       const sectionId = moreItem.dataset.navView || '';
       if (sectionId) {
-        closeMoreSheet();
+        clearIdleDrawerBackdrop();
+        closeAllMobileSheets();
         switchMainView(sectionId);
       }
       return;
@@ -188,6 +237,7 @@ function bindMobileShellEvents(): void {
 }
 
 export function initMobileShell(): void {
+  bindMobileTabBarEvents();
   bindMobileShellEvents();
   initMobilePeople();
   initMobileHome();

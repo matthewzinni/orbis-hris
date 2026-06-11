@@ -626,6 +626,7 @@ export async function loadReviewDashboardFallback(): Promise<void> {
     if (!interviewRows.length) {
       bodyTarget.innerHTML =
         '<tr><td colspan="6" class="empty">No stay interview schedule data available.</td></tr>';
+      window.renderMobileStayInterviewCards?.([]);
       return;
     }
 
@@ -647,6 +648,19 @@ export async function loadReviewDashboardFallback(): Promise<void> {
         `
       )
       .join('');
+
+    window.renderMobileStayInterviewCards?.(
+      interviewRows.map(
+        ({ employee, nextInterview, statusLabel, statusClass }) => ({
+          employeeId: String(employee.dbId || employee.id || employee.employee_id || ''),
+          name: employeeDisplayName(employee),
+          department: String(employee.department || employee.dept || ''),
+          nextInterview: nextInterview || '—',
+          statusLabel,
+          statusClass,
+        })
+      )
+    );
   } catch (err) {
     console.error('[Dashboard] Stay interview dashboard load failed:', err);
 
@@ -660,6 +674,8 @@ export async function loadReviewDashboardFallback(): Promise<void> {
         () => loadReviewDashboardFallback()
       );
     }
+
+    window.renderMobileStayInterviewCards?.([]);
   }
 }
 
