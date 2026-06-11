@@ -11,7 +11,7 @@
 }
 
 /* Default: mobile layout (sidebar hidden until desktop breakpoint) */
-body[data-layout='mobile'] {
+body[data-layout='mobile']:not(.auth-only) {
   overflow-x: clip;
   max-width: 100%;
 }
@@ -1216,6 +1216,59 @@ body[data-layout='mobile'] #settingsPage .layout-settings {
 
 body[data-layout='mobile'] #settingsPage .table-wrap {
   overflow-x: auto;
+}
+
+/* Login — iOS Safari tap targets, autofill, and scroll */
+body.auth-only .auth-shell {
+  justify-content: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: max(20px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+}
+
+body.auth-only .auth-brand-hero {
+  margin-bottom: 20px;
+}
+
+body.auth-only .auth-brand-hero .orbis-brand-mark {
+  width: 88px;
+  height: 88px;
+}
+
+body.auth-only .orbis-brand-name {
+  font-size: 2rem;
+}
+
+body.auth-only .field input,
+body.auth-only .auth-submit-btn,
+body.auth-only .auth-mode-link {
+  min-height: 48px;
+  font-size: 16px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body.auth-only .auth-submit-btn {
+  cursor: pointer;
+}
+
+body.auth-only .login-error:not(.hidden) {
+  display: block;
+  margin-top: 12px;
+}
+
+body.auth-only .toast-wrap {
+  left: 16px;
+  right: 16px;
+  top: max(12px, env(safe-area-inset-top));
+  z-index: 100020;
+}
+
+body.auth-only .toast {
+  min-width: 0;
+  max-width: none;
+  width: 100%;
 }
 
 @media (prefers-reduced-motion: reduce) {

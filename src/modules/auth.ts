@@ -60,6 +60,24 @@ function setLoginError(message: string): void {
   }
 }
 
+/** iOS Safari often delays syncing autofill into input.value until blur. */
+function syncAuthFieldValuesFromDom(): void {
+  const email = document.getElementById('loginEmail') as HTMLInputElement | null;
+  const password = document.getElementById('loginPassword') as HTMLInputElement | null;
+  const confirm = document.getElementById('registerPasswordConfirm') as HTMLInputElement | null;
+  const displayName = document.getElementById('registerDisplayName') as HTMLInputElement | null;
+
+  [email, password, confirm, displayName].forEach((input) => {
+    if (!input) return;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  if (document.activeElement instanceof HTMLElement) {
+    document.activeElement.blur();
+  }
+}
+
 function readAuthFields(): {
   email: string;
   password: string;
@@ -437,22 +455,43 @@ export async function waitForAuthSession(timeoutMs = 8000): Promise<Session | nu
   });
 }
 
+let authSubmitInFlight = false;
+
+async function submitAuthForm(): Promise<void> {
+  if (authSubmitInFlight) return;
+
+  syncAuthFieldValuesFromDom();
+  await new Promise<void>((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+
+  authSubmitInFlight = true;
+  try {
+    if (authMode === 'register') {
+      await registerAccount();
+      return;
+    }
+
+    await signIn();
+  } finally {
+    authSubmitInFlight = false;
+  }
+}
+
 /** Wire login / register / logout without inline HTML handlers. */
 export function initAuthBindings(): void {
+  const authForm = document.getElementById('authForm');
   const submitBtn = document.getElementById('authSubmitBtn');
   const logoutBtn = document.getElementById('logoutBtn');
   const email = document.getElementById('loginEmail');
   const password = document.getElementById('loginPassword');
   const modeToggle = document.getElementById('authModeToggle');
 
-  if (submitBtn && submitBtn.getAttribute('data-auth-bound') !== '1') {
-    submitBtn.setAttribute('data-auth-bound', '1');
-    submitBtn.addEventListener('click', () => {
-      if (authMode === 'register') {
-        void registerAccount();
-      } else {
-        void signIn();
-      }
+  if (authForm && authForm.getAttribute('data-auth-bound') !== '1') {
+    authForm.setAttribute('data-auth-bound', '1');
+    authForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      void submitAuthForm();
     });
   }
 
@@ -466,11 +505,7 @@ export function initAuthBindings(): void {
   const onEnter = (event: KeyboardEvent) => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
-    if (authMode === 'register') {
-      void registerAccount();
-    } else {
-      void signIn();
-    }
+    void submitAuthForm();
   };
 
   if (email && email.getAttribute('data-auth-bound') !== '1') {

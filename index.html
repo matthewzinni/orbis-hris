@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta
       name="description"
       content="BTW Global Orbis — HR intelligence, employee records, care & engagement, and operations."
@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="/src/styles/orbis-alerts.css" />
   </head>
 
-  <body>
+  <body class="auth-only">
     <div id="authView" class="auth-shell auth-shell--branded">
       <div class="auth-brand-hero">
         <img class="orbis-brand-mark" src="/orbis-logo.svg" width="120" height="120" alt="" />
@@ -27,23 +27,31 @@
         <p class="orbis-brand-product">HR Intelligence &amp; Operations · BTW Global</p>
       </div>
       <div class="auth-card">
-        <div class="auth-body">
+        <form class="auth-body" id="authForm" novalidate>
           <div class="field">
             <label for="loginEmail">Email</label>
             <input
               id="loginEmail"
+              name="email"
               type="email"
+              inputmode="email"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
               placeholder="you@company.com"
               autocomplete="username"
+              required
             />
           </div>
           <div class="field">
             <label for="loginPassword">Password</label>
             <input
               id="loginPassword"
+              name="password"
               type="password"
               placeholder="Password"
               autocomplete="current-password"
+              required
             />
           </div>
           <div id="authRegisterPanel" class="auth-mode-panel hidden">
@@ -51,6 +59,7 @@
               <label for="registerDisplayName">Your name (optional)</label>
               <input
                 id="registerDisplayName"
+                name="displayName"
                 type="text"
                 placeholder="First and last name"
                 autocomplete="name"
@@ -60,6 +69,7 @@
               <label for="registerPasswordConfirm">Confirm password</label>
               <input
                 id="registerPasswordConfirm"
+                name="passwordConfirm"
                 type="password"
                 placeholder="Re-enter password"
                 autocomplete="new-password"
@@ -67,7 +77,7 @@
             </div>
           </div>
           <div class="auth-submit-row">
-            <button class="button primary auth-submit-btn" id="authSubmitBtn" type="button">
+            <button class="button primary auth-submit-btn" id="authSubmitBtn" type="submit">
               Sign in
             </button>
           </div>
@@ -87,7 +97,7 @@
             your access and choose your level: <strong>user</strong> (your profile + PTO),
             <strong>supervisor</strong> (direct reports), or <strong>admin</strong> (full HRIS).
           </div>
-        </div>
+        </form>
       </div>
       <p class="orbis-legal-footer">Copyright © 2026 | BTW Global, LLC</p>
     </div>
