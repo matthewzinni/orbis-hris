@@ -9,6 +9,13 @@ import { isMobileLayout } from './mobileLayout';
 import { initMobilePeople } from './mobilePeople';
 import { initMobileHome } from './mobileHome';
 import { initMobileDrawer } from './mobileDrawer';
+import { initMobileTasks } from './mobileTasks';
+import { initMobilePortal } from './mobilePortal';
+import { applyMobileTabBadges } from './mobileBadges';
+import { initMobileActivity } from './mobileActivity';
+import { initMobileForms } from './mobileForms';
+import { initMobileNotifications } from './mobileNotifications';
+import { initMobileMoreModules } from './mobileMoreModules';
 
 declare global {
   interface Window {
@@ -47,6 +54,8 @@ function renderTabBar(): void {
     </button>`
     )
     .join('');
+
+  applyMobileTabBadges();
 }
 
 function renderMoreMenu(): void {
@@ -183,6 +192,12 @@ export function initMobileShell(): void {
   initMobilePeople();
   initMobileHome();
   initMobileDrawer();
+  initMobileTasks();
+  initMobilePortal();
+  initMobileActivity();
+  initMobileForms();
+  initMobileNotifications();
+  initMobileMoreModules();
   refreshShell();
 }
 

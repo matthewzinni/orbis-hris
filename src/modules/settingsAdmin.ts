@@ -1009,6 +1009,7 @@ export async function loadSettingsAdmin(force = false): Promise<void> {
 
   await Promise.all([loadUserAccessTable(), loadRecentAuditLogs()]);
   (window as { __settingsAdminLoaded?: boolean }).__settingsAdminLoaded = true;
+  window.renderMobileSettingsNav?.();
 }
 
 function bindSettingsEvents(): void {

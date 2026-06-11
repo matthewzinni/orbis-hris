@@ -77,6 +77,43 @@
   padding: 0.85rem 1rem;
 }
 
+/* Mobile — full-screen signing sheet */
+body[data-layout='mobile'].orbis-mobile-signing-open .orbis-mobile-tabbar {
+  display: none !important;
+}
+
+body[data-layout='mobile'] #erSigningBackdrop.open {
+  align-items: flex-end;
+  padding: 0;
+}
+
+body[data-layout='mobile'] #erSigningBackdrop .er-signing-dialog {
+  width: 100vw;
+  max-width: 100vw;
+  max-height: 100dvh;
+  height: 100dvh;
+  margin: 0;
+  border-radius: 0;
+  padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+}
+
+body[data-layout='mobile'] .er-signing-actions {
+  position: sticky;
+  bottom: 0;
+  padding-top: 12px;
+  background: linear-gradient(180deg, transparent, var(--card, #fafbfc) 24%);
+}
+
+body[data-layout='mobile'] .er-signing-actions .button {
+  flex: 1;
+  min-height: 44px;
+}
+
+body[data-layout='mobile'] .signature-typed-name {
+  font-size: 16px;
+  min-height: 44px;
+}
+
 .er-signing-success {
   color: #027a48;
   background: rgba(34, 197, 94, 0.12);

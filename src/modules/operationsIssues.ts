@@ -332,6 +332,7 @@ function renderIssuesTable(issues: OperationsIssue[]): void {
   if (!filtered.length) {
     tbody.innerHTML =
       '<tr><td colspan="8" class="empty">No operational issues match the current filters.</td></tr>';
+    window.renderMobileOperationsCards?.(filtered);
     return;
   }
 
@@ -376,6 +377,8 @@ function renderIssuesTable(issues: OperationsIssue[]): void {
       if (issueId) void openOperationsIssueDrawer(issueId);
     });
   });
+
+  window.renderMobileOperationsCards?.(filtered);
 
   tbody.querySelectorAll<HTMLButtonElement>('[data-delete-operations-issue-id]').forEach((button) => {
     button.addEventListener('click', () => {

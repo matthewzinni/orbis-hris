@@ -229,6 +229,10 @@ export async function loadHrInbox(force = false): Promise<void> {
       window.updateWorkspaceAlerts();
     }
 
+    if (typeof window.refreshMobileTasksUi === 'function') {
+      void window.refreshMobileTasksUi();
+    }
+
     void renderOutTodayCard();
   } catch (err) {
     console.error('[HrInbox] Load failed:', err);

@@ -33,6 +33,7 @@ const SECTION_LABELS: Record<string, string> = {
   myTasksView: 'Tasks & Acknowledgments',
   myDirectoryView: 'Directory',
   myTimeOffView: 'My Time Off',
+  activityView: 'Activity',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
   settingsView: 'Admin & Settings',
@@ -71,7 +72,7 @@ function primaryTasksSection(): string {
 
 function primaryActivitySection(): string {
   if (isEmployeeUser()) return 'myTimeOffView';
-  if (isSupervisorUser() || isAdminUser()) return 'operationsView';
+  if (isSupervisorUser() || isAdminUser()) return 'activityView';
   return 'myTimeOffView';
 }
 
@@ -142,8 +143,9 @@ const SECTION_TO_TAB: Record<string, MobileTabId> = {
   employeesView: 'people',
   myDirectoryView: 'people',
   myTasksView: 'tasks',
-  operationsView: 'activity',
+  activityView: 'activity',
   myTimeOffView: 'activity',
+  operationsView: 'more',
   orgChartView: 'more',
   candidatesView: 'more',
   documentsView: 'more',

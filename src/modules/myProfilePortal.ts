@@ -23,6 +23,7 @@ import { employeePersonalEmail, employeeWorkEmail } from '../services/employeeUt
 
 declare global {
   interface Window {
+    refreshMobilePortalUi?: () => void;
     loadMyProfilePortal?: () => Promise<void>;
     saveMyProfileContactInfo?: () => Promise<void>;
     saveMyEmergencyContactPortal?: () => Promise<void>;
@@ -301,6 +302,10 @@ export async function loadMyProfilePortal(): Promise<void> {
 
   if (profileError) {
     showToast('Could not load profile.', 'error');
+  }
+
+  if (typeof window.refreshMobilePortalUi === 'function') {
+    window.refreshMobilePortalUi();
   }
 }
 

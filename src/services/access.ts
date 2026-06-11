@@ -68,6 +68,7 @@ const SUPERVISOR_SECTIONS = new Set([
   'attendanceView',
   'operationsView',
   'careEngagementView',
+  'activityView',
 ]);
 
 export type EmployeeLike = Record<string, unknown>;
@@ -327,6 +328,7 @@ export function canAccessAppSection(sectionId: string): boolean {
   }
 
   if (isSupervisorUser()) {
+    if (section === 'myTasksView') return true;
     if (EMPLOYEE_PORTAL_SECTIONS.has(section) && hasPersonalEmployeePortal()) return true;
     if (EMPLOYEE_PORTAL_SECTIONS.has(section)) return false;
     if (ADMIN_ONLY_SECTIONS.has(section)) return false;

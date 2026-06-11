@@ -268,6 +268,7 @@ function renderAbsenceReportRows(rows: AbsenceRollupRow[]): void {
 
   if (!rows.length) {
     body.innerHTML = `<tr><td colspan="5" class="empty">No employees with ${ATTENDANCE_REPEAT_ABSENCE_MIN} or more absences in the past ${ATTENDANCE_LOOKBACK_DAYS} days.</td></tr>`;
+    window.renderMobileAbsenceCards?.([]);
     return;
   }
 
@@ -289,6 +290,16 @@ function renderAbsenceReportRows(rows: AbsenceRollupRow[]): void {
       `
     )
     .join('');
+
+  window.renderMobileAbsenceCards?.(
+    rows.map((row) => ({
+      employeeId: row.employeeId,
+      name: row.name,
+      department: row.department || '—',
+      absenceCount: row.absenceCount,
+      datesLabel: formatAbsenceDates(row.absenceDates),
+    }))
+  );
 }
 
 async function loadAbsenceReportPanel(): Promise<void> {
@@ -410,6 +421,7 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
   if (!employees.length) {
     body.innerHTML =
       '<tr><td colspan="5" class="empty">No active employees in your roster.</td></tr>';
+    window.renderMobileAttendanceRollCall?.([]);
     updateAttendanceKpis(snapshot);
     return;
   }
@@ -419,6 +431,20 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
   body.innerHTML = employees
     .map((employee) => renderEmployeeChecklistRow(employee, presentKeys, absentKeys))
     .join('');
+
+  window.renderMobileAttendanceRollCall?.(
+    employees.map((employee) => {
+      const person = personFromEmployee(employee);
+      const key = personKey(person);
+      return {
+        attendanceKey: key,
+        name: person.name,
+        department: person.department || '—',
+        presentChecked: presentKeys.has(key),
+        absentChecked: absentKeys.has(key),
+      };
+    })
+  );
 
   updateAttendanceKpis(snapshot);
 }

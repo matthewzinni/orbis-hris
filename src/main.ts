@@ -189,6 +189,9 @@ bridge.bootstrapOrbisAfterAuth = async () => {
   const bootOk = await initializeProtectedModules();
   if (!bootOk) return;
   initAppSections();
+  if (typeof window.refreshMobileTasksBadge === 'function') {
+    void window.refreshMobileTasksBadge();
+  }
 };
 
 // Always use the section router from appSections (not legacy scroll-into-view navigation).

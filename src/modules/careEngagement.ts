@@ -239,6 +239,7 @@ function renderCareTrackerTable(dataset: CareEngagementDataset): void {
 
   if (!items.length) {
     body.innerHTML = `<tr><td colspan="${colspan}" class="empty">No care items logged.</td></tr>`;
+    window.renderMobileCareCards?.([]);
     return;
   }
 
@@ -268,6 +269,8 @@ function renderCareTrackerTable(dataset: CareEngagementDataset): void {
     `;
     })
     .join('');
+
+  window.renderMobileCareCards?.(items);
 }
 
 function renderCareItemDetail(item: CareTrackerItem | null): void {

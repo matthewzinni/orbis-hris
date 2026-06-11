@@ -146,6 +146,8 @@ export function renderOrgChart(): void {
   if (unlinkedCard) {
     unlinkedCard.classList.toggle('hidden', !unlinked.length);
   }
+
+  window.renderMobileOrgChartDrill?.();
 }
 
 export async function loadOrgChart(): Promise<void> {

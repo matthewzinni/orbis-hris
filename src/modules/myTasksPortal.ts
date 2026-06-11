@@ -2,6 +2,8 @@ import {
   canAccessAppSection,
   ensureLinkedEmployeeRecord,
   getLinkedEmployeeId,
+  isAdminUser,
+  isSupervisorUser,
 } from '../services/access';
 import {
   getHandbookDocumentUrl,
@@ -24,6 +26,7 @@ import {
 
 declare global {
   interface Window {
+    refreshMobileTasksUi?: () => Promise<void>;
     loadMyTasksPortal?: () => Promise<void>;
     toggleMyOnboardingTask?: (taskId: string, isComplete: boolean) => Promise<void>;
     acknowledgeHandbookFromPortal?: (documentId: string) => Promise<void>;
@@ -398,11 +401,17 @@ export async function toggleMyOnboardingTask(taskId: string, isComplete: boolean
 function renderTasksPortalUnlinkedState(): void {
   const pendingEl = safeGet('myTasksPendingList');
   const handbookEl = safeGet('myTasksHandbookList');
-  const message =
-    '<div class="muted">No employee record is linked to your account. Ask HR to link your BTW id in Admin → User Access.</div>';
+  const isManager = isAdminUser() || isSupervisorUser();
+  const message = isManager
+    ? '<div class="muted">No employee record is linked to your login. Personal acknowledgments will appear here once HR links your BTW id.</div>'
+    : '<div class="muted">No employee record is linked to your account. Ask HR to link your BTW id in Admin → User Access.</div>';
 
   if (pendingEl) pendingEl.innerHTML = message;
-  if (handbookEl) handbookEl.innerHTML = message;
+  if (handbookEl) {
+    handbookEl.innerHTML = isManager
+      ? '<div class="muted">Handbook and personal tasks require a linked employee record.</div>'
+      : message;
+  }
   renderOnboardingChecklist([]);
   renderCompletedAcknowledgments([]);
 }
@@ -420,6 +429,9 @@ export async function loadMyTasksPortal(): Promise<void> {
 
   if (!employeeId) {
     renderTasksPortalUnlinkedState();
+    if (typeof window.refreshMobileTasksUi === 'function') {
+      void window.refreshMobileTasksUi();
+    }
     return;
   }
 
@@ -453,6 +465,9 @@ export async function loadMyTasksPortal(): Promise<void> {
     bindPolicyActions();
     renderOnboardingChecklist(snapshot.onboardingTasks);
     renderCompletedAcknowledgments(snapshot.completed);
+    if (typeof window.refreshMobileTasksUi === 'function') {
+      void window.refreshMobileTasksUi();
+    }
   } catch (err) {
     console.error('[MyTasksPortal]', err);
     if (pendingEl) pendingEl.innerHTML = '<div class="muted">Could not load your tasks.</div>';

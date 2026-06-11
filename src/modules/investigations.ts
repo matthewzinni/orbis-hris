@@ -588,6 +588,7 @@ function renderInvestigationsTable(rows: Investigation[]): void {
   if (!filtered.length) {
     tbody.innerHTML =
       '<tr><td colspan="9" class="empty">No investigations match the current filters.</td></tr>';
+    window.renderMobileInvestigationCards?.(filtered);
     return;
   }
 
@@ -626,6 +627,8 @@ function renderInvestigationsTable(rows: Investigation[]): void {
       `;
     })
     .join('');
+
+  window.renderMobileInvestigationCards?.(filtered);
 
   tbody.querySelectorAll<HTMLButtonElement>('[data-edit-investigation-id]').forEach((button) => {
     button.addEventListener('click', () => {

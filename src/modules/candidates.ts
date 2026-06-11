@@ -687,6 +687,7 @@ export async function loadCandidates(): Promise<void> {
         : 'No candidates found.';
 
       target.innerHTML = `<div class="empty">${escapeHtml(emptyMessage)}</div>`;
+      window.renderMobileCandidateCards?.([]);
 
       return;
     }
@@ -770,6 +771,8 @@ export async function loadCandidates(): Promise<void> {
         .join('');
     }
     
+
+    window.renderMobileCandidateCards?.(rows);
 
     target.querySelectorAll<HTMLButtonElement>('[data-edit-candidate-id]').forEach((button) => {
       button.addEventListener('click', () => {

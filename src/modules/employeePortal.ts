@@ -16,6 +16,7 @@ import {
 
 declare global {
   interface Window {
+    refreshMobilePortalUi?: () => void;
     loadMyTimeOffPortal?: () => Promise<void>;
     submitMyTimeOffRequest?: () => Promise<void>;
   }
@@ -126,6 +127,9 @@ export async function loadMyTimeOffPortal(): Promise<void> {
     }
 
     list.innerHTML = rows.map(renderMyLeaveRow).join('');
+    if (typeof window.refreshMobilePortalUi === 'function') {
+      window.refreshMobilePortalUi();
+    }
   } catch (err) {
     console.error('[EmployeePortal]', err);
     if (list) list.innerHTML = '<div class="muted">Could not load your time off requests.</div>';

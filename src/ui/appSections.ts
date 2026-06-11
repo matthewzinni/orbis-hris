@@ -31,6 +31,7 @@ declare global {
     loadMyHandbookPortal?: () => Promise<void>;
     loadMyDirectoryPortal?: () => Promise<void>;
     loadMyTimeOffPortal?: () => Promise<void>;
+    loadMobileActivityFeed?: (force?: boolean) => Promise<void>;
   }
 }
 
@@ -79,6 +80,7 @@ const SECTION_LABELS: Record<string, string> = {
   myTasksView: 'Tasks & Acknowledgments',
   myDirectoryView: 'Directory',
   myTimeOffView: 'My Time Off',
+  activityView: 'Activity',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
   settingsView: 'Admin & Settings',
@@ -212,6 +214,17 @@ const APP_SECTIONS: AppSection[] = [
     onEnter: () => {
       if (typeof window.loadMyTimeOffPortal === 'function') {
         void window.loadMyTimeOffPortal();
+      }
+    },
+  },
+  {
+    id: 'activityView',
+    rootId: 'orbisSectionActivity',
+    targetId: 'activityPage',
+    aliases: ['activity', 'team-activity', 'hr-activity'],
+    onEnter: () => {
+      if (typeof window.loadMobileActivityFeed === 'function') {
+        void window.loadMobileActivityFeed();
       }
     },
   },

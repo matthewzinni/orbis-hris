@@ -209,6 +209,10 @@ function renderAlertsPanel(alerts: WorkspaceAlert[]): void {
     .join('');
 }
 
+export function getWorkspaceAlerts(): WorkspaceAlert[] {
+  return collectWorkspaceAlerts();
+}
+
 export function updateWorkspaceAlerts(): void {
   renderAlertsPanel(collectWorkspaceAlerts());
 }

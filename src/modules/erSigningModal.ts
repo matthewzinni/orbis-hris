@@ -42,7 +42,7 @@ function showToast(message: string, type: 'success' | 'error' = 'success'): void
 function closeErSigningModal(): void {
   const backdrop = safeGet('erSigningBackdrop');
   backdrop?.classList.remove('open');
-  document.body.classList.remove('orbis-modal-open');
+  document.body.classList.remove('orbis-modal-open', 'orbis-mobile-signing-open');
   activeToken = '';
 
   const body = safeGet('erSigningBody');
@@ -205,7 +205,7 @@ export async function openErSigningModal(token: string): Promise<void> {
 
   activeToken = normalized;
   backdrop.classList.add('open');
-  document.body.classList.add('orbis-modal-open');
+  document.body.classList.add('orbis-modal-open', 'orbis-mobile-signing-open');
   body.innerHTML = '<div class="muted">Loading document…</div>';
 
   try {

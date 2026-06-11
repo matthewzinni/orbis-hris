@@ -901,6 +901,7 @@
                     <button class="button soft" type="button" id="orgChartPrintBtn">Print</button>
                   </div>
                 </div>
+                <div id="mobileOrgChartDrill" class="orbis-mobile-orgchart-drill hidden" aria-live="polite"></div>
                 <div id="orgChartTree" class="org-chart-tree" role="tree" aria-label="Reporting hierarchy">
                   <p class="empty">Loading org chart…</p>
                 </div>
@@ -942,6 +943,11 @@
                 <span class="muted">Your job details and contact information</span>
               </div>
             </div>
+            <nav
+              id="mobilePortalQuickLinks"
+              class="orbis-mobile-portal-quicklinks hidden"
+              aria-label="Quick links"
+            ></nav>
             <div class="card">
               <div class="card-header">
                 <span id="myProfilePageTitle">My Profile</span>
@@ -1035,6 +1041,22 @@
             <div class="toolbar">
               <div class="toolbar-left">
                 <span class="muted">Pending tasks, handbook review, and signed acknowledgments</span>
+              </div>
+            </div>
+            <div
+              class="card orbis-mobile-hr-tasks-card hidden"
+              id="mobileHrTasksCard"
+              data-hr-inbox-access
+            >
+              <div class="card-header">
+                <span>HR action items</span>
+                <button class="button soft sm" type="button" id="mobileHrTasksRefreshBtn">
+                  Refresh
+                </button>
+              </div>
+              <div class="card-body">
+                <p class="muted" id="mobileHrTasksSummary">Loading HR items…</p>
+                <div id="mobileHrTasksList" class="orbis-mobile-hr-task-list"></div>
               </div>
             </div>
             <div class="card">
@@ -1226,6 +1248,29 @@
         </section>
 
         <section
+          id="orbisSectionActivity"
+          class="orbis-app-section hidden"
+          data-section="activityView"
+          aria-hidden="true"
+        >
+          <div class="page" id="activityPage">
+            <div class="toolbar mobile-activity-toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Recent notes, discipline, reviews, and team updates</span>
+              </div>
+              <div class="toolbar-right">
+                <button class="button soft" type="button" id="mobileActivityRefreshBtn">
+                  Refresh
+                </button>
+              </div>
+            </div>
+            <div id="mobileActivityFeed" class="orbis-mobile-activity-feed">
+              <div class="muted">Loading activity…</div>
+            </div>
+          </div>
+        </section>
+
+        <section
           id="orbisSectionAttendance"
           class="orbis-app-section hidden"
           data-section="attendanceView"
@@ -1270,7 +1315,8 @@
                 </button>
               </div>
               <div class="card-body">
-                <div class="table-wrap">
+                <div id="mobileAttendanceAbsences" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                <div class="table-wrap orbis-desktop-module-table">
                   <table class="attendance-absence-report-table">
                     <thead>
                       <tr>
@@ -1313,7 +1359,8 @@
                 </div>
               </div>
               <div class="card-body attendance-roll-call-body">
-                <div class="table-wrap attendance-table-scroll">
+                <div id="mobileAttendanceRollCall" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                <div class="table-wrap attendance-table-scroll orbis-desktop-module-table">
                   <table class="attendance-checklist-table">
                     <thead>
                       <tr>
@@ -1364,7 +1411,8 @@
                 <span class="muted" id="candidateCount">Loading candidates...</span>
               </div>
               <div class="card-body">
-                <div class="table-wrap">
+                <div id="mobileCandidatesList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                <div class="table-wrap orbis-desktop-module-table">
                   <table>
                     <thead>
                       <tr>
@@ -1487,7 +1535,8 @@
                       </select>
                     </div>
                   </div>
-                  <div class="table-wrap">
+                  <div id="mobileOperationsList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                  <div class="table-wrap orbis-desktop-module-table">
                     <table>
                       <thead>
                         <tr>
@@ -1635,7 +1684,8 @@
                       </select>
                     </div>
                   </div>
-                  <div class="table-wrap">
+                  <div id="mobileInvestigationsList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                  <div class="table-wrap orbis-desktop-module-table">
                     <table>
                       <thead>
                         <tr>
@@ -1805,7 +1855,8 @@
                       placeholder="Search care items..."
                     />
                   </div>
-                  <div class="table-wrap">
+                  <div id="mobileCareList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                  <div class="table-wrap orbis-desktop-module-table">
                     <table>
                       <thead>
                         <tr>
@@ -2347,6 +2398,7 @@
               </div>
             </div>
             <div id="settingsAdminContent">
+              <nav id="mobileSettingsNav" class="orbis-mobile-settings-nav hidden" aria-label="Settings sections"></nav>
               <div class="toolbar settings-toolbar">
                 <div class="toolbar-left">
                   <span class="muted">User access and recent audit activity</span>
@@ -2394,7 +2446,7 @@
                       </div>
                     </div>
                   </div>
-                  <div class="card">
+                  <div class="card" id="settingsUserAccessCard">
                     <div class="card-header">
                       <span>Approved user access</span>
                       <span class="muted" id="settingsUserAccessCount">Loading...</span>
@@ -2426,7 +2478,7 @@
                   </div>
                 </div>
                 <div class="stack">
-                  <div class="card">
+                  <div class="card" id="settingsAuditLogCard">
                     <div class="card-header">
                       <span>Recent audit log</span>
                       <span class="muted" id="settingsAuditLogCount">Loading...</span>
@@ -2502,6 +2554,30 @@
                 <button type="button" class="button primary" id="orbisMobileRosterFilterApply">Apply</button>
               </div>
             </div>
+          </div>
+        </div>
+        <div
+          id="orbisMobileNotificationsSheet"
+          class="orbis-mobile-sheet"
+          aria-hidden="true"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="orbisMobileNotificationsTitle"
+        >
+          <div class="orbis-mobile-sheet-backdrop" id="orbisMobileNotificationsBackdrop"></div>
+          <div class="orbis-mobile-sheet-panel">
+            <div class="orbis-mobile-sheet-header">
+              <h2 id="orbisMobileNotificationsTitle">Notifications</h2>
+              <button
+                type="button"
+                class="orbis-mobile-sheet-close"
+                id="orbisMobileNotificationsClose"
+              >
+                Close
+              </button>
+            </div>
+            <p class="muted orbis-mobile-notifications-summary" id="orbisMobileNotificationsSummary"></p>
+            <div id="orbisMobileNotificationsList" class="orbis-mobile-notifications-list"></div>
           </div>
         </div>
         <div
