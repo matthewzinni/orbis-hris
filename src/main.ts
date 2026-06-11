@@ -1,4 +1,6 @@
+import './mobile/mobileLayout';
 import './styles/app-shell.css';
+import './styles/orbis-mobile.css';
 import './styles/orbis-brand.css';
 import './styles/orbis-space-theme.css';
 import './styles/orbis-polish.css';

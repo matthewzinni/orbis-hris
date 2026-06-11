@@ -1,11 +1,4 @@
-import {
-  PDFDocument,
-  StandardFonts,
-  rgb,
-  type PDFPage,
-  type PDFFont,
-  type PDFForm,
-} from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from 'pdf-lib';
 import { supabaseClient } from './supabaseClient';
 import type { SignatureFormType } from './signatureRequests';
 
@@ -17,6 +10,7 @@ type AcknowledgmentDocument = {
   date: string;
   summary: string;
   employeeName: string;
+  employeeSignature?: string;
 };
 
 const TABLE_BY_FORM: Record<SignatureFormType, string> = {
@@ -30,7 +24,7 @@ const PAGE_HEIGHT = 792;
 const MARGIN = 54;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 /** Reserve bottom of the last page for the signature block (always visible). */
-const SIGNATURE_BLOCK_HEIGHT = 340;
+const SIGNATURE_BLOCK_HEIGHT = 280;
 
 const PDF_UNICODE_REPLACEMENTS: Array<[string, string]> = [
   ['\u2192', '->'],
@@ -77,6 +71,16 @@ function formatDateLabel(value: unknown): string {
     month: '2-digit',
     day: '2-digit',
   });
+}
+
+function dataUrlToBytes(dataUrl: string): Uint8Array {
+  const base64 = dataUrl.split(',')[1] || '';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 }
 
 function downloadPdf(bytes: Uint8Array, filename: string): void {
@@ -142,6 +146,9 @@ function buildDocumentMeta(
 ): AcknowledgmentDocument {
   const safeName = toPdfSafeText(employeeName);
 
+  const signature = String(record.employee_signature || '').trim();
+  const employeeSignature = signature.startsWith('data:image/') ? signature : undefined;
+
   if (formType === 'discipline') {
     return {
       title: 'Discipline acknowledgment',
@@ -149,6 +156,7 @@ function buildDocumentMeta(
       date: toPdfSafeText(formatDateLabel(record.incident_date || record.created_at)),
       summary: toPdfSafeText(buildSummary(formType, record)),
       employeeName: safeName,
+      employeeSignature,
     };
   }
 
@@ -161,6 +169,7 @@ function buildDocumentMeta(
       date: toPdfSafeText(formatDateLabel(record.incident_date || record.created_at)),
       summary: toPdfSafeText(buildSummary(formType, record)),
       employeeName: safeName,
+      employeeSignature,
     };
   }
 
@@ -170,6 +179,7 @@ function buildDocumentMeta(
     date: toPdfSafeText(formatDateLabel(record.review_date || record.created_at)),
     summary: toPdfSafeText(buildSummary(formType, record)),
     employeeName: safeName,
+    employeeSignature,
   };
 }
 
@@ -269,7 +279,6 @@ function drawSummaryPages(
 
 function drawDashedSignatureFrame(
   page: PDFPage,
-  font: PDFFont,
   x: number,
   y: number,
   width: number,
@@ -301,23 +310,17 @@ function drawDashedSignatureFrame(
     page.drawRectangle({ x: right - 1, y: py, width: 1, height: h, color: rgb(0.796, 0.835, 0.882) });
   }
 
-  page.drawText('Sign here', {
-    x: x + width / 2 - 24,
-    y: y + height / 2 - 4,
-    size: 11,
-    font,
-    color: rgb(0.58, 0.639, 0.722),
-  });
 }
 
-function drawSignatureBlock(
+async function drawSignatureBlock(
+  pdfDoc: PDFDocument,
   page: PDFPage,
-  form: PDFForm,
   doc: AcknowledgmentDocument,
   regular: PDFFont,
   bold: PDFFont
-): void {
+): Promise<void> {
   const blockTop = MARGIN + SIGNATURE_BLOCK_HEIGHT;
+  const signed = Boolean(doc.employeeSignature);
 
   page.drawLine({
     start: { x: MARGIN, y: blockTop + 8 },
@@ -336,34 +339,35 @@ function drawSignatureBlock(
 
   let y = blockTop - 28;
 
-  page.drawText('Complete the fields below, then sign in the signature box.', {
-    x: MARGIN,
-    y,
-    size: 9,
-    font: regular,
-    color: rgb(0.42, 0.447, 0.502),
-    maxWidth: CONTENT_WIDTH,
-  });
+  page.drawText(
+    signed
+      ? 'Signed electronically in Orbis.'
+      : 'Pending employee signature in Orbis (Tasks & Acknowledgments).',
+    {
+      x: MARGIN,
+      y,
+      size: 9,
+      font: regular,
+      color: rgb(0.42, 0.447, 0.502),
+      maxWidth: CONTENT_WIDTH,
+    }
+  );
   y -= 22;
 
-  const agreeCheck = form.createCheckBox('agreeToSign');
-  agreeCheck.addToPage(page, {
-    x: MARGIN,
-    y: y - 14,
-    width: 14,
-    height: 14,
-    borderWidth: 1,
-    borderColor: rgb(0.42, 0.447, 0.502),
-  });
-  page.drawText('I have reviewed this document and agree to sign electronically.', {
-    x: MARGIN + 20,
-    y: y - 12,
-    size: 10,
-    font: regular,
-    color: rgb(0.122, 0.161, 0.216),
-    maxWidth: CONTENT_WIDTH - 20,
-  });
-  y -= 30;
+  page.drawText(
+    signed
+      ? '[x] I have reviewed this document and agree to sign electronically.'
+      : '[ ] I have reviewed this document and agree to sign electronically.',
+    {
+      x: MARGIN,
+      y,
+      size: 10,
+      font: regular,
+      color: rgb(0.122, 0.161, 0.216),
+      maxWidth: CONTENT_WIDTH,
+    }
+  );
+  y -= 26;
 
   page.drawText('FULL LEGAL NAME', {
     x: MARGIN,
@@ -372,23 +376,23 @@ function drawSignatureBlock(
     font: bold,
     color: rgb(0.42, 0.447, 0.502),
   });
-  y -= 16;
+  y -= 14;
 
-  const nameField = form.createTextField('employeeLegalName');
-  if (doc.employeeName) {
-    nameField.setText(doc.employeeName);
-  }
-  nameField.addToPage(page, {
+  page.drawText(doc.employeeName || '', {
     x: MARGIN,
-    y: y - 22,
-    width: CONTENT_WIDTH,
-    height: 22,
+    y: y - 2,
+    size: 12,
     font: regular,
-    borderWidth: 1,
-    borderColor: rgb(0.42, 0.447, 0.502),
-    backgroundColor: rgb(1, 1, 1),
+    color: rgb(0.067, 0.094, 0.153),
   });
-  y -= 38;
+  y -= 10;
+  page.drawLine({
+    start: { x: MARGIN, y },
+    end: { x: MARGIN + CONTENT_WIDTH, y },
+    thickness: 1,
+    color: rgb(0.067, 0.094, 0.153),
+  });
+  y -= 24;
 
   page.drawText('EMPLOYEE SIGNATURE', {
     x: MARGIN,
@@ -401,20 +405,44 @@ function drawSignatureBlock(
   const signatureHeight = 96;
   const sigBoxY = y - 8 - signatureHeight;
 
-  drawDashedSignatureFrame(page, regular, MARGIN, sigBoxY, CONTENT_WIDTH, signatureHeight);
+  if (signed && doc.employeeSignature) {
+    page.drawRectangle({
+      x: MARGIN,
+      y: sigBoxY,
+      width: CONTENT_WIDTH,
+      height: signatureHeight,
+      borderColor: rgb(0.796, 0.835, 0.882),
+      borderWidth: 1,
+      color: rgb(1, 1, 1),
+    });
 
-  const signatureField = form.createTextField('employeeSignature');
-  signatureField.enableMultiline();
-  signatureField.addToPage(page, {
-    x: MARGIN + 2,
-    y: sigBoxY + 2,
-    width: CONTENT_WIDTH - 4,
-    height: signatureHeight - 4,
-    font: regular,
-    borderWidth: 0,
-    backgroundColor: rgb(1, 1, 1),
-    textColor: rgb(0.067, 0.094, 0.153),
-  });
+    const bytes = dataUrlToBytes(doc.employeeSignature);
+    const image = doc.employeeSignature.includes('image/png')
+      ? await pdfDoc.embedPng(bytes)
+      : await pdfDoc.embedJpg(bytes);
+    const dims = image.scale(1);
+    const maxW = CONTENT_WIDTH - 24;
+    const maxH = signatureHeight - 16;
+    const scale = Math.min(maxW / dims.width, maxH / dims.height, 1);
+    const width = dims.width * scale;
+    const height = dims.height * scale;
+
+    page.drawImage(image, {
+      x: MARGIN + (CONTENT_WIDTH - width) / 2,
+      y: sigBoxY + (signatureHeight - height) / 2,
+      width,
+      height,
+    });
+  } else {
+    drawDashedSignatureFrame(page, MARGIN, sigBoxY, CONTENT_WIDTH, signatureHeight);
+    page.drawText('Awaiting Orbis signature', {
+      x: MARGIN + CONTENT_WIDTH / 2 - 52,
+      y: sigBoxY + 12,
+      size: 9,
+      font: regular,
+      color: rgb(0.58, 0.639, 0.722),
+    });
+  }
 
   y = sigBoxY - 20;
 
@@ -425,23 +453,29 @@ function drawSignatureBlock(
     font: bold,
     color: rgb(0.42, 0.447, 0.502),
   });
-  y -= 16;
+  y -= 14;
 
-  const dateField = form.createTextField('dateSigned');
-  dateField.addToPage(page, {
-    x: MARGIN,
-    y: y - 22,
-    width: 220,
-    height: 22,
-    font: regular,
-    borderWidth: 1,
-    borderColor: rgb(0.42, 0.447, 0.502),
-    backgroundColor: rgb(1, 1, 1),
+  if (signed) {
+    page.drawText(toPdfSafeText(formatDateLabel(new Date().toISOString())), {
+      x: MARGIN,
+      y: y - 2,
+      size: 11,
+      font: regular,
+      color: rgb(0.067, 0.094, 0.153),
+    });
+  }
+
+  y -= 10;
+  page.drawLine({
+    start: { x: MARGIN, y },
+    end: { x: MARGIN + 220, y },
+    thickness: 1,
+    color: rgb(0.067, 0.094, 0.153),
   });
 
   const footer =
     'Employee signature confirms receipt of this document. It does not imply agreement. ' +
-    'Use Adobe Acrobat Reader Fill & Sign or Preview Markup to sign if needed.';
+    'Signatures are collected in the Orbis employee portal.';
   let footerY = MARGIN + 8;
   wrapText(footer, regular, 8, CONTENT_WIDTH).forEach((line) => {
     page.drawText(line, {
@@ -453,18 +487,12 @@ function drawSignatureBlock(
     });
     footerY += 11;
   });
-
-  nameField.defaultUpdateAppearances(regular);
-  signatureField.defaultUpdateAppearances(regular);
-  dateField.defaultUpdateAppearances(regular);
-  agreeCheck.defaultUpdateAppearances();
 }
 
 async function buildAcknowledgmentPdfBytes(doc: AcknowledgmentDocument): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const form = pdfDoc.getForm();
 
   let page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   let y = drawHeader(page, doc, regular, bold);
@@ -485,7 +513,7 @@ async function buildAcknowledgmentPdfBytes(doc: AcknowledgmentDocument): Promise
     page = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   }
 
-  drawSignatureBlock(page, form, doc, regular, bold);
+  await drawSignatureBlock(pdfDoc, page, doc, regular, bold);
 
   return pdfDoc.save();
 }

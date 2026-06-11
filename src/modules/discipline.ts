@@ -1,6 +1,7 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { stopAllDictation } from './dictation';
+import { requestEmployeeAcknowledgmentSignature } from '../services/employeeAcknowledgmentSigning';
 import {
   clearCanvasSignature,
   getCanvasSignature,
@@ -250,8 +251,9 @@ export async function loadEmployeeDiscipline(employeeId: string): Promise<void> 
             <button class="button soft sm" type="button" data-edit-discipline-id="${escapeHtml(row.id || '')}">Edit</button>
             ${
               row.employee_signature
-                ? ''
-                : `<button class="button soft sm" type="button" data-sign-discipline-id="${escapeHtml(row.id || '')}">Generate PDF</button>`
+                ? `<button class="button soft sm" type="button" data-pdf-discipline-id="${escapeHtml(row.id || '')}">Generate PDF</button>`
+                : `<button class="button primary sm" type="button" data-request-discipline-id="${escapeHtml(row.id || '')}">Request signature</button>
+                   <button class="button soft sm" type="button" data-pdf-discipline-id="${escapeHtml(row.id || '')}">Generate PDF</button>`
             }
             <button class="button danger sm" type="button" data-delete-discipline-id="${escapeHtml(row.id || '')}">Delete</button>
           </div>
@@ -278,17 +280,52 @@ export async function loadEmployeeDiscipline(employeeId: string): Promise<void> 
       });
     });
 
-    target.querySelectorAll<HTMLButtonElement>('[data-sign-discipline-id]').forEach((button) => {
+    target.querySelectorAll<HTMLButtonElement>('[data-request-discipline-id]').forEach((button) => {
       button.addEventListener('click', async () => {
-        const recordId = button.dataset.signDisciplineId;
+        const recordId = button.dataset.requestDisciplineId;
+        const record = rows.find((row) => String(row.id) === String(recordId));
+        if (!recordId || !record) return;
+
+        const employee = getCurrentEmployee();
+        const employeeId = String(record.employee_id || getEmployeeId(employee) || '').trim();
+        if (!employeeId) {
+          showToast('Employee context is missing for this record.', 'error');
+          return;
+        }
+
+        const signerName = [
+          employee?.first_name || employee?.first,
+          employee?.last_name || employee?.last,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .trim();
+
+        try {
+          await requestEmployeeAcknowledgmentSignature({
+            formType: 'discipline',
+            recordId,
+            employeeId,
+            signerName: signerName || undefined,
+            signerEmail: String((employee as { email?: string })?.email || '').trim() || undefined,
+          });
+          showToast('Signature request added to employee My Tasks.');
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Could not request signature.';
+          showToast(message, 'error');
+        }
+      });
+    });
+
+    target.querySelectorAll<HTMLButtonElement>('[data-pdf-discipline-id]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const recordId = button.dataset.pdfDisciplineId;
         if (!recordId) return;
 
         try {
           const { openErAcknowledgmentPdf } = await import('../services/erAcknowledgmentPdf');
           await openErAcknowledgmentPdf('discipline', recordId);
-          showToast(
-            'PDF downloaded. Open it in Acrobat Reader or Preview and use the signature field to sign.'
-          );
+          showToast('PDF downloaded.');
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Could not generate PDF.';
           showToast(message, 'error');

@@ -1,5 +1,4 @@
 import {
-  createSignatureRequest,
   getEdgeFunctionHeaders,
   getFormSignatureFunctionUrl,
   type SignatureFormType,
@@ -225,22 +224,16 @@ export async function queueEmployeeSignatureAndOpenPdf(input: {
   signerName?: string;
   signerEmail?: string;
 }): Promise<void> {
-  const { openErAcknowledgmentPdf } = await import('../services/erAcknowledgmentPdf');
-
-  await openErAcknowledgmentPdf(input.formType, input.recordId);
+  const { requestEmployeeAcknowledgmentSignature } = await import(
+    '../services/employeeAcknowledgmentSigning'
+  );
 
   try {
-    await createSignatureRequest({
-      formType: input.formType,
-      recordId: input.recordId,
-      employeeId: input.employeeId,
-      signerRole: 'employee',
-      signerName: input.signerName,
-      signerEmail: input.signerEmail,
-    });
-    showToast('PDF downloaded. Employee can also sign from My Tasks in Orbis.');
-  } catch {
-    showToast('PDF downloaded. Save the record before queueing employee signature.', 'error');
+    await requestEmployeeAcknowledgmentSignature(input);
+    showToast('Signature request added to employee My Tasks.');
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Could not request signature.';
+    showToast(message, 'error');
   }
 }
 

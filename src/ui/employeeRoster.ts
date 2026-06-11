@@ -47,6 +47,7 @@ type OrbisRosterWindow = Window & {
   syncOpenedEmployeeRecordId?: (id: string) => void;
   loadEmployees?: () => Promise<unknown>;
   renderEmployeeRoster?: () => void;
+  renderMobileEmployeeRoster?: () => void;
   renderRoster?: () => void;
   bindRosterEvents?: () => void;
   bindAtRiskKpiHover?: () => void;
@@ -789,6 +790,10 @@ function renderEmployeeRoster() {
     // Re-bind At-Risk KPI hover after roster updates
     if (typeof bindAtRiskKpiHover === 'function') {
         bindAtRiskKpiHover();
+    }
+
+    if (typeof window.renderMobileEmployeeRoster === 'function') {
+        window.renderMobileEmployeeRoster();
     }
 }
 

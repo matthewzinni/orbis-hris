@@ -1,0 +1,608 @@
+/* Orbis mobile shell — mobile-first; desktop sidebar at min-width 1024px */
+
+:root {
+  --mobile-header-h: 56px;
+  --mobile-tabbar-h: 64px;
+  --mobile-tap-min: 44px;
+  --mobile-gap: 12px;
+  --mobile-radius: 12px;
+  --mobile-sheet-radius: 16px 16px 0 0;
+  --mobile-safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Default: mobile layout (sidebar hidden until desktop breakpoint) */
+body[data-layout='mobile'] .orbis-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+body[data-layout='mobile'] .orbis-sidebar {
+  display: none !important;
+}
+
+body[data-layout='mobile'] .orbis-workspace {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(var(--mobile-tabbar-h) + var(--mobile-safe-bottom));
+}
+
+body[data-layout='mobile'] .orbis-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  min-height: var(--mobile-header-h);
+  padding: 10px 14px;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: var(--surface-elevated);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+body[data-layout='mobile'] .orbis-page-title {
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+body[data-layout='mobile'] .orbis-topbar-right {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+body[data-layout='mobile'] .orbis-topbar-meta-item:nth-child(1),
+body[data-layout='mobile'] .orbis-topbar-meta-item:nth-child(3),
+body[data-layout='mobile'] #dashboardSyncLine {
+  display: none;
+}
+
+body[data-layout='mobile'] .orbis-topbar-meta-item {
+  font-size: 0.75rem;
+}
+
+body[data-layout='mobile'] .orbis-topbar-right .button {
+  min-height: var(--mobile-tap-min);
+  padding: 8px 12px;
+  font-size: 0.82rem;
+}
+
+body[data-layout='mobile'] .orbis-app-main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 14px calc(16px + var(--mobile-safe-bottom));
+}
+
+body[data-layout='mobile'] .page {
+  padding: 0;
+}
+
+/* Bottom tab bar */
+.orbis-mobile-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: none;
+  align-items: stretch;
+  justify-content: space-around;
+  gap: 2px;
+  min-height: var(--mobile-tabbar-h);
+  padding: 6px 8px calc(6px + var(--mobile-safe-bottom));
+  background: rgba(250, 251, 252, 0.96);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 24px rgba(22, 50, 79, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+body[data-layout='mobile'] .orbis-mobile-tabbar:not(.hidden) {
+  display: flex;
+}
+
+.orbis-mobile-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--mobile-tap-min);
+  padding: 4px 6px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  transition: color var(--orbis-transition), background var(--orbis-transition);
+}
+
+.orbis-mobile-tab-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.orbis-mobile-tab-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.orbis-mobile-tab.active {
+  color: var(--blue-strong);
+  background: var(--blue-light);
+}
+
+.orbis-mobile-tab:active {
+  transform: scale(0.97);
+}
+
+/* More sheet */
+.orbis-mobile-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.orbis-mobile-sheet.open {
+  pointer-events: auto;
+  visibility: visible;
+}
+
+.orbis-mobile-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.42);
+  opacity: 0;
+  transition: opacity 240ms var(--orbis-ease-out);
+}
+
+.orbis-mobile-sheet.open .orbis-mobile-sheet-backdrop {
+  opacity: 1;
+}
+
+.orbis-mobile-sheet-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: min(78vh, 640px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--mobile-sheet-radius);
+  background: var(--card);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(100%);
+  transition: transform 280ms var(--orbis-ease-out);
+  padding-bottom: var(--mobile-safe-bottom);
+}
+
+.orbis-mobile-sheet.open .orbis-mobile-sheet-panel {
+  transform: translateY(0);
+}
+
+.orbis-mobile-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.orbis-mobile-sheet-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--navy);
+}
+
+.orbis-mobile-sheet-close {
+  min-height: var(--mobile-tap-min);
+  min-width: var(--mobile-tap-min);
+  border: none;
+  border-radius: 10px;
+  background: var(--surface-muted);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+body.orbis-mobile-sheet-open {
+  overflow: hidden;
+}
+
+.orbis-mobile-more-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px 16px;
+  overflow: auto;
+}
+
+.orbis-mobile-more-item {
+  display: flex;
+  align-items: center;
+  min-height: var(--mobile-tap-min);
+  padding: 12px 14px;
+  border: none;
+  border-radius: var(--mobile-radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.orbis-mobile-more-item:active {
+  background: var(--surface-muted);
+}
+
+.orbis-mobile-more-empty {
+  margin: 0;
+  padding: 16px 14px;
+  text-align: center;
+}
+
+/* People — roster cards */
+.orbis-mobile-filter-btn {
+  display: none;
+}
+
+body[data-layout='mobile'] .orbis-mobile-filter-btn {
+  display: inline-flex;
+  min-height: var(--mobile-tap-min);
+}
+
+body[data-layout='mobile'] .employees-toolbar .toolbar-left .select {
+  display: none;
+}
+
+body[data-layout='mobile'] .employees-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+body[data-layout='mobile'] .employees-toolbar .toolbar-left {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  width: 100%;
+}
+
+body[data-layout='mobile'] .employees-toolbar .toolbar-right {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+body[data-layout='mobile'] .employees-toolbar .toolbar-right .button {
+  flex: 1;
+  min-height: var(--mobile-tap-min);
+}
+
+body[data-layout='mobile'] #employeeRosterCard .orbis-desktop-roster-table {
+  display: none;
+}
+
+body[data-layout='mobile'] #mobileEmployeeRosterList:not(.hidden) {
+  display: flex;
+}
+
+.orbis-mobile-roster-list {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.orbis-mobile-roster-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--mobile-tap-min);
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--mobile-radius);
+  background: var(--card);
+  box-shadow: var(--shadow-soft);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform var(--orbis-transition),
+    box-shadow var(--orbis-transition);
+}
+
+.orbis-mobile-roster-card:active {
+  transform: scale(0.99);
+  box-shadow: none;
+}
+
+.orbis-mobile-roster-card--skeleton {
+  pointer-events: none;
+}
+
+.orbis-mobile-roster-avatar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--blue-light);
+  color: var(--navy);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.orbis-mobile-roster-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.orbis-mobile-roster-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.orbis-mobile-roster-name {
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.25;
+}
+
+.orbis-mobile-roster-meta {
+  margin-top: 4px;
+  font-size: 0.86rem;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.orbis-mobile-roster-sub {
+  margin-top: 2px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.orbis-mobile-roster-chevron {
+  flex: 0 0 auto;
+  color: var(--muted-soft);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.orbis-mobile-empty {
+  padding: 28px 16px;
+  text-align: center;
+}
+
+.orbis-mobile-empty p {
+  margin: 8px 0 0;
+}
+
+.skeleton-block {
+  background: linear-gradient(90deg, #eef2f7 0%, #f8fafc 45%, #eef2f7 100%);
+  background-size: 200% 100%;
+  animation: orbis-mobile-skeleton 1.2s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.skeleton-line {
+  height: 12px;
+  margin-top: 8px;
+}
+
+.skeleton-line--lg {
+  height: 16px;
+  width: 72%;
+  margin-top: 0;
+}
+
+.skeleton-line--sm {
+  width: 48%;
+}
+
+@keyframes orbis-mobile-skeleton {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.orbis-mobile-pull-indicator {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  height: 0;
+  overflow: hidden;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  transition: height 180ms ease;
+}
+
+.orbis-mobile-pull-indicator.visible {
+  display: flex;
+  height: calc(var(--pull-offset, 32px));
+}
+
+.orbis-mobile-pull-indicator.refreshing::after {
+  content: ' · refreshing…';
+}
+
+.orbis-mobile-filter-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px 16px 18px;
+}
+
+.orbis-mobile-filter-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.orbis-mobile-filter-actions .button {
+  min-height: var(--mobile-tap-min);
+}
+
+/* Full-screen employee profile on mobile */
+body[data-layout='mobile'] #employeeDrawer.open {
+  top: 0;
+  right: 0;
+  left: 0;
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  box-shadow: none;
+  z-index: 95;
+}
+
+body[data-layout='mobile'].orbis-drawer-open .orbis-mobile-tabbar,
+body[data-layout='mobile'].orbis-mobile-employee-profile-open .orbis-mobile-tabbar {
+  display: none !important;
+}
+
+body[data-layout='mobile'] #employeeDrawer .drawer-header {
+  padding: 14px 16px;
+  min-height: var(--mobile-header-h);
+}
+
+body[data-layout='mobile'] #employeeDrawer .drawer-close {
+  min-width: var(--mobile-tap-min);
+  min-height: var(--mobile-tap-min);
+}
+
+body[data-layout='mobile'] #employeeDrawer .drawer-body {
+  padding-bottom: calc(16px + var(--mobile-safe-bottom));
+}
+
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-segmented {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 12px;
+  margin: 0;
+  border-bottom: 1px solid var(--line);
+  scrollbar-width: none;
+}
+
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-segmented::-webkit-scrollbar {
+  display: none;
+}
+
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-segmented .tab-btn {
+  flex: 0 0 auto;
+  min-height: var(--mobile-tap-min);
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+body[data-layout='mobile'] #employeeDrawer .field input,
+body[data-layout='mobile'] #employeeDrawer .field select,
+body[data-layout='mobile'] #employeeDrawer .field textarea {
+  min-height: var(--mobile-tap-min);
+  font-size: 16px;
+}
+
+/* Home — KPI carousel + stacked cards */
+body[data-layout='mobile'] .orbis-mobile-kpi-carousel {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+body[data-layout='mobile'] .orbis-mobile-kpi-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+body[data-layout='mobile'] .orbis-mobile-kpi-carousel .kpi-card {
+  flex: 0 0 min(78vw, 280px);
+  margin: 0;
+}
+
+body[data-layout='mobile'] .orbis-mobile-home .card {
+  margin-bottom: 12px;
+}
+
+body[data-layout='mobile'] .orbis-mobile-home .manager-home-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+body[data-layout='mobile'] .orbis-mobile-home .manager-home-grid {
+  grid-template-columns: 1fr;
+}
+
+body[data-layout='mobile'] .orbis-mobile-home .mini-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+body[data-layout='mobile'] .orbis-mobile-home .mini-table-wrap table {
+  min-width: 560px;
+}
+
+body[data-layout='mobile'] .employee-directory-list {
+  gap: 10px;
+}
+
+body[data-layout='mobile'] .employee-directory-card {
+  min-height: var(--mobile-tap-min);
+}
+
+/* Desktop: restore sidebar shell; hide mobile chrome */
+@media (min-width: 1024px) {
+  body[data-layout='desktop'] .orbis-app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  }
+
+  body[data-layout='desktop'] .orbis-sidebar {
+    display: flex !important;
+    flex-direction: column;
+  }
+
+  body[data-layout='desktop'] .orbis-workspace {
+    padding-bottom: 0;
+  }
+
+  body[data-layout='desktop'] .orbis-mobile-tabbar,
+  body[data-layout='desktop'] .orbis-mobile-sheet {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbis-mobile-sheet-backdrop,
+  .orbis-mobile-sheet-panel,
+  .orbis-mobile-tab {
+    transition: none;
+  }
+}

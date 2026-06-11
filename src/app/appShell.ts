@@ -2,6 +2,8 @@
 // App shell: drawer tabs, current employee bridge
 // ============================================
 
+import { initMobileShell } from '../mobile/mobileShell';
+
 function safeGet(id: string): HTMLElement | null {
   if (typeof window.safeGet === 'function') {
     return window.safeGet(id);
@@ -195,6 +197,9 @@ export function showAuthView(): void {
 
 export function showAuthenticatedOrbisView(): void {
   setRootViewVisibility('app');
+  if (typeof window.refreshMobileNavigation === 'function') {
+    window.refreshMobileNavigation();
+  }
 }
 
 function bindRosterSortHeaders(): void {
@@ -253,4 +258,6 @@ export function initAppShell(): void {
   if (typeof initCommandPalette === 'function') {
     initCommandPalette();
   }
+
+  initMobileShell();
 }

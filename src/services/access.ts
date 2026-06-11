@@ -367,6 +367,10 @@ export function applyRoleNavigation(): void {
       (el as HTMLInputElement).disabled = false;
     });
   }
+
+  if (typeof window.refreshMobileNavigation === 'function') {
+    window.refreshMobileNavigation();
+  }
 }
 
 export function getLinkedEmployeeId(): string {

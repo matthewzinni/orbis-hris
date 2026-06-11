@@ -3,7 +3,8 @@
  */
 
 import '../styles/signature-field.css';
-import { createSignatureRequest, type SignatureFormType } from '../services/signatureRequests';
+import { type SignatureFormType } from '../services/signatureRequests';
+import { requestEmployeeAcknowledgmentSignature } from '../services/employeeAcknowledgmentSigning';
 import { openErAcknowledgmentPdf } from '../services/erAcknowledgmentPdf';
 
 const initializedPads = new Set<string>();
@@ -257,18 +258,18 @@ function mountSignatureControls(
     const remoteRow = document.createElement('div');
     remoteRow.className = 'signature-remote-row';
     remoteRow.innerHTML = `
+      <button type="button" class="button primary sm signature-queue-portal-btn">Request signature</button>
       <button type="button" class="button soft sm signature-generate-pdf-btn">Generate PDF</button>
-      <button type="button" class="button soft sm signature-queue-portal-btn">Add to My Tasks</button>
-      <span class="muted" style="font-size:12px;">PDF includes fillable signature fields. Portal employees can also sign in My Tasks.</span>
+      <span class="muted" style="font-size:12px;">Employee signs in Orbis under Tasks &amp; Acknowledgments. PDF is a record copy after signing.</span>
     `;
     controls.appendChild(remoteRow);
 
-    remoteRow.querySelector('.signature-generate-pdf-btn')?.addEventListener('click', () => {
-      void handleGenerateAcknowledgmentPdf();
-    });
-
     remoteRow.querySelector('.signature-queue-portal-btn')?.addEventListener('click', () => {
       void handleQueuePortalSignature(options.signerRole || 'employee');
+    });
+
+    remoteRow.querySelector('.signature-generate-pdf-btn')?.addEventListener('click', () => {
+      void handleGenerateAcknowledgmentPdf();
     });
   }
 
@@ -285,10 +286,7 @@ async function handleGenerateAcknowledgmentPdf(): Promise<void> {
 
   try {
     await openErAcknowledgmentPdf(context.formType, context.recordId);
-    window.showToast?.(
-      'PDF downloaded. Open it in Acrobat Reader or Preview and use the signature field to sign.',
-      'success'
-    );
+    window.showToast?.('PDF downloaded.', 'success');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Could not generate PDF.';
     window.showToast?.(message, 'error');
@@ -305,15 +303,14 @@ async function handleQueuePortalSignature(
   }
 
   try {
-    await createSignatureRequest({
+    await requestEmployeeAcknowledgmentSignature({
       formType: context.formType,
       recordId: context.recordId,
       employeeId: context.employeeId,
-      signerRole,
       signerName: context.signerName,
       signerEmail: context.signerEmail,
     });
-    window.showToast?.('Added to employee My Tasks for in-app signing.', 'success');
+    window.showToast?.('Signature request added to employee My Tasks.', 'success');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Could not queue signature.';
     window.showToast?.(message, 'error');
@@ -523,7 +520,7 @@ window.requestEmployeeSignatureLink = async (
     signerName,
     signerEmail,
   });
-  await handleGenerateAcknowledgmentPdf();
+  await handleQueuePortalSignature('employee');
 };
 
 document.addEventListener('DOMContentLoaded', () => {
