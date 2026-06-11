@@ -24,10 +24,10 @@ export const supabaseClient = createClient(
   isSupabaseConfigured ? supabaseAnonKey : fallbackKey,
   {
     auth: {
-      detectSessionInUrl: true,
+      // Email/password only — avoid parsing stray query params (e.g. accidental GET form submits).
+      detectSessionInUrl: false,
       persistSession: true,
       autoRefreshToken: true,
-      flowType: 'pkce',
     },
   }
 );

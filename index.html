@@ -14,6 +14,25 @@
     <link rel="stylesheet" href="/src/styles/orbis-space-theme.css" />
     <link rel="stylesheet" href="/src/styles/styles.css" />
     <link rel="stylesheet" href="/src/styles/orbis-alerts.css" />
+    <script>
+      (function () {
+        try {
+          var keys = ['email', 'password', 'passwordConfirm', 'displayName'];
+          var url = new URL(window.location.href);
+          var dirty = false;
+          keys.forEach(function (key) {
+            if (url.searchParams.has(key)) {
+              url.searchParams.delete(key);
+              dirty = true;
+            }
+          });
+          if (dirty) {
+            var next = url.pathname + url.search + url.hash;
+            window.history.replaceState(null, '', next);
+          }
+        } catch (e) {}
+      })();
+    </script>
   </head>
 
   <body class="auth-only">
@@ -27,7 +46,14 @@
         <p class="orbis-brand-product">HR Intelligence &amp; Operations · BTW Global</p>
       </div>
       <div class="auth-card">
-        <form class="auth-body" id="authForm" novalidate>
+        <form
+          class="auth-body"
+          id="authForm"
+          method="post"
+          action="#"
+          novalidate
+          onsubmit="event.preventDefault(); return false;"
+        >
           <div class="field">
             <label for="loginEmail">Email</label>
             <input
@@ -40,7 +66,6 @@
               spellcheck="false"
               placeholder="you@company.com"
               autocomplete="username"
-              required
             />
           </div>
           <div class="field">
@@ -51,7 +76,6 @@
               type="password"
               placeholder="Password"
               autocomplete="current-password"
-              required
             />
           </div>
           <div id="authRegisterPanel" class="auth-mode-panel hidden">

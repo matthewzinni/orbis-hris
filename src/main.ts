@@ -469,6 +469,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     if (
+      typeof window.isSignInFlowActive === 'function' &&
+      window.isSignInFlowActive() &&
+      event === 'SIGNED_IN'
+    ) {
+      return;
+    }
+    if (
       sessionData &&
       (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
       document.getElementById('appView')?.classList.contains('hidden')

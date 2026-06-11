@@ -6,6 +6,15 @@ type AuthMode = 'signin' | 'register';
 
 let authMode: AuthMode = 'signin';
 let registeringAccount = false;
+let signInFlowActive = false;
+let authBindingsInitialized = false;
+
+type AuthFieldSnapshot = {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  displayName: string;
+};
 
 export function isRegisteringAccount(): boolean {
   return registeringAccount;
@@ -60,30 +69,10 @@ function setLoginError(message: string): void {
   }
 }
 
-/** iOS Safari often delays syncing autofill into input.value until blur. */
-function syncAuthFieldValuesFromDom(): void {
-  const email = document.getElementById('loginEmail') as HTMLInputElement | null;
-  const password = document.getElementById('loginPassword') as HTMLInputElement | null;
-  const confirm = document.getElementById('registerPasswordConfirm') as HTMLInputElement | null;
-  const displayName = document.getElementById('registerDisplayName') as HTMLInputElement | null;
+function readAuthFields(): AuthFieldSnapshot {
+  const form = document.getElementById('authForm') as HTMLFormElement | null;
+  const fromForm = form ? new FormData(form) : null;
 
-  [email, password, confirm, displayName].forEach((input) => {
-    if (!input) return;
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-
-  if (document.activeElement instanceof HTMLElement) {
-    document.activeElement.blur();
-  }
-}
-
-function readAuthFields(): {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  displayName: string;
-} {
   const emailInput = document.querySelector<HTMLInputElement>(
     '#email, #loginEmail, input[name="email"], input[type="email"]'
   );
@@ -93,12 +82,30 @@ function readAuthFields(): {
   const confirmInput = document.getElementById('registerPasswordConfirm') as HTMLInputElement | null;
   const displayInput = document.getElementById('registerDisplayName') as HTMLInputElement | null;
 
-  return {
-    email: String(emailInput?.value || '').trim(),
-    password: String(passwordInput?.value || '').trim(),
-    confirmPassword: String(confirmInput?.value || '').trim(),
-    displayName: String(displayInput?.value || '').trim(),
-  };
+  const email = String(fromForm?.get('email') || emailInput?.value || '').trim();
+  const password = String(fromForm?.get('password') || passwordInput?.value || '').trim();
+  const confirmPassword = String(
+    fromForm?.get('passwordConfirm') || confirmInput?.value || ''
+  ).trim();
+  const displayName = String(fromForm?.get('displayName') || displayInput?.value || '').trim();
+
+  return { email, password, confirmPassword, displayName };
+}
+
+function restoreAuthFields(snapshot: AuthFieldSnapshot): void {
+  const emailInput = document.getElementById('loginEmail') as HTMLInputElement | null;
+  const passwordInput = document.getElementById('loginPassword') as HTMLInputElement | null;
+
+  if (emailInput && snapshot.email) {
+    emailInput.value = snapshot.email;
+  }
+  if (passwordInput && snapshot.password) {
+    passwordInput.value = snapshot.password;
+  }
+}
+
+export function isSignInFlowActive(): boolean {
+  return signInFlowActive;
 }
 
 async function enterAuthenticatedApp(): Promise<void> {
@@ -152,7 +159,7 @@ export function setAuthMode(mode: AuthMode): void {
   setLoginError('');
 }
 
-export async function registerAccount(): Promise<boolean> {
+export async function registerAccount(fields?: AuthFieldSnapshot): Promise<boolean> {
   setLoginError('');
 
   if (!isSupabaseConfigured) {
@@ -163,7 +170,7 @@ export async function registerAccount(): Promise<boolean> {
     return false;
   }
 
-  const { email, password, confirmPassword, displayName } = readAuthFields();
+  const { email, password, confirmPassword, displayName } = fields || readAuthFields();
 
   if (!email || !password) {
     const message = 'Enter your email and a password.';
@@ -279,9 +286,9 @@ export async function registerAccount(): Promise<boolean> {
 }
 
 export async function signIn(email?: string, password?: string) {
-  const fields = readAuthFields();
-  const resolvedEmail = String(email || fields.email).trim();
-  const resolvedPassword = String(password || fields.password).trim();
+  const snapshot = readAuthFields();
+  const resolvedEmail = String(email ?? snapshot.email).trim();
+  const resolvedPassword = String(password ?? snapshot.password).trim();
 
   setLoginError('');
 
@@ -297,10 +304,13 @@ export async function signIn(email?: string, password?: string) {
     const message = 'Please enter both email and password.';
     setLoginError(message);
     showToast(message, 'error');
+    restoreAuthFields({ ...snapshot, email: resolvedEmail, password: resolvedPassword });
     return null;
   }
 
   setLoginLoading(true);
+  signInFlowActive = true;
+  let signedIn = false;
 
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -312,6 +322,7 @@ export async function signIn(email?: string, password?: string) {
       const message = error.message || 'Sign in failed.';
       setLoginError(message);
       showToast(message, 'error');
+      restoreAuthFields({ ...snapshot, email: resolvedEmail, password: resolvedPassword });
       return null;
     }
 
@@ -323,6 +334,7 @@ export async function signIn(email?: string, password?: string) {
         'Your account is waiting for admin approval. You will be able to sign in after HR approves your access.';
       setLoginError(message);
       showToast(message, 'error');
+      restoreAuthFields({ ...snapshot, email: resolvedEmail, password: resolvedPassword });
       return null;
     }
 
@@ -331,6 +343,7 @@ export async function signIn(email?: string, password?: string) {
       const message = 'This account request was rejected. Contact HR if you believe this is an error.';
       setLoginError(message);
       showToast(message, 'error');
+      restoreAuthFields({ ...snapshot, email: resolvedEmail, password: resolvedPassword });
       return null;
     }
 
@@ -345,6 +358,7 @@ export async function signIn(email?: string, password?: string) {
           'Access request submitted. An HR admin must approve your account before you can sign in.';
         setLoginError(message);
         showToast(message, 'success');
+        restoreAuthFields({ ...snapshot, email: resolvedEmail, password: resolvedPassword });
         return null;
       }
 
@@ -353,9 +367,11 @@ export async function signIn(email?: string, password?: string) {
         'No approved Orbis access for this account. Contact HR or use Create account if you are new.';
       setLoginError(message);
       showToast(message, 'error');
+      restoreAuthFields({ ...snapshot, email: resolvedEmail, password: resolvedPassword });
       return null;
     }
 
+    signedIn = true;
     showToast('Signed in successfully.');
     await enterAuthenticatedApp();
     return data;
@@ -363,9 +379,14 @@ export async function signIn(email?: string, password?: string) {
     console.error('Sign in failed:', err);
     setLoginError('Sign in failed. Please try again.');
     showToast('Sign in failed. Please try again.', 'error');
+    restoreAuthFields({ ...snapshot, email: resolvedEmail, password: resolvedPassword });
     return null;
   } finally {
+    signInFlowActive = false;
     setLoginLoading(false);
+    if (!signedIn) {
+      restoreAuthFields({ ...snapshot, email: resolvedEmail, password: resolvedPassword });
+    }
   }
 }
 
@@ -460,19 +481,17 @@ let authSubmitInFlight = false;
 async function submitAuthForm(): Promise<void> {
   if (authSubmitInFlight) return;
 
-  syncAuthFieldValuesFromDom();
-  await new Promise<void>((resolve) => {
-    window.requestAnimationFrame(() => resolve());
-  });
+  // Read immediately — never blur first (iOS clears autofill fields on blur).
+  const snapshot = readAuthFields();
 
   authSubmitInFlight = true;
   try {
     if (authMode === 'register') {
-      await registerAccount();
+      await registerAccount(snapshot);
       return;
     }
 
-    await signIn();
+    await signIn(snapshot.email, snapshot.password);
   } finally {
     authSubmitInFlight = false;
   }
@@ -482,15 +501,32 @@ async function submitAuthForm(): Promise<void> {
 export function initAuthBindings(): void {
   const authForm = document.getElementById('authForm');
   const submitBtn = document.getElementById('authSubmitBtn');
+  const passwordInput = document.getElementById('loginPassword');
   const logoutBtn = document.getElementById('logoutBtn');
-  const email = document.getElementById('loginEmail');
-  const password = document.getElementById('loginPassword');
   const modeToggle = document.getElementById('authModeToggle');
+
+  const handleAuthSubmit = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void submitAuthForm();
+  };
 
   if (authForm && authForm.getAttribute('data-auth-bound') !== '1') {
     authForm.setAttribute('data-auth-bound', '1');
-    authForm.addEventListener('submit', (event) => {
+    authForm.addEventListener('submit', handleAuthSubmit, true);
+  }
+
+  if (submitBtn && submitBtn.getAttribute('data-auth-bound') !== '1') {
+    submitBtn.setAttribute('data-auth-bound', '1');
+    submitBtn.addEventListener('click', handleAuthSubmit, true);
+  }
+
+  if (passwordInput && passwordInput.getAttribute('data-auth-bound') !== '1') {
+    passwordInput.setAttribute('data-auth-bound', '1');
+    passwordInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
       event.preventDefault();
+      event.stopPropagation();
       void submitAuthForm();
     });
   }
@@ -502,28 +538,6 @@ export function initAuthBindings(): void {
     });
   }
 
-  const onEnter = (event: KeyboardEvent) => {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    void submitAuthForm();
-  };
-
-  if (email && email.getAttribute('data-auth-bound') !== '1') {
-    email.setAttribute('data-auth-bound', '1');
-    email.addEventListener('keydown', onEnter);
-  }
-
-  if (password && password.getAttribute('data-auth-bound') !== '1') {
-    password.setAttribute('data-auth-bound', '1');
-    password.addEventListener('keydown', onEnter);
-  }
-
-  const confirmPassword = document.getElementById('registerPasswordConfirm');
-  if (confirmPassword && confirmPassword.getAttribute('data-auth-bound') !== '1') {
-    confirmPassword.setAttribute('data-auth-bound', '1');
-    confirmPassword.addEventListener('keydown', onEnter);
-  }
-
   if (logoutBtn && logoutBtn.getAttribute('data-auth-bound') !== '1') {
     logoutBtn.setAttribute('data-auth-bound', '1');
     logoutBtn.addEventListener('click', () => {
@@ -531,7 +545,10 @@ export function initAuthBindings(): void {
     });
   }
 
-  setAuthMode('signin');
+  if (!authBindingsInitialized) {
+    authBindingsInitialized = true;
+    setAuthMode('signin');
+  }
 }
 
 declare global {
@@ -545,8 +562,11 @@ declare global {
     bootstrapOrbisAfterAuth?: () => Promise<void>;
     clearOrbisSessionState?: () => void;
     getUserRole?: () => Promise<string | null>;
+    isSignInFlowActive?: () => boolean;
   }
 }
+
+window.isSignInFlowActive = isSignInFlowActive;
 
 window.signIn = signIn;
 window.registerAccount = registerAccount;
