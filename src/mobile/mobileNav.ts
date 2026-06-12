@@ -26,6 +26,7 @@ const SECTION_LABELS: Record<string, string> = {
   orgChartView: 'Org Chart',
   candidatesView: 'Candidates',
   documentsView: 'Documents',
+  janusView: 'Janus',
   operationsView: 'Operations',
   careEngagementView: 'Care & Engagement',
   attendanceView: 'Attendance',
@@ -41,6 +42,7 @@ const SECTION_LABELS: Record<string, string> = {
 
 const MORE_SECTION_IDS = [
   'documentsView',
+  'janusView',
   'reportsView',
   'investigationsView',
   'operationsView',
@@ -149,6 +151,7 @@ const SECTION_TO_TAB: Record<string, MobileTabId> = {
   orgChartView: 'more',
   candidatesView: 'more',
   documentsView: 'more',
+  janusView: 'more',
   attendanceView: 'more',
   careEngagementView: 'more',
   investigationsView: 'more',

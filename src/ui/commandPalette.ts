@@ -1,5 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
-import { isAdminUser, isSupervisorUser } from '../services/access';
+import { isAdminUser, isSupervisorUser, canAccessJanus } from '../services/access';
 import { employeeDisplayName, type EmployeeLike } from '../services/employeeUtils';
 import { switchMainView } from './navigation';
 
@@ -70,6 +70,14 @@ const ACTION_COMMANDS: CommandItem[] = [
     subtitle: 'Navigation',
     searchText: 'documents files library',
     run: () => switchMainView('documentsView'),
+  },
+  {
+    id: 'nav-janus',
+    kind: 'action',
+    title: 'Go to Janus',
+    subtitle: 'Navigation',
+    searchText: 'janus crm relationships clients vendors accounts contacts',
+    run: () => switchMainView('janusView'),
   },
   {
     id: 'nav-attendance',
@@ -461,6 +469,7 @@ function getNavigationCommands(): CommandItem[] {
 
   return ACTION_COMMANDS.filter((command) => {
     if (strictAdminIds.has(command.id)) return false;
+    if (command.id === 'nav-janus') return canAccessJanus();
     if (command.id === 'nav-attendance') return isSupervisorUser();
     if (command.id === 'nav-care-engagement') return isSupervisorUser();
     return true;

@@ -56,6 +56,7 @@ const ADMIN_PORTAL_SECTIONS = new Set(['myTasksView', 'myDirectoryView']);
 const ADMIN_ONLY_SECTIONS = new Set([
   'candidatesView',
   'documentsView',
+  'janusView',
   'investigationsView',
   'reportsView',
   'settingsView',
@@ -235,6 +236,22 @@ export function isAdminUser(): boolean {
   return String(currentUserRole || '').toLowerCase() === 'admin';
 }
 
+export function isJanusUser(): boolean {
+  return String(currentUserRole || '').toLowerCase() === 'janus';
+}
+
+export function isJanusReadonlyUser(): boolean {
+  return String(currentUserRole || '').toLowerCase() === 'janus_readonly';
+}
+
+export function canAccessJanus(): boolean {
+  return isAdminUser() || isJanusUser() || isJanusReadonlyUser();
+}
+
+export function canEditJanus(): boolean {
+  return isAdminUser() || isJanusUser();
+}
+
 export function canManageEmployeeRecords(): boolean {
   return isAdminUser();
 }
@@ -317,6 +334,10 @@ export function canAccessOrbisApp(): boolean {
 export function canAccessAppSection(sectionId: string): boolean {
   const section = String(sectionId || '').trim();
   if (!section) return false;
+
+  if (section === 'janusView') {
+    return canAccessJanus();
+  }
 
   if (isPortalUser()) {
     return EMPLOYEE_PORTAL_SECTIONS.has(section);

@@ -17,6 +17,7 @@ import './styles/manager-home.css';
 import './styles/onboarding.css';
 import './styles/policy-campaigns.css';
 import './styles/dashboard-charts.css';
+import './styles/janus.css';
 import './styles/er-signing-modal.css';
 import './styles/er-acknowledgment-print.css';
 import './ui/dashboardCharts';
@@ -66,6 +67,7 @@ import './modules/myDirectoryPortal';
 import './modules/employees';
 import './modules/orgChart';
 import './modules/attendance';
+import './modules/janus';
 import './modules/dashboardBoot';
 import './modules/managerHome';
 import './ui/executiveInsight';
@@ -414,6 +416,9 @@ async function initializeProtectedModules(): Promise<boolean> {
     applyOperationsCenterAccess();
     applyCareEngagementCenterAccess();
     applyInvestigationsCenterAccess();
+    if (typeof bridge.applyJanusAccess === 'function') {
+      bridge.applyJanusAccess();
+    }
     if (typeof bridge.applyAttendanceAccess === 'function') {
       bridge.applyAttendanceAccess();
     }

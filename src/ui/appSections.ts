@@ -32,6 +32,7 @@ declare global {
     loadMyDirectoryPortal?: () => Promise<void>;
     loadMyTimeOffPortal?: () => Promise<void>;
     loadMobileActivityFeed?: (force?: boolean) => Promise<void>;
+    loadJanus?: () => Promise<void>;
   }
 }
 
@@ -73,6 +74,7 @@ const SECTION_LABELS: Record<string, string> = {
   orgChartView: 'Org Chart',
   candidatesView: 'Candidates',
   documentsView: 'Documents',
+  janusView: 'Janus',
   operationsView: 'Operations',
   careEngagementView: 'Care & Engagement',
   attendanceView: 'Attendance',
@@ -146,6 +148,17 @@ const APP_SECTIONS: AppSection[] = [
       }
       if (typeof window.loadPolicyCampaignsAdmin === 'function') {
         void window.loadPolicyCampaignsAdmin();
+      }
+    },
+  },
+  {
+    id: 'janusView',
+    rootId: 'orbisSectionJanus',
+    targetId: 'janusPage',
+    aliases: ['janus', 'crm', 'relationships', 'clients'],
+    onEnter: () => {
+      if (typeof window.loadJanus === 'function') {
+        void window.loadJanus();
       }
     },
   },

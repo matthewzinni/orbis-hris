@@ -189,6 +189,10 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
     window.applyHrInboxAccess();
   }
 
+  if (typeof window.applyJanusAccess === 'function') {
+    window.applyJanusAccess();
+  }
+
   if (typeof window.applyLeaveAccess === 'function') {
     window.applyLeaveAccess();
   }

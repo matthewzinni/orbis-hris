@@ -1,0 +1,49 @@
+.janus-page .page-header h1 {
+  margin-bottom: 0.35rem;
+}
+
+.janus-tagline {
+  margin: 0;
+  max-width: 46rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.janus-scaffold-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.janus-scaffold-card .card-body {
+  display: grid;
+  gap: 12px;
+}
+
+.janus-scaffold-lead {
+  margin: 0;
+}
+
+.janus-scaffold-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--text);
+}
+
+.janus-scaffold-list li + li {
+  margin-top: 0.35rem;
+}
+
+.janus-scaffold-foot {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.janus-empty {
+  padding: 1rem 0;
+}
+
+body[data-layout='mobile'] .janus-scaffold-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}

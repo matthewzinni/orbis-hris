@@ -205,6 +205,15 @@
               Documents
             </button>
             <button
+              class="orbis-nav-item admin-only hidden"
+              type="button"
+              data-nav-view="janusView"
+              data-janus-access
+              data-admin-only
+            >
+              Janus
+            </button>
+            <button
               class="orbis-nav-item hidden"
               type="button"
               data-nav-view="attendanceView"
@@ -2011,6 +2020,30 @@
 
           <div id="documentsList" class="documents-grid"></div>
         </section>
+        </section>
+
+        <section
+          id="orbisSectionJanus"
+          class="orbis-app-section hidden admin-only"
+          data-section="janusView"
+          aria-hidden="true"
+          data-janus-access
+          data-admin-only
+        >
+          <div class="page janus-page" id="janusPage">
+            <div class="page-header">
+              <div>
+                <h1>Janus</h1>
+                <p class="janus-tagline">
+                  Relationship CRM for BTW — accounts, contacts, meeting recaps, and agreements in
+                  one searchable place.
+                </p>
+              </div>
+              <button class="button soft" type="button" id="janusRefreshBtn">Refresh</button>
+            </div>
+            <p class="muted" id="janusHomeSummary">Loading relationship workspace…</p>
+            <div id="janusHomeBody"></div>
+          </div>
         </section>
 
         <section
