@@ -41,7 +41,7 @@ function getAuthStorage(): AuthStorage {
 }
 
 function buildClientOptions(): SupabaseClientOptions<'public'> {
-  const options: SupabaseClientOptions<'public'> = {
+  return {
     auth: {
       storage: getAuthStorage(),
       autoRefreshToken: true,
@@ -49,22 +49,6 @@ function buildClientOptions(): SupabaseClientOptions<'public'> {
       detectSessionInUrl: false,
     },
   };
-
-  const isNode =
-    typeof process !== 'undefined' && typeof process.versions?.node === 'string';
-  const hasNativeWebSocket = typeof globalThis.WebSocket === 'function';
-
-  if (isNode && !hasNativeWebSocket) {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const ws = require('ws') as typeof WebSocket;
-      options.realtime = { transport: ws };
-    } catch {
-      // Realtime unused in Phase 0.
-    }
-  }
-
-  return options;
 }
 
 export const supabase = createClient(

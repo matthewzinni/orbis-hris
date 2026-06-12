@@ -134,6 +134,73 @@ export function isActiveDashboardEmployee(employee: EmployeeLike | null | undefi
 
 export const STAY_INTERVIEW_DUE_SOON_DAYS = 14;
 
+/** Company policy: benefits eligibility begins 90 calendar days after hire date. */
+export const BENEFITS_ELIGIBILITY_WAIT_DAYS = 90;
+
+export function readEmployeeHireDateRaw(employee: EmployeeLike | null | undefined): string {
+  return String(
+    employee?.hire_date || employee?.hireDate || employee?.displayHireDate || ''
+  ).trim();
+}
+
+export function getBenefitsEligibilityDate(
+  employee: EmployeeLike | null | undefined
+): Date | null {
+  const hireDate = parseDueDate(readEmployeeHireDateRaw(employee));
+  if (!hireDate) return null;
+
+  const eligible = new Date(hireDate);
+  eligible.setDate(eligible.getDate() + BENEFITS_ELIGIBILITY_WAIT_DAYS);
+  return eligible;
+}
+
+export function getBenefitsEligibilityDateIso(
+  employee: EmployeeLike | null | undefined
+): string | null {
+  const eligibleDate = getBenefitsEligibilityDate(employee);
+  return eligibleDate ? eligibleDate.toISOString().slice(0, 10) : null;
+}
+
+/** Status value written when the 90-day wait is satisfied. */
+export const AUTO_BENEFITS_ELIGIBLE_STATUS = 'Eligible';
+
+export function daysUntilBenefitsEligible(
+  employee: EmployeeLike | null | undefined
+): number | null {
+  const eligibleDate = getBenefitsEligibilityDate(employee);
+  if (!eligibleDate) return null;
+  return daysUntilDate(eligibleDate);
+}
+
+export function isBenefitsEligibleEmployee(
+  employee: EmployeeLike | null | undefined
+): boolean {
+  const days = daysUntilBenefitsEligible(employee);
+  return days !== null && days <= 0;
+}
+
+export function formatBenefitsEligibilitySummary(
+  employee: EmployeeLike | null | undefined
+): string {
+  if (!readEmployeeHireDateRaw(employee)) {
+    return 'Add a hire date to calculate benefits eligibility.';
+  }
+
+  const eligibleDate = getBenefitsEligibilityDate(employee);
+  if (!eligibleDate) return 'Hire date is invalid — cannot calculate benefits eligibility.';
+
+  const days = daysUntilBenefitsEligible(employee);
+  if (days === null) return '';
+
+  const dateLabel = formatDueDateLabel(eligibleDate, '');
+
+  if (days <= 0) {
+    return `Eligible for benefits since ${dateLabel} (${BENEFITS_ELIGIBILITY_WAIT_DAYS} days after hire).`;
+  }
+
+  return `Eligible for benefits on ${dateLabel} (in ${days} day${days === 1 ? '' : 's'}).`;
+}
+
 export function isContractEmployee(employee: EmployeeLike | null | undefined): boolean {
   return String(employee?.pay_type || employee?.payType || '')
     .trim()

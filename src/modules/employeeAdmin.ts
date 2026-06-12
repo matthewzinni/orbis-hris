@@ -2,7 +2,11 @@
 
 import { supabaseClient } from '../services/supabaseClient';
 import { recordAuditEvent } from '../services/auditTrail';
-import { cleanEmployeeNameValue } from '../services/employeeUtils';
+import {
+  cleanEmployeeNameValue,
+  formatBenefitsEligibilitySummary,
+  readEmployeeHireDateRaw,
+} from '../services/employeeUtils';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { resetDrawerForms } from './drawerForms';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
@@ -11,6 +15,8 @@ import { createDefaultOffboardingTasks } from './offboarding';
 import { createPayrollHandoff } from '../services/payrollHandoff';
 
 type EmployeeRow = Record<string, unknown>;
+
+let benefitsEligibilityBindingsReady = false;
 
 function safeGet(id: string): HTMLElement | null {
   if (typeof window.safeGet === 'function') {
@@ -288,6 +294,32 @@ export async function updateEmployeeById(
   return { data: (Array.isArray(data) ? data[0] : data) as EmployeeRow, error: null };
 }
 
+export function updateBenefitsEligibilityHint(employee?: EmployeeRow | null): void {
+  const hint = safeGet('employeeBenefitsEligibilityHint');
+  if (!hint) return;
+
+  const hireInput = safeGet('employeeHireDateInput') as HTMLInputElement | null;
+  const source = employee || window.currentEmployee;
+  const hireDate = hireInput?.value || readEmployeeHireDateRaw(source as EmployeeRow);
+
+  hint.textContent = formatBenefitsEligibilitySummary({
+    ...(source && typeof source === 'object' ? source : {}),
+    hire_date: hireDate,
+    hireDate,
+  });
+}
+
+function ensureBenefitsEligibilityBindings(): void {
+  if (benefitsEligibilityBindingsReady) return;
+
+  const hireInput = safeGet('employeeHireDateInput');
+  if (!hireInput) return;
+
+  benefitsEligibilityBindingsReady = true;
+  hireInput.addEventListener('change', () => updateBenefitsEligibilityHint());
+  hireInput.addEventListener('input', () => updateBenefitsEligibilityHint());
+}
+
 export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefined): void {
   if (!employee) return;
 
@@ -478,6 +510,9 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
   }
 
   syncEmployeeTerminationDateFieldVisibility(values.status);
+
+  ensureBenefitsEligibilityBindings();
+  updateBenefitsEligibilityHint(employee);
 }
 
 function unlockEmployeeIdFields(): void {
@@ -588,6 +623,7 @@ export function clearEmployeeAdminForm(): void {
 
   unlockEmployeeIdFields();
   syncEmployeeTerminationDateFieldVisibility('ACTIVE');
+  updateBenefitsEligibilityHint(null);
 }
 
 export function syncEmployeeTerminationDateFieldVisibility(status?: unknown): void {
@@ -789,10 +825,12 @@ declare global {
     resetEmployeeForm?: () => void;
     renderEmployeeDrawerIdentityHeader?: (employee: EmployeeRow | null | undefined) => void;
     syncEmployeeTerminationDateFieldVisibility?: (status?: unknown) => void;
+    updateBenefitsEligibilityHint?: (employee?: EmployeeRow | null) => void;
   }
 }
 
 window.populateEmployeeAdminForm = populateEmployeeAdminForm;
+window.updateBenefitsEligibilityHint = updateBenefitsEligibilityHint;
 window.updateEmployeeById = updateEmployeeById;
 window.deleteEmployeeById = deleteEmployeeById;
 window.runDeleteEmployee = runDeleteEmployee;

@@ -127,20 +127,13 @@ function bindPayrollHandoffPanel(): void {
     event.preventDefault();
     void (async () => {
       try {
-        await updatePayrollHandoffStatus(
+        await applyPayrollHandoffAction(
           handoffId,
           action === 'confirmed' ? 'confirmed' : 'sent'
         );
         showToast(
           action === 'confirmed' ? 'Marked confirmed with payroll.' : 'Marked sent to payroll.'
         );
-        const ctx = currentEmployeeContext();
-        if (ctx) {
-          await loadEmployeePayrollHandoffs(ctx.rosterId);
-        }
-        if (typeof window.loadHrInbox === 'function') {
-          void window.loadHrInbox(true);
-        }
       } catch (err) {
         showToast(err instanceof Error ? err.message : 'Could not update handoff.', 'error');
       }
@@ -150,6 +143,28 @@ function bindPayrollHandoffPanel(): void {
   safeGet<HTMLButtonElement>('payrollHandoffLogBtn')?.addEventListener('click', () => {
     void logManualPayrollHandoff();
   });
+}
+
+export async function applyPayrollHandoffAction(
+  handoffId: string,
+  action: 'sent' | 'confirmed'
+): Promise<void> {
+  await updatePayrollHandoffStatus(handoffId, action);
+
+  const ctx = currentEmployeeContext();
+  if (ctx) {
+    await loadEmployeePayrollHandoffs(ctx.rosterId);
+  }
+
+  if (typeof window.loadHrInbox === 'function') {
+    void window.loadHrInbox(true);
+  }
+  if (typeof window.loadMyTasksPortal === 'function') {
+    void window.loadMyTasksPortal();
+  }
+  if (typeof window.updateWorkspaceAlerts === 'function') {
+    window.updateWorkspaceAlerts();
+  }
 }
 
 export async function loadEmployeePayrollHandoffs(employeeId: string): Promise<void> {

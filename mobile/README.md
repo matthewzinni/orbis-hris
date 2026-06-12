@@ -39,7 +39,7 @@ Then press **`w`** for web, scan the QR code with **Expo Go**, or press **`i`** 
 
 ### QR code doesn’t work?
 
-1. **Update Expo Go** on your phone ([iOS](https://apps.apple.com/app/expo-go/id982107779) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent)) — this project uses **Expo SDK 56**; an old Expo Go will refuse the link.
+1. **Update Expo Go** on your phone ([iOS](https://apps.apple.com/app/expo-go/id982107779) / [Android](https://play.google.com/store/apps/details?id=host.exp.exponent)) — this project uses **Expo SDK 54** to match the App Store version of Expo Go (e.g. 54.0.x). SDK 56 is not on the iOS App Store yet.
 2. **Same Wi‑Fi** — phone and Mac must be on the same network (not guest Wi‑Fi). Turn off VPN on both if possible.
 3. **Use tunnel mode** (most reliable):
    ```bash
@@ -60,6 +60,14 @@ Then press **`w`** for web, scan the QR code with **Expo Go**, or press **`i`** 
 1. `node -v` → must be **v20.x**, not v21/v24.
 2. Run **`npm start`** (not `expo start` directly).
 3. Reinstall deps after pulling latest: `rm -rf node_modules && npm install`
+
+### Red screen: `private properties are not supported`?
+
+This happens when Metro leaves React Native’s `#private` class fields in the JS bundle and Expo Go’s Hermes is too old to run them. This project fixes that via `babel.config.js` (`unstable_transformProfile: 'default'`) and `metro.config.js` (`hermesParser: false`).
+
+1. Pull latest `mobile/` changes, then reinstall: `rm -rf node_modules .expo && npm install`
+2. Start with a clean Metro cache: `npx expo start --go -c`
+3. Force-quit Expo Go on the phone, reopen, and scan the QR again.
 
 ## Environment
 

@@ -4,6 +4,7 @@ import {
   kindLabel,
   type HrInboxItem,
 } from '../services/hrInbox';
+import { applyPayrollHandoffAction } from '../modules/payrollHandoff';
 import { isMobileLayout } from './mobileLayout';
 import { refreshMobileTasksBadge } from './mobileBadges';
 
@@ -25,19 +26,30 @@ function severityLabel(severity: HrInboxItem['severity']): string {
 }
 
 function renderHrTaskCard(item: HrInboxItem): string {
+  const payrollActions =
+    item.kind === 'payroll_handoff' && item.route.type === 'payroll_handoff'
+      ? `<div class="orbis-mobile-hr-task-actions">
+          <button type="button" class="button soft sm" data-mobile-payroll-action="sent" data-mobile-payroll-id="${esc(item.route.handoffId)}">Mark sent</button>
+          <button type="button" class="button soft sm" data-mobile-payroll-action="confirmed" data-mobile-payroll-id="${esc(item.route.handoffId)}">Confirmed</button>
+        </div>`
+      : '';
+
   return `
-    <button
-      type="button"
-      class="orbis-mobile-hr-task-card severity-${esc(item.severity)}"
-      data-mobile-inbox-id="${esc(item.id)}"
-    >
-      <span class="orbis-mobile-hr-task-meta">
-        <span class="hr-inbox-severity">${esc(severityLabel(item.severity))}</span>
-        <span class="hr-inbox-kind">${esc(kindLabel(item.kind))}</span>
-      </span>
-      <span class="orbis-mobile-hr-task-title">${esc(item.title)}</span>
-      <span class="orbis-mobile-hr-task-detail muted">${esc(item.detail)}</span>
-    </button>`;
+    <article class="orbis-mobile-hr-task-card severity-${esc(item.severity)}">
+      <button
+        type="button"
+        class="orbis-mobile-hr-task-card-main"
+        data-mobile-inbox-id="${esc(item.id)}"
+      >
+        <span class="orbis-mobile-hr-task-meta">
+          <span class="hr-inbox-severity">${esc(severityLabel(item.severity))}</span>
+          <span class="hr-inbox-kind">${esc(kindLabel(item.kind))}</span>
+        </span>
+        <span class="orbis-mobile-hr-task-title">${esc(item.title)}</span>
+        <span class="orbis-mobile-hr-task-detail muted">${esc(item.detail)}</span>
+      </button>
+      ${payrollActions}
+    </article>`;
 }
 
 async function openMobileInboxItem(item: HrInboxItem): Promise<void> {
@@ -66,6 +78,16 @@ async function openMobileInboxItem(item: HrInboxItem): Promise<void> {
     }
     if (typeof window.openOperationsIssueDrawer === 'function') {
       await window.openOperationsIssueDrawer(route.issueId);
+    }
+    return;
+  }
+
+  if (route.type === 'payroll_handoff') {
+    if (typeof window.switchMainView === 'function') {
+      window.switchMainView('employeesView');
+    }
+    if (typeof window.openEmployeeDrawer === 'function') {
+      await window.openEmployeeDrawer(route.employeeId);
     }
     return;
   }
@@ -124,6 +146,36 @@ function bindMobileTasksEvents(): void {
   (window as { __mobileTasksBound?: boolean }).__mobileTasksBound = true;
 
   document.getElementById('mobileHrTasksList')?.addEventListener('click', (event) => {
+    const payrollButton = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+      '[data-mobile-payroll-action]'
+    );
+    if (payrollButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const handoffId = payrollButton.dataset.mobilePayrollId || '';
+      const action = payrollButton.dataset.mobilePayrollAction;
+      if (!handoffId || (action !== 'sent' && action !== 'confirmed')) return;
+
+      void (async () => {
+        try {
+          await applyPayrollHandoffAction(handoffId, action);
+          if (typeof window.showToast === 'function') {
+            window.showToast(
+              action === 'confirmed'
+                ? 'Marked confirmed with payroll.'
+                : 'Marked sent to payroll.'
+            );
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Could not update handoff.';
+          if (typeof window.showToast === 'function') {
+            window.showToast(message, 'error');
+          }
+        }
+      })();
+      return;
+    }
+
     const button = (event.target as HTMLElement | null)?.closest<HTMLElement>(
       '[data-mobile-inbox-id]'
     );
@@ -133,6 +185,7 @@ function bindMobileTasksEvents(): void {
     const id = button.dataset.mobileInboxId || '';
     const item = window.__hrInboxCache?.find((row) => row.id === id);
     if (!item) return;
+    if (item.kind === 'payroll_handoff') return;
     void openMobileInboxItem(item);
   });
 

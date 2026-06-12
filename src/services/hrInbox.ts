@@ -16,6 +16,10 @@ import {
   getEmployeeNextStayInterviewDueDate,
   isActiveDashboardEmployee,
   isStayInterviewEligibleEmployee,
+  daysUntilBenefitsEligible,
+  formatBenefitsEligibilitySummary,
+  getBenefitsEligibilityDate,
+  isBenefitsEligibleEmployee,
   parseDueDate,
   readEmployeeNextStayInterviewDateRaw,
 } from './employeeUtils';
@@ -54,13 +58,15 @@ export type HrInboxKind =
   | 'payroll_handoff'
   | 'offboarding'
   | 'leave_request'
-  | 'policy_campaign';
+  | 'policy_campaign'
+  | 'benefits_eligibility';
 
 export type HrInboxRoute =
   | { type: 'employee'; employeeId: string; drawerTab?: string }
   | { type: 'investigation'; investigationId: string }
   | { type: 'operations'; issueId: string }
-  | { type: 'view'; viewId: string };
+  | { type: 'view'; viewId: string }
+  | { type: 'payroll_handoff'; handoffId: string; employeeId: string };
 
 export type HrInboxItem = {
   id: string;
@@ -96,6 +102,7 @@ const KIND_LABELS: Record<HrInboxKind, string> = {
   offboarding: 'Offboarding',
   leave_request: 'Time off',
   policy_campaign: 'Policy acknowledgment',
+  benefits_eligibility: 'Benefits eligibility',
 };
 
 type EmployeeLike = Record<string, unknown>;
@@ -150,6 +157,71 @@ function compareInboxItems(left: HrInboxItem, right: HrInboxItem): number {
   if (nameCmp !== 0) return nameCmp;
 
   return left.title.localeCompare(right.title, undefined, { sensitivity: 'base' });
+}
+
+function collectBenefitsEligibilityItems(employees: EmployeeLike[]): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  employees.filter(isActiveDashboardEmployee).forEach((employee) => {
+    const days = daysUntilBenefitsEligible(employee);
+    if (days === null) return;
+
+    // Recently eligible (past 30 days) or approaching (next 7 days).
+    if (days > 7 || days < -30) return;
+
+    const employeeId = drawerEmployeeId(employee);
+    if (!employeeId) return;
+
+    const name = employeeDisplayName(employee);
+    const eligibleDate = getBenefitsEligibilityDate(employee);
+    const dueDate = eligibleDate ? eligibleDate.toISOString().slice(0, 10) : null;
+    const severity = severityFromDays(days);
+    const alreadyEligible = isBenefitsEligibleEmployee(employee);
+
+    items.push({
+      id: `benefits:${employeeId}`,
+      kind: 'benefits_eligibility',
+      severity: alreadyEligible && days < 0 ? 'due_soon' : severity,
+      employeeName: name,
+      dueDate,
+      title: alreadyEligible
+        ? `Benefits eligible — ${name}`
+        : `Benefits eligibility soon — ${name}`,
+      detail: formatBenefitsEligibilitySummary(employee),
+      route: { type: 'employee', employeeId, drawerTab: 'employee' },
+    });
+  });
+
+  return items;
+}
+
+const ADMIN_TASKS_ATTENTION_KINDS: HrInboxKind[] = [
+  'payroll_handoff',
+  'benefits_eligibility',
+];
+
+export async function buildAdminTasksAttentionItems(): Promise<HrInboxItem[]> {
+  if (!isAdminUser()) return [];
+
+  if (!getEmployees().length) {
+    try {
+      await loadEmployees();
+    } catch (err) {
+      console.warn('[HrInbox] Could not load employees for admin tasks:', err);
+    }
+  }
+
+  const [payrollHandoffs] = await Promise.all([loadPendingPayrollHandoffs()]);
+  const activeEmployees = getActiveEmployees() as EmployeeLike[];
+
+  return sortHrInboxItems([
+    ...collectPayrollHandoffItems(payrollHandoffs),
+    ...collectBenefitsEligibilityItems(activeEmployees),
+  ]);
+}
+
+export function isAdminTasksAttentionItem(item: HrInboxItem): boolean {
+  return ADMIN_TASKS_ATTENTION_KINDS.includes(item.kind);
 }
 
 function collectStayInterviewItems(employees: EmployeeLike[]): HrInboxItem[] {
@@ -679,7 +751,11 @@ function collectPayrollHandoffItems(handoffs: PayrollHandoffRecord[]): HrInboxIt
       dueDate: handoff.effective_date,
       title: `Payroll handoff — ${name}`,
       detail: `${payrollChangeTypeLabel(handoff.change_type)} · ${handoff.summary}`,
-      route: { type: 'employee', employeeId, drawerTab: 'employee' },
+      route: {
+        type: 'payroll_handoff',
+        handoffId: handoff.id,
+        employeeId,
+      },
     });
   });
 
@@ -792,6 +868,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
 
   const merged: HrInboxItem[] = [
     ...collectStayInterviewItems(activeEmployees),
+    ...collectBenefitsEligibilityItems(activeEmployees),
     ...collectOnboardingItems(onboardingRes.data || [], activeEmployees),
     ...collectOffboardingItems(offboardingRes.data || [], allEmployees),
     ...collectDisciplineItems(disciplineRes.data || []),

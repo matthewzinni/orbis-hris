@@ -1086,6 +1086,36 @@ function supervisorNameMatches(rosterSupervisor: string, accessSupervisor: strin
   );
 }
 
+type RosterEmployeeForTeam = {
+  id?: string;
+  supervisor?: string;
+  status?: string;
+};
+
+function isActiveRosterEmployee(row: RosterEmployeeForTeam): boolean {
+  const status = String(row.status || '')
+    .trim()
+    .toUpperCase();
+  return status !== 'TERMINATED' && status !== 'INACTIVE';
+}
+
+/** Employee ids whose roster supervisor field matches this supervisor name. */
+export function resolveDirectReportIdsFromRoster(
+  supervisorName: string,
+  employees: RosterEmployeeForTeam[]
+): string[] {
+  const needle = String(supervisorName || '').trim();
+  if (!needle || !employees.length) return [];
+
+  return employees
+    .filter((row) => isActiveRosterEmployee(row))
+    .filter((row) =>
+      supervisorNameMatches(String(row.supervisor || ''), needle)
+    )
+    .map((row) => String(row.id || '').trim())
+    .filter(Boolean);
+}
+
 /** Employee ids whose roster supervisor field matches this supervisor name. */
 export async function resolveDirectReportIdsForSupervisorName(
   supervisorName: string
@@ -1099,16 +1129,7 @@ export async function resolveDirectReportIdsForSupervisorName(
 
   if (error || !data?.length) return [];
 
-  return data
-    .filter((row) => {
-      const status = String((row as { status?: string }).status || '')
-        .trim()
-        .toUpperCase();
-      if (status === 'TERMINATED' || status === 'INACTIVE') return false;
-      return supervisorNameMatches(String((row as { supervisor?: string }).supervisor || ''), needle);
-    })
-    .map((row) => String((row as { id?: string }).id || '').trim())
-    .filter(Boolean);
+  return resolveDirectReportIdsFromRoster(needle, data as RosterEmployeeForTeam[]);
 }
 
 export async function resolveEmployeeRosterName(employeeId: string): Promise<string> {
@@ -1137,6 +1158,148 @@ export async function resolveSupervisorScopeForEmployee(
 
   const supervised_employee_ids = await resolveDirectReportIdsForSupervisorName(rosterName);
   return { supervisor_name: rosterName, supervised_employee_ids };
+}
+
+export type EmployeeRosterIndex = {
+  activeEmployees: RosterEmployeeForTeam[];
+  supervisorByEmployeeId: Map<string, string>;
+  supervisorByEmail: Map<string, string>;
+  rosterNameByEmployeeId: Map<string, string>;
+};
+
+export type EmployeeSupervisorLookup = {
+  byEmployeeId: Map<string, string>;
+  byEmail: Map<string, string>;
+};
+
+/** Roster fields used for admin user-access supervisor + team columns. */
+export async function loadEmployeeRosterIndex(): Promise<EmployeeRosterIndex> {
+  const activeEmployees: RosterEmployeeForTeam[] = [];
+  const supervisorByEmployeeId = new Map<string, string>();
+  const supervisorByEmail = new Map<string, string>();
+  const rosterNameByEmployeeId = new Map<string, string>();
+
+  const { data, error } = await supabaseClient
+    .from('employees')
+    .select('id, supervisor, status, first_name, last_name, work_email, personal_email');
+
+  if (error) {
+    console.warn('[Access] Could not load employee roster index:', error);
+    return {
+      activeEmployees,
+      supervisorByEmployeeId,
+      supervisorByEmail,
+      rosterNameByEmployeeId,
+    };
+  }
+
+  (data || []).forEach((row) => {
+    const employeeId = String((row as { id?: string }).id || '').trim();
+    const employeeKey = employeeId.toLowerCase();
+    const supervisor = String((row as { supervisor?: string }).supervisor || '').trim();
+    const rosterName =
+      `${String((row as { first_name?: string }).first_name || '').trim()} ${String((row as { last_name?: string }).last_name || '').trim()}`.trim();
+
+    if (employeeKey && rosterName) {
+      rosterNameByEmployeeId.set(employeeKey, rosterName);
+    }
+
+    if (employeeKey && supervisor) {
+      supervisorByEmployeeId.set(employeeKey, supervisor);
+    }
+
+    const emails = [
+      (row as { work_email?: string }).work_email,
+      (row as { personal_email?: string }).personal_email,
+    ];
+    emails.forEach((value) => {
+      const email = String(value || '').trim().toLowerCase();
+      if (email && supervisor) supervisorByEmail.set(email, supervisor);
+    });
+
+    if (isActiveRosterEmployee(row as RosterEmployeeForTeam)) {
+      activeEmployees.push({
+        id: employeeId,
+        supervisor,
+        status: String((row as { status?: string }).status || ''),
+      });
+    }
+  });
+
+  return {
+    activeEmployees,
+    supervisorByEmployeeId,
+    supervisorByEmail,
+    rosterNameByEmployeeId,
+  };
+}
+
+/** Supervisor on file (employees.supervisor) keyed by roster id and login email. */
+export async function loadEmployeeSupervisorLookup(): Promise<EmployeeSupervisorLookup> {
+  const index = await loadEmployeeRosterIndex();
+  return {
+    byEmployeeId: index.supervisorByEmployeeId,
+    byEmail: index.supervisorByEmail,
+  };
+}
+
+/** Manager name from the employee roster record linked to this login. */
+export function resolveEmployeeFileSupervisor(
+  row: UserAccessRow | null | undefined,
+  index: EmployeeRosterIndex | null | undefined
+): string {
+  if (!row || !index) return '';
+
+  const linkedId = String(row.linked_employee_id || '')
+    .trim()
+    .toLowerCase();
+  if (linkedId && index.supervisorByEmployeeId.has(linkedId)) {
+    return index.supervisorByEmployeeId.get(linkedId) || '';
+  }
+
+  const email = String(row.email || '')
+    .trim()
+    .toLowerCase();
+  if (email && index.supervisorByEmail.has(email)) {
+    return index.supervisorByEmail.get(email) || '';
+  }
+
+  return '';
+}
+
+/** Roster name used to match employees.supervisor for direct-report team IDs. */
+export function resolveSupervisorRosterName(
+  row: UserAccessRow | null | undefined,
+  index: EmployeeRosterIndex | null | undefined
+): string {
+  if (!row || !index) return '';
+
+  const linkedId = String(row.linked_employee_id || '')
+    .trim()
+    .toLowerCase();
+  if (linkedId && index.rosterNameByEmployeeId.has(linkedId)) {
+    return index.rosterNameByEmployeeId.get(linkedId) || '';
+  }
+
+  return String(row.supervisor_name || row.display_name || '').trim();
+}
+
+/** Direct-report BTW ids from roster (supervisor role only). */
+export function resolveTeamIdsForAccessRow(
+  row: UserAccessRow | null | undefined,
+  index: EmployeeRosterIndex | null | undefined
+): string[] {
+  if (!row || !index) return [];
+
+  const role = String(row.role || 'user')
+    .trim()
+    .toLowerCase();
+  if (role !== 'supervisor') return [];
+
+  const rosterName = resolveSupervisorRosterName(row, index);
+  if (!rosterName) return [];
+
+  return resolveDirectReportIdsFromRoster(rosterName, index.activeEmployees);
 }
 
 /** Match roster employee id (BTW code) from login email for user-role PTO linking. */

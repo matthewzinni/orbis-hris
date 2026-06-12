@@ -43,9 +43,6 @@ declare global {
     ) => void;
     appendHistoryItem?: (containerId: string, record: HistoryRecord) => void;
     clearHistoryList?: (containerId: string, emptyMessage?: string) => void;
-    renderRecentActivity?: () => Promise<void>;
-    loadRecentActivityFallback?: () => Promise<void>;
-    loadRecentHrActivity?: () => Promise<void>;
     getAuditTrail?: () => ActivityRecord[];
     getOrCreateDashboardSectionBody?: (title: string, id: string) => HTMLElement | null;
   }
@@ -149,45 +146,6 @@ export function clearHistoryList(
   }
 
   container.innerHTML = `<div class="empty">${escapeHtml(emptyMessage)}</div>`;
-}
-
-export async function renderRecentActivity(): Promise<void> {
-  const audit =
-    typeof window.getAuditTrail === 'function'
-      ? window.getAuditTrail()
-      : [];
-
-  if (typeof window.loadRecentHrActivity === 'function') {
-    await window.loadRecentHrActivity();
-    return;
-  }
-
-  const container =
-    document.getElementById('recentActivity') ||
-    document.getElementById('recentHrActivityList') ||
-    (typeof window.getOrCreateDashboardSectionBody === 'function'
-      ? window.getOrCreateDashboardSectionBody('Recent HR Activity', 'recentActivity')
-      : null);
-
-  if (!container) return;
-
-  if (!audit.length) {
-    container.innerHTML = '<div class="empty">No recent HR activity yet.</div>';
-    return;
-  }
-
-  container.innerHTML = audit
-    .slice(0, 8)
-    .map(
-      (item) => `
-        <div class="dashboard-list-item">
-          <strong>${escapeHtml(item.action || 'Activity')}</strong>
-          <span>${escapeHtml(item.employeeName || '')}</span>
-          <small>${item.timestamp ? escapeHtml(new Date(item.timestamp).toLocaleString()) : ''}</small>
-        </div>
-      `
-    )
-    .join('');
 }
 
 export function getResolvedHistoryEmployeeId(employeeId: string | null = null): string {
@@ -295,7 +253,5 @@ export async function loadEmployeeHistory(employeeId: string): Promise<void> {
 window.renderHistoryList = renderHistoryList;
 window.appendHistoryItem = appendHistoryItem;
 window.clearHistoryList = clearHistoryList;
-window.renderRecentActivity = renderRecentActivity;
-window.loadRecentActivityFallback = renderRecentActivity;
 window.loadEmployeeHistory = loadEmployeeHistory;
 window.getResolvedHistoryEmployeeId = getResolvedHistoryEmployeeId;

@@ -75,8 +75,6 @@ declare global {
 
     renderBasicDashboardKpis?: () => void;
 
-    loadRecentActivityFallback?: () => Promise<void>;
-
     loadEmployees?: () => Promise<void>;
     loadAllDashboardData?: () => Promise<void>;
 
@@ -631,10 +629,6 @@ async function resolveCurrentCandidateId(): Promise<string> {
 
 async function refreshCandidatesUi(): Promise<void> {
   await loadCandidates();
-
-  if (typeof window.loadRecentActivityFallback === 'function') {
-    await window.loadRecentActivityFallback();
-  }
 
   if (typeof window.renderBasicDashboardKpis === 'function') {
     window.renderBasicDashboardKpis();

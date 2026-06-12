@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { DetailRow } from '@/components/DetailRow';
+import { formatBenefitsEligibilitySummary } from '@/src/lib/benefits';
 import {
   EmployeeRecord,
   employeeDisplayName,
@@ -85,6 +86,10 @@ export default function EmployeeDetailScreen() {
                 value={String(employee.standard_hours ?? '')}
               />
               <DetailRow label="Benefits" value={String(employee.benefits_status || '')} />
+              <DetailRow
+                label="Benefits eligibility"
+                value={formatBenefitsEligibilitySummary(employee.hire_date)}
+              />
               <DetailRow
                 label="Next stay interview"
                 value={formatDate(employee.next_review_date)}

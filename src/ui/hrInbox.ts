@@ -68,6 +68,13 @@ async function openInboxRoute(route: HrInboxRoute): Promise<void> {
     return;
   }
 
+  if (route.type === 'payroll_handoff') {
+    if (typeof window.openEmployeeDrawer === 'function') {
+      await window.openEmployeeDrawer(route.employeeId);
+    }
+    return;
+  }
+
   if (typeof window.openEmployeeDrawer === 'function') {
     await window.openEmployeeDrawer(route.employeeId);
   }

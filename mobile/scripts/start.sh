@@ -29,9 +29,9 @@ fi
 
 echo ""
 echo "Orbis Mobile — open on device:"
-echo "  • Same Wi‑Fi: scan QR with Expo Go (update Expo Go from App Store for SDK 56)"
+echo "  • Same Wi‑Fi: scan QR with Expo Go (App Store 54.x matches this project's SDK 54)"
 echo "  • QR fails: npm run start:tunnel  (works on cellular / different networks)"
 echo "  • Browser: press w in this terminal → http://localhost:8081"
 echo ""
 
-exec node --require ./scripts/expo-cli-url-fix.cjs ./node_modules/expo/bin/cli start "$@"
+exec node --require ./scripts/expo-cli-url-fix.cjs ./node_modules/expo/bin/cli start --go "$@"

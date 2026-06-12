@@ -14,9 +14,3 @@ export function isSystemEmployeeNoteType(noteType: unknown): boolean {
 
   return SYSTEM_EMPLOYEE_NOTE_TYPES.includes(normalized as SystemEmployeeNoteType);
 }
-
-export function isRecentHrActivityNote(row: {
-  note_type?: unknown;
-}): boolean {
-  return !isSystemEmployeeNoteType(row.note_type);
-}

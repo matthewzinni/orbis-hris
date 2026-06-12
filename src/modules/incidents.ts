@@ -56,7 +56,6 @@ declare global {
     getCurrentEmployeeForOrbis?: () => IncidentEmployee | null;
 
     renderBasicDashboardKpis?: () => void;
-    loadRecentActivityFallback?: () => Promise<void>;
   }
 }
 
@@ -134,10 +133,6 @@ function setInputValue(id: string, value: unknown): void {
 
 async function refreshIncidentDependentUi(employeeId: string): Promise<void> {
   await loadEmployeeIncidents(employeeId);
-
-  if (typeof window.loadRecentActivityFallback === 'function') {
-    await window.loadRecentActivityFallback();
-  }
 
   if (typeof window.renderBasicDashboardKpis === 'function') {
     window.renderBasicDashboardKpis();

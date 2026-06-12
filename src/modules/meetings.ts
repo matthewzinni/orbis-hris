@@ -53,7 +53,6 @@ declare global {
 
     renderBasicDashboardKpis?: () => void;
 
-    loadRecentActivityFallback?: () => Promise<void>;
   }
 }
 
@@ -128,10 +127,6 @@ function setInputValue(id: string, value: unknown): void {
 
 async function refreshMeetingDependentUi(employeeId: string): Promise<void> {
   await loadEmployeeMeetings(employeeId);
-
-  if (typeof window.loadRecentActivityFallback === 'function') {
-    await window.loadRecentActivityFallback();
-  }
 
   if (typeof window.renderBasicDashboardKpis === 'function') {
     window.renderBasicDashboardKpis();

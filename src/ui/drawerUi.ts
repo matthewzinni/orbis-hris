@@ -8,6 +8,7 @@ import {
   restoreDrawerTabPlacement,
 } from './drawerIdentityHeader';
 import { ensureDrawerLayout, setEmployeeDrawerCreateMode } from './drawerLayout';
+import { formatBenefitsEligibilitySummary } from '../services/employeeUtils';
 
 type DrawerUiEmployee = Record<string, unknown> & {
   id?: string;
@@ -316,6 +317,9 @@ function forcePopulateEmployeeAdminFieldsByLabels(employee) {
     setDrawerAdminFieldByLabel('Standard Hours', standardHours);
     setDrawerAdminFieldByLabel('Status', status);
     setDrawerAdminFieldByLabel('Benefits Status', benefitsStatus);
+    if (typeof window.updateBenefitsEligibilityHint === 'function') {
+      window.updateBenefitsEligibilityHint(employee);
+    }
     setDrawerAdminFieldByLabel('Hire Date', hireDate);
     setDrawerAdminFieldByLabel('Termination Date', terminationDate);
     setDrawerAdminFieldByLabel('Next Stay Interview Date', nextReview);
@@ -765,6 +769,7 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
         ['Tenure Months', employee.tenureMonths || employee.tenure_months],
         ['Tenure Years', employee.tenureYears || employee.tenure_years],
         ['Benefits Status', employee.benefitsStatus || employee.benefits_status],
+        ['Benefits Eligibility', formatBenefitsEligibilitySummary(employee)],
         ['Tenure Bracket', employee.tenureBracket || employee.tenure_bracket]
     ];
 

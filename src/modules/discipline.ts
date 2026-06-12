@@ -57,7 +57,6 @@ declare global {
     switchTab?: (tabName: string) => void;
 
     renderBasicDashboardKpis?: () => void;
-    loadRecentActivityFallback?: () => Promise<void>;
   }
 }
 
@@ -185,10 +184,6 @@ function buildDisciplinePayload(employeeId: string): DisciplineRecord {
 
 async function refreshDisciplineDependentUi(employeeId: string): Promise<void> {
   await loadEmployeeDiscipline(employeeId);
-
-  if (typeof window.loadRecentActivityFallback === 'function') {
-    await window.loadRecentActivityFallback();
-  }
 
   if (typeof window.renderBasicDashboardKpis === 'function') {
     window.renderBasicDashboardKpis();

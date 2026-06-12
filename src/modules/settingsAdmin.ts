@@ -2,11 +2,16 @@ import { supabaseClient } from '../services/supabaseClient';
 import {
   getUserRole,
   isAdminUser,
+  loadEmployeeRosterIndex,
   parseSupervisedEmployeeIds,
   resolveDirectReportIdsForSupervisorName,
+  resolveEmployeeFileSupervisor,
   resolveEmployeeRosterName,
   resolveLinkedEmployeeIdForEmail,
+  resolveSupervisorRosterName,
   resolveSupervisorScopeForEmployee,
+  resolveTeamIdsForAccessRow,
+  type EmployeeRosterIndex,
   type UserAccessRow,
 } from '../services/access';
 import { showOrbisConfirm } from '../ui/confirmModal';
@@ -15,6 +20,7 @@ const USER_ACCESS_ROLES = ['admin', 'supervisor', 'user'] as const;
 
 let cachedUserAccessRows: UserAccessRow[] = [];
 let cachedPendingRows: UserAccessRow[] = [];
+let cachedEmployeeRosterIndex: EmployeeRosterIndex | null = null;
 let editingUserEmail: string | null = null;
 let isAddingUserAccess = false;
 let isSavingUserAccess = false;
@@ -62,7 +68,41 @@ function parseScopedEmployeeIdsFromInput(raw: string): string[] | null {
 }
 
 function formatScopedIdsForInput(row: UserAccessRow): string {
-  return parseSupervisedEmployeeIds(row).join(', ');
+  return teamIdsLabel(row);
+}
+
+function teamIdsLabel(row: UserAccessRow, maxLength = 0): string {
+  const role = normalizeUserRole(String(row.role || 'user'));
+  if (role !== 'supervisor') return '—';
+
+  const ids = resolveTeamIdsForAccessRow(row, cachedEmployeeRosterIndex);
+  if (!ids.length) return '—';
+
+  const joined = ids.join(', ');
+  if (maxLength > 0 && joined.length > maxLength) {
+    return `${joined.slice(0, maxLength)}…`;
+  }
+
+  return joined;
+}
+
+function renderSupervisorTeamEditCell(row: UserAccessRow): string {
+  const role = normalizeUserRole(String(row.role || 'user'));
+  if (role !== 'supervisor') {
+    return '<span class="muted">—</span>';
+  }
+
+  const teamIds = teamIdsLabel(row);
+  return `
+    <textarea
+      class="settings-inline-input"
+      data-field="supervised_employee_ids"
+      rows="2"
+      style="min-width: 200px; resize: vertical"
+      placeholder="Direct-report BTW ids from roster"
+      title="Active employees whose supervisor field matches this person's roster name"
+    >${escAttr(teamIds === '—' ? '' : teamIds)}</textarea>
+  `;
 }
 
 function readRowFromForm(root: ParentNode, originalEmail: string): UserAccessRow | null {
@@ -82,13 +122,19 @@ function readRowFromForm(root: ParentNode, originalEmail: string): UserAccessRow
   }
 
   const role = normalizeUserRole(roleSelect?.value || 'user');
+  const supervisorName =
+    role === 'supervisor' ? String(supervisorInput?.value || '').trim() : '';
+  const supervisedEmployeeIds =
+    role === 'supervisor'
+      ? parseScopedEmployeeIdsFromInput(scopedIdsInput?.value || '')
+      : null;
 
   return {
     email,
     display_name: String(displayInput?.value || '').trim(),
     role,
-    supervisor_name: String(supervisorInput?.value || '').trim(),
-    supervised_employee_ids: parseScopedEmployeeIdsFromInput(scopedIdsInput?.value || ''),
+    supervisor_name: supervisorName,
+    supervised_employee_ids: supervisedEmployeeIds,
     linked_employee_id: String(linkedIdInput?.value || '').trim() || null,
     can_delete: Boolean(canDeleteInput?.checked),
     approval_status: 'approved',
@@ -104,6 +150,36 @@ function renderRoleOptions(selected: string): string {
   ).join('');
 }
 
+function fileSupervisorLabel(row: UserAccessRow): string {
+  const fromFile = resolveEmployeeFileSupervisor(row, cachedEmployeeRosterIndex);
+  return fromFile || '—';
+}
+
+function renderSupervisorEditCell(row: UserAccessRow): string {
+  const role = normalizeUserRole(String(row.role || 'user'));
+  const fileSupervisor = resolveEmployeeFileSupervisor(row, cachedEmployeeRosterIndex);
+
+  if (role === 'supervisor') {
+    return `
+      <input
+        class="settings-inline-input"
+        type="text"
+        data-field="supervisor_name"
+        value="${escAttr(row.supervisor_name || '')}"
+        placeholder="Roster name for team match"
+        title="How this person appears on direct reports' supervisor field — not their manager"
+      />
+      ${
+        fileSupervisor
+          ? `<div class="muted" style="margin-top:4px;font-size:0.8rem">Reports to: ${esc(fileSupervisor)}</div>`
+          : ''
+      }
+    `;
+  }
+
+  return `<span class="muted" title="From employee file">${esc(fileSupervisor || '—')}</span>`;
+}
+
 function renderUserAccessViewRow(row: UserAccessRow): string {
   const email = normalizeUserEmail(String(row.email || ''));
 
@@ -114,13 +190,8 @@ function renderUserAccessViewRow(row: UserAccessRow): string {
       <td>${esc(String(row.role || 'user').toUpperCase())}</td>
       <td>${esc(String(row.approval_status || 'approved').toUpperCase())}</td>
       <td>${esc(row.linked_employee_id || '—')}</td>
-      <td>${esc(row.supervisor_name || '—')}</td>
-      <td class="muted" style="max-width: 240px; font-size: 0.85rem; word-break: break-all">${(() => {
-        const ids = parseSupervisedEmployeeIds(row);
-        if (!ids.length) return '—';
-        const preview = ids.join(', ');
-        return esc(preview.length > 120 ? `${preview.slice(0, 120)}…` : preview);
-      })()}</td>
+      <td>${esc(fileSupervisorLabel(row))}</td>
+      <td class="muted" style="max-width: 240px; font-size: 0.85rem; word-break: break-all" title="Supervisor role: direct-report BTW ids from roster">${esc(teamIdsLabel(row, 120))}</td>
       <td>${row.can_delete ? 'Yes' : 'No'}</td>
       <td>
         <div class="settings-user-actions table-actions">
@@ -358,24 +429,8 @@ function renderUserAccessEditRow(row: UserAccessRow, isNew: boolean): string {
           placeholder="BTW id for USER role (e.g. BTW2105)"
         />
       </td>
-      <td>
-        <input
-          class="settings-inline-input"
-          type="text"
-          data-field="supervisor_name"
-          value="${escAttr(row.supervisor_name || '')}"
-          placeholder="Supervisor name (fuzzy match)"
-        />
-      </td>
-      <td>
-        <textarea
-          class="settings-inline-input"
-          data-field="supervised_employee_ids"
-          rows="2"
-          style="min-width: 200px; resize: vertical"
-          placeholder="Team employee IDs, comma-separated"
-        >${escAttr(formatScopedIdsForInput(row))}</textarea>
-      </td>
+      <td>${renderSupervisorEditCell(row)}</td>
+      <td>${renderSupervisorTeamEditCell(row)}</td>
       <td>
         <label class="settings-delete-check">
           <input type="checkbox" data-field="can_delete"${row.can_delete ? ' checked' : ''} />
@@ -878,6 +933,53 @@ function formatTimestamp(value: string): string {
   return date.toLocaleString();
 }
 
+function teamIdsMatch(stored: string[] | null | undefined, next: string[]): boolean {
+  const left = (stored || []).map((id) => id.toLowerCase()).sort().join(',');
+  const right = next.map((id) => id.toLowerCase()).sort().join(',');
+  return left === right;
+}
+
+/** Keep supervisor_name + supervised_employee_ids aligned with roster for access control. */
+async function syncSupervisorTeamAccess(rows: UserAccessRow[]): Promise<boolean> {
+  if (!isAdminUser() || !cachedEmployeeRosterIndex) return false;
+
+  let changed = false;
+
+  for (const row of rows) {
+    if (normalizeUserRole(String(row.role || '')) !== 'supervisor') continue;
+
+    const email = normalizeUserEmail(String(row.email || ''));
+    if (!email) continue;
+
+    const rosterName = resolveSupervisorRosterName(row, cachedEmployeeRosterIndex);
+    const teamIds = resolveTeamIdsForAccessRow(row, cachedEmployeeRosterIndex);
+    const patch: Partial<UserAccessRow> = {};
+
+    if (rosterName && rosterName !== String(row.supervisor_name || '').trim()) {
+      patch.supervisor_name = rosterName;
+    }
+
+    const nextTeamIds = teamIds.length ? teamIds : null;
+    if (!teamIdsMatch(row.supervised_employee_ids, teamIds)) {
+      patch.supervised_employee_ids = nextTeamIds;
+    }
+
+    if (!Object.keys(patch).length) continue;
+
+    const { error } = await supabaseClient.from('user_access').update(patch).eq('email', email);
+
+    if (error) {
+      console.warn('[Settings] Could not sync supervisor team access:', email, error);
+      continue;
+    }
+
+    Object.assign(row, patch);
+    changed = true;
+  }
+
+  return changed;
+}
+
 async function loadUserAccessTable(): Promise<void> {
   const body = document.getElementById('settingsUserAccessBody');
   const countEl = document.getElementById('settingsUserAccessCount');
@@ -918,6 +1020,27 @@ async function loadUserAccessTable(): Promise<void> {
   cachedPendingRows = cachedUserAccessRows.filter(
     (row) => String(row.approval_status || '').toLowerCase() === 'pending'
   );
+  cachedEmployeeRosterIndex = await loadEmployeeRosterIndex();
+
+  const synced = await syncSupervisorTeamAccess(cachedUserAccessRows);
+  if (synced) {
+    const { data: refreshed, error: refreshError } = await supabaseClient
+      .from('user_access')
+      .select(
+        'email, display_name, role, supervisor_name, supervised_employee_ids, linked_employee_id, can_delete, approval_status'
+      )
+      .order('approval_status', { ascending: true })
+      .order('role', { ascending: true })
+      .order('email', { ascending: true });
+
+    if (!refreshError && refreshed) {
+      cachedUserAccessRows = refreshed as UserAccessRow[];
+      cachedPendingRows = cachedUserAccessRows.filter(
+        (row) => String(row.approval_status || '').toLowerCase() === 'pending'
+      );
+    }
+  }
+
   renderUserAccessTableBody();
   renderPendingApprovalsBody();
 }

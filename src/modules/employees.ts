@@ -5,6 +5,7 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { appState } from '../core/state';
 import {
+  isAdminUser,
   isSupervisorUser,
   isEmployeeUser,
   getLinkedEmployeeId,
@@ -13,6 +14,7 @@ import {
   parseSupervisedEmployeeIds,
   getUserRole,
 } from '../services/access';
+import { syncAutoBenefitsEligibility } from '../services/benefitsEligibilitySync';
 
 export type EmployeeRecord = Record<string, unknown>;
 
@@ -22,6 +24,8 @@ export type NormalizedEmployeeStatus =
   | 'leave'
   | 'terminated'
   | 'unknown';
+
+let skipBenefitsEligibilitySync = false;
 
 export function normalizeEmployeeStatus(status: unknown): NormalizedEmployeeStatus {
   const normalized = String(status || '')
@@ -195,6 +199,23 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
 
   if (typeof window.ensureInvestigationsLoaded === 'function') {
     window.ensureInvestigationsLoaded();
+  }
+
+  if (isAdminUser() && !skipBenefitsEligibilitySync) {
+    void syncAutoBenefitsEligibility(normalizedEmployees).then((count) => {
+      if (!count) return;
+
+      skipBenefitsEligibilitySync = true;
+      void loadEmployees()
+        .then(() => {
+          if (typeof window.loadHrInbox === 'function') {
+            void window.loadHrInbox(true);
+          }
+        })
+        .finally(() => {
+          skipBenefitsEligibilitySync = false;
+        });
+    });
   }
 
   return scoped;

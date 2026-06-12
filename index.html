@@ -770,43 +770,6 @@
                 </div>
               </div>
             </div>
-            <div
-              class="card orbis-disclosure-card"
-              data-orbis-disclosure
-              data-orbis-disclosure-start="collapsed"
-            >
-              <div class="card-header orbis-disclosure-header">
-                <span>Recent HR Activity</span>
-                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
-                <button
-                  type="button"
-                  class="orbis-disclosure-toggle"
-                  data-orbis-disclosure-toggle
-                  aria-expanded="false"
-                >
-                  Show details
-                </button>
-                <button
-                  id="clearRecentActivityBtn"
-                  class="button soft sm"
-                  type="button"
-                  title="Hide all current activity from this feed"
-                >
-                  Clear All
-                </button>
-                </div>
-              </div>
-              <div class="card-body">
-                <p class="muted orbis-disclosure-summary" style="margin: 0">
-                  Latest notes, discipline, incidents, and stay interview activity.
-                </p>
-                <div class="orbis-disclosure-panel" data-orbis-disclosure-panel hidden>
-                <div id="recentActivity" class="history-list" style="margin-top: 12px">
-                  <div class="empty">Loading activity...</div>
-                </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
           </div>
@@ -2496,8 +2459,8 @@
                               <th>Role</th>
                               <th>Status</th>
                               <th>PTO employee ID</th>
-                              <th>Supervisor</th>
-                              <th>Team IDs</th>
+                              <th title="Manager on the employee roster record">Supervisor</th>
+                              <th title="Supervisor role only: BTW ids of active direct reports from roster">Team IDs</th>
                               <th>Can delete</th>
                               <th>Actions</th>
                             </tr>
@@ -5166,8 +5129,16 @@
                       <input
                         id="employeeBenefitsStatusInput"
                         type="text"
-                        placeholder="Benefits status"
+                        placeholder="Enrolled, waived, pending, etc."
                       />
+                      <p
+                        id="employeeBenefitsEligibilityHint"
+                        class="muted"
+                        style="margin: 6px 0 0; font-size: 0.82rem; line-height: 1.45"
+                      >
+                        Eligible for benefits 90 calendar days after hire date. Orbis auto-sets
+                        status to Eligible and logs a payroll handoff when that date is reached.
+                      </p>
                     </div>
                     <div class="field">
                       <label for="employeeHireDateInput">Hire Date</label>
