@@ -21,7 +21,7 @@ import {
   janusContactDisplayName,
   janusFormatAddress,
 } from '../types/janusTypes';
-import { initJanusAccountPanels, refreshJanusAccountPanels, syncJanusPanelsEditAccess } from './janusAccountPanels';
+import { initJanusAccountPanels, refreshJanusAccountPanels, resetJanusMeetingEditor, syncJanusPanelsEditAccess } from './janusAccountPanels';
 import { initJanusMeetingDictation, stopJanusMeetingDictation } from './dictation';
 
 declare global {
@@ -401,6 +401,7 @@ export async function openJanusAccountDrawer(
   currentJanusAccountId = accountId || null;
   setJanusDrawerTab(resolvedTab);
   clearContactForm();
+  resetJanusMeetingEditor();
 
   const account = accountId ? await fetchJanusAccount(accountId) : null;
   if (accountId && !account) {

@@ -276,6 +276,33 @@ body.authenticated .janus-help-code {
   border-bottom: 1px solid var(--line);
 }
 
+.janus-meeting-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.janus-meeting-row.is-selected {
+  border-color: rgba(79, 140, 255, 0.35);
+  background: rgba(79, 140, 255, 0.06);
+  margin: 0 -12px;
+  padding: 12px;
+  border-radius: 12px;
+}
+
+.janus-meeting-row-main {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.janus-meeting-row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
 .janus-meeting-row:last-child,
 .janus-document-row:last-child,
 .janus-activity-row:last-child {

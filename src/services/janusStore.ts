@@ -345,6 +345,31 @@ export async function createJanusMeeting(draft: JanusMeetingDraft): Promise<Janu
   return mapMeeting(data as Record<string, unknown>);
 }
 
+export async function updateJanusMeeting(
+  meetingId: string,
+  draft: Omit<JanusMeetingDraft, 'account_id'>
+): Promise<JanusMeeting> {
+  const payload = {
+    meeting_date: draft.meeting_date,
+    title: String(draft.title || '').trim(),
+    attendees: draft.attendees || [],
+    transcript: draft.transcript || null,
+    summary: draft.summary || null,
+    action_items: draft.action_items || null,
+    follow_up_date: draft.follow_up_date || null,
+  };
+
+  const { data, error } = await supabaseClient
+    .from('janus_meetings')
+    .update(payload)
+    .eq('id', meetingId)
+    .select('*')
+    .single();
+
+  if (error) throw error;
+  return mapMeeting(data as Record<string, unknown>);
+}
+
 export async function fetchJanusActivities(accountId: string): Promise<JanusActivity[]> {
   const { data, error } = await supabaseClient
     .from('janus_activities')

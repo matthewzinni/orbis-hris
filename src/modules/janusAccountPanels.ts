@@ -18,6 +18,7 @@ import {
   fetchJanusContacts,
   fetchJanusDocuments,
   fetchJanusMeetings,
+  updateJanusMeeting,
 } from '../services/janusStore';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import type { JanusActivity, JanusDocument, JanusMeeting } from '../types/janusTypes';
@@ -68,6 +69,9 @@ function renderMeetingsList(meetings: JanusMeeting[]): void {
   const list = safeGet('janusMeetingsList');
   if (!list) return;
 
+  meetingCache.clear();
+  meetings.forEach((meeting) => meetingCache.set(meeting.id, meeting));
+
   if (!meetings.length) {
     list.innerHTML = '<div class="muted janus-empty">No meetings logged yet.</div>';
     return;
@@ -76,22 +80,27 @@ function renderMeetingsList(meetings: JanusMeeting[]): void {
   list.innerHTML = meetings
     .map(
       (meeting) => `
-      <article class="janus-meeting-row">
-        <div class="janus-meeting-row-top">
-          <strong>${esc(meeting.title)}</strong>
-          <span class="badge badge-soft">${esc(formatJanusDateLabel(meeting.meeting_date))}</span>
+      <article class="janus-meeting-row${meeting.id === editingMeetingId ? ' is-selected' : ''}">
+        <div class="janus-meeting-row-main">
+          <div class="janus-meeting-row-top">
+            <strong>${esc(meeting.title)}</strong>
+            <span class="badge badge-soft">${esc(formatJanusDateLabel(meeting.meeting_date))}</span>
+          </div>
+          ${meeting.summary ? `<p class="janus-meeting-summary">${esc(meeting.summary)}</p>` : ''}
+          ${
+            meeting.action_items
+              ? `<pre class="janus-meeting-actions muted">${esc(meeting.action_items)}</pre>`
+              : ''
+          }
+          ${
+            meeting.follow_up_date
+              ? `<p class="muted janus-meeting-followup">Follow up ${esc(formatJanusDateLabel(meeting.follow_up_date))}</p>`
+              : ''
+          }
         </div>
-        ${meeting.summary ? `<p class="janus-meeting-summary">${esc(meeting.summary)}</p>` : ''}
-        ${
-          meeting.action_items
-            ? `<pre class="janus-meeting-actions muted">${esc(meeting.action_items)}</pre>`
-            : ''
-        }
-        ${
-          meeting.follow_up_date
-            ? `<p class="muted janus-meeting-followup">Follow up ${esc(formatJanusDateLabel(meeting.follow_up_date))}</p>`
-            : ''
-        }
+        <div class="janus-meeting-row-actions">
+          <button type="button" class="button soft sm" data-janus-open-meeting="${esc(meeting.id)}">Open</button>
+        </div>
       </article>
     `
     )
@@ -191,6 +200,7 @@ function renderActivityTimeline(
 }
 
 function clearMeetingForm(): void {
+  editingMeetingId = null;
   safeGet<HTMLInputElement>('janusMeetingDateInput')!.value = todayIso();
   safeGet<HTMLInputElement>('janusMeetingTimeInput')!.value = '';
   safeGet<HTMLInputElement>('janusMeetingTitleInput')!.value = '';
@@ -199,10 +209,46 @@ function clearMeetingForm(): void {
   safeGet<HTMLTextAreaElement>('janusMeetingSummaryInput')!.value = '';
   safeGet<HTMLTextAreaElement>('janusMeetingActionsInput')!.value = '';
   safeGet<HTMLInputElement>('janusMeetingFollowUpInput')!.value = '';
+  updateMeetingFormUi();
+}
+
+function fillMeetingForm(meeting: JanusMeeting): void {
+  editingMeetingId = meeting.id;
+  safeGet<HTMLInputElement>('janusMeetingDateInput')!.value = meeting.meeting_date || todayIso();
+  safeGet<HTMLInputElement>('janusMeetingTimeInput')!.value = '';
+  safeGet<HTMLInputElement>('janusMeetingTitleInput')!.value = meeting.title || '';
+  safeGet<HTMLInputElement>('janusMeetingAttendeesInput')!.value = (meeting.attendees || []).join(', ');
+  safeGet<HTMLTextAreaElement>('janusMeetingTranscriptInput')!.value = meeting.transcript || '';
+  safeGet<HTMLTextAreaElement>('janusMeetingSummaryInput')!.value = meeting.summary || '';
+  safeGet<HTMLTextAreaElement>('janusMeetingActionsInput')!.value = meeting.action_items || '';
+  safeGet<HTMLInputElement>('janusMeetingFollowUpInput')!.value = meeting.follow_up_date || '';
+  updateMeetingFormUi();
+  safeGet('janusMeetingFormCard')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function updateMeetingFormUi(): void {
+  const isEditing = Boolean(editingMeetingId);
+  const titleEl = safeGet('janusMeetingFormTitle');
+  const saveBtn = safeGet<HTMLButtonElement>('janusSaveMeetingBtn');
+  const clearBtn = safeGet<HTMLButtonElement>('janusClearMeetingBtn');
+
+  if (titleEl) {
+    titleEl.textContent = isEditing ? 'Meeting details' : 'Log meeting';
+  }
+  if (saveBtn) {
+    saveBtn.textContent = isEditing ? 'Update meeting' : 'Save meeting';
+  }
+  clearBtn?.classList.toggle('hidden', !isEditing);
+}
+
+export function resetJanusMeetingEditor(): void {
+  clearMeetingForm();
 }
 
 let panelsBound = false;
+let editingMeetingId: string | null = null;
 const documentCache = new Map<string, JanusDocument>();
+const meetingCache = new Map<string, JanusMeeting>();
 
 export async function refreshJanusAccountPanels(
   accountId: string,
@@ -315,42 +361,57 @@ async function saveMeetingRecord(accountId: string): Promise<void> {
   }
 
   try {
-    const meeting = await createJanusMeeting({
-      account_id: accountId,
-      meeting_date: meetingDate,
-      title: title.trim(),
-      attendees,
-      transcript: transcript.trim() || null,
-      summary: summary.trim() || null,
-      action_items: action_items.trim() || null,
-      follow_up_date: follow_up_date || null,
-    });
+    if (editingMeetingId) {
+      await updateJanusMeeting(editingMeetingId, {
+        meeting_date: meetingDate,
+        title: title.trim(),
+        attendees,
+        transcript: transcript.trim() || null,
+        summary: summary.trim() || null,
+        action_items: action_items.trim() || null,
+        follow_up_date: follow_up_date || null,
+      });
+      clearMeetingForm();
+      await refreshJanusAccountPanels(accountId);
+      showToast('Meeting updated.');
+    } else {
+      await createJanusMeeting({
+        account_id: accountId,
+        meeting_date: meetingDate,
+        title: title.trim(),
+        attendees,
+        transcript: transcript.trim() || null,
+        summary: summary.trim() || null,
+        action_items: action_items.trim() || null,
+        follow_up_date: follow_up_date || null,
+      });
 
-    await createJanusActivity({
-      account_id: accountId,
-      activity_type: 'meeting',
-      activity_date: meetingDate,
-      subject: `Meeting — ${title.trim()}`,
-      body: summary.trim() || transcript.trim().slice(0, 500),
-    });
-
-    if (follow_up_date) {
       await createJanusActivity({
         account_id: accountId,
-        activity_type: 'follow_up',
-        activity_date: follow_up_date,
-        subject: `Follow up — ${title.trim()}`,
-        body: action_items.trim() || 'Scheduled from meeting log.',
+        activity_type: 'meeting',
+        activity_date: meetingDate,
+        subject: `Meeting — ${title.trim()}`,
+        body: summary.trim() || transcript.trim().slice(0, 500),
       });
+
+      if (follow_up_date) {
+        await createJanusActivity({
+          account_id: accountId,
+          activity_type: 'follow_up',
+          activity_date: follow_up_date,
+          subject: `Follow up — ${title.trim()}`,
+          body: action_items.trim() || 'Scheduled from meeting log.',
+        });
+      }
+
+      clearMeetingForm();
+      await refreshJanusAccountPanels(accountId);
+      showToast('Meeting saved.');
     }
 
-    clearMeetingForm();
-    await refreshJanusAccountPanels(accountId);
-    showToast('Meeting saved.');
     if (typeof window.loadJanus === 'function') {
       void window.loadJanus(true);
     }
-    void meeting;
   } catch (err) {
     showToast(err instanceof Error ? err.message : 'Could not save meeting.', 'error');
   }
@@ -465,6 +526,23 @@ export function initJanusAccountPanels(getAccountId: () => string | null): void 
     const accountId = getAccountId();
     if (!accountId) return;
     void saveMeetingRecord(accountId);
+  });
+
+  safeGet('janusClearMeetingBtn')?.addEventListener('click', () => {
+    clearMeetingForm();
+    const accountId = getAccountId();
+    if (accountId) void refreshJanusAccountPanels(accountId, 'meetings');
+  });
+
+  safeGet('janusMeetingsList')?.addEventListener('click', (event) => {
+    const openBtn = (event.target as Element | null)?.closest<HTMLElement>('[data-janus-open-meeting]');
+    if (!openBtn) return;
+    const meetingId = openBtn.dataset.janusOpenMeeting || '';
+    const meeting = meetingCache.get(meetingId);
+    if (!meeting) return;
+    fillMeetingForm(meeting);
+    const accountId = getAccountId();
+    if (accountId) void refreshJanusAccountPanels(accountId, 'meetings');
   });
 
   safeGet('janusUploadDocumentBtn')?.addEventListener('click', () => {
