@@ -16,7 +16,13 @@ import {
 } from '../services/access';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
-const USER_ACCESS_ROLES = ['admin', 'supervisor', 'user'] as const;
+const USER_ACCESS_ROLES = [
+  'admin',
+  'supervisor',
+  'user',
+  'janus',
+  'janus_readonly',
+] as const;
 
 let cachedUserAccessRows: UserAccessRow[] = [];
 let cachedPendingRows: UserAccessRow[] = [];

@@ -2039,10 +2039,151 @@
                   one searchable place.
                 </p>
               </div>
-              <button class="button soft" type="button" id="janusRefreshBtn">Refresh</button>
+              <div class="page-header-actions">
+                <button class="button soft" type="button" id="janusRefreshBtn">Refresh</button>
+                <label class="button soft janus-import-label" id="janusCopperImportLabel">
+                  Import Copper CSV
+                  <input id="janusCopperImportInput" type="file" accept=".csv,text/csv" hidden />
+                </label>
+                <button class="button soft" type="button" id="janusLogMeetingBtn">Log meeting</button>
+                <button class="button primary" type="button" id="janusNewAccountBtn">
+                  ＋ New account
+                </button>
+              </div>
             </div>
+
             <p class="muted" id="janusHomeSummary">Loading relationship workspace…</p>
-            <div id="janusHomeBody"></div>
+
+            <div class="janus-scaffold-grid">
+              <div class="kpi-card">
+                <div class="kpi-label">Accounts</div>
+                <div class="kpi-value" id="janusKpiAccounts">—</div>
+                <div class="kpi-sub">Clients, vendors, partners</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Contacts</div>
+                <div class="kpi-value" id="janusKpiContacts">—</div>
+                <div class="kpi-sub">People at each account</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Meetings</div>
+                <div class="kpi-value" id="janusKpiMeetings">—</div>
+                <div class="kpi-sub">Recaps and follow-ups</div>
+              </div>
+              <div class="kpi-card">
+                <div class="kpi-label">Documents</div>
+                <div class="kpi-value" id="janusKpiDocuments">—</div>
+                <div class="kpi-sub">Agreements and SOWs</div>
+              </div>
+            </div>
+
+            <div class="layout janus-dashboard-layout">
+              <div class="card">
+                <div class="card-header">Recent meetings</div>
+                <div class="card-body">
+                  <div id="janusRecentMeetingsList" class="janus-dashboard-list">
+                    <div class="muted">Loading…</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Upcoming follow-ups</div>
+                <div class="card-body">
+                  <div id="janusUpcomingFollowUpsList" class="janus-dashboard-list">
+                    <div class="muted">Loading…</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="toolbar janus-toolbar">
+              <div class="toolbar-left janus-toolbar-filters">
+                <input
+                  class="input search-input"
+                  id="janusSearchInput"
+                  type="search"
+                  placeholder="Search accounts, contacts, meetings…"
+                  aria-label="Search Janus"
+                />
+                <select class="select" id="janusTypeFilter" aria-label="Filter by account type">
+                  <option value="">All types</option>
+                  <option value="client">Client</option>
+                  <option value="vendor">Vendor</option>
+                  <option value="partner">Partner</option>
+                  <option value="publisher">Publisher</option>
+                  <option value="other">Other</option>
+                </select>
+                <select class="select" id="janusStatusFilter" aria-label="Filter by account status">
+                  <option value="">All statuses</option>
+                  <option value="active">Active</option>
+                  <option value="prospect">Prospect</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="card hidden" id="janusGlobalSearchCard">
+              <div class="card-header">Search results</div>
+              <div class="card-body">
+                <div id="janusGlobalSearchList" class="janus-search-results"></div>
+              </div>
+            </div>
+
+            <div class="card" id="janusAccountsCard">
+              <div class="card-header">
+                <span>Accounts</span>
+                <span class="muted" id="janusAccountCount">Loading accounts…</span>
+              </div>
+              <div class="card-body">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Owner</th>
+                        <th>Phone / address</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="janusAccountsBody">
+                      <tr>
+                        <td colspan="6" class="empty">Loading accounts…</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" id="janusContactsCard">
+              <div class="card-header">
+                <span>Contacts</span>
+                <span class="muted" id="janusContactCount">Loading contacts…</span>
+              </div>
+              <div class="card-body">
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Account</th>
+                        <th>Title</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="janusContactsBody">
+                      <tr>
+                        <td colspan="6" class="empty">Loading contacts…</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -2831,6 +2972,276 @@
                 </div>
               </div>
             </section>
+          </div>
+        </aside>
+        <aside class="drawer hidden" id="janusAccountDrawer" aria-hidden="true" data-janus-access>
+          <div class="drawer-header">
+            <div>
+              <h2 class="drawer-title" id="janusAccountDrawerTitle">Account</h2>
+              <div class="drawer-sub" id="janusAccountDrawerSub">Janus CRM</div>
+            </div>
+            <button class="drawer-close" type="button" onclick="closeJanusAccountDrawer()">
+              Close
+            </button>
+          </div>
+          <div class="janus-drawer-tabs" role="tablist" aria-label="Account sections">
+            <button type="button" class="janus-drawer-tab active" data-janus-drawer-tab="overview" aria-selected="true">
+              Overview
+            </button>
+            <button type="button" class="janus-drawer-tab" data-janus-drawer-tab="contacts" aria-selected="false">
+              Contacts
+            </button>
+            <button type="button" class="janus-drawer-tab" data-janus-drawer-tab="meetings" aria-selected="false">
+              Meetings
+            </button>
+            <button type="button" class="janus-drawer-tab" data-janus-drawer-tab="documents" aria-selected="false">
+              Documents
+            </button>
+            <button type="button" class="janus-drawer-tab" data-janus-drawer-tab="activity" aria-selected="false">
+              Activity
+            </button>
+          </div>
+          <div class="drawer-body">
+            <div data-janus-drawer-panel="overview">
+              <div class="card">
+                <div class="card-header">Account details</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="janusAccountNameInput">Account name</label>
+                      <input id="janusAccountNameInput" type="text" data-janus-account-field placeholder="Macmillan, Sourcebooks…" />
+                    </div>
+                    <div class="field">
+                      <label for="janusAccountTypeInput">Type</label>
+                      <select id="janusAccountTypeInput" data-janus-account-field></select>
+                    </div>
+                    <div class="field">
+                      <label for="janusAccountStatusInput">Status</label>
+                      <select id="janusAccountStatusInput" data-janus-account-field></select>
+                    </div>
+                    <div class="field">
+                      <label for="janusAccountOwnerInput">Relationship owner</label>
+                      <input id="janusAccountOwnerInput" type="email" data-janus-account-field placeholder="owner@btwglobal.com" />
+                    </div>
+                    <div class="field">
+                      <label for="janusAccountWebsiteInput">Website</label>
+                      <input id="janusAccountWebsiteInput" type="url" data-janus-account-field placeholder="https://" />
+                    </div>
+                    <div class="field">
+                      <label for="janusAccountPhoneInput">Phone</label>
+                      <input id="janusAccountPhoneInput" type="tel" data-janus-account-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusAccountStreetInput">Street</label>
+                      <input id="janusAccountStreetInput" type="text" data-janus-account-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusAccountCityInput">City</label>
+                      <input id="janusAccountCityInput" type="text" data-janus-account-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusAccountStateInput">State</label>
+                      <input id="janusAccountStateInput" type="text" data-janus-account-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusAccountZipInput">ZIP</label>
+                      <input id="janusAccountZipInput" type="text" data-janus-account-field />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="janusAccountNotesInput">Notes</label>
+                    <textarea id="janusAccountNotesInput" rows="4" data-janus-account-field placeholder="Relationship context, preferences, history…"></textarea>
+                  </div>
+                  <div class="button-row">
+                    <button class="button primary" type="button" id="saveJanusAccountBtn">Save account</button>
+                    <button class="button soft hidden" type="button" id="deleteJanusAccountBtn">Delete account</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden" data-janus-drawer-panel="contacts" aria-hidden="true">
+              <div class="card">
+                <div class="card-header">Contacts</div>
+                <div class="card-body">
+                  <div id="janusContactsList" class="janus-contacts-list">
+                    <div class="muted">Save the account to add contacts.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header" id="janusContactFormTitle">Add contact</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="janusContactFirstNameInput">First name</label>
+                      <input id="janusContactFirstNameInput" type="text" data-janus-contact-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusContactLastNameInput">Last name</label>
+                      <input id="janusContactLastNameInput" type="text" data-janus-contact-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusContactTitleInput">Title</label>
+                      <input id="janusContactTitleInput" type="text" data-janus-contact-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusContactEmailInput">Email</label>
+                      <input id="janusContactEmailInput" type="email" data-janus-contact-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusContactPhoneInput">Phone</label>
+                      <input id="janusContactPhoneInput" type="tel" data-janus-contact-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusContactPrimaryInput" style="display:flex;align-items:center;gap:8px;margin-top:28px">
+                        <input id="janusContactPrimaryInput" type="checkbox" data-janus-contact-field />
+                        Primary contact
+                      </label>
+                    </div>
+                    <div class="field">
+                      <label for="janusContactStreetInput">Street</label>
+                      <input id="janusContactStreetInput" type="text" data-janus-contact-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusContactCityInput">City</label>
+                      <input id="janusContactCityInput" type="text" data-janus-contact-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusContactStateInput">State</label>
+                      <input id="janusContactStateInput" type="text" data-janus-contact-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusContactZipInput">ZIP</label>
+                      <input id="janusContactZipInput" type="text" data-janus-contact-field />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="janusContactNotesInput">Notes</label>
+                    <textarea id="janusContactNotesInput" rows="3" data-janus-contact-field placeholder="Personal context, preferences…"></textarea>
+                  </div>
+                  <div class="button-row">
+                    <button class="button primary" type="button" id="saveJanusContactBtn">Save contact</button>
+                    <button class="button soft" type="button" id="cancelJanusContactBtn">Clear</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden" data-janus-drawer-panel="meetings" aria-hidden="true">
+              <div class="card">
+                <div class="card-header">Log meeting</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="janusMeetingDateInput">Meeting date</label>
+                      <input id="janusMeetingDateInput" type="date" data-janus-meeting-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusMeetingTimeInput">Meeting time</label>
+                      <input id="janusMeetingTimeInput" type="time" data-janus-meeting-field />
+                    </div>
+                    <div class="field">
+                      <label for="janusMeetingTitleInput">Title</label>
+                      <input id="janusMeetingTitleInput" type="text" data-janus-meeting-field placeholder="Q2 business review" />
+                    </div>
+                    <div class="field" style="grid-column: 1 / -1">
+                      <label for="janusMeetingAttendeesInput">Attendees</label>
+                      <input id="janusMeetingAttendeesInput" type="text" data-janus-meeting-field placeholder="Comma-separated names or emails" />
+                    </div>
+                  </div>
+                  <div class="candidate-actions-row">
+                    <button class="button primary" type="button" id="janusEmailMeetingRequestBtn">
+                      Email meeting request
+                    </button>
+                    <span class="muted">Opens your email client with meeting request details pre-filled.</span>
+                  </div>
+                  <div class="field">
+                    <label for="janusMeetingTranscriptInput">Transcript / notes</label>
+                    <textarea id="janusMeetingTranscriptInput" rows="6" data-janus-meeting-field placeholder="Paste meeting transcript or typed notes…"></textarea>
+                  </div>
+                  <div class="button-row">
+                    <button class="button soft" type="button" id="janusGenerateMeetingSummaryBtn">Generate summary</button>
+                  </div>
+                  <div class="field">
+                    <label for="janusMeetingSummaryInput">Summary</label>
+                    <textarea id="janusMeetingSummaryInput" rows="4" data-janus-meeting-field></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="janusMeetingActionsInput">Action items</label>
+                    <textarea id="janusMeetingActionsInput" rows="3" data-janus-meeting-field></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="janusMeetingFollowUpInput">Follow-up date</label>
+                    <input id="janusMeetingFollowUpInput" type="date" data-janus-meeting-field />
+                  </div>
+                  <div class="button-row">
+                    <button class="button primary" type="button" id="janusSaveMeetingBtn">Save meeting</button>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Meeting history</div>
+                <div class="card-body">
+                  <div id="janusMeetingsList" class="janus-meetings-list">
+                    <div class="muted">Save the account to log meetings.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden" data-janus-drawer-panel="documents" aria-hidden="true">
+              <div class="card" id="janusDocumentUploadForm">
+                <div class="card-header">Upload document</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="janusDocumentTitleInput">Title</label>
+                      <input id="janusDocumentTitleInput" type="text" placeholder="Macmillan agreement" />
+                    </div>
+                    <div class="field">
+                      <label for="janusDocumentTypeInput">Type</label>
+                      <select id="janusDocumentTypeInput">
+                        <option value="agreement">Agreement</option>
+                        <option value="sow">SOW</option>
+                        <option value="nda">NDA</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="janusDocumentEffectiveInput">Effective date</label>
+                      <input id="janusDocumentEffectiveInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="janusDocumentFileInput">File</label>
+                      <input id="janusDocumentFileInput" type="file" accept=".pdf,.doc,.docx,.txt,image/*" />
+                    </div>
+                  </div>
+                  <div class="button-row">
+                    <button class="button primary" type="button" id="janusUploadDocumentBtn">Upload</button>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Documents</div>
+                <div class="card-body">
+                  <div id="janusDocumentsList" class="janus-documents-list">
+                    <div class="muted">No documents yet.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden" data-janus-drawer-panel="activity" aria-hidden="true">
+              <div class="card">
+                <div class="card-header">Activity timeline</div>
+                <div class="card-body">
+                  <div id="janusActivityList" class="janus-activity-list">
+                    <div class="muted">No activity yet.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </aside>
         <aside class="drawer hidden" id="operationsIssueDrawer" aria-hidden="true">

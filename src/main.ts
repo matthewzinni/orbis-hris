@@ -68,6 +68,8 @@ import './modules/employees';
 import './modules/orgChart';
 import './modules/attendance';
 import './modules/janus';
+import './modules/janusAccountDrawer';
+import './modules/janusAccountPanels';
 import './modules/dashboardBoot';
 import './modules/managerHome';
 import './ui/executiveInsight';

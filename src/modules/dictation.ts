@@ -64,8 +64,13 @@ function appendTranscript(textarea: HTMLTextAreaElement, transcript: string): vo
   const chunk = String(transcript || '').trim();
   if (!chunk) return;
 
-  const existing = String(textarea.value || '').trimEnd();
-  textarea.value = existing ? `${existing}\n${chunk}` : chunk;
+  const existing = String(textarea.value || '');
+  if (!existing.trim()) {
+    textarea.value = chunk;
+  } else {
+    const needsSpace = !existing.endsWith(' ') && !existing.endsWith('\n');
+    textarea.value = `${existing.trimEnd()}${needsSpace ? ' ' : ''}${chunk}`;
+  }
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
@@ -470,10 +475,6 @@ export function stopAllDictation(): void {
   controllers.forEach((controller) => controller.stop());
 }
 
-export function stopMeetingDictation(): void {
-  stopAllDictation();
-}
-
 function registerCareDictationController(targets: DictationTargetOption[]): void {
   const usable = targets.filter((target) => Boolean(safeGet<HTMLTextAreaElement>(target.id)));
   if (!usable.length) return;
@@ -565,6 +566,29 @@ export function initInvestigationDictation(): void {
 
 export function stopInvestigationDictation(): void {
   controllers.get('invInterview')?.stop();
+}
+
+export function stopMeetingDictation(): void {
+  controllers.get('meeting')?.stop();
+}
+
+export function initJanusMeetingDictation(): void {
+  if (controllers.has('janusMeeting')) {
+    controllers.get('janusMeeting')?.init();
+    return;
+  }
+
+  mountDictation({
+    prefix: 'janusMeeting',
+    textareaId: 'janusMeetingTranscriptInput',
+    consentText:
+      'Before using dictation, confirm attendees know notes are being transcribed. Speech recognition runs in your browser; Orbis does not save or upload audio.',
+    stoppedHint: 'Stopped — review and edit notes, then save the meeting or generate a summary.',
+  });
+}
+
+export function stopJanusMeetingDictation(): void {
+  controllers.get('janusMeeting')?.stop();
 }
 
 export function initMeetingDictation(): void {

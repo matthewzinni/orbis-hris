@@ -88,6 +88,16 @@ supabase functions serve summarize-stay-interview --env-file supabase/.env.local
 
 After deploy, sign in on production and use Stay Interviews → **Generate AI summary**. Summaries are interpretive (what matters, risks, opportunities, recommended focus) — not data recaps. If the secret is missing, the app uses a structured advisory template instead.
 
+## Janus meeting AI summary (Edge Function)
+
+Janus **Generate summary** on the Meetings tab calls `summarize-janus-meeting` (same `OPENAI_API_KEY` secret as stay interviews).
+
+```bash
+supabase functions deploy summarize-janus-meeting
+```
+
+If the function is not deployed or `OPENAI_API_KEY` is unset, Janus falls back to a basic summary draft from the pasted transcript.
+
 ## Stay interview org themes (Edge Function)
 
 **Reports → Stay interview themes (leadership)** aggregates Q&A from recent stay interviews (with employee names for theme attribution) and calls `analyze-stay-themes` (same `OPENAI_API_KEY` secret). Use this for management readouts on what is going well, common obstacles, retention signals, and who to follow up with.
