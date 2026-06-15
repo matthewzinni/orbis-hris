@@ -620,6 +620,10 @@ async function saveUserAccessRow(
     }
   }
 
+  if (payload.role === 'admin') {
+    payload.can_delete = true;
+  }
+
   const lookupEmail = normalizeUserEmail(isNew ? payload.email : originalEmail || payload.email);
 
   if (!lookupEmail) {

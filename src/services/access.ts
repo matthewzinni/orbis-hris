@@ -41,6 +41,10 @@ export const LEADERSHIP_ADMIN_EMAILS = new Set([
   'matthew.zinni@btwglobal.com',
   'trent.wynne@btwglobal.com',
   'brent.wynne@btwglobal.com',
+  'colewoolard@gmail.com',
+  'david.allewalt@btwglobal.com',
+  'orlando.gomez@btwglobal.com',
+  'willblake13@gmail.com',
 ]);
 
 const EMPLOYEE_PORTAL_SECTIONS = new Set([
@@ -180,7 +184,13 @@ export async function getUserRole(): Promise<string | null> {
       }
 
       const accessRole = normalizeOrbisRole(String(accessRow.role || ''));
-      if (accessRole === 'admin' || accessRole === 'supervisor' || accessRole === 'user') {
+      if (
+        accessRole === 'admin' ||
+        accessRole === 'supervisor' ||
+        accessRole === 'user' ||
+        accessRole === 'janus' ||
+        accessRole === 'janus_readonly'
+      ) {
         currentUserRole = accessRole;
         window.currentUserRole = currentUserRole;
         window.currentUserAccess = currentUserAccess;
