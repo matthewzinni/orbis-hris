@@ -663,6 +663,12 @@ export async function saveReviewRecord(): Promise<void> {
   if (typeof window.loadMyTasksPortal === 'function') {
     void window.loadMyTasksPortal();
   }
+  if (typeof window.refreshPerformanceReviewsDueKpi === 'function') {
+    void window.refreshPerformanceReviewsDueKpi();
+  }
+  if (typeof window.loadPerformanceReviewSupervisorNotify === 'function') {
+    void window.loadPerformanceReviewSupervisorNotify();
+  }
 }
 
 window.loadEmployeeReviews = loadEmployeeReviews;

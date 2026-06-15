@@ -47,6 +47,22 @@ export const LEADERSHIP_ADMIN_EMAILS = new Set([
   'willblake13@gmail.com',
 ]);
 
+/** Executives who can email supervisors about team performance reviews due. */
+export const PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS = new Set([
+  'matthew.zinni@btwglobal.com',
+  'trent.wynne@btwglobal.com',
+  'brent.wynne@btwglobal.com',
+]);
+
+export function canEmailSupervisorsPerformanceReviews(): boolean {
+  const email = String(
+    getCurrentUserAccess()?.email || (window as { currentUserEmail?: string }).currentUserEmail || ''
+  )
+    .trim()
+    .toLowerCase();
+  return PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS.has(email);
+}
+
 const EMPLOYEE_PORTAL_SECTIONS = new Set([
   'myProfileView',
   'myTasksView',
@@ -524,19 +540,46 @@ export function getSupervisorDepartmentScope(): string[] {
   return Array.from(departments);
 }
 
-/** Performance reviews: admins always; supervisors only for their direct reports. */
+/** Org-wide performance review visibility (HR leadership only). */
+export function hasOrgWidePerformanceReviewAccess(): boolean {
+  return canEmailSupervisorsPerformanceReviews();
+}
+
+/** Direct reports for performance reviews (supervisors + department-head admins). */
+export function employeeMatchesPerformanceReviewScope(
+  employee: EmployeeLike | null | undefined
+): boolean {
+  if (!isAdminUser() && !isSupervisorUser()) return false;
+  if (hasOrgWidePerformanceReviewAccess()) return true;
+
+  const scopedIds = parseSupervisedEmployeeIds(currentUserAccess);
+  if (scopedIds.length > 0) {
+    const empId = String(employee?.id || employee?.dbId || '')
+      .trim()
+      .toLowerCase();
+    return Boolean(empId) && scopedIds.includes(empId);
+  }
+
+  const supervisorNames = [
+    String(currentUserAccess?.supervisor_name || '').trim(),
+    String(currentUserAccess?.display_name || '').trim(),
+  ].filter(Boolean);
+
+  const employeeSupervisor = String(employee?.supervisor || employee?.displaySupervisor || '');
+  if (!employeeSupervisor || !supervisorNames.length) return false;
+
+  return supervisorNames.some((name) => supervisorNameMatches(employeeSupervisor, name));
+}
+
+/** Performance reviews: HR leadership org-wide; other admins/supervisors direct reports only. */
 export function canAccessPerformanceReviews(employee?: EmployeeLike | null): boolean {
   if (Boolean(window.isCreatingEmployee)) return false;
 
-  if (isAdminUser()) return true;
+  if (!isAdminUser() && !isSupervisorUser()) return false;
 
-  if (isSupervisorUser()) {
-    const target =
-      employee ?? (window.currentEmployee as EmployeeLike | null | undefined) ?? null;
-    return employeeMatchesSupervisorAccess(target);
-  }
-
-  return false;
+  const target =
+    employee ?? (window.currentEmployee as EmployeeLike | null | undefined) ?? null;
+  return employeeMatchesPerformanceReviewScope(target);
 }
 
 /** Employee Admin tab + flags: admins always; supervisors only for their direct reports. */
@@ -772,6 +815,18 @@ export function applyAdminDashboardView(): void {
               >`;
   }
 
+  const performanceReviewsLabel = document.querySelector('#cardPerformanceReviewsDue .kpi-label');
+  if (performanceReviewsLabel) {
+    performanceReviewsLabel.innerHTML = `Performance Reviews Due
+              <span
+                id="kPerformanceReviewsDueInfo"
+                class="info-icon"
+                title="90-day and annual performance reviews overdue or due within 7 days."
+                style="cursor: help; font-size: 0.8rem; color: var(--muted)"
+                >ⓘ</span
+              >`;
+  }
+
   const riskLabel = document.querySelector('#cardTurnoverRisk .kpi-label');
   if (riskLabel) {
     riskLabel.innerHTML = `Turnover Risk
@@ -842,6 +897,14 @@ export function applySupervisorDashboardView(): void {
     ?.closest('.kpi-card')
     ?.querySelector('.kpi-label');
   if (reviewsLabel) reviewsLabel.textContent = 'My Stay Interviews Due';
+
+  const performanceReviewsLabel = document
+    .querySelector('#kPerformanceReviewsDue')
+    ?.closest('.kpi-card')
+    ?.querySelector('.kpi-label');
+  if (performanceReviewsLabel) {
+    performanceReviewsLabel.textContent = 'My Performance Reviews Due';
+  }
 
   const riskLabel = document
     .querySelector('#kTurnoverRisk')
@@ -1163,7 +1226,7 @@ export function applyRolePermissions(): void {
   }
 }
 
-function supervisorNameMatches(rosterSupervisor: string, accessSupervisor: string): boolean {
+export function supervisorNameMatches(rosterSupervisor: string, accessSupervisor: string): boolean {
   const supervisorName = String(accessSupervisor || '').trim().toLowerCase();
   const employeeSupervisor = String(rosterSupervisor || '').trim().toLowerCase();
 

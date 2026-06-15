@@ -38,6 +38,17 @@ function collectWorkspaceAlertsFromDom(): WorkspaceAlert[] {
     });
   }
 
+  const performanceReviewsDue = parseCountFromElement('kPerformanceReviewsDue');
+  if (performanceReviewsDue > 0) {
+    alerts.push({
+      id: 'performance-reviews-due',
+      label: 'Performance reviews due',
+      detail: `${performanceReviewsDue} 90-day or annual review${performanceReviewsDue === 1 ? '' : 's'} need attention`,
+      count: performanceReviewsDue,
+      viewId: 'myTasksView',
+    });
+  }
+
   const atRisk = parseCountFromElement('kAtRiskEmployees');
   if (atRisk > 0) {
     alerts.push({

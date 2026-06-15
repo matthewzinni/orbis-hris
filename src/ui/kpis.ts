@@ -1,4 +1,9 @@
 import { getEmployeeById, loadEmployees } from '../modules/employees';
+import { isAdminUser, isSupervisorUser } from '../services/access';
+import {
+  buildPerformanceReviewDueCandidates,
+  type PerformanceReviewDueCandidate,
+} from '../services/performanceReviewDue';
 import { supabaseClient } from '../services/supabaseClient';
 import { hideKpiRetryBanner, showKpiRetryBanner } from './dashboardRetry';
 import {
@@ -14,6 +19,7 @@ import {
   IN_HOUSE_FTE_INSURANCE_THRESHOLD,
   isStayInterviewEligibleEmployee,
   isStayInterviewOverdue,
+  parseDueDate,
 } from '../services/employeeUtils';
 import { hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
 import {
@@ -392,6 +398,101 @@ function buildOverdueStayInterviewLines(
   return sortOverdueStayInterviewEmployees(employees)
     .map((employee) => formatEmployeeDueDateLine(employee))
     .filter(Boolean);
+}
+
+function buildPerformanceReviewDueKpiLines(
+  candidates: PerformanceReviewDueCandidate[]
+): string[] {
+  return candidates.map((candidate) => {
+    const dueLabel = formatDueDateLabel(parseDueDate(candidate.dueDate), candidate.dueDate);
+    const timing =
+      candidate.severity === 'overdue'
+        ? `${Math.abs(candidate.daysUntilDue)}d overdue`
+        : `due in ${candidate.daysUntilDue}d`;
+    return `${candidate.employeeName} · ${candidate.reviewTypeLabel} · ${dueLabel} (${timing})`;
+  });
+}
+
+function updatePerformanceReviewsDueKpiSubtext(
+  candidates: PerformanceReviewDueCandidate[]
+): void {
+  const total = candidates.length;
+  const overdue = candidates.filter((candidate) => candidate.severity === 'overdue').length;
+  const dueSoon = total - overdue;
+
+  if (!total) {
+    setKpiText('kPerformanceReviewsDueSub', 'No 90-day or annual reviews due right now');
+    return;
+  }
+
+  if (overdue && dueSoon) {
+    setKpiText(
+      'kPerformanceReviewsDueSub',
+      `${overdue} overdue · ${dueSoon} due within 7 days`
+    );
+    return;
+  }
+
+  if (overdue) {
+    setKpiText(
+      'kPerformanceReviewsDueSub',
+      `${overdue} overdue performance review${overdue === 1 ? '' : 's'}`
+    );
+    return;
+  }
+
+  setKpiText(
+    'kPerformanceReviewsDueSub',
+    `${dueSoon} performance review${dueSoon === 1 ? '' : 's'} due within 7 days`
+  );
+}
+
+export async function refreshPerformanceReviewsDueKpi(): Promise<void> {
+  const card = document.getElementById('cardPerformanceReviewsDue');
+  if (!card) return;
+
+  if (!isAdminUser() && !isSupervisorUser()) {
+    card.classList.add('hidden');
+    return;
+  }
+
+  card.classList.remove('hidden');
+
+  try {
+    const candidates = await buildPerformanceReviewDueCandidates();
+    const overdueCount = candidates.filter((candidate) => candidate.severity === 'overdue').length;
+
+    setKpiText('kPerformanceReviewsDue', candidates.length);
+    updatePerformanceReviewsDueKpiSubtext(candidates);
+
+    card.classList.remove('good', 'warn', 'alert');
+    if (overdueCount > 0) {
+      card.classList.add('alert');
+    } else if (candidates.length > 0) {
+      card.classList.add('warn');
+    } else {
+      card.classList.add('good');
+    }
+
+    const info = safeGet('kPerformanceReviewsDueInfo');
+    if (info) {
+      const lines = buildPerformanceReviewDueKpiLines(candidates);
+      info.title = lines.length
+        ? `90-day reviews apply to hires on or after Mar 1, 2026. Due now: ${lines.join('; ')}`
+        : '90-day reviews apply to hires on or after Mar 1, 2026. No performance reviews overdue or due within 7 days.';
+    }
+
+    setKpiCardTooltip(
+      'cardPerformanceReviewsDue',
+      buildPerformanceReviewDueKpiLines(candidates),
+      'No performance reviews due right now'
+    );
+  } catch (err) {
+    console.warn('[KPIs] Could not load performance reviews due:', err);
+    setKpiText('kPerformanceReviewsDue', '—');
+    setKpiText('kPerformanceReviewsDueSub', 'Could not load performance review due counts');
+    card.classList.remove('good', 'warn', 'alert');
+  }
 }
 
 function applyReviewImpactPlayers(
@@ -909,6 +1010,8 @@ export function renderKpiEmployeeMetrics(): void {
   updateTurnoverRateKpis(employees);
   buildKpiHoverDetails();
 
+  void refreshPerformanceReviewsDueKpi();
+
   if (typeof window.renderDashboardCharts === 'function') {
     window.renderDashboardCharts(employees);
   }
@@ -1305,6 +1408,8 @@ export async function loadSummaryMetrics(): Promise<void> {
 
     renderKpiEmployeeMetrics();
 
+    await refreshPerformanceReviewsDueKpi();
+
     if (typeof window.loadExecutiveInsight === 'function') {
       window.loadExecutiveInsight();
     }
@@ -1352,6 +1457,8 @@ export async function loadSummaryMetrics(): Promise<void> {
       window.renderKpiEmployeeMetrics();
     }
 
+    void refreshPerformanceReviewsDueKpi();
+
     showKpiRetryBanner('Some KPI metrics could not be loaded from Supabase.', () => loadSummaryMetrics());
   }
 }
@@ -1386,5 +1493,6 @@ window.buildKpiHoverDetails = buildKpiHoverDetails;
 window.initKpiHoverUi = initKpiHoverUi;
 window.syncKpiCardTooltip = syncKpiCardTooltip;
 window.renderKpiEmployeeMetrics = renderKpiEmployeeMetrics;
+window.refreshPerformanceReviewsDueKpi = refreshPerformanceReviewsDueKpi;
 window.loadSummaryMetrics = loadSummaryMetrics;
 window.refreshTurnoverKpisFromSupabase = refreshTurnoverKpisFromSupabase;

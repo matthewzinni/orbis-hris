@@ -502,6 +502,22 @@
             <div class="kpi-value" id="kReviewsDue">—</div>
             <div class="kpi-sub">Active employees with overdue stay interviews</div>
           </div>
+          <div class="kpi-card warn" id="cardPerformanceReviewsDue">
+            <div class="kpi-label" style="display: flex; align-items: center; gap: 6px">
+              Performance Reviews Due
+              <span
+                id="kPerformanceReviewsDueInfo"
+                class="info-icon"
+                title="90-day and annual performance reviews overdue or due within 7 days."
+                style="cursor: help; font-size: 0.8rem; color: var(--muted)"
+                >ⓘ</span
+              >
+            </div>
+            <div class="kpi-value" id="kPerformanceReviewsDue">—</div>
+            <div class="kpi-sub" id="kPerformanceReviewsDueSub">
+              90-day and annual reviews overdue or due soon
+            </div>
+          </div>
           <div class="kpi-card good" id="cardImpactPlayers">
             <div class="kpi-label">Impact Players</div>
             <div class="kpi-value" id="kImpactPlayers">—</div>
@@ -1071,6 +1087,17 @@
               <div class="card-body">
                 <div id="myTasksPendingList" class="employee-portal-task-list">
                   <div class="muted">Loading tasks…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card hidden" id="performanceReviewSupervisorNotifyCard">
+              <div class="card-header">Supervisor review follow-up</div>
+              <div class="card-body">
+                <p class="muted employee-portal-help">
+                  Email each supervisor a list of 90-day and annual performance reviews due on their team.
+                </p>
+                <div id="performanceReviewSupervisorNotifyList" class="performance-review-supervisor-notify-list">
+                  <div class="muted">Loading supervisor review lists…</div>
                 </div>
               </div>
             </div>
@@ -2388,6 +2415,10 @@ Tyndale,vendor,,,,</pre>
               <div class="detail-card">
                 <div class="detail-label">Stay interviews due</div>
                 <div class="detail-value" id="reportsKpiReviewsDue">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Performance reviews due</div>
+                <div class="detail-value" id="reportsKpiPerformanceReviewsDue">—</div>
               </div>
               <div class="detail-card">
                 <div class="detail-label">At-risk employees</div>

@@ -172,26 +172,38 @@ function bindAdminAttentionActions(): void {
   });
 }
 
+function renderAdminAttentionGroup(title: string, items: HrInboxItem[]): string {
+  if (!items.length) return '';
+
+  return `
+    <div class="employee-portal-attention-group">
+      <h3 class="employee-portal-attention-group-title">${esc(title)}</h3>
+      ${items.map(renderAdminAttentionRow).join('')}
+    </div>
+  `;
+}
+
 function renderPendingTasksList(
   adminItems: HrInboxItem[],
   personalItems: EmployeeTaskItem[]
 ): string {
   const performanceReviewItems = adminItems.filter((item) => item.kind === 'performance_review');
-  const otherAdminItems = adminItems.filter((item) => item.kind !== 'performance_review');
+  const benefitsItems = adminItems.filter((item) => item.kind === 'benefits_eligibility');
+  const payrollItems = adminItems.filter((item) => item.kind === 'payroll_handoff');
+  const otherAdminItems = adminItems.filter(
+    (item) =>
+      item.kind !== 'performance_review' &&
+      item.kind !== 'benefits_eligibility' &&
+      item.kind !== 'payroll_handoff'
+  );
 
-  const rows: string[] = [];
-
-  if (performanceReviewItems.length) {
-    rows.push(`
-      <div class="employee-portal-attention-group">
-        <h3 class="employee-portal-attention-group-title">Performance Reviews Due</h3>
-        ${performanceReviewItems.map(renderAdminAttentionRow).join('')}
-      </div>
-    `);
-  }
-
-  rows.push(...otherAdminItems.map(renderAdminAttentionRow));
-  rows.push(...personalItems.map((item) => renderTaskRow(item, true)));
+  const rows: string[] = [
+    renderAdminAttentionGroup('Performance Reviews Due', performanceReviewItems),
+    renderAdminAttentionGroup('Benefits Eligibility', benefitsItems),
+    renderAdminAttentionGroup('Payroll Handoffs', payrollItems),
+    ...otherAdminItems.map(renderAdminAttentionRow),
+    ...personalItems.map((item) => renderTaskRow(item, true)),
+  ].filter(Boolean);
 
   if (!rows.length) {
     return '<div class="employee-portal-task-empty">You are caught up — no pending tasks or acknowledgments.</div>';
@@ -571,6 +583,10 @@ export async function loadMyTasksPortal(): Promise<void> {
 
   if ((isAdminUser() || isSupervisorUser()) && typeof window.loadHrInbox === 'function') {
     void window.loadHrInbox();
+  }
+
+  if (typeof window.loadPerformanceReviewSupervisorNotify === 'function') {
+    void window.loadPerformanceReviewSupervisorNotify();
   }
 
   let employeeId = getLinkedEmployeeId();

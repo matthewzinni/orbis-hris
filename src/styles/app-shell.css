@@ -1094,6 +1094,10 @@ body.authenticated #appView {
   border-left-color: var(--accent-warn);
 }
 
+#cardPerformanceReviewsDue {
+  border-left-color: var(--accent-warn);
+}
+
 #cardImpactPlayers {
   border-left-color: var(--accent-success);
 }

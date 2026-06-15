@@ -1,7 +1,11 @@
 import {
-  employeeMatchesSupervisorAccess,
+  employeeMatchesPerformanceReviewScope,
+  getAccessApprovalStatus,
+  hasOrgWidePerformanceReviewAccess,
   isAdminUser,
   isSupervisorUser,
+  supervisorNameMatches,
+  type UserAccessRow,
 } from './access';
 import {
   daysUntilDate,
@@ -314,9 +318,137 @@ export function getPerformanceReviewScopedEmployees(
 
   return employees.filter((employee) => {
     if (!isActiveDashboardEmployee(employee)) return false;
-    if (isAdminUser()) return true;
-    return employeeMatchesSupervisorAccess(employee);
+    if (hasOrgWidePerformanceReviewAccess()) return true;
+    return employeeMatchesPerformanceReviewScope(employee);
   });
+}
+
+export type SupervisorPerformanceReviewDueGroup = {
+  supervisorName: string;
+  supervisorEmail: string | null;
+  items: PerformanceReviewDueCandidate[];
+};
+
+export function groupPerformanceReviewDueBySupervisor(
+  candidates: PerformanceReviewDueCandidate[]
+): Omit<SupervisorPerformanceReviewDueGroup, 'supervisorEmail'>[] {
+  const groups = new Map<string, PerformanceReviewDueCandidate[]>();
+
+  candidates.forEach((candidate) => {
+    const supervisorName = String(candidate.supervisor || '').trim() || 'Unassigned';
+    const bucket = groups.get(supervisorName) || [];
+    bucket.push(candidate);
+    groups.set(supervisorName, bucket);
+  });
+
+  return Array.from(groups.entries())
+    .map(([supervisorName, items]) => ({
+      supervisorName,
+      items: [...items].sort((left, right) => {
+        const severityRank = { overdue: 0, due_soon: 1 };
+        const rank = severityRank[left.severity] - severityRank[right.severity];
+        if (rank !== 0) return rank;
+        return left.employeeName.localeCompare(right.employeeName, undefined, {
+          sensitivity: 'base',
+        });
+      }),
+    }))
+    .sort((left, right) => {
+      const leftOverdue = left.items.filter((item) => item.severity === 'overdue').length;
+      const rightOverdue = right.items.filter((item) => item.severity === 'overdue').length;
+      if (leftOverdue !== rightOverdue) return rightOverdue - leftOverdue;
+      return left.supervisorName.localeCompare(right.supervisorName, undefined, {
+        sensitivity: 'base',
+      });
+    });
+}
+
+function normalizeNameKey(name: string): string {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+export async function loadSupervisorEmailLookup(): Promise<Map<string, string>> {
+  const lookup = new Map<string, string>();
+
+  const { data: accessRows, error: accessError } = await supabaseClient
+    .from('user_access')
+    .select('email, display_name, supervisor_name, approval_status');
+
+  if (accessError) {
+    console.warn('[PerformanceReviewDue] Could not load supervisor emails:', accessError.message);
+  }
+
+  (accessRows || []).forEach((row) => {
+    if (getAccessApprovalStatus(row as UserAccessRow) !== 'approved') return;
+    const email = String((row as { email?: string }).email || '')
+      .trim()
+      .toLowerCase();
+    if (!email) return;
+
+    const displayName = String((row as { display_name?: string }).display_name || '').trim();
+    const supervisorName = String((row as { supervisor_name?: string }).supervisor_name || '').trim();
+
+    [displayName, supervisorName].forEach((name) => {
+      if (!name) return;
+      lookup.set(normalizeNameKey(name), email);
+    });
+  });
+
+  if (!getEmployees().length) {
+    try {
+      await loadEmployees();
+    } catch (err) {
+      console.warn('[PerformanceReviewDue] Could not load employees for supervisor emails:', err);
+    }
+  }
+
+  getEmployees().forEach((employee) => {
+    const name = employeeDisplayName(employee as EmployeeLike);
+    const email = String(
+      (employee as EmployeeLike).work_email || (employee as EmployeeLike).workEmail || ''
+    )
+      .trim()
+      .toLowerCase();
+    if (!name || !email) return;
+    lookup.set(normalizeNameKey(name), email);
+  });
+
+  return lookup;
+}
+
+export function resolveSupervisorEmail(
+  supervisorName: string,
+  lookup: Map<string, string>
+): string | null {
+  const trimmed = String(supervisorName || '').trim();
+  if (!trimmed || trimmed === 'Unassigned' || trimmed === '—') return null;
+
+  const direct = lookup.get(normalizeNameKey(trimmed));
+  if (direct) return direct;
+
+  for (const [name, email] of lookup.entries()) {
+    if (supervisorNameMatches(trimmed, name)) {
+      return email;
+    }
+  }
+
+  return null;
+}
+
+export async function buildSupervisorPerformanceReviewDueGroups(): Promise<
+  SupervisorPerformanceReviewDueGroup[]
+> {
+  const candidates = await buildPerformanceReviewDueCandidates();
+  const grouped = groupPerformanceReviewDueBySupervisor(candidates);
+  const emailLookup = await loadSupervisorEmailLookup();
+
+  return grouped.map((group) => ({
+    ...group,
+    supervisorEmail: resolveSupervisorEmail(group.supervisorName, emailLookup),
+  }));
 }
 
 export function formatPerformanceReviewDueDetail(candidate: PerformanceReviewDueCandidate): string {

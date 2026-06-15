@@ -62,6 +62,7 @@ import './modules/leaveRequests';
 import './modules/employeePortal';
 import './modules/myProfilePortal';
 import './modules/myTasksPortal';
+import './modules/performanceReviewSupervisorNotify';
 import { bootErSigningFromUrl } from './modules/erSigningModal';
 import './modules/myDirectoryPortal';
 import './modules/employees';

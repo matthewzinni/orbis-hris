@@ -3,7 +3,13 @@
  */
 
 import { supabaseClient } from './supabaseClient';
-import { employeeMatchesSupervisorAccess, isAdminUser, isSupervisorUser } from './access';
+import {
+  employeeMatchesPerformanceReviewScope,
+  employeeMatchesSupervisorAccess,
+  hasOrgWidePerformanceReviewAccess,
+  isAdminUser,
+  isSupervisorUser,
+} from './access';
 import {
   loadPolicyCampaignInboxAssignments,
   type PolicyCampaign,
@@ -136,6 +142,11 @@ function resolveEmployee(refId: string): EmployeeLike | undefined {
   });
 }
 
+/** Benefits + payroll handoffs on Tasks are HR-leadership only (Matthew/Trent/Brent). */
+function canSeeOrgWideAdminTaskItems(): boolean {
+  return isAdminUser() && hasOrgWidePerformanceReviewAccess();
+}
+
 function severityFromDays(days: number | null, fallback: HrInboxSeverity = 'info'): HrInboxSeverity {
   if (days === null) return fallback;
   if (days < 0) return 'overdue';
@@ -243,10 +254,13 @@ export async function buildAdminTasksAttentionItems(): Promise<HrInboxItem[]> {
     return sortHrInboxItems(await reviewItemsPromise);
   }
 
-  const [payrollHandoffs, reviewItems] = await Promise.all([
-    loadPendingPayrollHandoffs(),
-    reviewItemsPromise,
-  ]);
+  const reviewItems = await reviewItemsPromise;
+
+  if (!canSeeOrgWideAdminTaskItems()) {
+    return sortHrInboxItems(reviewItems);
+  }
+
+  const payrollHandoffs = await loadPendingPayrollHandoffs();
   const activeEmployees = getActiveEmployees() as EmployeeLike[];
 
   return sortHrInboxItems([
@@ -768,6 +782,8 @@ function collectPayrollHandoffItems(handoffs: PayrollHandoffRecord[]): HrInboxIt
     if (handoff.status !== 'pending') return;
 
     const employee = resolveEmployee(handoff.employee_id);
+    if (!employeeMatchesPerformanceReviewScope(employee ?? null)) return;
+
     const employeeId = employee ? drawerEmployeeId(employee) : handoff.employee_id;
     const name = employee ? employeeDisplayName(employee) : handoff.employee_id;
 
