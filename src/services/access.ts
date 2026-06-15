@@ -103,6 +103,58 @@ export function setCurrentUserAccess(access: UserAccessRow | null, role?: string
   }
   window.currentUserRole = currentUserRole;
   window.currentUserAccess = currentUserAccess;
+  updateTopbarSignedInLabel();
+}
+
+export function resolveSignedInUserLabel(
+  access: UserAccessRow | null = currentUserAccess,
+  fallbackEmail = ''
+): string {
+  const displayName = String(access?.display_name || '').trim();
+  if (displayName) return displayName;
+
+  const accessEmail = String(access?.email || '').trim();
+  if (accessEmail) return accessEmail;
+
+  const authEmail = String(fallbackEmail || (window as { currentUserEmail?: string }).currentUserEmail || '')
+    .trim();
+  if (authEmail) return authEmail;
+
+  return '';
+}
+
+/** Keep topbar "Signed in as" in sync with auth + user_access. */
+export function updateTopbarSignedInLabel(fallbackEmail = ''): void {
+  const label = resolveSignedInUserLabel(currentUserAccess, fallbackEmail) || '—';
+  const el = safeGet('currentUserEmail');
+  if (el) {
+    el.textContent = label;
+    const email = String(
+      currentUserAccess?.email ||
+        fallbackEmail ||
+        (window as { currentUserEmail?: string }).currentUserEmail ||
+        ''
+    )
+      .trim()
+      .toLowerCase();
+    if (email && label.toLowerCase() !== email) {
+      el.setAttribute('title', email);
+    } else {
+      el.removeAttribute('title');
+    }
+  }
+
+  const cacheEmail = String(
+    currentUserAccess?.email ||
+      fallbackEmail ||
+      (window as { currentUserEmail?: string }).currentUserEmail ||
+      ''
+  )
+    .trim()
+    .toLowerCase();
+  if (cacheEmail) {
+    (window as { currentUserEmail?: string }).currentUserEmail = cacheEmail;
+  }
 }
 
 export async function fetchUserAccessRowForEmail(email: string): Promise<UserAccessRow | null> {
@@ -160,6 +212,10 @@ export async function getUserRole(): Promise<string | null> {
     const userEmail = String(user.email || '')
       .trim()
       .toLowerCase();
+
+    if (userEmail) {
+      (window as { currentUserEmail?: string }).currentUserEmail = userEmail;
+    }
 
     currentUserAccess = null;
 
@@ -223,18 +279,21 @@ export async function getUserRole(): Promise<string | null> {
     if (roles.includes('admin')) {
       currentUserRole = 'admin';
       window.currentUserRole = currentUserRole;
+      updateTopbarSignedInLabel(userEmail);
       return 'admin';
     }
 
     if (roles.includes('supervisor')) {
       currentUserRole = 'supervisor';
       window.currentUserRole = currentUserRole;
+      updateTopbarSignedInLabel(userEmail);
       return 'supervisor';
     }
 
     currentUserRole = '';
     window.currentUserRole = currentUserRole;
     window.currentUserAccess = null;
+    updateTopbarSignedInLabel();
     return null;
   } catch (err) {
     console.error(err);
@@ -740,11 +799,14 @@ export function applyAdminDashboardView(): void {
 }
 
 export function clearOrbisSessionState(): void {
+  delete (window as { currentUserEmail?: string }).currentUserEmail;
   setCurrentUserAccess(null, 'user');
   window.EMPLOYEES = [];
   window.ALL_EMPLOYEES = [];
   window.currentEmployeeRoster = [];
   window.currentFilteredEmployees = [];
+  const signedInEl = safeGet('currentUserEmail');
+  if (signedInEl) signedInEl.textContent = '—';
   applyAdminDashboardView();
 }
 
@@ -1414,6 +1476,12 @@ declare global {
     clearOrbisSessionState?: () => void;
     currentFilteredEmployees?: unknown[];
     isActiveDashboardEmployee?: (employee: EmployeeLike) => boolean;
+    updateTopbarSignedInLabel?: (fallbackEmail?: string) => void;
+    resolveSignedInUserLabel?: (
+      access?: UserAccessRow | null,
+      fallbackEmail?: string
+    ) => string;
+    currentUserEmail?: string;
     applyRoleLocks?: () => void;
     applyAddEmployeeAsCandidateAccess?: () => void;
     applyRolePermissions?: () => void;
@@ -1441,6 +1509,8 @@ declare global {
 window.currentUserRole = currentUserRole;
 window.currentUserAccess = currentUserAccess;
 window.getUserRole = getUserRole;
+window.updateTopbarSignedInLabel = updateTopbarSignedInLabel;
+window.resolveSignedInUserLabel = resolveSignedInUserLabel;
 window.isAdminUser = isAdminUser;
 window.canManageEmployeeRecords = canManageEmployeeRecords;
 window.isSupervisorUser = isSupervisorUser;
