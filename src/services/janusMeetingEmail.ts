@@ -1,8 +1,14 @@
+import { buildMailtoUrl } from '../utils/mailto';
 import type { JanusAccount, JanusContact } from '../types/janusTypes';
-import { janusContactDisplayName } from '../types/janusTypes';
+import { formatJanusDateLabel, janusContactDisplayName } from '../types/janusTypes';
+import {
+  openJanusMailto,
+  resolveJanusSenderName,
+  truncateForJanusMailto,
+} from './janusEmailCommon';
 
 export type JanusMeetingEmailDraft = {
-  account: JanusAccount;
+  account: Pick<JanusAccount, 'name'>;
   contact?: JanusContact | null;
   meetingDate?: string;
   meetingTime?: string;
@@ -11,18 +17,28 @@ export type JanusMeetingEmailDraft = {
   notes?: string;
 };
 
+function formatMeetingWhen(meetingDate: string, meetingTime: string): string {
+  const dateLabel = meetingDate ? formatJanusDateLabel(meetingDate) : '';
+  const timeLabel = String(meetingTime || '').trim();
+  if (dateLabel && timeLabel) return `${dateLabel} at ${timeLabel}`;
+  if (dateLabel) return dateLabel;
+  if (timeLabel) return timeLabel;
+  return '[date and time]';
+}
+
 export function buildJanusMeetingRequestMailto(draft: JanusMeetingEmailDraft): string {
   const contact = draft.contact;
   const email = String(contact?.email || '').trim();
   const contactName = contact ? janusContactDisplayName(contact) : '';
-  const accountName = String(draft.account.name || '').trim();
+  const accountName = String(draft.account.name || '').trim() || 'your team';
   const title = String(draft.title || '').trim() || `Meeting with ${accountName}`;
-  const meetingDate = String(draft.meetingDate || '').trim();
-  const meetingTime = String(draft.meetingTime || '').trim();
-  const whenParts = [meetingDate, meetingTime].filter(Boolean);
-  const whenText = whenParts.length ? whenParts.join(' at ') : '[date and time]';
+  const whenText = formatMeetingWhen(
+    String(draft.meetingDate || '').trim(),
+    String(draft.meetingTime || '').trim()
+  );
   const attendees = String(draft.attendees || '').trim();
-  const notes = String(draft.notes || '').trim();
+  const notes = truncateForJanusMailto(String(draft.notes || '').trim());
+  const senderName = resolveJanusSenderName();
 
   const subject = `Meeting request — ${title} | BTW Global`;
   const greetingName = contactName.split(' ')[0] || 'there';
@@ -30,7 +46,7 @@ export function buildJanusMeetingRequestMailto(draft: JanusMeetingEmailDraft): s
   const lines = [
     `Hi ${greetingName},`,
     '',
-    `I'd like to schedule time with ${accountName} to discuss ${title.toLowerCase()}.`,
+    `I'd like to schedule time with ${accountName} to discuss ${title}.`,
     `Proposed schedule: ${whenText}.`,
   ];
 
@@ -47,22 +63,14 @@ export function buildJanusMeetingRequestMailto(draft: JanusMeetingEmailDraft): s
     lines.push('', 'Agenda / notes:', notes);
   }
 
-  lines.push('', 'Thank you,', '[Your name]');
+  lines.push('', 'Thank you,', senderName);
 
-  const mailto = email ? `mailto:${email}` : 'mailto:';
-  return `${mailto}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(lines.join('\n'))}`;
+  return buildMailtoUrl(email || '', {
+    subject,
+    body: lines.join('\n'),
+  });
 }
 
 export function openJanusMeetingRequestEmail(draft: JanusMeetingEmailDraft): void {
-  const mailtoUrl = buildJanusMeetingRequestMailto(draft);
-  try {
-    const link = document.createElement('a');
-    link.href = mailtoUrl;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  } catch {
-    window.location.assign(mailtoUrl);
-  }
+  openJanusMailto(buildJanusMeetingRequestMailto(draft));
 }

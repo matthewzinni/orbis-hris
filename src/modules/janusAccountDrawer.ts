@@ -21,7 +21,13 @@ import {
   janusContactDisplayName,
   janusFormatAddress,
 } from '../types/janusTypes';
-import { initJanusAccountPanels, refreshJanusAccountPanels, resetJanusMeetingEditor, syncJanusPanelsEditAccess } from './janusAccountPanels';
+import { initJanusAccountPanels, refreshJanusAccountPanels, resetJanusMeetingEditor, syncJanusMeetingEmailContext, syncJanusPanelsEditAccess, clearJanusMeetingEmailContext } from './janusAccountPanels';
+import {
+  clearJanusContactEmailCache,
+  launchJanusContactMeetingRequestEmail,
+  launchJanusContactOutreachEmail,
+  syncJanusContactEmailCache,
+} from './janusContactEmailUi';
 import { initJanusMeetingDictation, stopJanusMeetingDictation } from './dictation';
 
 declare global {
@@ -197,8 +203,10 @@ function syncJanusContactFormAccess(): void {
 
   const contactSave = safeGet<HTMLButtonElement>('saveJanusContactBtn');
   const contactCancel = safeGet<HTMLButtonElement>('cancelJanusContactBtn');
+  const contactMeetingEmail = safeGet<HTMLButtonElement>('janusEmailContactMeetingBtn');
   if (contactSave) contactSave.classList.toggle('hidden', !editable);
   if (contactCancel) contactCancel.classList.toggle('hidden', !editable);
+  if (contactMeetingEmail) contactMeetingEmail.classList.toggle('hidden', !editable);
 }
 
 function syncJanusAccountFormAccess(): void {
@@ -287,7 +295,17 @@ function renderContactsList(contacts: JanusContact[]): void {
   list.innerHTML = contacts
     .map((contact) => {
       const address = janusFormatAddress(contact);
-      const actions = canEditJanus()
+      const emailActions = contact.email
+        ? `<div class="janus-contact-actions">
+            <button type="button" class="button soft sm" data-janus-email-contact="${esc(contact.id)}">Email</button>
+            ${
+              canEditJanus()
+                ? `<button type="button" class="button soft sm" data-janus-email-contact-meeting="${esc(contact.id)}">Meeting request</button>`
+                : ''
+            }
+          </div>`
+        : '';
+      const manageActions = canEditJanus()
         ? `<div class="janus-contact-actions">
             <button type="button" class="button soft sm" data-janus-edit-contact="${esc(contact.id)}">Edit</button>
             <button type="button" class="button soft sm" data-janus-delete-contact="${esc(contact.id)}">Delete</button>
@@ -309,7 +327,10 @@ function renderContactsList(contacts: JanusContact[]): void {
             ${address ? `<div class="muted janus-contact-address">${esc(address)}</div>` : ''}
             ${contact.notes ? `<div class="janus-contact-notes">${esc(contact.notes)}</div>` : ''}
           </div>
-          ${actions}
+          <div class="janus-contact-row-side">
+            ${emailActions}
+            ${manageActions}
+          </div>
         </article>
       `;
     })
@@ -342,6 +363,9 @@ async function refreshContactsPanel(): Promise<void> {
   if (!currentJanusAccountId) return;
   const contacts = await fetchJanusContacts(currentJanusAccountId);
   renderContactsList(contacts);
+  const account = await fetchJanusAccount(currentJanusAccountId);
+  syncJanusMeetingEmailContext(account, contacts);
+  syncJanusContactEmailCache(account?.name || '', contacts);
 }
 
 export function isJanusAccountDrawerOpen(): boolean {
@@ -376,6 +400,8 @@ export function closeJanusAccountDrawer(): void {
   currentJanusAccountId = null;
   editingContactId = null;
   clearContactForm();
+  clearJanusMeetingEmailContext();
+  clearJanusContactEmailCache();
 }
 
 export async function openJanusAccountDrawer(
@@ -402,6 +428,8 @@ export async function openJanusAccountDrawer(
   setJanusDrawerTab(resolvedTab);
   clearContactForm();
   resetJanusMeetingEditor();
+  clearJanusMeetingEmailContext();
+  clearJanusContactEmailCache();
 
   const account = accountId ? await fetchJanusAccount(accountId) : null;
   if (accountId && !account) {
@@ -451,6 +479,12 @@ export async function saveJanusAccountRecord(): Promise<void> {
       currentJanusAccountId = created.id;
       fillAccountForm(created);
       showToast('Account created.');
+    }
+
+    if (currentJanusAccountId) {
+      const account = await fetchJanusAccount(currentJanusAccountId);
+      const contacts = await fetchJanusContacts(currentJanusAccountId);
+      syncJanusMeetingEmailContext(account, contacts);
     }
 
     if (typeof window.loadJanus === 'function') {
@@ -575,6 +609,14 @@ function bindJanusAccountDrawer(): void {
     clearContactForm();
   });
 
+  safeGet('janusEmailContactBtn')?.addEventListener('click', () => {
+    launchJanusContactOutreachEmail();
+  });
+
+  safeGet('janusEmailContactMeetingBtn')?.addEventListener('click', () => {
+    launchJanusContactMeetingRequestEmail();
+  });
+
   document.querySelectorAll<HTMLButtonElement>('[data-janus-drawer-tab]').forEach((button) => {
     button.addEventListener('click', () => {
       const tab = button.dataset.janusDrawerTab as typeof janusDrawerTab;
@@ -585,6 +627,23 @@ function bindJanusAccountDrawer(): void {
 
   safeGet('janusContactsList')?.addEventListener('click', (event) => {
     const target = event.target as Element | null;
+
+    const emailBtn = target?.closest<HTMLElement>('[data-janus-email-contact]');
+    if (emailBtn) {
+      const contactId = emailBtn.dataset.janusEmailContact || '';
+      if (!contactId) return;
+      launchJanusContactOutreachEmail({ contactId });
+      return;
+    }
+
+    const meetingEmailBtn = target?.closest<HTMLElement>('[data-janus-email-contact-meeting]');
+    if (meetingEmailBtn) {
+      const contactId = meetingEmailBtn.dataset.janusEmailContactMeeting || '';
+      if (!contactId) return;
+      launchJanusContactMeetingRequestEmail({ contactId });
+      return;
+    }
+
     const editBtn = target?.closest<HTMLElement>('[data-janus-edit-contact]');
     if (editBtn) {
       const contactId = editBtn.dataset.janusEditContact || '';

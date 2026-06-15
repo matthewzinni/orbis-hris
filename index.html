@@ -2133,9 +2133,9 @@
                       </ol>
                       <h4>Schedule via email</h4>
                       <ol>
-                        <li>Open the account → <strong>Meetings</strong> tab.</li>
-                        <li>Enter date, time, title, and attendees.</li>
-                        <li>Click <strong>Email meeting request</strong> (requires a contact with an email on that account).</li>
+                        <li>Open the account → <strong>Meetings</strong> or <strong>Contacts</strong> tab.</li>
+                        <li>Enter meeting details or open a contact with an email address.</li>
+                        <li>Click <strong>Email meeting request</strong> or <strong>Email contact</strong> on a contact row.</li>
                       </ol>
                     </section>
 
@@ -3270,6 +3270,15 @@ Tyndale,vendor,,,,</pre>
                     <label for="janusContactNotesInput">Notes</label>
                     <textarea id="janusContactNotesInput" rows="3" data-janus-contact-field placeholder="Personal context, preferences…"></textarea>
                   </div>
+                  <div class="candidate-actions-row">
+                    <button class="button primary" type="button" id="janusEmailContactBtn">
+                      Email contact
+                    </button>
+                    <button class="button soft" type="button" id="janusEmailContactMeetingBtn">
+                      Email meeting request
+                    </button>
+                    <span class="muted">Opens your email client with a pre-filled message to this contact.</span>
+                  </div>
                   <div class="button-row">
                     <button class="button primary" type="button" id="saveJanusContactBtn">Save contact</button>
                     <button class="button soft" type="button" id="cancelJanusContactBtn">Clear</button>
@@ -3328,6 +3337,7 @@ Tyndale,vendor,,,,</pre>
                   <div class="button-row">
                     <button class="button primary" type="button" id="janusSaveMeetingBtn">Save meeting</button>
                     <button class="button soft hidden" type="button" id="janusClearMeetingBtn">New meeting</button>
+                    <button class="button soft hidden" type="button" id="janusDeleteMeetingBtn">Delete meeting</button>
                   </div>
                 </div>
               </div>

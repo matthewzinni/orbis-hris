@@ -254,6 +254,7 @@ export async function getUserRole(): Promise<string | null> {
         if (accessRole === 'supervisor') {
           await ensureSupervisorEmployeeScope();
         }
+        updateTopbarSignedInLabel(userEmail);
         return accessRole;
       }
     }

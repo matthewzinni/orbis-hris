@@ -18,10 +18,11 @@ import {
   fetchJanusContacts,
   fetchJanusDocuments,
   fetchJanusMeetings,
+  deleteJanusMeeting,
   updateJanusMeeting,
 } from '../services/janusStore';
 import { showOrbisConfirm } from '../ui/confirmModal';
-import type { JanusActivity, JanusDocument, JanusMeeting } from '../types/janusTypes';
+import type { JanusAccount, JanusActivity, JanusContact, JanusDocument, JanusMeeting } from '../types/janusTypes';
 import {
   formatJanusDateLabel,
   janusActivityTypeLabel,
@@ -99,7 +100,12 @@ function renderMeetingsList(meetings: JanusMeeting[]): void {
           }
         </div>
         <div class="janus-meeting-row-actions">
-          <button type="button" class="button soft sm" data-janus-open-meeting="${esc(meeting.id)}">Open</button>
+          <button type="button" class="button soft sm" data-janus-open-meeting-id="${esc(meeting.id)}">Open</button>
+          ${
+            canEditJanus()
+              ? `<button type="button" class="button soft sm" data-janus-delete-meeting="${esc(meeting.id)}">Delete</button>`
+              : ''
+          }
         </div>
       </article>
     `
@@ -239,16 +245,98 @@ function updateMeetingFormUi(): void {
     saveBtn.textContent = isEditing ? 'Update meeting' : 'Save meeting';
   }
   clearBtn?.classList.toggle('hidden', !isEditing);
+  safeGet<HTMLButtonElement>('janusDeleteMeetingBtn')?.classList.toggle('hidden', !isEditing || !canEditJanus());
 }
 
 export function resetJanusMeetingEditor(): void {
   clearMeetingForm();
 }
 
+export function clearJanusMeetingEmailContext(): void {
+  cachedMeetingAccount = null;
+  cachedMeetingContacts = [];
+}
+
 let panelsBound = false;
 let editingMeetingId: string | null = null;
+let cachedMeetingAccount: JanusAccount | null = null;
+let cachedMeetingContacts: JanusContact[] = [];
 const documentCache = new Map<string, JanusDocument>();
 const meetingCache = new Map<string, JanusMeeting>();
+
+export function syncJanusMeetingEmailContext(
+  account: JanusAccount | null,
+  contacts: JanusContact[]
+): void {
+  cachedMeetingAccount = account;
+  cachedMeetingContacts = contacts;
+}
+
+function resolveMeetingEmailContact(): JanusContact | null {
+  const primary =
+    cachedMeetingContacts.find((contact) => contact.is_primary && contact.email) ||
+    cachedMeetingContacts.find((contact) => contact.email) ||
+    null;
+  if (primary?.email) return primary;
+
+  const attendees = safeGet<HTMLInputElement>('janusMeetingAttendeesInput')?.value || '';
+  const emailMatch = attendees.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+  if (!emailMatch) return null;
+
+  return {
+    id: '',
+    account_id: cachedMeetingAccount?.id || '',
+    first_name: '',
+    last_name: '',
+    title: null,
+    email: emailMatch[0],
+    phone: null,
+    address_street: null,
+    address_city: null,
+    address_state: null,
+    address_zip: null,
+    notes: null,
+    is_primary: false,
+    copper_id: null,
+    created_at: '',
+    updated_at: '',
+  };
+}
+
+export function launchJanusMeetingRequestEmail(): boolean {
+  if (!canEditJanus()) {
+    showToast('Read-only access.', 'error');
+    return false;
+  }
+
+  const accountName =
+    safeGet<HTMLInputElement>('janusAccountNameInput')?.value?.trim() ||
+    cachedMeetingAccount?.name ||
+    '';
+  if (!accountName) {
+    showToast('Save the account before emailing a meeting request.', 'error');
+    return false;
+  }
+
+  const contact = resolveMeetingEmailContact();
+  if (!contact?.email) {
+    showToast('Add a contact with an email on this account, or include an email in Attendees.', 'error');
+    return false;
+  }
+
+  openJanusMeetingRequestEmail({
+    account: { name: accountName },
+    contact,
+    meetingDate: safeGet<HTMLInputElement>('janusMeetingDateInput')?.value || '',
+    meetingTime: safeGet<HTMLInputElement>('janusMeetingTimeInput')?.value || '',
+    title: safeGet<HTMLInputElement>('janusMeetingTitleInput')?.value || '',
+    attendees: safeGet<HTMLInputElement>('janusMeetingAttendeesInput')?.value || '',
+    notes: safeGet<HTMLTextAreaElement>('janusMeetingTranscriptInput')?.value || '',
+  });
+
+  showToast(`Opening email to ${contact.email}.`);
+  return true;
+}
 
 export async function refreshJanusAccountPanels(
   accountId: string,
@@ -455,34 +543,6 @@ async function uploadDocumentRecord(accountId: string): Promise<void> {
   }
 }
 
-async function emailMeetingRequest(accountId: string): Promise<void> {
-  const account = await fetchJanusAccount(accountId);
-  if (!account) {
-    showToast('Account not found.', 'error');
-    return;
-  }
-
-  const contacts = await fetchJanusContacts(accountId);
-  const primary = contacts.find((contact) => contact.is_primary) || contacts[0] || null;
-
-  if (!primary?.email) {
-    showToast('Add a contact with an email on this account first.', 'error');
-    return;
-  }
-
-  openJanusMeetingRequestEmail({
-    account,
-    contact: primary,
-    meetingDate: safeGet<HTMLInputElement>('janusMeetingDateInput')?.value || '',
-    meetingTime: safeGet<HTMLInputElement>('janusMeetingTimeInput')?.value || '',
-    title: safeGet<HTMLInputElement>('janusMeetingTitleInput')?.value || '',
-    attendees: safeGet<HTMLInputElement>('janusMeetingAttendeesInput')?.value || '',
-    notes: safeGet<HTMLTextAreaElement>('janusMeetingTranscriptInput')?.value || '',
-  });
-
-  showToast(`Opening email to ${primary.email}.`);
-}
-
 export function syncJanusPanelsEditAccess(): void {
   const editable = canEditJanus();
   safeGet<HTMLButtonElement>('janusGenerateMeetingSummaryBtn')?.classList.toggle('hidden', !editable);
@@ -508,12 +568,7 @@ export function initJanusAccountPanels(getAccountId: () => string | null): void 
   initJanusMeetingDictation();
 
   safeGet('janusEmailMeetingRequestBtn')?.addEventListener('click', () => {
-    const accountId = getAccountId();
-    if (!accountId) {
-      showToast('Save the account before emailing a meeting request.', 'error');
-      return;
-    }
-    void emailMeetingRequest(accountId);
+    launchJanusMeetingRequestEmail();
   });
 
   safeGet('janusGenerateMeetingSummaryBtn')?.addEventListener('click', () => {
@@ -534,15 +589,77 @@ export function initJanusAccountPanels(getAccountId: () => string | null): void 
     if (accountId) void refreshJanusAccountPanels(accountId, 'meetings');
   });
 
+  safeGet('janusDeleteMeetingBtn')?.addEventListener('click', () => {
+    const accountId = getAccountId();
+    const meetingId = editingMeetingId;
+    const meeting = meetingId ? meetingCache.get(meetingId) : null;
+    if (!accountId || !meetingId || !meeting) return;
+
+    void (async () => {
+      const ok = await showOrbisConfirm(`Delete "${meeting.title}"?`, {
+        title: 'Delete meeting',
+        confirmLabel: 'Delete',
+        danger: true,
+      });
+      if (!ok) return;
+
+      try {
+        await deleteJanusMeeting(meetingId);
+        clearMeetingForm();
+        await refreshJanusAccountPanels(accountId);
+        showToast('Meeting deleted.');
+        if (typeof window.loadJanus === 'function') {
+          void window.loadJanus(true);
+        }
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Could not delete meeting.', 'error');
+      }
+    })();
+  });
+
   safeGet('janusMeetingsList')?.addEventListener('click', (event) => {
-    const openBtn = (event.target as Element | null)?.closest<HTMLElement>('[data-janus-open-meeting]');
-    if (!openBtn) return;
-    const meetingId = openBtn.dataset.janusOpenMeeting || '';
+    const target = event.target as Element | null;
+
+    const openBtn = target?.closest<HTMLElement>('[data-janus-open-meeting-id]');
+    if (openBtn) {
+      const meetingId = openBtn.dataset.janusOpenMeetingId || '';
+      const meeting = meetingCache.get(meetingId);
+      if (!meeting) return;
+      fillMeetingForm(meeting);
+      const accountId = getAccountId();
+      if (accountId) void refreshJanusAccountPanels(accountId, 'meetings');
+      return;
+    }
+
+    const deleteBtn = target?.closest<HTMLElement>('[data-janus-delete-meeting]');
+    if (!deleteBtn) return;
+    const meetingId = deleteBtn.dataset.janusDeleteMeeting || '';
     const meeting = meetingCache.get(meetingId);
     if (!meeting) return;
-    fillMeetingForm(meeting);
-    const accountId = getAccountId();
-    if (accountId) void refreshJanusAccountPanels(accountId, 'meetings');
+
+    void (async () => {
+      const ok = await showOrbisConfirm(`Delete "${meeting.title}"?`, {
+        title: 'Delete meeting',
+        confirmLabel: 'Delete',
+        danger: true,
+      });
+      if (!ok) return;
+
+      try {
+        await deleteJanusMeeting(meetingId);
+        if (editingMeetingId === meetingId) {
+          clearMeetingForm();
+        }
+        const accountId = getAccountId();
+        if (accountId) await refreshJanusAccountPanels(accountId);
+        showToast('Meeting deleted.');
+        if (typeof window.loadJanus === 'function') {
+          void window.loadJanus(true);
+        }
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Could not delete meeting.', 'error');
+      }
+    })();
   });
 
   safeGet('janusUploadDocumentBtn')?.addEventListener('click', () => {

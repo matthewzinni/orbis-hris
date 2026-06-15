@@ -370,6 +370,11 @@ export async function updateJanusMeeting(
   return mapMeeting(data as Record<string, unknown>);
 }
 
+export async function deleteJanusMeeting(meetingId: string): Promise<void> {
+  const { error } = await supabaseClient.from('janus_meetings').delete().eq('id', meetingId);
+  if (error) throw error;
+}
+
 export async function fetchJanusActivities(accountId: string): Promise<JanusActivity[]> {
   const { data, error } = await supabaseClient
     .from('janus_activities')

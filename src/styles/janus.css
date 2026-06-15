@@ -240,6 +240,13 @@ body.authenticated .janus-help-code {
   font-size: 0.92rem;
 }
 
+.janus-contact-row-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
 .janus-contact-actions {
   display: flex;
   flex-wrap: wrap;
@@ -301,6 +308,10 @@ body.authenticated .janus-help-code {
   display: flex;
   gap: 8px;
   align-items: flex-start;
+}
+
+.janus-meeting-row-actions .button.soft.sm {
+  white-space: nowrap;
 }
 
 .janus-meeting-row:last-child,

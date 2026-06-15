@@ -1,4 +1,8 @@
 import { canAccessJanus, canEditJanus, isAdminUser } from '../services/access';
+import {
+  launchJanusContactMeetingRequestEmail,
+  launchJanusContactOutreachEmail,
+} from './janusContactEmailUi';
 import { importCopperCsv } from '../services/janusCopperImport';
 import {
   deleteJanusAccount,
@@ -313,6 +317,14 @@ function renderContactsTable(contacts: JanusContactWithAccount[]): void {
   tbody.innerHTML = visible
     .map((contact) => {
       const primaryBadge = contact.is_primary ? '<span class="badge badge-active">Primary</span>' : '';
+      const emailActions = contact.email
+        ? `<button type="button" class="button soft sm" data-janus-email-contact-row="${esc(contact.id)}">Email</button>
+            ${
+              canEditJanus()
+                ? `<button type="button" class="button soft sm" data-janus-email-contact-meeting-row="${esc(contact.id)}">Meeting</button>`
+                : ''
+            }`
+        : '';
       return `
         <tr>
           <td>
@@ -327,6 +339,7 @@ function renderContactsTable(contacts: JanusContactWithAccount[]): void {
           <td>${esc(contact.phone || '—')}</td>
           <td>
             <div class="janus-table-actions">
+              ${emailActions}
               <button type="button" class="button soft sm" data-janus-open-account="${esc(contact.account_id)}" data-janus-open-tab="contacts">Open</button>
             </div>
           </td>
@@ -508,7 +521,33 @@ function bindJanusListUi(): void {
   });
 
   safeGet('janusContactsBody')?.addEventListener('click', (event) => {
-    const button = (event.target as Element | null)?.closest<HTMLElement>('[data-janus-open-account]');
+    const target = event.target as Element | null;
+
+    const emailBtn = target?.closest<HTMLElement>('[data-janus-email-contact-row]');
+    if (emailBtn) {
+      const contactId = emailBtn.dataset.janusEmailContactRow || '';
+      const contact = cachedJanusContacts.find((row) => row.id === contactId);
+      if (!contact) return;
+      launchJanusContactOutreachEmail({
+        contact,
+        accountName: contact.account_name,
+      });
+      return;
+    }
+
+    const meetingEmailBtn = target?.closest<HTMLElement>('[data-janus-email-contact-meeting-row]');
+    if (meetingEmailBtn) {
+      const contactId = meetingEmailBtn.dataset.janusEmailContactMeetingRow || '';
+      const contact = cachedJanusContacts.find((row) => row.id === contactId);
+      if (!contact) return;
+      launchJanusContactMeetingRequestEmail({
+        contact,
+        accountName: contact.account_name,
+      });
+      return;
+    }
+
+    const button = target?.closest<HTMLElement>('[data-janus-open-account]');
     if (!button || typeof window.openJanusAccountDrawer !== 'function') return;
     const accountId = button.dataset.janusOpenAccount || '';
     const tab = button.dataset.janusOpenTab || 'contacts';
