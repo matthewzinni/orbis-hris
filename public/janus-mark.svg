@@ -1,15 +1,75 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" role="img" aria-label="Janus">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" role="img" aria-label="Janus">
   <defs>
-    <linearGradient id="janusGrad" x1="8" y1="8" x2="112" y2="112" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#5ee7ff"/>
-      <stop offset="45%" stop-color="#4f8cff"/>
-      <stop offset="100%" stop-color="#a855f7"/>
+    <linearGradient id="janusGrad" x1="256" y1="40" x2="256" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#67ecff"/>
+      <stop offset="42%" stop-color="#5a82ff"/>
+      <stop offset="100%" stop-color="#ad48ff"/>
     </linearGradient>
   </defs>
-  <ellipse cx="42" cy="60" rx="38" ry="12" stroke="url(#janusGrad)" stroke-width="4.5" transform="rotate(-24 42 60)"/>
-  <ellipse cx="78" cy="60" rx="38" ry="12" stroke="url(#janusGrad)" stroke-width="4.5" transform="rotate(24 78 60)"/>
-  <circle cx="60" cy="60" r="27" stroke="url(#janusGrad)" stroke-width="4.5"/>
-  <line x1="60" y1="33" x2="60" y2="87" stroke="url(#janusGrad)" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
-  <circle cx="48" cy="58" r="5.5" fill="url(#janusGrad)"/>
-  <circle cx="72" cy="58" r="5.5" fill="url(#janusGrad)"/>
+  <!-- Left outer arc -->
+  <path
+    d="M 256 58 A 214 214 0 0 0 256 454"
+    stroke="url(#janusGrad)"
+    stroke-width="18"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <!-- Right outer arc -->
+  <path
+    d="M 256 58 A 214 214 0 0 1 256 454"
+    stroke="url(#janusGrad)"
+    stroke-width="18"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <!-- Center spine -->
+  <path
+    d="M 246 58 L 246 454 M 266 58 L 266 454"
+    stroke="url(#janusGrad)"
+    stroke-width="10"
+    stroke-linecap="round"
+    fill="none"
+  />
+  <!-- Left profile -->
+  <path
+    d="M 256 58
+       C 228 60 198 86 176 124
+       C 156 160 148 204 154 248
+       C 160 292 178 334 206 368
+       C 228 394 244 414 256 454"
+    stroke="url(#janusGrad)"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- Right profile -->
+  <path
+    d="M 256 58
+       C 284 60 314 86 336 124
+       C 356 160 364 204 358 248
+       C 352 292 334 334 306 368
+       C 284 394 268 414 256 454"
+    stroke="url(#janusGrad)"
+    stroke-width="18"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- Left eye -->
+  <path
+    d="M 206 188 L 220 202 L 206 216 L 192 202 Z"
+    stroke="url(#janusGrad)"
+    stroke-width="11"
+    stroke-linejoin="round"
+    fill="none"
+  />
+  <!-- Right eye -->
+  <path
+    d="M 306 188 L 320 202 L 306 216 L 292 202 Z"
+    stroke="url(#janusGrad)"
+    stroke-width="11"
+    stroke-linejoin="round"
+    fill="none"
+  />
 </svg>

@@ -656,6 +656,13 @@ export async function saveReviewRecord(): Promise<void> {
   resetPerformanceReviewFormUi({ preserveReviewAttachmentContext: true });
 
   await refreshReviewDependentUi(employeeId);
+
+  if (typeof window.loadHrInbox === 'function') {
+    void window.loadHrInbox(true);
+  }
+  if (typeof window.loadMyTasksPortal === 'function') {
+    void window.loadMyTasksPortal();
+  }
 }
 
 window.loadEmployeeReviews = loadEmployeeReviews;

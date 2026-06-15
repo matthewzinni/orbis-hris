@@ -44,6 +44,10 @@ import {
   loadPendingLeaveRequests,
   type LeaveRequestRecord,
 } from './leaveRequests';
+import {
+  buildPerformanceReviewDueCandidates,
+  formatPerformanceReviewDueDetail,
+} from './performanceReviewDue';
 
 export type HrInboxSeverity = 'overdue' | 'due_soon' | 'info';
 
@@ -59,7 +63,8 @@ export type HrInboxKind =
   | 'offboarding'
   | 'leave_request'
   | 'policy_campaign'
-  | 'benefits_eligibility';
+  | 'benefits_eligibility'
+  | 'performance_review';
 
 export type HrInboxRoute =
   | { type: 'employee'; employeeId: string; drawerTab?: string }
@@ -103,6 +108,7 @@ const KIND_LABELS: Record<HrInboxKind, string> = {
   leave_request: 'Time off',
   policy_campaign: 'Policy acknowledgment',
   benefits_eligibility: 'Benefits eligibility',
+  performance_review: 'Performance review',
 };
 
 type EmployeeLike = Record<string, unknown>;
@@ -196,12 +202,32 @@ function collectBenefitsEligibilityItems(employees: EmployeeLike[]): HrInboxItem
 }
 
 const ADMIN_TASKS_ATTENTION_KINDS: HrInboxKind[] = [
+  'performance_review',
   'payroll_handoff',
   'benefits_eligibility',
 ];
 
+function collectPerformanceReviewDueItems(): Promise<HrInboxItem[]> {
+  return buildPerformanceReviewDueCandidates().then((candidates) =>
+    candidates.map((candidate) => ({
+      id: `performance-review:${candidate.employeeId}:${candidate.periodKind}:${candidate.dueDate}`,
+      kind: 'performance_review' as const,
+      severity: candidate.severity,
+      employeeName: candidate.employeeName,
+      dueDate: candidate.dueDate,
+      title: `${candidate.reviewTypeLabel} — ${candidate.employeeName}`,
+      detail: formatPerformanceReviewDueDetail(candidate),
+      route: {
+        type: 'employee' as const,
+        employeeId: candidate.employeeId,
+        drawerTab: 'reviews',
+      },
+    }))
+  );
+}
+
 export async function buildAdminTasksAttentionItems(): Promise<HrInboxItem[]> {
-  if (!isAdminUser()) return [];
+  if (!isAdminUser() && !isSupervisorUser()) return [];
 
   if (!getEmployees().length) {
     try {
@@ -211,10 +237,20 @@ export async function buildAdminTasksAttentionItems(): Promise<HrInboxItem[]> {
     }
   }
 
-  const [payrollHandoffs] = await Promise.all([loadPendingPayrollHandoffs()]);
+  const reviewItemsPromise = collectPerformanceReviewDueItems();
+
+  if (!isAdminUser()) {
+    return sortHrInboxItems(await reviewItemsPromise);
+  }
+
+  const [payrollHandoffs, reviewItems] = await Promise.all([
+    loadPendingPayrollHandoffs(),
+    reviewItemsPromise,
+  ]);
   const activeEmployees = getActiveEmployees() as EmployeeLike[];
 
   return sortHrInboxItems([
+    ...reviewItems,
     ...collectPayrollHandoffItems(payrollHandoffs),
     ...collectBenefitsEligibilityItems(activeEmployees),
   ]);
@@ -801,15 +837,17 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
   const pendingLeavePromise = loadPendingLeaveRequests();
 
   if (isSupervisorUser() && !isAdminUser()) {
-    const [pendingLeave, policyAssignments] = await Promise.all([
+    const [pendingLeave, policyAssignments, reviewItems] = await Promise.all([
       pendingLeavePromise,
       loadPolicyCampaignInboxAssignments().catch((err) => {
         console.warn('[HrInbox] Could not load policy campaigns:', err);
         return [];
       }),
+      collectPerformanceReviewDueItems(),
     ]);
 
     return sortHrInboxItems([
+      ...reviewItems,
       ...collectLeaveRequestItems(pendingLeave),
       ...collectPolicyCampaignItems(policyAssignments, true),
     ]);
@@ -826,6 +864,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     payrollHandoffs,
     pendingLeave,
     policyAssignments,
+    reviewItems,
   ] = await Promise.all([
     supabaseClient
       .from('onboarding_tasks')
@@ -850,6 +889,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
       console.warn('[HrInbox] Could not load policy campaigns:', err);
       return [];
     }),
+    collectPerformanceReviewDueItems(),
   ]);
 
   const queryErrors = [
@@ -867,6 +907,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
   }
 
   const merged: HrInboxItem[] = [
+    ...reviewItems,
     ...collectStayInterviewItems(activeEmployees),
     ...collectBenefitsEligibilityItems(activeEmployees),
     ...collectOnboardingItems(onboardingRes.data || [], activeEmployees),
@@ -917,6 +958,17 @@ export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSum
       detail: `${staySoon} due within ${DUE_SOON_DAYS} days`,
       count: staySoon,
       viewId: 'dashboardView',
+    });
+  }
+
+  const performanceReviewsDue = items.filter((item) => item.kind === 'performance_review').length;
+  if (performanceReviewsDue > 0) {
+    alerts.push({
+      id: 'performance-reviews-due',
+      label: 'Performance reviews due',
+      detail: `${performanceReviewsDue} 90-day or annual review${performanceReviewsDue === 1 ? '' : 's'} need attention`,
+      count: performanceReviewsDue,
+      viewId: 'myTasksView',
     });
   }
 

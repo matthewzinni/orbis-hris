@@ -9,6 +9,7 @@ import {
   buildAdminTasksAttentionItems,
   kindLabel,
   type HrInboxItem,
+  type HrInboxRoute,
 } from '../services/hrInbox';
 import { applyPayrollHandoffAction } from './payrollHandoff';
 import {
@@ -45,6 +46,31 @@ let cachedPolicyDocs: HandbookDocument[] = [];
 let cachedHandbookDocs: HandbookDocument[] = [];
 
 let adminAttentionBound = false;
+let cachedAttentionItems: HrInboxItem[] = [];
+
+async function openTasksAttentionRoute(route: HrInboxRoute): Promise<void> {
+  if (route.type === 'payroll_handoff') {
+    if (typeof window.openEmployeeDrawer === 'function') {
+      await window.openEmployeeDrawer(route.employeeId);
+    }
+    return;
+  }
+
+  if (route.type !== 'employee') return;
+
+  if (typeof window.openEmployeeDrawer === 'function') {
+    await window.openEmployeeDrawer(route.employeeId);
+  }
+
+  const tab = route.drawerTab;
+  if (!tab) return;
+
+  if (typeof window.switchDrawerTab === 'function') {
+    window.switchDrawerTab(tab);
+  } else if (typeof window.switchTab === 'function') {
+    window.switchTab(tab);
+  }
+}
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -83,7 +109,9 @@ function renderAdminAttentionRow(item: HrInboxItem): string {
     item.kind === 'payroll_handoff' && item.route.type === 'payroll_handoff'
       ? `<button type="button" class="button soft sm" data-tasks-payroll-action="sent" data-tasks-payroll-id="${esc(item.route.handoffId)}">Mark sent</button>
          <button type="button" class="button soft sm" data-tasks-payroll-action="confirmed" data-tasks-payroll-id="${esc(item.route.handoffId)}">Confirmed</button>`
-      : '';
+      : item.kind === 'performance_review' && item.route.type === 'employee'
+        ? `<button type="button" class="button primary sm" data-tasks-attention-id="${esc(item.id)}">Open review</button>`
+        : '';
 
   return `
     <article class="employee-portal-task-row employee-portal-task-row--pending employee-portal-task-row--admin">
@@ -108,6 +136,18 @@ function bindAdminAttentionActions(): void {
   if (!root) return;
 
   root.addEventListener('click', (event) => {
+    const attentionBtn = (event.target as Element | null)?.closest<HTMLElement>(
+      '[data-tasks-attention-id]'
+    );
+    if (attentionBtn) {
+      const itemId = attentionBtn.dataset.tasksAttentionId || '';
+      const item = cachedAttentionItems.find((row) => row.id === itemId);
+      if (!item) return;
+      event.preventDefault();
+      void openTasksAttentionRoute(item.route);
+      return;
+    }
+
     const button = (event.target as Element | null)?.closest<HTMLElement>(
       '[data-tasks-payroll-action]'
     );
@@ -136,10 +176,22 @@ function renderPendingTasksList(
   adminItems: HrInboxItem[],
   personalItems: EmployeeTaskItem[]
 ): string {
-  const rows = [
-    ...adminItems.map(renderAdminAttentionRow),
-    ...personalItems.map((item) => renderTaskRow(item, true)),
-  ];
+  const performanceReviewItems = adminItems.filter((item) => item.kind === 'performance_review');
+  const otherAdminItems = adminItems.filter((item) => item.kind !== 'performance_review');
+
+  const rows: string[] = [];
+
+  if (performanceReviewItems.length) {
+    rows.push(`
+      <div class="employee-portal-attention-group">
+        <h3 class="employee-portal-attention-group-title">Performance Reviews Due</h3>
+        ${performanceReviewItems.map(renderAdminAttentionRow).join('')}
+      </div>
+    `);
+  }
+
+  rows.push(...otherAdminItems.map(renderAdminAttentionRow));
+  rows.push(...personalItems.map((item) => renderTaskRow(item, true)));
 
   if (!rows.length) {
     return '<div class="employee-portal-task-empty">You are caught up — no pending tasks or acknowledgments.</div>';
@@ -509,14 +561,15 @@ export async function loadMyTasksPortal(): Promise<void> {
 
   bindAdminAttentionActions();
 
-  const adminItemsPromise = isAdminUser()
-    ? buildAdminTasksAttentionItems().catch((err) => {
-        console.warn('[MyTasksPortal] Could not load admin attention items:', err);
-        return [] as HrInboxItem[];
-      })
-    : Promise.resolve([] as HrInboxItem[]);
+  const adminItemsPromise =
+    isAdminUser() || isSupervisorUser()
+      ? buildAdminTasksAttentionItems().catch((err) => {
+          console.warn('[MyTasksPortal] Could not load admin attention items:', err);
+          return [] as HrInboxItem[];
+        })
+      : Promise.resolve([] as HrInboxItem[]);
 
-  if (isAdminUser() && typeof window.loadHrInbox === 'function') {
+  if ((isAdminUser() || isSupervisorUser()) && typeof window.loadHrInbox === 'function') {
     void window.loadHrInbox();
   }
 
@@ -528,6 +581,7 @@ export async function loadMyTasksPortal(): Promise<void> {
   const pendingEl = safeGet('myTasksPendingList');
   const handbookEl = safeGet('myTasksHandbookList');
   const adminItems = await adminItemsPromise;
+  cachedAttentionItems = adminItems;
 
   if (!employeeId) {
     renderTasksPortalUnlinkedState(adminItems);
