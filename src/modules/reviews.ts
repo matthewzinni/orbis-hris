@@ -7,6 +7,7 @@ import {
   clearCanvasSignature,
   getCanvasSignature,
   setCanvasSignature,
+  setSignatureRequestContext,
 } from '../ui/signaturePads';
 
 type ReviewScoreLabel =
@@ -175,11 +176,44 @@ function setInputValue(id: string, value: unknown): void {
   input.value = String(value ?? '');
 }
 
+function syncReviewSignatureContext(
+  recordId: string | null | undefined,
+  employee: ReviewEmployee | null
+): void {
+  const normalizedRecordId = String(recordId || '').trim();
+  const employeeId = String(employee?.dbId || employee?.id || employee?.employee_id || '').trim();
+
+  if (!normalizedRecordId || !employeeId) {
+    setSignatureRequestContext(null);
+    return;
+  }
+
+  setSignatureRequestContext({
+    formType: 'review',
+    recordId: normalizedRecordId,
+    employeeId,
+    signerName: [employee?.first_name || employee?.first, employee?.last_name || employee?.last]
+      .filter(Boolean)
+      .join(' ')
+      .trim(),
+    signerEmail: String(
+      (employee as { work_email?: string; email?: string })?.work_email ||
+        (employee as { email?: string })?.email ||
+        ''
+    ).trim(),
+  });
+}
+
 function resetPerformanceReviewFormUi(options?: {
   preserveReviewAttachmentContext?: boolean;
+  preserveSignatureContext?: boolean;
 }): void {
   currentReviewId = null;
   window.currentReviewId = null;
+
+  if (!options?.preserveSignatureContext) {
+    setSignatureRequestContext(null);
+  }
 
   if (!options?.preserveReviewAttachmentContext) {
     window.reviewAttachmentContextId = null;
@@ -459,6 +493,9 @@ export function editReviewRecord(review: ReviewRecord): void {
   currentReviewId = review.id || null;
   window.currentReviewId = currentReviewId;
 
+  syncReviewSignatureContext(review.id, getCurrentEmployee());
+  window.initReviewSignaturePads?.();
+
   setInputValue('reviewDate', review.review_date || todayInputValue());
   setInputValue('reviewType', review.review_type || '');
   setInputValue('reviewQuality', reviewValueFromScore(review.quality_score));
@@ -651,9 +688,13 @@ export async function saveReviewRecord(): Promise<void> {
       : null;
   if (resolvedAttachmentReviewId) {
     window.reviewAttachmentContextId = resolvedAttachmentReviewId;
+    syncReviewSignatureContext(resolvedAttachmentReviewId, activeEmployee);
   }
 
-  resetPerformanceReviewFormUi({ preserveReviewAttachmentContext: true });
+  resetPerformanceReviewFormUi({
+    preserveReviewAttachmentContext: true,
+    preserveSignatureContext: Boolean(resolvedAttachmentReviewId),
+  });
 
   await refreshReviewDependentUi(employeeId);
 

@@ -342,7 +342,7 @@ async function drawSignatureBlock(
   page.drawText(
     signed
       ? 'Signed electronically in Orbis.'
-      : 'Pending employee signature in Orbis (Tasks & Acknowledgments).',
+      : 'Pending employee signature via signing link.',
     {
       x: MARGIN,
       y,

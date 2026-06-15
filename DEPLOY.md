@@ -128,14 +128,18 @@ supabase functions deploy investigation-hr-guidance
 
 ## Remote e-sign links (Edge Function)
 
-Employee signing links (`/sign.html?token=...`) call `form-signature` (no Orbis login required).
+Employee signing links (`/sign.html?token=...`) call `form-signature` (no Orbis login required). Do **not** send employees to the main app URL (`/?signToken=...`) — that requires an Orbis login.
+
+If Vercel **Deployment Protection** is enabled on preview deployments, add a path exception for `/sign.html` in Project → Settings → Deployment Protection, or send links using production `https://www.orbis-btw.com/sign.html?token=...` only.
+
+Set `VITE_PUBLIC_APP_URL=https://www.orbis-btw.com` in Vercel Production so copied signing links always use the public site (not a preview URL).
 
 ```bash
 npm run db:push   # creates signature_requests table
 supabase functions deploy form-signature
 ```
 
-HR flow: save the discipline/incident/review record → **Send signing link** (or **Request signature** in history). The link is copied to the clipboard for email/SMS.
+HR flow: save the discipline/incident/review record → **Copy signing link** (or from history). The link is copied to the clipboard for email/SMS. Employee opens `/sign.html?token=...` — no Orbis login required.
 
 ## Attendance tracker (Intuit Workforce API)
 

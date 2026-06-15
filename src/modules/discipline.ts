@@ -1,7 +1,7 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { stopAllDictation } from './dictation';
-import { requestEmployeeAcknowledgmentSignature } from '../services/employeeAcknowledgmentSigning';
+import { requestAndCopyEmployeeSigningLink } from '../services/employeeAcknowledgmentSigning';
 import {
   clearCanvasSignature,
   getCanvasSignature,
@@ -247,7 +247,7 @@ export async function loadEmployeeDiscipline(employeeId: string): Promise<void> 
             ${
               row.employee_signature
                 ? `<button class="button soft sm" type="button" data-pdf-discipline-id="${escapeHtml(row.id || '')}">Generate PDF</button>`
-                : `<button class="button primary sm" type="button" data-request-discipline-id="${escapeHtml(row.id || '')}">Request signature</button>
+                : `<button class="button primary sm" type="button" data-request-discipline-id="${escapeHtml(row.id || '')}">Copy signing link</button>
                    <button class="button soft sm" type="button" data-pdf-discipline-id="${escapeHtml(row.id || '')}">Generate PDF</button>`
             }
             <button class="button danger sm" type="button" data-delete-discipline-id="${escapeHtml(row.id || '')}">Delete</button>
@@ -297,16 +297,16 @@ export async function loadEmployeeDiscipline(employeeId: string): Promise<void> 
           .trim();
 
         try {
-          await requestEmployeeAcknowledgmentSignature({
+          await requestAndCopyEmployeeSigningLink({
             formType: 'discipline',
             recordId,
             employeeId,
             signerName: signerName || undefined,
             signerEmail: String((employee as { email?: string })?.email || '').trim() || undefined,
           });
-          showToast('Signature request added to employee My Tasks.');
+          showToast('Signing link copied. Send it to the employee — no Orbis login required.');
         } catch (err) {
-          const message = err instanceof Error ? err.message : 'Could not request signature.';
+          const message = err instanceof Error ? err.message : 'Could not create signing link.';
           showToast(message, 'error');
         }
       });

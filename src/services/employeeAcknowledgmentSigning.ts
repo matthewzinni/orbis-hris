@@ -1,4 +1,8 @@
-import { createSignatureRequest, type SignatureFormType } from './signatureRequests';
+import {
+  copySigningLink,
+  createSignatureRequest,
+  type SignatureFormType,
+} from './signatureRequests';
 
 export type RequestEmployeeAcknowledgmentInput = {
   formType: SignatureFormType;
@@ -10,7 +14,7 @@ export type RequestEmployeeAcknowledgmentInput = {
 
 export async function requestEmployeeAcknowledgmentSignature(
   input: RequestEmployeeAcknowledgmentInput
-): Promise<{ token: string }> {
+): Promise<{ token: string; signingUrl: string }> {
   const recordId = String(input.recordId || '').trim();
   const employeeId = String(input.employeeId || '').trim();
 
@@ -18,10 +22,10 @@ export async function requestEmployeeAcknowledgmentSignature(
     throw new Error('Save the record before requesting a signature.');
   }
   if (!employeeId) {
-    throw new Error('Employee is required to request an in-app signature.');
+    throw new Error('Employee is required to request a signature.');
   }
 
-  const { token } = await createSignatureRequest({
+  return createSignatureRequest({
     formType: input.formType,
     recordId,
     employeeId,
@@ -29,6 +33,13 @@ export async function requestEmployeeAcknowledgmentSignature(
     signerName: input.signerName,
     signerEmail: input.signerEmail,
   });
+}
 
-  return { token };
+/** Create a public signing link and copy it for HR to send to the employee. */
+export async function requestAndCopyEmployeeSigningLink(
+  input: RequestEmployeeAcknowledgmentInput
+): Promise<string> {
+  const { signingUrl } = await requestEmployeeAcknowledgmentSignature(input);
+  await copySigningLink(signingUrl);
+  return signingUrl;
 }

@@ -224,15 +224,15 @@ export async function queueEmployeeSignatureAndOpenPdf(input: {
   signerName?: string;
   signerEmail?: string;
 }): Promise<void> {
-  const { requestEmployeeAcknowledgmentSignature } = await import(
+  const { requestAndCopyEmployeeSigningLink } = await import(
     '../services/employeeAcknowledgmentSigning'
   );
 
   try {
-    await requestEmployeeAcknowledgmentSignature(input);
-    showToast('Signature request added to employee My Tasks.');
+    await requestAndCopyEmployeeSigningLink(input);
+    showToast('Signing link copied. Send it to the employee — no Orbis login required.');
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Could not request signature.';
+    const message = err instanceof Error ? err.message : 'Could not create signing link.';
     showToast(message, 'error');
   }
 }
@@ -259,10 +259,11 @@ export function bootErSigningFromUrl(): void {
   const token = String(params.get('signToken') || params.get('token') || '').trim();
   if (!token) return;
 
-  const url = new URL(window.location.href);
-  url.searchParams.delete('signToken');
-  url.searchParams.delete('token');
-  window.history.replaceState({}, '', url.pathname + url.hash);
+  // Public signing page — no Orbis or Vercel login required.
+  if (!window.location.pathname.endsWith('/sign.html')) {
+    window.location.replace(`/sign.html?token=${encodeURIComponent(token)}`);
+    return;
+  }
 
   void openErSigningModal(token);
 }

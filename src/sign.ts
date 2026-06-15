@@ -13,7 +13,7 @@ type SignPayload = {
 
 function getTokenFromUrl(): string {
   const params = new URLSearchParams(window.location.search);
-  return String(params.get('token') || '').trim();
+  return String(params.get('token') || params.get('signToken') || '').trim();
 }
 
 function esc(value: unknown): string {

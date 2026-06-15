@@ -20,9 +20,14 @@ function getSigningFunctionBaseUrl(): string {
   return `${supabaseUrl}/functions/v1/form-signature`;
 }
 
+function getPublicAppOrigin(): string {
+  const configured = String(import.meta.env.VITE_PUBLIC_APP_URL || '').trim().replace(/\/$/, '');
+  if (configured) return configured;
+  return String(window.location.origin || '').replace(/\/$/, '');
+}
+
 export function buildPublicSigningUrl(token: string): string {
-  const origin = String(window.location.origin || '').replace(/\/$/, '');
-  return `${origin}/?signToken=${encodeURIComponent(token)}`;
+  return `${getPublicAppOrigin()}/sign.html?token=${encodeURIComponent(token)}`;
 }
 
 export async function createSignatureRequest(

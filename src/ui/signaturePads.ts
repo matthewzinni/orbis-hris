@@ -4,7 +4,7 @@
 
 import '../styles/signature-field.css';
 import { type SignatureFormType } from '../services/signatureRequests';
-import { requestEmployeeAcknowledgmentSignature } from '../services/employeeAcknowledgmentSigning';
+import { requestAndCopyEmployeeSigningLink } from '../services/employeeAcknowledgmentSigning';
 import { openErAcknowledgmentPdf } from '../services/erAcknowledgmentPdf';
 
 const initializedPads = new Set<string>();
@@ -258,9 +258,9 @@ function mountSignatureControls(
     const remoteRow = document.createElement('div');
     remoteRow.className = 'signature-remote-row';
     remoteRow.innerHTML = `
-      <button type="button" class="button primary sm signature-queue-portal-btn">Request signature</button>
+      <button type="button" class="button primary sm signature-queue-portal-btn">Copy signing link</button>
       <button type="button" class="button soft sm signature-generate-pdf-btn">Generate PDF</button>
-      <span class="muted" style="font-size:12px;">Employee signs in Orbis under Tasks &amp; Acknowledgments. PDF is a record copy after signing.</span>
+      <span class="muted" style="font-size:12px;">Email or text the link to the employee. They can sign on any device without an Orbis login.</span>
     `;
     controls.appendChild(remoteRow);
 
@@ -298,21 +298,29 @@ async function handleQueuePortalSignature(
 ): Promise<void> {
   const context = getSignatureRequestContext();
   if (!context?.recordId) {
-    window.showToast?.('Save the form first, then queue employee signature.', 'error');
+    window.showToast?.('Save the form first, then copy a signing link.', 'error');
+    return;
+  }
+
+  if (signerRole !== 'employee') {
+    window.showToast?.('Signing links are available for employee signatures only.', 'error');
     return;
   }
 
   try {
-    await requestEmployeeAcknowledgmentSignature({
+    await requestAndCopyEmployeeSigningLink({
       formType: context.formType,
       recordId: context.recordId,
       employeeId: context.employeeId,
       signerName: context.signerName,
       signerEmail: context.signerEmail,
     });
-    window.showToast?.('Signature request added to employee My Tasks.', 'success');
+    window.showToast?.(
+      'Signing link copied. Send it to the employee — no Orbis login required.',
+      'success'
+    );
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Could not queue signature.';
+    const message = err instanceof Error ? err.message : 'Could not create signing link.';
     window.showToast?.(message, 'error');
   }
 }
@@ -520,7 +528,17 @@ window.requestEmployeeSignatureLink = async (
     signerName,
     signerEmail,
   });
-  await handleQueuePortalSignature('employee');
+  await requestAndCopyEmployeeSigningLink({
+    formType,
+    recordId,
+    employeeId,
+    signerName,
+    signerEmail,
+  });
+  window.showToast?.(
+    'Signing link copied. Send it to the employee — no Orbis login required.',
+    'success'
+  );
 };
 
 document.addEventListener('DOMContentLoaded', () => {

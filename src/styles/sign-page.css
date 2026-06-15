@@ -1,0 +1,170 @@
+:root {
+  color-scheme: light;
+  --sign-bg: #f4f6f9;
+  --sign-card: #ffffff;
+  --sign-text: #0f172a;
+  --sign-muted: #64748b;
+  --sign-line: #e2e8f0;
+  --sign-primary: #1d4ed8;
+  --sign-primary-hover: #1e40af;
+  --sign-success-bg: #ecfdf3;
+  --sign-success-text: #027a48;
+  --sign-error-bg: #fef3f2;
+  --sign-error-text: #b42318;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  background: var(--sign-bg);
+  color: var(--sign-text);
+}
+
+.sign-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.sign-card {
+  width: min(640px, 100%);
+  background: var(--sign-card);
+  border: 1px solid var(--sign-line);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+  padding: 24px;
+}
+
+.sign-brand {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sign-muted);
+}
+
+.sign-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.sign-meta {
+  margin: 8px 0 0;
+  color: var(--sign-muted);
+  font-size: 0.95rem;
+}
+
+.sign-loading {
+  color: var(--sign-muted);
+}
+
+.sign-summary {
+  white-space: pre-wrap;
+  line-height: 1.55;
+  background: #f8fafc;
+  border: 1px solid var(--sign-line);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.sign-preview {
+  margin-top: 12px;
+  border: 1px dashed var(--sign-line);
+  border-radius: 10px;
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fafafa;
+}
+
+.sign-preview img {
+  max-width: 100%;
+  max-height: 140px;
+}
+
+.sign-actions {
+  margin-top: 16px;
+}
+
+.signature-typed-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.signature-typed-row input {
+  flex: 1 1 220px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--sign-line);
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+.button {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button.primary {
+  background: var(--sign-primary);
+  color: #fff;
+}
+
+.button.primary:hover:not(:disabled) {
+  background: var(--sign-primary-hover);
+}
+
+.button.soft {
+  background: #fff;
+  border-color: var(--sign-line);
+  color: var(--sign-text);
+}
+
+.button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.muted {
+  color: var(--sign-muted);
+}
+
+.sign-success,
+.sign-error {
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.sign-success {
+  color: var(--sign-success-text);
+  background: var(--sign-success-bg);
+  border: 1px solid rgba(2, 122, 72, 0.2);
+}
+
+.sign-error {
+  color: var(--sign-error-text);
+  background: var(--sign-error-bg);
+  border: 1px solid rgba(180, 35, 24, 0.2);
+}
