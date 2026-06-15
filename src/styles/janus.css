@@ -1,41 +1,156 @@
-.janus-page .page-header {
+/* Janus CRM — module accents on top of shared Orbis shell */
+
+.janus-page-intro {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
+  gap: 10px;
 }
 
-.janus-page .page-header-actions {
+.janus-brand-row {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
 }
 
-.janus-tagline {
+.janus-brand-logo {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+}
+
+.janus-brand-logo img {
+  width: 44px;
+  height: 44px;
+  display: block;
+  filter: drop-shadow(0 8px 24px rgba(79, 140, 255, 0.35));
+}
+
+.janus-brand-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-indent: 0.22em;
+  text-transform: uppercase;
+  color: var(--space-text-bright, #f8fafc);
+  line-height: 1;
+}
+
+.janus-brand-tagline {
+  margin-top: 4px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.janus-brand-subtitle {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.55;
+}
+
+.janus-brand-desc {
   margin: 0;
   max-width: 46rem;
-  color: var(--muted);
+}
+
+.janus-help-btn {
+  width: 40px;
+  min-width: 40px;
+  padding-left: 0;
+  padding-right: 0;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.janus-help-card:not(.is-expanded) .orbis-disclosure-panel {
+  display: none;
+}
+
+.janus-help-card.is-expanded .orbis-disclosure-panel {
+  display: block;
+  animation: orbis-fade-in 240ms var(--orbis-ease-out, ease-out) both;
+}
+
+.janus-help-content {
+  display: grid;
+  gap: 28px;
+  margin-top: 12px;
+}
+
+.janus-help-section h3 {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  color: var(--space-text-bright, var(--navy));
+}
+
+.janus-help-section h4 {
+  margin: 18px 0 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--space-text-bright, var(--navy-2));
+}
+
+.janus-help-section p {
+  margin: 0 0 10px;
   line-height: 1.5;
 }
 
-.janus-scaffold-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+.janus-help-section ol,
+.janus-help-section ul {
+  margin: 0 0 12px;
+  padding-left: 1.35rem;
+  line-height: 1.55;
 }
 
-.janus-toolbar-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
+.janus-help-section li + li {
+  margin-top: 6px;
 }
 
-.janus-toolbar-filters input[type='search'],
-.janus-toolbar-filters .input[type='search'] {
-  min-width: min(320px, 100%);
+.janus-help-section ul {
+  margin-top: 8px;
+  list-style: disc;
+}
+
+.janus-help-table {
+  font-size: 0.88rem;
+}
+
+.janus-help-table code {
+  font-size: 0.82rem;
+}
+
+.janus-help-code {
+  margin: 8px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(15, 23, 42, 0.04);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+body.authenticated .janus-help-code {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.janus-help-example-label {
+  margin-top: 14px !important;
+  margin-bottom: 0 !important;
+  font-size: 0.88rem;
+}
+
+.janus-import-label {
+  cursor: pointer;
+  margin: 0;
 }
 
 .janus-table-actions {
@@ -52,25 +167,16 @@
   gap: 8px;
 }
 
-#janusContactsCard {
-  margin-top: 16px;
+.janus-page .history-item[role='button'] {
+  cursor: pointer;
 }
 
-#janusAccountDrawer .candidate-actions-row {
-  margin: 0 0 16px;
+.janus-page .history-item[role='button']:hover {
+  border-color: rgba(79, 140, 255, 0.28);
 }
 
 .janus-empty {
   padding: 0.5rem 0;
-}
-
-.janus-drawer-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 0 16px 12px;
-  border-bottom: 1px solid var(--line);
-  flex-shrink: 0;
 }
 
 #janusAccountDrawer {
@@ -95,23 +201,6 @@
 #janusAccountDrawer .drawer-body > [data-janus-drawer-panel]:not(.hidden) {
   position: relative;
   z-index: 1;
-}
-
-.janus-drawer-tab {
-  border: 1px solid var(--line);
-  background: var(--surface-muted);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.janus-drawer-tab.active {
-  background: var(--accent, #2563eb);
-  border-color: transparent;
-  color: #fff;
 }
 
 .janus-contacts-list {
@@ -149,7 +238,6 @@
 .janus-contact-notes {
   margin-top: 6px;
   font-size: 0.92rem;
-  color: var(--text);
 }
 
 .janus-contact-actions {
@@ -159,58 +247,19 @@
   align-items: flex-start;
 }
 
-body[data-layout='mobile'] .janus-scaffold-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+#janusAccountDrawer .candidate-actions-row {
+  margin: 0 0 16px;
 }
 
-body[data-layout='mobile'] .janus-toolbar-filters {
+#janusAccountDrawer .field textarea[data-janus-meeting-field] {
   width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
-body[data-layout='mobile'] .janus-toolbar-filters input[type='search'],
-body[data-layout='mobile'] .janus-toolbar-filters select {
+#janusAccountDrawer .dictation-mount {
   width: 100%;
-}
-
-body[data-layout='mobile'] .page-header-actions {
-  width: 100%;
-}
-
-body[data-layout='mobile'] .page-header-actions .button {
-  flex: 1 1 auto;
-}
-
-.janus-import-label {
-  cursor: pointer;
-  margin: 0;
-}
-
-.janus-dashboard-layout {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
-
-.janus-dashboard-list,
-.janus-search-results {
-  display: grid;
-  gap: 10px;
-}
-
-.janus-dashboard-item,
-.janus-search-result {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius, 10px);
-  background: var(--surface-muted);
-  text-align: left;
-  cursor: pointer;
 }
 
 .janus-meetings-list,
@@ -247,17 +296,6 @@ body[data-layout='mobile'] .page-header-actions .button {
   line-height: 1.45;
 }
 
-#janusAccountDrawer .field textarea[data-janus-meeting-field] {
-  width: 100%;
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-  word-wrap: break-word;
-}
-
-#janusAccountDrawer .dictation-mount {
-  width: 100%;
-}
-
 .janus-meeting-actions {
   margin: 0;
   white-space: pre-wrap;
@@ -275,4 +313,13 @@ body[data-layout='mobile'] .page-header-actions .button {
 .janus-document-actions {
   display: flex;
   gap: 8px;
+}
+
+body[data-layout='mobile'] .janus-page-intro {
+  align-items: flex-start;
+}
+
+body[data-layout='mobile'] #janusAccountDrawer .toolbar-left .input,
+body[data-layout='mobile'] #janusAccountDrawer .toolbar-left .select {
+  width: 100%;
 }

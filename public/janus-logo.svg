@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" fill="none" role="img" aria-label="Janus">
+  <defs>
+    <linearGradient id="janusLogoGrad" x1="8" y1="8" x2="112" y2="112" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#5ee7ff"/>
+      <stop offset="45%" stop-color="#4f8cff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="42" cy="60" rx="38" ry="12" stroke="url(#janusLogoGrad)" stroke-width="4.5" transform="rotate(-24 42 60)"/>
+  <ellipse cx="78" cy="60" rx="38" ry="12" stroke="url(#janusLogoGrad)" stroke-width="4.5" transform="rotate(24 78 60)"/>
+  <circle cx="60" cy="60" r="27" stroke="url(#janusLogoGrad)" stroke-width="4.5"/>
+  <line x1="60" y1="33" x2="60" y2="87" stroke="url(#janusLogoGrad)" stroke-width="3" stroke-linecap="round" opacity="0.45"/>
+  <circle cx="48" cy="58" r="5.5" fill="url(#janusLogoGrad)"/>
+  <circle cx="72" cy="58" r="5.5" fill="url(#janusLogoGrad)"/>
+  <text
+    x="138"
+    y="54"
+    fill="#f8fafc"
+    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-size="34"
+    font-weight="700"
+    letter-spacing="0.22em"
+  >JANUS</text>
+  <text
+    x="138"
+    y="78"
+    fill="#94a3b8"
+    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-size="11"
+    font-weight="600"
+    letter-spacing="0.18em"
+  >CONNECT · TRACK · GROW</text>
+  <text
+    x="138"
+    y="96"
+    fill="#64748b"
+    font-family="system-ui, -apple-system, 'Segoe UI', sans-serif"
+    font-size="10"
+    font-weight="600"
+    letter-spacing="0.14em"
+  >RELATIONSHIP CRM</text>
+</svg>

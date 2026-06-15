@@ -33,6 +33,7 @@ declare global {
 let cachedJanusAccounts: JanusAccount[] = [];
 let cachedJanusContacts: JanusContactWithAccount[] = [];
 let janusListBound = false;
+let janusHelpBound = false;
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
@@ -163,10 +164,13 @@ function renderDashboardPanels(
       recentEl.innerHTML = recentMeetings
         .map(
           (meeting) => `
-          <button type="button" class="janus-dashboard-item" data-janus-open-meeting="${esc(meeting.account_id)}">
-            <strong>${esc(meeting.account_name)}</strong>
-            <span class="muted">${esc(meeting.title)} · ${esc(formatJanusDateLabel(meeting.meeting_date))}</span>
-          </button>
+          <div class="history-item" data-janus-open-meeting="${esc(meeting.account_id)}" role="button" tabindex="0">
+            <div class="history-top">
+              <strong>${esc(meeting.account_name)}</strong>
+              <span>${esc(formatJanusDateLabel(meeting.meeting_date))}</span>
+            </div>
+            <div class="history-body muted">${esc(meeting.title)}</div>
+          </div>
         `
         )
         .join('');
@@ -180,10 +184,13 @@ function renderDashboardPanels(
       followEl.innerHTML = upcomingFollowUps
         .map(
           (meeting) => `
-          <button type="button" class="janus-dashboard-item" data-janus-open-meeting="${esc(meeting.account_id)}">
-            <strong>${esc(meeting.account_name)}</strong>
-            <span class="muted">${esc(meeting.title)} · follow up ${esc(formatJanusDateLabel(meeting.follow_up_date))}</span>
-          </button>
+          <div class="history-item" data-janus-open-meeting="${esc(meeting.account_id)}" role="button" tabindex="0">
+            <div class="history-top">
+              <strong>${esc(meeting.account_name)}</strong>
+              <span>Follow up ${esc(formatJanusDateLabel(meeting.follow_up_date))}</span>
+            </div>
+            <div class="history-body muted">${esc(meeting.title)}</div>
+          </div>
         `
         )
         .join('');
@@ -208,27 +215,33 @@ function renderGlobalSearchResults(results: JanusSearchResult[]): void {
     .map((result) => {
       if (result.kind === 'account') {
         return `
-          <button type="button" class="janus-search-result" data-janus-open-account="${esc(result.account.id)}">
-            <span class="badge badge-soft">Account</span>
-            <strong>${esc(result.account.name)}</strong>
-          </button>
+          <div class="history-item" data-janus-open-account="${esc(result.account.id)}" role="button" tabindex="0">
+            <div class="history-top">
+              <strong>${esc(result.account.name)}</strong>
+              <span class="badge badge-soft">Account</span>
+            </div>
+          </div>
         `;
       }
       if (result.kind === 'contact') {
         return `
-          <button type="button" class="janus-search-result" data-janus-open-account="${esc(result.contact.account_id)}" data-janus-open-tab="contacts">
-            <span class="badge badge-soft">Contact</span>
-            <strong>${esc(janusContactDisplayName(result.contact))}</strong>
-            <span class="muted">${esc(result.account_name)}</span>
-          </button>
+          <div class="history-item" data-janus-open-account="${esc(result.contact.account_id)}" data-janus-open-tab="contacts" role="button" tabindex="0">
+            <div class="history-top">
+              <strong>${esc(janusContactDisplayName(result.contact))}</strong>
+              <span class="badge badge-soft">Contact</span>
+            </div>
+            <div class="history-body muted">${esc(result.account_name)}</div>
+          </div>
         `;
       }
       return `
-        <button type="button" class="janus-search-result" data-janus-open-meeting="${esc(result.meeting.account_id)}">
-          <span class="badge badge-soft">Meeting</span>
-          <strong>${esc(result.meeting.title)}</strong>
-          <span class="muted">${esc(result.account_name)} · ${esc(formatJanusDateLabel(result.meeting.meeting_date))}</span>
-        </button>
+        <div class="history-item" data-janus-open-meeting="${esc(result.meeting.account_id)}" role="button" tabindex="0">
+          <div class="history-top">
+            <strong>${esc(result.meeting.title)}</strong>
+            <span class="badge badge-soft">Meeting</span>
+          </div>
+          <div class="history-body muted">${esc(result.account_name)} · ${esc(formatJanusDateLabel(result.meeting.meeting_date))}</div>
+        </div>
       `;
     })
     .join('');
@@ -400,16 +413,50 @@ async function handleCopperImport(file: File): Promise<void> {
   const summary = `Imported ${result.accountsCreated} accounts and ${result.contactsCreated} contacts. Skipped ${result.rowsSkipped}.`;
   if (result.errors.length) {
     showToast(`${summary} ${result.errors.length} row errors.`, 'error');
-    console.warn('[Janus] Copper import errors:', result.errors);
+    console.warn('[Janus] CSV import errors:', result.errors);
   } else {
     showToast(summary);
   }
   await loadJanus(true);
 }
 
+function setJanusHelpExpanded(expanded: boolean): void {
+  const card = safeGet('janusHelpCard');
+  const toggle = safeGet<HTMLButtonElement>('janusHelpToggleBtn');
+  const panel = safeGet('janusHelpPanel');
+  const helpBtn = safeGet<HTMLButtonElement>('janusHelpBtn');
+  if (!card || !toggle || !panel) return;
+
+  card.classList.toggle('is-expanded', expanded);
+  panel.hidden = !expanded;
+  toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  toggle.textContent = expanded ? 'Hide guide' : 'Show guide';
+  helpBtn?.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+}
+
+function initJanusHelpUi(): void {
+  if (janusHelpBound) return;
+  janusHelpBound = true;
+
+  safeGet('janusHelpToggleBtn')?.addEventListener('click', () => {
+    const expanded =
+      safeGet<HTMLButtonElement>('janusHelpToggleBtn')?.getAttribute('aria-expanded') === 'true';
+    setJanusHelpExpanded(!expanded);
+  });
+
+  safeGet('janusHelpBtn')?.addEventListener('click', () => {
+    setJanusHelpExpanded(true);
+    safeGet('janusHelpCard')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  setJanusHelpExpanded(false);
+}
+
 function bindJanusListUi(): void {
   if (janusListBound) return;
   janusListBound = true;
+
+  initJanusHelpUi();
 
   safeGet('janusRefreshBtn')?.addEventListener('click', () => {
     void loadJanus(true);
@@ -470,20 +517,24 @@ function bindJanusListUi(): void {
   });
 
   safeGet('janusGlobalSearchList')?.addEventListener('click', (event) => {
-    const button = (event.target as Element | null)?.closest<HTMLElement>('[data-janus-open-account], [data-janus-open-meeting]');
-    if (!button || typeof window.openJanusAccountDrawer !== 'function') return;
-    const accountId = button.dataset.janusOpenAccount || button.dataset.janusOpenMeeting || '';
+    const item = (event.target as Element | null)?.closest<HTMLElement>(
+      '.history-item[data-janus-open-account], .history-item[data-janus-open-meeting]'
+    );
+    if (!item || typeof window.openJanusAccountDrawer !== 'function') return;
+    const accountId = item.dataset.janusOpenAccount || item.dataset.janusOpenMeeting || '';
     if (!accountId) return;
-    const tab = button.dataset.janusOpenMeeting
+    const tab = item.dataset.janusOpenMeeting
       ? 'meetings'
-      : button.dataset.janusOpenTab || 'overview';
+      : item.dataset.janusOpenTab || 'overview';
     void window.openJanusAccountDrawer(accountId, tab);
   });
 
   document.getElementById('janusPage')?.addEventListener('click', (event) => {
-    const button = (event.target as Element | null)?.closest<HTMLElement>('[data-janus-open-meeting]');
-    if (!button || typeof window.openJanusAccountDrawer !== 'function') return;
-    const accountId = button.dataset.janusOpenMeeting || '';
+    const item = (event.target as Element | null)?.closest<HTMLElement>(
+      '[data-janus-open-meeting]'
+    );
+    if (!item || typeof window.openJanusAccountDrawer !== 'function') return;
+    const accountId = item.dataset.janusOpenMeeting || '';
     if (!accountId) return;
     void window.openJanusAccountDrawer(accountId, 'meetings');
   });

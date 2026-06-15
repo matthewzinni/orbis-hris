@@ -2032,29 +2032,174 @@
         >
           <div class="page janus-page" id="janusPage">
             <div class="page-header">
-              <div>
-                <h1>Janus</h1>
-                <p class="janus-tagline">
-                  Relationship CRM for BTW — accounts, contacts, meeting recaps, and agreements in
-                  one searchable place.
+              <div class="janus-page-intro">
+                <div class="janus-brand-row">
+                  <div class="janus-brand-logo" aria-hidden="true">
+                    <img src="/janus-mark.svg" width="44" height="44" alt="" />
+                  </div>
+                  <div>
+                    <div class="janus-brand-title">Janus</div>
+                    <div class="janus-brand-tagline">Connect · Track · Grow</div>
+                    <div class="janus-brand-subtitle">Relationship CRM</div>
+                  </div>
+                </div>
+                <p class="muted janus-brand-desc">
+                  Accounts, contacts, meeting recaps, and agreements in one searchable place.
                 </p>
               </div>
-              <div class="page-header-actions">
-                <button class="button soft" type="button" id="janusRefreshBtn">Refresh</button>
-                <label class="button soft janus-import-label" id="janusCopperImportLabel">
-                  Import Copper CSV
-                  <input id="janusCopperImportInput" type="file" accept=".csv,text/csv" hidden />
-                </label>
-                <button class="button soft" type="button" id="janusLogMeetingBtn">Log meeting</button>
-                <button class="button primary" type="button" id="janusNewAccountBtn">
-                  ＋ New account
-                </button>
-              </div>
+              <button class="button soft janus-help-btn" type="button" id="janusHelpBtn" aria-expanded="false" aria-controls="janusHelpCard" title="How to use Janus">
+                ?
+              </button>
+              <button class="button soft" type="button" id="janusRefreshBtn">Refresh</button>
+              <label class="button soft janus-import-label" id="janusCopperImportLabel">
+                Import CSV
+                <input id="janusCopperImportInput" type="file" accept=".csv,text/csv" hidden />
+              </label>
+              <button class="button soft" type="button" id="janusLogMeetingBtn">Log meeting</button>
+              <button class="button primary" type="button" id="janusNewAccountBtn">
+                ＋ New account
+              </button>
             </div>
 
             <p class="muted" id="janusHomeSummary">Loading relationship workspace…</p>
 
-            <div class="janus-scaffold-grid">
+            <div class="card orbis-disclosure-card janus-help-card" id="janusHelpCard">
+              <div class="card-header orbis-disclosure-header">
+                <span>How to use Janus</span>
+                <button
+                  type="button"
+                  class="orbis-disclosure-toggle"
+                  id="janusHelpToggleBtn"
+                  aria-expanded="false"
+                  aria-controls="janusHelpPanel"
+                >
+                  Show guide
+                </button>
+              </div>
+              <div class="card-body">
+                <p class="muted orbis-disclosure-summary" style="margin: 0">
+                  Add companies and clients, log meetings, and bulk-import contacts from CSV.
+                </p>
+                <div class="orbis-disclosure-panel" id="janusHelpPanel" hidden>
+                  <div class="janus-help-content">
+                    <section class="janus-help-section">
+                      <h3>Adding companies &amp; clients</h3>
+                      <p class="muted">You need Janus edit access (<code>admin</code> or <code>janus</code> role) to add or change records.</p>
+                      <h4>Add a new account</h4>
+                      <ol>
+                        <li>Open <strong>Janus</strong> in the left sidebar.</li>
+                        <li>Click <strong>＋ New account</strong>.</li>
+                        <li>On the <strong>Overview</strong> tab, fill in account details:
+                          <ul>
+                            <li><strong>Account name</strong> (required) — e.g. Macmillan, Sourcebooks</li>
+                            <li><strong>Type</strong> — Client, Vendor, Partner, Publisher, or Other</li>
+                            <li><strong>Status</strong> — Active, Prospect, or Inactive</li>
+                            <li><strong>Relationship owner</strong> — BTW email for the relationship owner</li>
+                            <li>Website, phone, address, and notes (optional)</li>
+                          </ul>
+                        </li>
+                        <li>Click <strong>Save account</strong>. The company appears in the Accounts table.</li>
+                      </ol>
+                      <h4>Add contacts</h4>
+                      <ol>
+                        <li>With the account drawer open, go to the <strong>Contacts</strong> tab.</li>
+                        <li>Enter name (required), title, email, phone, and notes.</li>
+                        <li>Check <strong>Primary contact</strong> if this is the main person.</li>
+                        <li>Click <strong>Save contact</strong>.</li>
+                      </ol>
+                      <h4>Edit an existing account</h4>
+                      <ol>
+                        <li>Find the company in the <strong>Accounts</strong> table and click <strong>Open</strong>.</li>
+                        <li>Update fields, then <strong>Save account</strong> or <strong>Save contact</strong>.</li>
+                      </ol>
+                    </section>
+
+                    <section class="janus-help-section">
+                      <h3>Logging a meeting</h3>
+                      <p class="muted">The account must be saved before you can log a meeting.</p>
+                      <h4>From a specific account (recommended)</h4>
+                      <ol>
+                        <li>Click <strong>Open</strong> on the account in the Accounts table.</li>
+                        <li>Go to the <strong>Meetings</strong> tab.</li>
+                        <li>Enter <strong>Meeting date</strong>, <strong>Title</strong>, and <strong>Attendees</strong> (comma-separated).</li>
+                        <li>Paste or type notes in <strong>Transcript / notes</strong>.</li>
+                        <li>Optional: click <strong>Generate summary</strong> for an AI recap and action items.</li>
+                        <li>Set a <strong>Follow-up date</strong> if needed, then click <strong>Save meeting</strong>.</li>
+                      </ol>
+                      <h4>From the Janus home page</h4>
+                      <ol>
+                        <li>Click <strong>Log meeting</strong> (opens the Meetings tab for an account).</li>
+                        <li>If it is not the right company, close the drawer, open the correct account, and use the Meetings tab.</li>
+                      </ol>
+                      <h4>Schedule via email</h4>
+                      <ol>
+                        <li>Open the account → <strong>Meetings</strong> tab.</li>
+                        <li>Enter date, time, title, and attendees.</li>
+                        <li>Click <strong>Email meeting request</strong> (requires a contact with an email on that account).</li>
+                      </ol>
+                    </section>
+
+                    <section class="janus-help-section">
+                      <h3>Importing a CSV</h3>
+                      <ol>
+                        <li>Click <strong>Import CSV</strong> on the Janus home page.</li>
+                        <li>Choose a <code>.csv</code> file from your computer.</li>
+                        <li>Wait for the confirmation message showing accounts and contacts imported.</li>
+                        <li>Click <strong>Refresh</strong> if the tables do not update right away.</li>
+                      </ol>
+                      <p class="muted">The first row must be column headers. Use one row per contact; repeat the company name on multiple rows for several people at the same company.</p>
+                      <div class="table-wrap">
+                        <table class="janus-help-table">
+                          <thead>
+                            <tr>
+                              <th>Purpose</th>
+                              <th>Accepted column names</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr>
+                              <td>Company name</td>
+                              <td><code>company</code>, <code>company_name</code>, <code>account</code>, <code>account_name</code>, <code>organization</code>, <code>name</code></td>
+                            </tr>
+                            <tr>
+                              <td>Account type</td>
+                              <td><code>account_type</code>, <code>type</code>, <code>company_type</code> (client, vendor, partner, publisher)</td>
+                            </tr>
+                            <tr>
+                              <td>Contact name</td>
+                              <td><code>contact</code>, <code>contact_name</code>, <code>full_name</code>, <code>person</code></td>
+                            </tr>
+                            <tr>
+                              <td>Email</td>
+                              <td><code>email</code>, <code>email_address</code>, <code>work_email</code></td>
+                            </tr>
+                            <tr>
+                              <td>Phone</td>
+                              <td><code>phone</code>, <code>phone_number</code>, <code>work_phone</code>, <code>mobile</code></td>
+                            </tr>
+                            <tr>
+                              <td>Title</td>
+                              <td><code>title</code>, <code>job_title</code>, <code>role</code></td>
+                            </tr>
+                            <tr>
+                              <td>External ID</td>
+                              <td><code>company_id</code>, <code>account_id</code>, <code>contact_id</code>, <code>person_id</code>, <code>id</code></td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <p class="muted janus-help-example-label">Example:</p>
+                      <pre class="janus-help-code">company_name,account_type,contact_name,email,title,phone
+Sourcebooks,client,Jane Doe,jane@sourcebooks.com,VP Sales,555-0100
+Macmillan,client,John Smith,,
+Tyndale,vendor,,,,</pre>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="kpi-grid" id="janusKpiGrid">
               <div class="kpi-card">
                 <div class="kpi-label">Accounts</div>
                 <div class="kpi-value" id="janusKpiAccounts">—</div>
@@ -2077,65 +2222,68 @@
               </div>
             </div>
 
-            <div class="layout janus-dashboard-layout">
-              <div class="card">
-                <div class="card-header">Recent meetings</div>
-                <div class="card-body">
-                  <div id="janusRecentMeetingsList" class="janus-dashboard-list">
-                    <div class="muted">Loading…</div>
+            <div class="layout">
+              <div class="stack">
+                <div class="card">
+                  <div class="card-header">Recent meetings</div>
+                  <div class="card-body">
+                    <div id="janusRecentMeetingsList">
+                      <div class="muted">Loading…</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Upcoming follow-ups</div>
+                  <div class="card-body">
+                    <div id="janusUpcomingFollowUpsList">
+                      <div class="muted">Loading…</div>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div class="card">
-                <div class="card-header">Upcoming follow-ups</div>
-                <div class="card-body">
-                  <div id="janusUpcomingFollowUpsList" class="janus-dashboard-list">
-                    <div class="muted">Loading…</div>
+            </div>
+
+            <div class="layout">
+              <div class="stack">
+                <div class="card hidden" id="janusGlobalSearchCard">
+                  <div class="card-header">Search results</div>
+                  <div class="card-body">
+                    <div id="janusGlobalSearchList"></div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div class="toolbar janus-toolbar">
-              <div class="toolbar-left janus-toolbar-filters">
-                <input
-                  class="input search-input"
-                  id="janusSearchInput"
-                  type="search"
-                  placeholder="Search accounts, contacts, meetings…"
-                  aria-label="Search Janus"
-                />
-                <select class="select" id="janusTypeFilter" aria-label="Filter by account type">
-                  <option value="">All types</option>
-                  <option value="client">Client</option>
-                  <option value="vendor">Vendor</option>
-                  <option value="partner">Partner</option>
-                  <option value="publisher">Publisher</option>
-                  <option value="other">Other</option>
-                </select>
-                <select class="select" id="janusStatusFilter" aria-label="Filter by account status">
-                  <option value="">All statuses</option>
-                  <option value="active">Active</option>
-                  <option value="prospect">Prospect</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="card hidden" id="janusGlobalSearchCard">
-              <div class="card-header">Search results</div>
-              <div class="card-body">
-                <div id="janusGlobalSearchList" class="janus-search-results"></div>
-              </div>
-            </div>
-
-            <div class="card" id="janusAccountsCard">
-              <div class="card-header">
-                <span>Accounts</span>
-                <span class="muted" id="janusAccountCount">Loading accounts…</span>
-              </div>
-              <div class="card-body">
-                <div class="table-wrap">
+                <div class="card" id="janusAccountsCard">
+                  <div class="card-header">
+                    <span>Accounts</span>
+                    <span class="muted" id="janusAccountCount">Loading accounts…</span>
+                  </div>
+                  <div class="card-body">
+                    <div class="toolbar" style="margin-bottom: 12px">
+                      <div class="toolbar-left">
+                        <input
+                          class="input"
+                          id="janusSearchInput"
+                          type="search"
+                          placeholder="Search accounts, contacts, meetings…"
+                          aria-label="Search Janus"
+                        />
+                        <select class="select" id="janusTypeFilter" aria-label="Filter by account type">
+                          <option value="">All types</option>
+                          <option value="client">Client</option>
+                          <option value="vendor">Vendor</option>
+                          <option value="partner">Partner</option>
+                          <option value="publisher">Publisher</option>
+                          <option value="other">Other</option>
+                        </select>
+                        <select class="select" id="janusStatusFilter" aria-label="Filter by account status">
+                          <option value="">All statuses</option>
+                          <option value="active">Active</option>
+                          <option value="prospect">Prospect</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="table-wrap">
                   <table>
                     <thead>
                       <tr>
@@ -2157,30 +2305,32 @@
               </div>
             </div>
 
-            <div class="card" id="janusContactsCard">
-              <div class="card-header">
-                <span>Contacts</span>
-                <span class="muted" id="janusContactCount">Loading contacts…</span>
-              </div>
-              <div class="card-body">
-                <div class="table-wrap">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Name</th>
-                        <th>Account</th>
-                        <th>Title</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="janusContactsBody">
-                      <tr>
-                        <td colspan="6" class="empty">Loading contacts…</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div class="card" id="janusContactsCard">
+                  <div class="card-header">
+                    <span>Contacts</span>
+                    <span class="muted" id="janusContactCount">Loading contacts…</span>
+                  </div>
+                  <div class="card-body">
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Name</th>
+                            <th>Account</th>
+                            <th>Title</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody id="janusContactsBody">
+                          <tr>
+                            <td colspan="6" class="empty">Loading contacts…</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2984,24 +3134,24 @@
               Close
             </button>
           </div>
-          <div class="janus-drawer-tabs" role="tablist" aria-label="Account sections">
-            <button type="button" class="janus-drawer-tab active" data-janus-drawer-tab="overview" aria-selected="true">
-              Overview
-            </button>
-            <button type="button" class="janus-drawer-tab" data-janus-drawer-tab="contacts" aria-selected="false">
-              Contacts
-            </button>
-            <button type="button" class="janus-drawer-tab" data-janus-drawer-tab="meetings" aria-selected="false">
-              Meetings
-            </button>
-            <button type="button" class="janus-drawer-tab" data-janus-drawer-tab="documents" aria-selected="false">
-              Documents
-            </button>
-            <button type="button" class="janus-drawer-tab" data-janus-drawer-tab="activity" aria-selected="false">
-              Activity
-            </button>
-          </div>
           <div class="drawer-body">
+            <div class="tabs drawer-tablist" role="tablist" aria-label="Account sections">
+              <button type="button" class="tab-btn active" data-janus-drawer-tab="overview" aria-selected="true">
+                Overview
+              </button>
+              <button type="button" class="tab-btn" data-janus-drawer-tab="contacts" aria-selected="false">
+                Contacts
+              </button>
+              <button type="button" class="tab-btn" data-janus-drawer-tab="meetings" aria-selected="false">
+                Meetings
+              </button>
+              <button type="button" class="tab-btn" data-janus-drawer-tab="documents" aria-selected="false">
+                Documents
+              </button>
+              <button type="button" class="tab-btn" data-janus-drawer-tab="activity" aria-selected="false">
+                Activity
+              </button>
+            </div>
             <div data-janus-drawer-panel="overview">
               <div class="card">
                 <div class="card-header">Account details</div>
