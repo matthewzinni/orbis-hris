@@ -36,6 +36,9 @@ export type PerformanceReviewDueCandidate = {
 
 export const PERFORMANCE_REVIEW_DUE_SOON_DAYS = 7;
 
+/** 90-day performance reviews apply only to hires on or after this date. */
+export const NINETY_DAY_REVIEW_HIRE_CUTOFF = '2026-03-01';
+
 const NINETY_DAY_REVIEW_GRACE_DAYS = 120;
 const ANNUAL_REVIEW_GRACE_DAYS = 90;
 
@@ -45,6 +48,15 @@ function drawerEmployeeId(employee: EmployeeLike): string {
 
 function readHireDate(employee: EmployeeLike): Date | null {
   return parseDueDate(employee.hire_date || employee.hireDate);
+}
+
+export function isEligibleFor90DayPerformanceReview(hireDate: Date | null): boolean {
+  if (!hireDate) return false;
+
+  const cutoff = parseDueDate(NINETY_DAY_REVIEW_HIRE_CUTOFF);
+  if (!cutoff) return true;
+
+  return hireDate.getTime() >= cutoff.getTime();
 }
 
 function isoDate(date: Date): string {
@@ -183,6 +195,7 @@ function build90DayDueCandidate(
   hireDate: Date,
   reviews: PerformanceReviewRecord[]
 ): PerformanceReviewDueCandidate | null {
+  if (!isEligibleFor90DayPerformanceReview(hireDate)) return null;
   if (is90DayReviewComplete(reviews, hireDate)) return null;
 
   const dueDate = addCalendarDays(hireDate, 90);
