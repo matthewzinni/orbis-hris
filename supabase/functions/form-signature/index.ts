@@ -43,10 +43,91 @@ function isExpired(expiresAt: string | null | undefined): boolean {
   return new Date(expiresAt).getTime() < Date.now();
 }
 
+function reviewScoreLabel(score: unknown): string {
+  const numeric = Number(score);
+  if (!Number.isFinite(numeric) || numeric <= 0) return '';
+  if (numeric >= 5) return 'Exceeds Expectations';
+  if (numeric >= 3) return 'Meets Expectations';
+  if (numeric >= 2) return 'Needs Improvement';
+  return 'Below Expectations';
+}
+
+function buildReviewAcknowledgmentSummary(row: Record<string, unknown>): string {
+  const lines: string[] = [];
+
+  const scoreFields: Array<[string, unknown]> = [
+    ['Quality', row.quality_score],
+    ['Attendance', row.attendance_score],
+    ['Reliability', row.reliability_score],
+    ['Communication', row.communication_score],
+    ['Judgment', row.judgement_score],
+    ['Initiative', row.initiative_score],
+    ['Teamwork', row.teamwork_score],
+    ['Knowledge', row.knowledge_score],
+    ['Training', row.training_score],
+  ];
+
+  const ratings = scoreFields
+    .map(([label, score]) => {
+      const text = reviewScoreLabel(score);
+      return text ? `${label}: ${text}` : null;
+    })
+    .filter(Boolean) as string[];
+
+  if (ratings.length) {
+    lines.push('Performance ratings');
+    ratings.forEach((rating) => lines.push(`• ${rating}`));
+    lines.push('');
+  }
+
+  const sections: Array<[string, unknown]> = [
+    ['Strengths', row.strengths],
+    ['Areas for improvement', row.improvements],
+    ['Employee comments / feedback', row.employee_comments],
+    ['Manager action plan / next steps', row.manager_comments],
+  ];
+
+  sections.forEach(([label, value]) => {
+    const text = String(value || '').trim();
+    if (!text) return;
+    lines.push(String(label));
+    lines.push(text);
+    lines.push('');
+  });
+
+  const snapshot = lines.join('\n').trim();
+  if (snapshot) return snapshot.slice(0, 4000);
+
+  const legacy = String(row.summary || row.notes || '').trim();
+  return legacy.slice(0, 4000) || 'No review details were recorded for this period.';
+}
+
+async function loadEmployeeDisplayName(
+  client: ReturnType<typeof createClient>,
+  employeeId: string
+): Promise<string> {
+  const trimmed = String(employeeId || '').trim();
+  if (!trimmed) return '';
+
+  const { data, error } = await client
+    .from('employees')
+    .select('first_name, last_name, id, employee_id')
+    .or(`id.eq.${trimmed},employee_id.eq.${trimmed}`)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !data) return '';
+
+  return [String(data.first_name || '').trim(), String(data.last_name || '').trim()]
+    .filter(Boolean)
+    .join(' ');
+}
+
 async function loadFormSummary(
   client: ReturnType<typeof createClient>,
   formType: FormType,
-  recordId: string
+  recordId: string,
+  employeeId = ''
 ) {
   const table = TABLE_BY_FORM[formType];
   const { data, error } = await client.from(table).select('*').eq('id', recordId).maybeSingle();
@@ -75,11 +156,19 @@ async function loadFormSummary(
     };
   }
 
+  const employeeName = await loadEmployeeDisplayName(
+    client,
+    String(row.employee_id || employeeId || '')
+  );
+
   return {
     title: 'Performance review acknowledgment',
-    subtitle: String(row.review_type || 'Performance review'),
+    subtitle: [employeeName, String(row.review_type || 'Performance review')]
+      .filter(Boolean)
+      .join(' · '),
     date: String(row.review_date || row.created_at || ''),
-    summary: String(row.summary || row.notes || '').slice(0, 1200),
+    summary: buildReviewAcknowledgmentSummary(row),
+    employeeName,
   };
 }
 
@@ -126,7 +215,12 @@ Deno.serve(async (req) => {
     const recordId = String(requestRow.record_id || '');
 
     if (req.method === 'GET') {
-      const summary = await loadFormSummary(client, formType, recordId);
+      const summary = await loadFormSummary(
+        client,
+        formType,
+        recordId,
+        String(requestRow.employee_id || '')
+      );
 
       if (!summary) {
         return jsonResponse({ error: 'The related form could not be found.' }, 404);

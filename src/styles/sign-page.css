@@ -72,13 +72,50 @@ body {
 }
 
 .sign-summary {
-  white-space: pre-wrap;
+  margin-bottom: 16px;
+}
+
+.sign-summary-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sign-muted);
+  margin-bottom: 8px;
+}
+
+.sign-summary-body {
+  white-space: normal;
   line-height: 1.55;
   background: #f8fafc;
   border: 1px solid var(--sign-line);
   border-radius: 10px;
   padding: 14px 16px;
-  margin-bottom: 16px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.sign-summary-heading {
+  font-weight: 700;
+  color: var(--sign-text);
+  margin-top: 10px;
+}
+
+.sign-summary-heading:first-child {
+  margin-top: 0;
+}
+
+.sign-summary-item,
+.sign-summary-line {
+  color: var(--sign-text);
+}
+
+.sign-summary-item {
+  padding-left: 4px;
+}
+
+.sign-summary-spacer {
+  height: 6px;
 }
 
 .sign-preview {

@@ -1,5 +1,6 @@
 import { createTypedSignatureImage } from './ui/signaturePads';
 import { getEdgeFunctionHeaders, getFormSignatureFunctionUrl } from './services/signatureRequests';
+import { formatAcknowledgmentSummaryHtml } from './services/reviewAcknowledgmentSummary';
 
 type SignPayload = {
   status?: string;
@@ -7,9 +8,22 @@ type SignPayload = {
   subtitle?: string;
   date?: string;
   summary?: string;
+  employeeName?: string;
   signerName?: string;
   error?: string;
 };
+
+function formatDisplayDate(value: unknown): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw.slice(0, 10);
+  return parsed.toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
 function getTokenFromUrl(): string {
   const params = new URLSearchParams(window.location.search);
@@ -60,13 +74,19 @@ function renderSigningForm(payload: SignPayload, token: string): void {
 
   if (title) title.textContent = payload.title || 'Document signing';
   if (meta) {
-    meta.textContent = [payload.subtitle, payload.date].filter(Boolean).join(' · ');
+    meta.textContent = [payload.subtitle, formatDisplayDate(payload.date)].filter(Boolean).join(' · ');
   }
 
-  const defaultName = String(payload.signerName || '').trim();
+  const defaultName = String(payload.signerName || payload.employeeName || '').trim();
+  const summaryHtml = formatAcknowledgmentSummaryHtml(
+    payload.summary || 'No document details were included with this signing request.'
+  );
 
   body.innerHTML = `
-    <div class="sign-summary">${esc(payload.summary || 'Please review and sign this document.')}</div>
+    <div class="sign-summary">
+      <div class="sign-summary-label">Document snapshot</div>
+      <div class="sign-summary-body">${summaryHtml}</div>
+    </div>
     <label style="display:flex; gap:8px; align-items:flex-start; font-size:14px;">
       <input type="checkbox" id="signAgree" />
       <span>I have reviewed this document and agree to sign electronically.</span>

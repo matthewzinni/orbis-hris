@@ -3,6 +3,7 @@ import {
   getFormSignatureFunctionUrl,
   type SignatureFormType,
 } from '../services/signatureRequests';
+import { formatAcknowledgmentSummaryHtml } from '../services/reviewAcknowledgmentSummary';
 import { createTypedSignatureImage } from '../ui/signaturePads';
 
 type SignPayload = {
@@ -11,6 +12,7 @@ type SignPayload = {
   subtitle?: string;
   date?: string;
   summary?: string;
+  employeeName?: string;
   signerName?: string;
   error?: string;
 };
@@ -91,10 +93,17 @@ function renderSigningForm(payload: SignPayload, token: string): void {
     meta.textContent = [payload.subtitle, payload.date].filter(Boolean).join(' · ');
   }
 
-  const defaultName = String(payload.signerName || '').trim();
+  const defaultName = String(payload.signerName || payload.employeeName || '').trim();
+  const summaryHtml = formatAcknowledgmentSummaryHtml(
+    payload.summary || 'No document details were included with this signing request.',
+    'er-signing-summary'
+  );
 
   body.innerHTML = `
-    <div class="er-signing-summary">${esc(payload.summary || 'Please review and sign this document.')}</div>
+    <div class="er-signing-summary-wrap">
+      <div class="er-signing-summary-label">Document snapshot</div>
+      <div class="er-signing-summary-body">${summaryHtml}</div>
+    </div>
     <label class="er-signing-agree">
       <input type="checkbox" id="erSigningAgree" />
       <span>I have reviewed this document and agree to sign electronically.</span>

@@ -1,6 +1,7 @@
 import { PDFDocument, StandardFonts, rgb, type PDFPage, type PDFFont } from 'pdf-lib';
 import { supabaseClient } from './supabaseClient';
 import type { SignatureFormType } from './signatureRequests';
+import { buildReviewAcknowledgmentSummary } from './reviewAcknowledgmentSummary';
 
 type ErRecord = Record<string, unknown>;
 
@@ -136,7 +137,7 @@ function buildSummary(formType: SignatureFormType, record: ErRecord): string {
     return parts.join('\n\n');
   }
 
-  return String(record.summary || record.notes || '').trim();
+  return buildReviewAcknowledgmentSummary(record);
 }
 
 function buildDocumentMeta(

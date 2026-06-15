@@ -16,14 +16,40 @@
   font-size: 0.9rem;
 }
 
-.er-signing-summary {
+.er-signing-summary-wrap {
+  margin-bottom: 1rem;
+}
+
+.er-signing-summary-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted, #94a3b8);
+  margin-bottom: 0.35rem;
+}
+
+.er-signing-summary-body {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   padding: 0.85rem 1rem;
-  white-space: pre-wrap;
   line-height: 1.55;
-  margin-bottom: 1rem;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.er-signing-summary-heading {
+  font-weight: 700;
+  margin-top: 0.65rem;
+}
+
+.er-signing-summary-heading:first-child {
+  margin-top: 0;
+}
+
+.er-signing-summary-spacer {
+  height: 6px;
 }
 
 .er-signing-agree {
