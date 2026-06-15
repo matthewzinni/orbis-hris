@@ -27,6 +27,109 @@ export function getSignatureRequestContext(): SignatureRequestContext | null {
   return signatureRequestContext;
 }
 
+function readCurrentDrawerEmployee(): Record<string, unknown> | null {
+  return (window.currentEmployee as Record<string, unknown> | null | undefined) ?? null;
+}
+
+function employeeIdFromRecord(employee: Record<string, unknown> | null): string {
+  return String(employee?.dbId || employee?.id || employee?.employee_id || '').trim();
+}
+
+function employeeNameFromRecord(employee: Record<string, unknown> | null): string {
+  if (!employee) return '';
+  return [
+    employee.first_name || employee.first,
+    employee.last_name || employee.last,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+}
+
+function employeeEmailFromRecord(employee: Record<string, unknown> | null): string {
+  if (!employee) return '';
+  return String(employee.work_email || employee.email || '').trim();
+}
+
+function isDrawerTabActive(tabName: string): boolean {
+  return Boolean(
+    document.querySelector(`#employeeDrawer .tab-btn.active[data-tab="${tabName}"]`)
+  );
+}
+
+function resolveSignatureRequestContextFromWindow(): SignatureRequestContext | null {
+  const employee = readCurrentDrawerEmployee();
+  const employeeId = employeeIdFromRecord(employee);
+  if (!employeeId) return null;
+
+  const reviewRecordId = String(
+    window.currentReviewId || window.reviewAttachmentContextId || ''
+  ).trim();
+  if (reviewRecordId && (isDrawerTabActive('reviews') || signatureRequestContext?.formType === 'review')) {
+    return {
+      formType: 'review',
+      recordId: reviewRecordId,
+      employeeId,
+      signerName: employeeNameFromRecord(employee),
+      signerEmail: employeeEmailFromRecord(employee),
+    };
+  }
+
+  const disciplineRecordId = String(window.currentDisciplineId || '').trim();
+  if (disciplineRecordId && (isDrawerTabActive('discipline') || signatureRequestContext?.formType === 'discipline')) {
+    return {
+      formType: 'discipline',
+      recordId: disciplineRecordId,
+      employeeId,
+      signerName: employeeNameFromRecord(employee),
+      signerEmail: employeeEmailFromRecord(employee),
+    };
+  }
+
+  const incidentRecordId = String(window.currentIncidentId || '').trim();
+  if (incidentRecordId && (isDrawerTabActive('incidents') || signatureRequestContext?.formType === 'incident')) {
+    return {
+      formType: 'incident',
+      recordId: incidentRecordId,
+      employeeId,
+      signerName: employeeNameFromRecord(employee),
+      signerEmail: employeeEmailFromRecord(employee),
+    };
+  }
+
+  return null;
+}
+
+async function ensureSignatureRequestContext(): Promise<SignatureRequestContext | null> {
+  const existing = getSignatureRequestContext();
+  if (existing?.recordId) return existing;
+
+  const resolved = resolveSignatureRequestContextFromWindow();
+  if (resolved?.recordId) {
+    setSignatureRequestContext(resolved);
+    return resolved;
+  }
+
+  if (isDrawerTabActive('reviews') && typeof window.saveReviewRecord === 'function') {
+    await window.saveReviewRecord();
+    const afterSave = getSignatureRequestContext();
+    if (afterSave?.recordId) return afterSave;
+    return resolveSignatureRequestContextFromWindow();
+  }
+
+  if (isDrawerTabActive('discipline') && typeof window.saveDisciplineRecord === 'function') {
+    await window.saveDisciplineRecord();
+    return getSignatureRequestContext() || resolveSignatureRequestContextFromWindow();
+  }
+
+  if (isDrawerTabActive('incidents') && typeof window.saveIncidentRecord === 'function') {
+    await window.saveIncidentRecord();
+    return getSignatureRequestContext() || resolveSignatureRequestContextFromWindow();
+  }
+
+  return null;
+}
+
 const TENURE_AUTOFILL_PATTERN =
   /^\d+\s*[-–]\s*\d+(\s*(year|yr|month|mo)s?)?$/i;
 
@@ -260,7 +363,7 @@ function mountSignatureControls(
     remoteRow.innerHTML = `
       <button type="button" class="button primary sm signature-queue-portal-btn">Copy signing link</button>
       <button type="button" class="button soft sm signature-generate-pdf-btn">Generate PDF</button>
-      <span class="muted" style="font-size:12px;">Email or text the link to the employee. They can sign on any device without an Orbis login.</span>
+      <span class="muted signature-remote-help" style="font-size:12px;">Email or text the link to the employee. They can sign on any device without an Orbis login.</span>
     `;
     controls.appendChild(remoteRow);
 
@@ -296,14 +399,14 @@ async function handleGenerateAcknowledgmentPdf(): Promise<void> {
 async function handleQueuePortalSignature(
   signerRole: 'employee' | 'manager' | 'witness'
 ): Promise<void> {
-  const context = getSignatureRequestContext();
-  if (!context?.recordId) {
-    window.showToast?.('Save the form first, then copy a signing link.', 'error');
+  if (signerRole !== 'employee') {
+    window.showToast?.('Signing links are available for employee signatures only.', 'error');
     return;
   }
 
-  if (signerRole !== 'employee') {
-    window.showToast?.('Signing links are available for employee signatures only.', 'error');
+  const context = await ensureSignatureRequestContext();
+  if (!context?.recordId) {
+    window.showToast?.('Save the review first, then copy a signing link.', 'error');
     return;
   }
 
@@ -484,6 +587,14 @@ export function initErSignaturePads(formPrefix: 'discipline' | 'incident' | 'rev
   });
   refreshSignaturePadGuards(`${formPrefix}WitnessSignature`, `${formPrefix}WitnessSigStatus`, {
     signerRole: 'witness',
+  });
+
+  document.querySelectorAll<HTMLButtonElement>('.signature-queue-portal-btn').forEach((button) => {
+    button.textContent = 'Copy signing link';
+  });
+  document.querySelectorAll<HTMLElement>('.signature-remote-help').forEach((help) => {
+    help.textContent =
+      'Email or text the link to the employee. They can sign on any device without an Orbis login.';
   });
 
   scrubAllSignatureNameInputs();

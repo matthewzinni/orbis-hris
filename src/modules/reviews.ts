@@ -369,8 +369,6 @@ function applyReviewAutoSignals(
     showToast(`${employeeDisplayName(employee)} flagged as At-Risk.`, 'warning');
     return;
   }
-
-  showToast(currentReviewId ? 'Review updated.' : 'Review saved.', 'success');
 }
 
 async function refreshReviewDependentUi(employeeId: string): Promise<void> {
@@ -689,12 +687,24 @@ export async function saveReviewRecord(): Promise<void> {
   if (resolvedAttachmentReviewId) {
     window.reviewAttachmentContextId = resolvedAttachmentReviewId;
     syncReviewSignatureContext(resolvedAttachmentReviewId, activeEmployee);
-  }
+    currentReviewId = resolvedAttachmentReviewId;
+    window.currentReviewId = resolvedAttachmentReviewId;
 
-  resetPerformanceReviewFormUi({
-    preserveReviewAttachmentContext: true,
-    preserveSignatureContext: Boolean(resolvedAttachmentReviewId),
-  });
+    const saveButton = safeGet('saveReviewBtn');
+    if (saveButton) saveButton.textContent = 'Update Review';
+
+    const editStatus = safeGet('reviewEditStatus');
+    if (editStatus) {
+      editStatus.textContent = 'Editing saved review';
+      editStatus.classList.remove('hidden');
+    }
+
+    safeGet('cancelReviewEditBtn')?.classList.remove('hidden');
+    showToast('Review saved. You can copy a signing link now.', 'success');
+  } else {
+    resetPerformanceReviewFormUi({ preserveReviewAttachmentContext: true });
+    showToast('Review saved.', 'success');
+  }
 
   await refreshReviewDependentUi(employeeId);
 
