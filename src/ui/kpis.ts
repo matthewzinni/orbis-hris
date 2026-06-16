@@ -565,6 +565,54 @@ function ensureAtRiskMeta(employeeId: string): AtRiskMeta {
   return map[employeeId];
 }
 
+function getAtRiskAliasKeys(employeeId: string): string[] {
+  const employee = getEmployeeById(employeeId);
+  return employee ? getEmployeeMapKeys(employee) : [employeeId];
+}
+
+function isManualAtRiskSuppressed(employeeId: string, suppressedIds: Set<string>): boolean {
+  return getAtRiskAliasKeys(employeeId).some((key) => suppressedIds.has(key));
+}
+
+function applyDisciplineRiskToAliases(employeeId: string): void {
+  getAtRiskAliasKeys(employeeId).forEach((key) => {
+    const meta = ensureAtRiskMeta(key);
+    meta.disciplineRisk = true;
+  });
+}
+
+async function loadDisciplineRowsForKpis(): Promise<{
+  rows: Array<{
+    employee_id?: string;
+    report_status?: string;
+    discipline_level?: string;
+    action_taken?: string;
+    description?: string;
+    issue_type?: string;
+  }>;
+  error: string | null;
+}> {
+  const primarySelect =
+    'id, employee_id, issue_type, report_status, discipline_level, action_taken, description';
+
+  const primary = await supabaseClient.from('discipline_reports').select(primarySelect);
+  if (!primary.error) {
+    return { rows: (primary.data || []) as Array<Record<string, unknown>>, error: null };
+  }
+
+  console.warn('[KPIs] discipline_reports select failed, retrying without discipline_level:', primary.error);
+
+  const fallback = await supabaseClient
+    .from('discipline_reports')
+    .select('id, employee_id, issue_type, report_status, action_taken, description');
+
+  if (fallback.error) {
+    return { rows: [], error: fallback.error.message || 'Could not load discipline reports.' };
+  }
+
+  return { rows: (fallback.data || []) as Array<Record<string, unknown>>, error: null };
+}
+
 function getEmployeeStatus(employee: KpiEmployeeRecord): string {
   return String(employee.status || employee.displayStatus || employee.employee_status || '')
     .trim()
@@ -1064,17 +1112,16 @@ export async function loadSummaryMetrics(): Promise<void> {
   await ensureKpiEmployeeRoster();
 
   try {
+    const disciplinePromise = loadDisciplineRowsForKpis();
     const [
-      disciplineRes,
+      disciplineLoad,
       reviewsRes,
       manualRiskRes,
       impactPlayerRes,
       investigationsRes,
       operationsRes,
     ] = await Promise.all([
-      supabaseClient
-        .from('discipline_reports')
-        .select('id, employee_id, issue_type, report_status, discipline_level'),
+      disciplinePromise,
       supabaseClient
         .from('employee_reviews')
         .select(
@@ -1099,6 +1146,12 @@ export async function loadSummaryMetrics(): Promise<void> {
         .from('operations_issues')
         .select('id, status, is_recurring, department, related_employee_id, priority'),
     ]);
+
+    const disciplineRows = disciplineLoad.rows;
+    const disciplineRes = {
+      data: disciplineRows,
+      error: disciplineLoad.error ? { message: disciplineLoad.error } : null,
+    };
 
     if (!disciplineRes.error) {
       const openDisciplineCases = (disciplineRes.data || []).filter((row) =>
@@ -1216,7 +1269,7 @@ export async function loadSummaryMetrics(): Promise<void> {
     }
 
     reviewRiskEmployeeIds.forEach((employeeId) => {
-      if (manualSuppressedAtRiskIds.has(employeeId)) {
+      if (isManualAtRiskSuppressed(employeeId, manualSuppressedAtRiskIds)) {
         reviewRiskEmployeeIds.delete(employeeId);
       }
     });
@@ -1248,7 +1301,7 @@ export async function loadSummaryMetrics(): Promise<void> {
       });
 
       Object.entries(latestReviewByEmployee).forEach(([employeeId, item]) => {
-        if (manualSuppressedAtRiskIds.has(employeeId)) return;
+        if (isManualAtRiskSuppressed(employeeId, manualSuppressedAtRiskIds)) return;
         if (item.avgScore !== null && item.avgScore <= 2) {
           const meta = ensureAtRiskMeta(employeeId);
           meta.lowReview = true;
@@ -1260,11 +1313,7 @@ export async function loadSummaryMetrics(): Promise<void> {
 
     const rosterEmployees = getDashboardKpiEmployees();
     const intelligenceContext = buildHrIntelligenceContext({
-      disciplineRows: (disciplineRes.data || []) as Array<{
-        employee_id?: string;
-        report_status?: string;
-        discipline_level?: string;
-      }>,
+      disciplineRows,
       investigationRows: !investigationsRes.error
         ? (investigationsRes.data || []).filter((row) =>
             isOpenInvestigationStatus((row as { status?: string }).status)
@@ -1289,17 +1338,17 @@ export async function loadSummaryMetrics(): Promise<void> {
       failedMetrics.push('operations intelligence');
     }
 
-    intelligenceContext.disciplineOpenByEmployee.forEach((_, employeeId) => {
-      if (manualSuppressedAtRiskIds.has(employeeId)) return;
-      const meta = ensureAtRiskMeta(employeeId);
-      meta.disciplineRisk = true;
+    intelligenceContext.severeDisciplineByEmployee.forEach((_, employeeId) => {
+      if (isManualAtRiskSuppressed(employeeId, manualSuppressedAtRiskIds)) return;
+      applyDisciplineRiskToAliases(employeeId);
     });
 
     Object.keys(atRiskMap).forEach((employeeId) => {
       atRiskMap[employeeId] = enrichAtRiskMetaFromContext(
         employeeId,
         atRiskMap[employeeId],
-        intelligenceContext
+        intelligenceContext,
+        rosterEmployees
       );
     });
 
@@ -1402,8 +1451,8 @@ export async function loadSummaryMetrics(): Promise<void> {
       setKpiText(
         'kAtRiskEmployeesSub',
         atRiskEmployees === 0
-          ? 'No employees flagged from low review scores, manual HR flags, or severe open discipline (final warning+)'
-          : `${atRiskEmployees} employee${atRiskEmployees === 1 ? '' : 's'} flagged by review score, HR note, or severe open discipline`
+          ? 'No employees flagged from low review scores, manual HR flags, or severe discipline (final warning+)'
+          : `${atRiskEmployees} employee${atRiskEmployees === 1 ? '' : 's'} flagged by review score, HR note, or severe discipline`
       );
     } else {
       failedMetrics.push('at-risk summary');

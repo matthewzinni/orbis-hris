@@ -21,15 +21,8 @@ import { supabaseClient } from '../services/supabaseClient';
 import {
   loadEmployeeTasksSnapshot,
   recordHandbookAcknowledgment,
-  STANDARD_ONBOARDING_TASKS,
-  toggleEmployeeOnboardingTask,
   type EmployeeTaskItem,
 } from '../services/employeeTasks';
-import {
-  isOnboardingTaskCompleted,
-  onboardingDueBadgeLabel,
-  onboardingDueStatus,
-} from '../services/onboardingWorkflow';
 
 let cachedPolicyDocs: HandbookDocument[] = [];
 
@@ -387,76 +380,6 @@ function bindHandbookActions(docs: HandbookDocument[]): void {
   });
 }
 
-function renderOnboardingChecklist(
-  tasks: Array<{
-    id: string;
-    task_name?: string;
-    status?: string;
-    due_date?: string | null;
-  }>
-): void {
-  const container = safeGet('myTasksOnboardingList');
-  const summary = safeGet('myTasksOnboardingSummary');
-  const bar = safeGet('myTasksOnboardingProgress');
-
-  if (!container) return;
-
-  if (!tasks.length) {
-    container.innerHTML = '<div class="muted">No onboarding tasks on file.</div>';
-    if (summary) summary.textContent = '';
-    if (bar) bar.style.width = '0%';
-    return;
-  }
-
-  const completed = tasks.filter(
-    (task) => String(task.status || '').toLowerCase() === 'completed'
-  ).length;
-  const percent = Math.round((completed / tasks.length) * 100);
-
-  container.innerHTML = tasks
-    .map((task) => {
-      const completed = isOnboardingTaskCompleted(task.status);
-      const dueStatus = onboardingDueStatus(task.due_date);
-      const dueClass =
-        dueStatus === 'overdue'
-          ? 'badge badge-absent'
-          : dueStatus === 'due_soon'
-            ? 'badge badge-leave'
-            : 'badge badge-soft';
-      const dueBadge = completed
-        ? '<span class="badge badge-active">Completed</span>'
-        : task.due_date
-          ? `<span class="${dueClass}">${esc(onboardingDueBadgeLabel(task.due_date))}</span>`
-          : '';
-
-      return `
-        <label class="employee-portal-onboarding-row${completed ? ' is-complete' : ''}">
-          <input
-            type="checkbox"
-            data-onboarding-task-id="${esc(task.id)}"
-            ${completed ? 'checked' : ''}
-          />
-          <span class="employee-portal-onboarding-row-main">
-            <strong>${esc(task.task_name || 'Onboarding task')}</strong>
-            ${dueBadge}
-          </span>
-        </label>
-      `;
-    })
-    .join('');
-
-  container.querySelectorAll<HTMLInputElement>('[data-onboarding-task-id]').forEach((input) => {
-    input.addEventListener('change', () => {
-      void toggleMyOnboardingTask(input.dataset.onboardingTaskId || '', input.checked);
-    });
-  });
-
-  if (summary) {
-    summary.textContent = `${completed} of ${STANDARD_ONBOARDING_TASKS.length} complete`;
-  }
-  if (bar) bar.style.width = `${percent}%`;
-}
-
 function renderCompletedAcknowledgments(items: EmployeeTaskItem[]): void {
   const container = safeGet('myTasksCompletedList');
   if (!container) return;
@@ -523,19 +446,6 @@ export async function acknowledgeHandbookFromPortal(documentId: string): Promise
   }
 }
 
-export async function toggleMyOnboardingTask(taskId: string, isComplete: boolean): Promise<void> {
-  const employeeId = getLinkedEmployeeId();
-  if (!taskId || !employeeId) return;
-
-  try {
-    await toggleEmployeeOnboardingTask(employeeId, taskId, isComplete);
-    await loadMyTasksPortal();
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Could not update task.';
-    showToast(message, 'error');
-  }
-}
-
 function renderTasksPortalUnlinkedState(adminItems: HrInboxItem[] = []): void {
   const pendingEl = safeGet('myTasksPendingList');
   const handbookEl = safeGet('myTasksHandbookList');
@@ -554,7 +464,6 @@ function renderTasksPortalUnlinkedState(adminItems: HrInboxItem[] = []): void {
       ? '<div class="muted">Handbook and personal tasks require a linked employee record.</div>'
       : message;
   }
-  renderOnboardingChecklist([]);
   renderCompletedAcknowledgments([]);
 }
 
@@ -620,7 +529,6 @@ export async function loadMyTasksPortal(): Promise<void> {
     bindHandbookActions(snapshot.handbookDocuments);
     bindSignatureActions();
     bindPolicyActions();
-    renderOnboardingChecklist(snapshot.onboardingTasks);
     renderCompletedAcknowledgments(snapshot.completed);
     if (typeof window.refreshMobileTasksUi === 'function') {
       void window.refreshMobileTasksUi();
@@ -633,7 +541,6 @@ export async function loadMyTasksPortal(): Promise<void> {
 }
 
 window.loadMyTasksPortal = loadMyTasksPortal;
-window.toggleMyOnboardingTask = toggleMyOnboardingTask;
 window.acknowledgeHandbookFromPortal = acknowledgeHandbookFromPortal;
 window.acknowledgePolicyFromPortal = acknowledgePolicyFromPortal;
 

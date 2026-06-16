@@ -411,7 +411,7 @@ async function handleQueuePortalSignature(
   }
 
   try {
-    await requestAndCopyEmployeeSigningLink({
+    const { reused } = await requestAndCopyEmployeeSigningLink({
       formType: context.formType,
       recordId: context.recordId,
       employeeId: context.employeeId,
@@ -419,7 +419,9 @@ async function handleQueuePortalSignature(
       signerEmail: context.signerEmail,
     });
     window.showToast?.(
-      'Signing link copied. Send it to the employee — no Orbis login required.',
+      reused
+        ? 'Employee already has a pending acknowledgment in their portal — existing signing link copied.'
+        : 'Signing link copied. Send it to the employee — no Orbis login required.',
       'success'
     );
   } catch (err) {
@@ -627,11 +629,14 @@ window.requestEmployeeSignatureLink = async (
     employeeId,
     signerName,
     signerEmail,
+  }).then(({ reused }) => {
+    window.showToast?.(
+      reused
+        ? 'Employee already has a pending acknowledgment in their portal — existing signing link copied.'
+        : 'Signing link copied. Send it to the employee — no Orbis login required.',
+      'success'
+    );
   });
-  window.showToast?.(
-    'Signing link copied. Send it to the employee — no Orbis login required.',
-    'success'
-  );
 };
 
 document.addEventListener('DOMContentLoaded', () => {

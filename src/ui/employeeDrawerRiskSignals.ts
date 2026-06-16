@@ -66,7 +66,7 @@ export function buildEmployeeRiskSignalItems(
   if (riskMeta?.disciplineRisk) {
     items.push({
       tone: 'risk',
-      text: 'Open discipline case on file',
+      text: 'Severe discipline on file (Final Warning or higher)',
     });
   }
 

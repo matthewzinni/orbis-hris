@@ -338,7 +338,6 @@ declare global {
     saveEmployeeNote?: () => Promise<void>;
     deleteNote?: (noteId: string) => Promise<void>;
     submitMyTimeOffRequest?: () => Promise<void>;
-    toggleMyOnboardingTask?: (taskId: string, isComplete: boolean) => Promise<void>;
     acknowledgeHandbookFromPortal?: (documentId: string) => Promise<void>;
     acknowledgePolicyFromPortal?: (assignmentId: string, documentId?: string) => Promise<void>;
     supabase?: SupabaseClient;

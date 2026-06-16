@@ -131,7 +131,7 @@ export function buildRiskBadgeHtml(riskMeta: FlagMeta | null): string {
   }
 
   if (riskMeta.disciplineRisk) {
-    lines.push('', 'Open discipline case on file');
+    lines.push('', 'Severe discipline on file (Final Warning or higher)');
   }
 
   if (riskMeta.flaggedDate) {

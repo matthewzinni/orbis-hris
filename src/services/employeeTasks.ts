@@ -1,19 +1,7 @@
 import { loadHandbookDocuments, type HandbookDocument } from './employeeHandbook';
-import {
-  sortOnboardingTasksByStandard,
-  syncStandardOnboardingTasks,
-  STANDARD_ONBOARDING_TASKS,
-} from './onboardingStandard';
-import {
-  isOnboardingPortalVisible,
-  isOnboardingTaskCompleted,
-  onboardingAssigneeLabel,
-  onboardingDueBadgeLabel,
-  onboardingPortalDetail,
-  type OnboardingTaskRecord,
-} from './onboardingWorkflow';
 import { loadEmployeePolicyCampaignAssignments } from './policyCampaigns';
 import { supabaseClient } from './supabaseClient';
+import type { OnboardingTaskRecord } from './onboardingWorkflow';
 
 export type EmployeeTaskKind =
   | 'signature'
@@ -63,6 +51,13 @@ function formatDateLabel(value: string | null | undefined): string {
   return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function isPendingSignatureExpired(expiresAt: string | null | undefined): boolean {
+  const raw = String(expiresAt || '').trim();
+  if (!raw) return false;
+  const expires = new Date(raw);
+  return !Number.isNaN(expires.getTime()) && expires.getTime() <= Date.now();
+}
+
 export async function loadEmployeeTasksSnapshot(employeeId: string): Promise<EmployeeTasksSnapshot> {
   const id = String(employeeId || '').trim();
   if (!id) {
@@ -75,18 +70,10 @@ export async function loadEmployeeTasksSnapshot(employeeId: string): Promise<Emp
     };
   }
 
-  await syncStandardOnboardingTasks(id);
-
-  const [handbookDocuments, campaignAssignments, onboardingRes, signatureRes, acknowledgmentRes] =
+  const [handbookDocuments, campaignAssignments, signatureRes, acknowledgmentRes] =
     await Promise.all([
     loadHandbookDocuments(),
     loadEmployeePolicyCampaignAssignments(id).catch(() => []),
-    supabaseClient
-      .from('onboarding_tasks')
-      .select(
-        'id, task_name, status, due_date, assigned_to, show_in_portal, completed_at, created_at'
-      )
-      .eq('employee_id', id),
     supabaseClient
       .from('signature_requests')
       .select('id, token, form_type, signer_role, status, created_at, signed_at, expires_at')
@@ -100,9 +87,6 @@ export async function loadEmployeeTasksSnapshot(employeeId: string): Promise<Emp
       .order('acknowledged_at', { ascending: false }),
   ]);
 
-  if (onboardingRes.error) {
-    throw new Error(onboardingRes.error.message || 'Could not load onboarding tasks.');
-  }
   if (signatureRes.error) {
     throw new Error(signatureRes.error.message || 'Could not load signature requests.');
   }
@@ -110,64 +94,70 @@ export async function loadEmployeeTasksSnapshot(employeeId: string): Promise<Emp
     throw new Error(acknowledgmentRes.error.message || 'Could not load acknowledgments.');
   }
 
-  const allOnboardingTasks = sortOnboardingTasksByStandard(
-    (onboardingRes.data || []) as OnboardingTaskRecord[]
-  );
-  const onboardingTasks = allOnboardingTasks.filter((task) => isOnboardingPortalVisible(task));
   const acknowledgments = acknowledgmentRes.data || [];
   const pending: EmployeeTaskItem[] = [];
   const completed: EmployeeTaskItem[] = [];
 
-  onboardingTasks.forEach((task) => {
-    const taskName = String(task.task_name || 'Onboarding task').trim();
-    const completedTask = isOnboardingTaskCompleted(task.status);
-    const dueLine = task.due_date
-      ? onboardingDueBadgeLabel(task.due_date)
-      : '';
-    const assigneeLine =
-      task.assigned_to && task.assigned_to !== 'employee'
-        ? `Owner: ${onboardingAssigneeLabel(task.assigned_to)}`
-        : '';
-
-    const item: EmployeeTaskItem = {
-      id: `onboarding:${task.id}`,
-      kind: 'onboarding',
-      title: taskName,
-      detail: completedTask
-        ? `Marked complete ${formatDateLabel(task.completed_at) || 'on your checklist'}`
-        : [onboardingPortalDetail(task), dueLine, assigneeLine].filter(Boolean).join(' · '),
-      status: completedTask ? 'completed' : 'pending',
-      onboardingTaskId: task.id,
-      completedAt: task.completed_at ? String(task.completed_at) : null,
-    };
-
-    if (item.status === 'pending') pending.push(item);
-    else completed.push(item);
-  });
+  const pendingSignatureByFormType = new Map<
+    string,
+    {
+      id: string;
+      token?: string;
+      form_type?: string;
+      created_at?: string;
+      expires_at?: string;
+      signed_at?: string;
+    }
+  >();
 
   (signatureRes.data || []).forEach((row) => {
     const formType = String(row.form_type || '').trim();
     const status = String(row.status || '').trim().toLowerCase();
+
+    if (status === 'pending') {
+      if (isPendingSignatureExpired(row.expires_at)) return;
+
+      const existing = pendingSignatureByFormType.get(formType);
+      if (!existing) {
+        pendingSignatureByFormType.set(formType, row);
+        return;
+      }
+
+      const existingCreated = new Date(String(existing.created_at || '')).getTime();
+      const rowCreated = new Date(String(row.created_at || '')).getTime();
+      if (rowCreated > existingCreated) {
+        pendingSignatureByFormType.set(formType, row);
+      }
+      return;
+    }
+
+    if (status !== 'signed') return;
+
     const title = SIGNATURE_LABELS[formType] || 'Document acknowledgment';
-    const item: EmployeeTaskItem = {
+    completed.push({
       id: `signature:${row.id}`,
       kind: 'signature',
       title,
-      detail:
-        status === 'pending'
-          ? `Sign by ${formatDateLabel(row.expires_at) || 'deadline on file'}`
-          : status === 'signed'
-            ? `Signed ${formatDateLabel(row.signed_at) || ''}`.trim()
-            : String(row.status || 'Updated'),
-      status: status === 'signed' ? 'completed' : 'pending',
-      actionLabel: status === 'pending' ? 'Review & sign' : undefined,
-      actionUrl: undefined,
+      detail: `Signed ${formatDateLabel(row.signed_at) || ''}`.trim(),
+      status: 'completed',
       signatureToken: row.token ? String(row.token) : undefined,
       completedAt: row.signed_at ? String(row.signed_at) : null,
-    };
+    });
+  });
 
-    if (item.status === 'pending') pending.push(item);
-    else if (status === 'signed') completed.push(item);
+  pendingSignatureByFormType.forEach((row) => {
+    const formType = String(row.form_type || '').trim();
+    const title = SIGNATURE_LABELS[formType] || 'Document acknowledgment';
+    pending.push({
+      id: `signature:${row.id}`,
+      kind: 'signature',
+      title,
+      detail: `Sign by ${formatDateLabel(row.expires_at) || 'deadline on file'}`,
+      status: 'pending',
+      actionLabel: 'Review & sign',
+      signatureToken: row.token ? String(row.token) : undefined,
+      completedAt: null,
+    });
   });
 
   campaignAssignments.forEach((assignment) => {
@@ -235,7 +225,7 @@ export async function loadEmployeeTasksSnapshot(employeeId: string): Promise<Emp
     pending,
     completed,
     handbookDocuments,
-    onboardingTasks,
+    onboardingTasks: [],
     acknowledgments,
   };
 }
@@ -266,24 +256,3 @@ export async function recordHandbookAcknowledgment(input: {
     throw new Error(error.message || 'Could not save handbook acknowledgment.');
   }
 }
-
-export async function toggleEmployeeOnboardingTask(
-  employeeId: string,
-  taskId: string,
-  isComplete: boolean
-): Promise<void> {
-  const { error } = await supabaseClient
-    .from('onboarding_tasks')
-    .update({
-      status: isComplete ? 'Completed' : 'Pending',
-      completed_at: isComplete ? new Date().toISOString() : null,
-    })
-    .eq('id', taskId)
-    .eq('employee_id', employeeId);
-
-  if (error) {
-    throw new Error(error.message || 'Could not update onboarding task.');
-  }
-}
-
-export { STANDARD_ONBOARDING_TASKS };

@@ -88,7 +88,7 @@ function buildAtRiskAttention(
 
   const reasons: string[] = [];
   if (risk.manualReason) reasons.push(String(risk.manualReason).trim());
-  if (risk.disciplineRisk) reasons.push('Open discipline');
+  if (risk.disciplineRisk) reasons.push('Severe discipline');
   if (risk.lowReview) reasons.push('Low review score');
 
   if (!reasons.length) return null;

@@ -25,7 +25,10 @@ export type AtRiskIntelligenceMeta = {
 };
 
 export type HrIntelligenceContext = {
+  /** Open severe discipline cases (Final Warning+). */
   disciplineOpenByEmployee: Map<string, number>;
+  /** Severe discipline cases regardless of open/closed status — drives at-risk and turnover risk. */
+  severeDisciplineByEmployee: Map<string, number>;
   openInvestigationEmployeeIds: Set<string>;
   operationsPressureByEmployee: Map<string, number>;
   operationsPressureByDepartment: Map<string, number>;
@@ -38,6 +41,9 @@ type DisciplineRow = {
   employee_id?: string;
   report_status?: string;
   discipline_level?: string;
+  action_taken?: string;
+  description?: string;
+  issue_type?: string;
 };
 
 type InvestigationRow = {
@@ -88,6 +94,59 @@ export function countsTowardAtRiskDiscipline(level: unknown): boolean {
   return isSevereDisciplineLevel(level);
 }
 
+/** Match severe discipline from level or legacy text fields when level was not stored. */
+export function disciplineRowCountsTowardAtRisk(row: DisciplineRow): boolean {
+  return [row.discipline_level, row.action_taken, row.description, row.issue_type].some((value) =>
+    isSevereDisciplineLevel(value)
+  );
+}
+
+export function resolveEmployeeDisciplineKeys(
+  employeeId: string,
+  employees?: Array<Record<string, unknown>>
+): string[] {
+  const keys = new Set<string>();
+  const normalized = String(employeeId || '').trim();
+  if (!normalized) return [];
+
+  keys.add(normalized);
+  const normalizedLower = normalized.toLowerCase();
+
+  for (const employee of employees || []) {
+    const aliases = [employee.id, employee.employee_id, employee.dbId, employee.displayId]
+      .filter(Boolean)
+      .map((value) => String(value).trim())
+      .filter(Boolean);
+
+    if (!aliases.some((alias) => alias.toLowerCase() === normalizedLower)) {
+      continue;
+    }
+
+    aliases.forEach((alias) => keys.add(alias));
+    break;
+  }
+
+  return [...keys];
+}
+
+function getSevereDisciplineCount(
+  employeeOrId: Record<string, unknown> | string,
+  context: HrIntelligenceContext,
+  employees?: Array<Record<string, unknown>>
+): number {
+  const employeeId =
+    typeof employeeOrId === 'string'
+      ? employeeOrId
+      : getEmployeeRecordId(employeeOrId);
+
+  for (const key of resolveEmployeeDisciplineKeys(employeeId, employees)) {
+    const count = context.severeDisciplineByEmployee.get(key) || 0;
+    if (count > 0) return count;
+  }
+
+  return 0;
+}
+
 export function isOpenOperationsIssue(status: unknown): boolean {
   return !CLOSED_OPERATIONS_STATUSES.has(String(status || '').trim().toLowerCase());
 }
@@ -124,6 +183,7 @@ export function buildHrIntelligenceContext(input: {
   employees?: Array<Record<string, unknown>>;
 }): HrIntelligenceContext {
   const disciplineOpenByEmployee = new Map<string, number>();
+  const severeDisciplineByEmployee = new Map<string, number>();
   const openInvestigationEmployeeIds = new Set<string>();
   const operationsPressureByEmployee = new Map<string, number>();
   const operationsPressureByDepartment = new Map<string, number>();
@@ -132,11 +192,26 @@ export function buildHrIntelligenceContext(input: {
   const stayInterviewDueSoonIds = new Set<string>();
 
   (input.disciplineRows || []).forEach((row) => {
-    if (!isOpenDisciplineStatus(row.report_status)) return;
-    if (!countsTowardAtRiskDiscipline(row.discipline_level)) return;
+    if (!disciplineRowCountsTowardAtRisk(row)) return;
     const employeeId = String(row.employee_id || '').trim();
     if (!employeeId) return;
-    disciplineOpenByEmployee.set(employeeId, (disciplineOpenByEmployee.get(employeeId) || 0) + 1);
+
+    const aliasKeys = resolveEmployeeDisciplineKeys(employeeId, input.employees);
+    aliasKeys.forEach((key) => {
+      severeDisciplineByEmployee.set(
+        key,
+        (severeDisciplineByEmployee.get(key) || 0) + 1
+      );
+    });
+
+    if (isOpenDisciplineStatus(row.report_status)) {
+      aliasKeys.forEach((key) => {
+        disciplineOpenByEmployee.set(
+          key,
+          (disciplineOpenByEmployee.get(key) || 0) + 1
+        );
+      });
+    }
   });
 
   (input.investigationRows || []).forEach((row) => {
@@ -193,6 +268,7 @@ export function buildHrIntelligenceContext(input: {
 
   return {
     disciplineOpenByEmployee,
+    severeDisciplineByEmployee,
     openInvestigationEmployeeIds,
     operationsPressureByEmployee,
     operationsPressureByDepartment,
@@ -222,11 +298,14 @@ export function employeeHasOperationsPressure(
 export function enrichAtRiskMetaFromContext(
   employeeId: string,
   meta: AtRiskIntelligenceMeta,
-  context: HrIntelligenceContext
+  context: HrIntelligenceContext,
+  employees?: Array<Record<string, unknown>>
 ): AtRiskIntelligenceMeta {
+  const severeDiscipline = getSevereDisciplineCount(employeeId, context, employees);
+
   return {
     ...meta,
-    disciplineRisk: (context.disciplineOpenByEmployee.get(employeeId) || 0) > 0,
+    disciplineRisk: severeDiscipline > 0 || meta.disciplineRisk === true,
     openInvestigation: context.openInvestigationEmployeeIds.has(employeeId),
     stayInterviewOverdue: context.stayInterviewOverdueIds.has(employeeId),
     operationsPressure: meta.operationsPressure || false,
@@ -245,7 +324,7 @@ export function computeRetentionRiskPoints(
   if (meta?.lowReview) points += 2;
   if ((meta?.openIncidentCount || 0) > 0) points += 2;
   if (String(meta?.manualReason || '').trim()) points += 2;
-  if (meta?.disciplineRisk || (context.disciplineOpenByEmployee.get(employeeId) || 0) > 0) {
+  if (meta?.disciplineRisk || getSevereDisciplineCount(employee, context) > 0) {
     points += 2.5;
   }
   if (employeeHasOperationsPressure(employee, context)) {
@@ -459,7 +538,8 @@ export function buildExecutiveInsightLines(input: {
   if (atRiskCount) {
     const reviewDriven = atRiskIds.filter(([, meta]) => meta.lowReview).length;
     const disciplineDriven = atRiskIds.filter(
-      ([id, meta]) => meta.disciplineRisk || (context.disciplineOpenByEmployee.get(id) || 0) > 0
+      ([id, meta]) =>
+        meta.disciplineRisk || getSevereDisciplineCount(id, context, input.employees) > 0
     ).length;
 
     let focus = 'Review the At-Risk roster and assign manager follow-ups within 30 days.';

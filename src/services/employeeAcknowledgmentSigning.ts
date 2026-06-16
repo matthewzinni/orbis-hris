@@ -14,7 +14,7 @@ export type RequestEmployeeAcknowledgmentInput = {
 
 export async function requestEmployeeAcknowledgmentSignature(
   input: RequestEmployeeAcknowledgmentInput
-): Promise<{ token: string; signingUrl: string }> {
+): Promise<{ token: string; signingUrl: string; reused: boolean }> {
   const recordId = String(input.recordId || '').trim();
   const employeeId = String(input.employeeId || '').trim();
 
@@ -38,8 +38,8 @@ export async function requestEmployeeAcknowledgmentSignature(
 /** Create a public signing link and copy it for HR to send to the employee. */
 export async function requestAndCopyEmployeeSigningLink(
   input: RequestEmployeeAcknowledgmentInput
-): Promise<string> {
-  const { signingUrl } = await requestEmployeeAcknowledgmentSignature(input);
+): Promise<{ signingUrl: string; reused: boolean }> {
+  const { signingUrl, reused } = await requestEmployeeAcknowledgmentSignature(input);
   await copySigningLink(signingUrl);
-  return signingUrl;
+  return { signingUrl, reused };
 }

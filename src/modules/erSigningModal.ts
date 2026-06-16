@@ -228,8 +228,12 @@ export async function queueEmployeeSignatureAndOpenPdf(input: {
   );
 
   try {
-    await requestAndCopyEmployeeSigningLink(input);
-    showToast('Signing link copied. Send it to the employee — no Orbis login required.');
+    const { reused } = await requestAndCopyEmployeeSigningLink(input);
+    showToast(
+      reused
+        ? 'Employee already has a pending acknowledgment in their portal — existing signing link copied.'
+        : 'Signing link copied. Send it to the employee — no Orbis login required.'
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Could not create signing link.';
     showToast(message, 'error');

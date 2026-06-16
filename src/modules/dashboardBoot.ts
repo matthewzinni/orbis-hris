@@ -711,7 +711,7 @@ export async function loadRiskEmployeesFallback(): Promise<void> {
   setText(
     'kAtRiskEmployeesSub',
     riskEmployees.length === 0
-      ? 'No employees flagged from low review scores, manual HR flags, or severe open discipline (final warning+)'
+      ? 'No employees flagged from low review scores, manual HR flags, or severe discipline (final warning+)'
       : `${riskEmployees.length} employee${riskEmployees.length === 1 ? '' : 's'} flagged by review score, HR note, or severe open discipline`
   );
 

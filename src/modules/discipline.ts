@@ -180,14 +180,18 @@ function bindDisciplineExtraActions(
       }
 
       try {
-        await requestAndCopyEmployeeSigningLink({
+        const { reused } = await requestAndCopyEmployeeSigningLink({
           formType: 'discipline',
           recordId,
           employeeId,
           signerName: employeeSignerName(employee) || undefined,
           signerEmail: String((employee as { email?: string })?.email || '').trim() || undefined,
         });
-        showToast('Signing link copied. Send it to the employee — no Orbis login required.');
+        showToast(
+          reused
+            ? 'Employee already has a pending discipline acknowledgment — existing signing link copied.'
+            : 'Signing link copied. Send it to the employee — no Orbis login required.'
+        );
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Could not create signing link.';
         showToast(message, 'error');
