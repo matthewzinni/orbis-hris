@@ -833,6 +833,10 @@ function finalizeDashboardLoad(syncStatus: DashboardSyncStatus, syncedAt: Date):
     window.flushRenderBasicDashboardKpis?.();
   }
 
+  if (typeof window.hideDashboardLoadingSkeletons === 'function') {
+    window.hideDashboardLoadingSkeletons();
+  }
+
   updateDashboardSyncStatus(syncStatus, syncedAt);
 
   if (syncStatus === 'partial') {

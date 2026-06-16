@@ -22,7 +22,7 @@ import {
   isStayInterviewOverdue,
   parseDueDate,
 } from '../services/employeeUtils';
-import { hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
+import { getEmployeeMapKeys, hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
 import {
   buildHrIntelligenceContext,
   computeTurnoverRiskPercentage,
@@ -115,6 +115,41 @@ function escapeHtml(value: unknown): string {
 
 function getEmployeeKey(employee: KpiEmployeeRecord): string {
   return String(employee.id || employee.employee_id || '');
+}
+
+function resolveAtRiskMapMeta(
+  employee: KpiEmployeeRecord,
+  map: Record<string, AtRiskMeta | undefined> = window.currentAtRiskRosterMap || {}
+): AtRiskMeta | undefined {
+  for (const key of getEmployeeMapKeys(employee)) {
+    const meta = map[key];
+    if (meta) return meta;
+  }
+
+  return undefined;
+}
+
+function applyTurnoverRiskKpiCardStyle(turnoverRisk: number): void {
+  const turnoverRiskCard = safeGet('kTurnoverRisk')?.closest('.kpi-card');
+  if (!turnoverRiskCard) return;
+
+  turnoverRiskCard.classList.remove('good', 'warn', 'alert');
+  if (turnoverRisk >= 40) turnoverRiskCard.classList.add('alert');
+  else if (turnoverRisk >= 20) turnoverRiskCard.classList.add('warn');
+  else turnoverRiskCard.classList.add('good');
+}
+
+export function updateTurnoverRiskKpi(rate: number, subtext: string): void {
+  const turnoverRisk = Number(rate);
+  const turnoverRiskDisplay = `${turnoverRisk.toFixed(1)}%`;
+
+  setKpiText('kTurnoverRisk', turnoverRiskDisplay);
+  setKpiText('kTurnoverRiskSub', subtext);
+  applyTurnoverRiskKpiCardStyle(turnoverRisk);
+
+  if (typeof window.hideKpiGridLoading === 'function') {
+    window.hideKpiGridLoading();
+  }
 }
 
 function isImpactPlayer(employee: KpiEmployeeRecord): boolean {
@@ -296,7 +331,11 @@ function renderBasicDashboardKpisNow(employees?: KpiEmployeeRecord[]): void {
   if (container) {
     container.innerHTML = metrics.map(renderKpiCard).join('');
     updateTurnoverRateKpis(roster);
-    buildKpiHoverDetails();
+    if (safeGet('kTurnoverRisk')) {
+      renderKpiEmployeeMetrics();
+    } else {
+      buildKpiHoverDetails();
+    }
     return;
   }
 
@@ -309,6 +348,11 @@ function renderBasicDashboardKpisNow(employees?: KpiEmployeeRecord[]): void {
   });
 
   updateTurnoverRateKpis(roster);
+  if (safeGet('kTurnoverRisk')) {
+    renderKpiEmployeeMetrics();
+  } else {
+    buildKpiHoverDetails();
+  }
 }
 
 /** Debounced to coalesce bursts from record saves, loadEmployees, and dashboard refresh. */
@@ -755,7 +799,7 @@ export function buildKpiHoverDetails(): void {
     .filter((employee) =>
       isTurnoverRiskContributor(
         employee,
-        atRiskMapForTooltip[getEmployeeKey(employee)],
+        resolveAtRiskMapMeta(employee, atRiskMapForTooltip),
         intelligenceForTooltip,
         getEmployeeTenureMonths(employee)
       )
@@ -925,14 +969,20 @@ export function renderKpiEmployeeMetrics(): void {
     reviewEligibleActive,
     intelligenceContext,
     getEmployeeTenureMonths,
-    (employeeId) => atRiskMap[employeeId],
+    (employeeId) => {
+      const employee = reviewEligibleActive.find(
+        (row) => getEmployeeMapKeys(row).includes(employeeId)
+      );
+      return employee ? resolveAtRiskMapMeta(employee, atRiskMap) : atRiskMap[employeeId];
+    },
     () => true
   );
 
   const turnoverRisk = turnoverResult.percentage;
   const turnoverRiskContributors = turnoverResult.contributorCount;
-  const turnoverRiskDisplay = `${turnoverRisk.toFixed(1)}%`;
   const turnoverSubtext = `${turnoverRiskContributors} employee${turnoverRiskContributors === 1 ? '' : 's'} with retention signals (low reviews, severe discipline, or operations load)`;
+
+  updateTurnoverRiskKpi(Number(turnoverRisk.toFixed(1)), turnoverSubtext);
 
   const inHouseFteEmployees = activeEmployees.filter(isInHouseFteEmployee);
   const inHouseFteCount = inHouseFteEmployees.length;
@@ -958,21 +1008,6 @@ export function renderKpiEmployeeMetrics(): void {
   const inHouseFteInfo = safeGet('kInHouseFteInfo');
   if (inHouseFteInfo) {
     inHouseFteInfo.title = `Active in-house full-time employees (not contract, part-time, overseas/remote, or Brent/Trent). ${inHouseFteInsuranceHeadline(inHouseFteCount)}`;
-  }
-
-  if (typeof window.updateTurnoverRiskKpi === 'function') {
-    window.updateTurnoverRiskKpi(Number(turnoverRisk.toFixed(1)), turnoverSubtext);
-  } else {
-    setKpiText('kTurnoverRisk', turnoverRiskDisplay);
-    setKpiText('kTurnoverRiskSub', turnoverSubtext);
-  }
-
-  const turnoverRiskCard = safeGet('kTurnoverRisk')?.closest('.kpi-card');
-  if (turnoverRiskCard) {
-    turnoverRiskCard.classList.remove('good', 'warn', 'alert');
-    if (turnoverRisk >= 40) turnoverRiskCard.classList.add('alert');
-    else if (turnoverRisk >= 20) turnoverRiskCard.classList.add('warn');
-    else turnoverRiskCard.classList.add('good');
   }
 
   if (typeof window.updateReviewsDueKpi === 'function') {
@@ -1466,7 +1501,11 @@ export async function refreshTurnoverKpisFromSupabase(): Promise<void> {
     }
 
     updateTurnoverRateKpis(employees);
-    buildKpiHoverDetails();
+    if (safeGet('kTurnoverRisk')) {
+      renderKpiEmployeeMetrics();
+    } else {
+      buildKpiHoverDetails();
+    }
   } catch (err) {
     console.warn('[KPIs] Unexpected turnover KPI refresh failure:', err);
   }
@@ -1479,6 +1518,7 @@ window.buildKpiHoverDetails = buildKpiHoverDetails;
 window.initKpiHoverUi = initKpiHoverUi;
 window.syncKpiCardTooltip = syncKpiCardTooltip;
 window.renderKpiEmployeeMetrics = renderKpiEmployeeMetrics;
+window.updateTurnoverRiskKpi = updateTurnoverRiskKpi;
 window.refreshPerformanceReviewsDueKpi = refreshPerformanceReviewsDueKpi;
 window.loadSummaryMetrics = loadSummaryMetrics;
 window.refreshTurnoverKpisFromSupabase = refreshTurnoverKpisFromSupabase;
