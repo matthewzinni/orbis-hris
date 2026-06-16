@@ -112,6 +112,7 @@ declare global {
     ALL_EMPLOYEES?: Record<string, unknown>[];
     currentEmployeeRoster?: Record<string, unknown>[];
     renderBasicDashboardKpis?: (employees?: Record<string, unknown>[]) => void;
+    flushRenderBasicDashboardKpis?: () => void;
     refreshDashboardKpis?: (employees?: KpiEmployeeRecord[]) => void;
     renderKpiEmployeeMetrics?: () => void;
     refreshTurnoverKpisFromSupabase?: () => Promise<void>;

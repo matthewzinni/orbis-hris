@@ -26,6 +26,77 @@ export type NormalizedEmployeeStatus =
   | 'unknown';
 
 let skipBenefitsEligibilitySync = false;
+let loadEmployeesInFlight: Promise<EmployeeRecord[]> | null = null;
+let loadEmployeesQueued = false;
+let employeeLoadUiRefreshScheduled = false;
+
+function runEmployeeLoadUiRefresh(): void {
+  if (typeof window.renderRoster === 'function') {
+    window.renderRoster();
+  }
+
+  if (typeof window.renderKpiEmployeeMetrics === 'function') {
+    window.renderKpiEmployeeMetrics();
+  }
+
+  if (typeof window.populateDepartmentFilter === 'function') {
+    window.populateDepartmentFilter();
+  }
+
+  if (typeof window.renderDepartmentSummary === 'function') {
+    window.renderDepartmentSummary();
+  }
+
+  if (typeof window.renderBasicDashboardKpis === 'function') {
+    window.renderBasicDashboardKpis();
+  }
+
+  if (typeof window.applyOperationsCenterAccess === 'function') {
+    window.applyOperationsCenterAccess();
+  }
+
+  if (typeof window.applyCareEngagementCenterAccess === 'function') {
+    window.applyCareEngagementCenterAccess();
+  }
+
+  if (typeof window.applyInvestigationsCenterAccess === 'function') {
+    window.applyInvestigationsCenterAccess();
+  }
+
+  if (typeof window.applyAttendanceAccess === 'function') {
+    window.applyAttendanceAccess();
+  }
+
+  if (typeof window.applyHrInboxAccess === 'function') {
+    window.applyHrInboxAccess();
+  }
+
+  if (typeof window.applyJanusAccess === 'function') {
+    window.applyJanusAccess();
+  }
+
+  if (typeof window.applyLeaveAccess === 'function') {
+    window.applyLeaveAccess();
+  }
+
+  if (typeof window.ensureOperationsIssuesLoaded === 'function') {
+    window.ensureOperationsIssuesLoaded();
+  }
+
+  if (typeof window.ensureInvestigationsLoaded === 'function') {
+    window.ensureInvestigationsLoaded();
+  }
+}
+
+function scheduleEmployeeLoadUiRefresh(): void {
+  if (employeeLoadUiRefreshScheduled) return;
+
+  employeeLoadUiRefreshScheduled = true;
+  requestAnimationFrame(() => {
+    employeeLoadUiRefreshScheduled = false;
+    runEmployeeLoadUiRefresh();
+  });
+}
 
 export function normalizeEmployeeStatus(status: unknown): NormalizedEmployeeStatus {
   const normalized = String(status || '')
@@ -65,6 +136,23 @@ function normalizeRow(employee: EmployeeRecord): EmployeeRecord | null {
 }
 
 export async function loadEmployees(): Promise<EmployeeRecord[]> {
+  if (loadEmployeesInFlight) {
+    loadEmployeesQueued = true;
+    return loadEmployeesInFlight;
+  }
+
+  loadEmployeesInFlight = loadEmployeesInternal().finally(() => {
+    loadEmployeesInFlight = null;
+    if (loadEmployeesQueued) {
+      loadEmployeesQueued = false;
+      void loadEmployees();
+    }
+  });
+
+  return loadEmployeesInFlight;
+}
+
+async function loadEmployeesInternal(): Promise<EmployeeRecord[]> {
   try {
     await getUserRole();
     console.log('[Access Loaded In loadEmployees]', window.currentUserRole, window.currentUserAccess);
@@ -138,22 +226,6 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
     scoped.length
   );
 
-  if (typeof window.renderRoster === 'function') {
-    window.renderRoster();
-  }
-
-  if (typeof window.renderKpiEmployeeMetrics === 'function') {
-    window.renderKpiEmployeeMetrics();
-  }
-
-  if (typeof window.populateDepartmentFilter === 'function') {
-    window.populateDepartmentFilter();
-  }
-
-  if (typeof window.renderDepartmentSummary === 'function') {
-    window.renderDepartmentSummary();
-  }
-
   if (isEmployeeUser()) {
     applyEmployeePortalView();
     if (scoped[0]) {
@@ -165,45 +237,7 @@ export async function loadEmployees(): Promise<EmployeeRecord[]> {
     window.applyAdminDashboardView?.();
   }
 
-  if (typeof window.renderBasicDashboardKpis === 'function') {
-    window.renderBasicDashboardKpis();
-  }
-
-  if (typeof window.applyOperationsCenterAccess === 'function') {
-    window.applyOperationsCenterAccess();
-  }
-
-  if (typeof window.applyCareEngagementCenterAccess === 'function') {
-    window.applyCareEngagementCenterAccess();
-  }
-
-  if (typeof window.applyInvestigationsCenterAccess === 'function') {
-    window.applyInvestigationsCenterAccess();
-  }
-
-  if (typeof window.applyAttendanceAccess === 'function') {
-    window.applyAttendanceAccess();
-  }
-
-  if (typeof window.applyHrInboxAccess === 'function') {
-    window.applyHrInboxAccess();
-  }
-
-  if (typeof window.applyJanusAccess === 'function') {
-    window.applyJanusAccess();
-  }
-
-  if (typeof window.applyLeaveAccess === 'function') {
-    window.applyLeaveAccess();
-  }
-
-  if (typeof window.ensureOperationsIssuesLoaded === 'function') {
-    window.ensureOperationsIssuesLoaded();
-  }
-
-  if (typeof window.ensureInvestigationsLoaded === 'function') {
-    window.ensureInvestigationsLoaded();
-  }
+  scheduleEmployeeLoadUiRefresh();
 
   if (isAdminUser() && !skipBenefitsEligibilitySync) {
     void syncAutoBenefitsEligibility(normalizedEmployees).then((count) => {

@@ -99,6 +99,48 @@ export function todayInputValue(): string {
   return toInputDate(new Date());
 }
 
+export type DebouncedFunction<T extends (...args: never[]) => void> = T & {
+  flush: () => void;
+  cancel: () => void;
+};
+
+/** Coalesce rapid calls; optional flush runs the pending invocation immediately. */
+export function debounce<T extends (...args: never[]) => void>(
+  fn: T,
+  waitMs: number
+): DebouncedFunction<T> {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let pendingArgs: Parameters<T> | null = null;
+
+  const debounced = ((...args: Parameters<T>) => {
+    pendingArgs = args;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      const argsToUse = pendingArgs;
+      pendingArgs = null;
+      if (argsToUse) fn(...argsToUse);
+    }, waitMs);
+  }) as DebouncedFunction<T>;
+
+  debounced.flush = () => {
+    if (!timer && !pendingArgs) return;
+    if (timer) clearTimeout(timer);
+    timer = null;
+    const argsToUse = pendingArgs;
+    pendingArgs = null;
+    if (argsToUse) fn(...argsToUse);
+  };
+
+  debounced.cancel = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    pendingArgs = null;
+  };
+
+  return debounced;
+}
+
 export function getCurrentEmployeeDisplayName(): string {
   const employee = window.currentEmployee;
 

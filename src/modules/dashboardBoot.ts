@@ -803,10 +803,6 @@ async function runDashboardOverviewLoads(): Promise<DashboardSyncStatus> {
 
   try {
     await loadEmployees();
-
-    if (typeof window.renderRoster === 'function') {
-      window.renderRoster();
-    }
   } catch (err) {
     console.error('[Dashboard] Employee load failed:', err);
     syncStatus = 'error';
@@ -834,6 +830,7 @@ function finalizeDashboardLoad(syncStatus: DashboardSyncStatus, syncedAt: Date):
 
   if (typeof window.renderBasicDashboardKpis === 'function') {
     window.renderBasicDashboardKpis();
+    window.flushRenderBasicDashboardKpis?.();
   }
 
   updateDashboardSyncStatus(syncStatus, syncedAt);
@@ -850,10 +847,6 @@ function finalizeDashboardLoad(syncStatus: DashboardSyncStatus, syncedAt: Date):
 
   if (typeof window.initKpiHoverUi === 'function') {
     window.initKpiHoverUi();
-  }
-
-  if (typeof window.buildKpiHoverDetails === 'function') {
-    window.buildKpiHoverDetails();
   }
 
   if (typeof window.loadHrInbox === 'function') {
@@ -890,6 +883,7 @@ export async function loadDashboardOverview(): Promise<void> {
   } finally {
     if (typeof window.renderBasicDashboardKpis === 'function') {
       window.renderBasicDashboardKpis();
+      window.flushRenderBasicDashboardKpis?.();
     }
     refreshStayInterviewDashboardSummaryFromCache();
     isLoadingDashboard = false;
@@ -929,6 +923,7 @@ export async function loadAllDashboardData(): Promise<void> {
   } finally {
     if (typeof window.renderBasicDashboardKpis === 'function') {
       window.renderBasicDashboardKpis();
+      window.flushRenderBasicDashboardKpis?.();
     }
     refreshStayInterviewDashboardSummaryFromCache();
     isLoadingDashboard = false;

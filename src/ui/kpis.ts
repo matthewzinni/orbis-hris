@@ -1,4 +1,5 @@
 import { getEmployeeById, loadEmployees } from '../modules/employees';
+import { debounce } from '../utils/helpers';
 import { isAdminUser, isSupervisorUser } from '../services/access';
 import {
   buildPerformanceReviewDueCandidates,
@@ -287,7 +288,7 @@ function getKpiRoster(employees?: KpiEmployeeRecord[]): KpiEmployeeRecord[] {
   return [];
 }
 
-export function renderBasicDashboardKpis(employees?: KpiEmployeeRecord[]): void {
+function renderBasicDashboardKpisNow(employees?: KpiEmployeeRecord[]): void {
   const roster = getKpiRoster(employees);
   const metrics = buildKpiMetrics(roster);
   const container = findKpiContainer();
@@ -308,6 +309,13 @@ export function renderBasicDashboardKpis(employees?: KpiEmployeeRecord[]): void 
   });
 
   updateTurnoverRateKpis(roster);
+}
+
+/** Debounced to coalesce bursts from record saves, loadEmployees, and dashboard refresh. */
+export const renderBasicDashboardKpis = debounce(renderBasicDashboardKpisNow, 100);
+
+export function flushRenderBasicDashboardKpis(): void {
+  renderBasicDashboardKpis.flush();
 }
 
 export function refreshDashboardKpis(employees?: KpiEmployeeRecord[]): void {
@@ -1465,6 +1473,7 @@ export async function refreshTurnoverKpisFromSupabase(): Promise<void> {
 }
 
 window.renderBasicDashboardKpis = renderBasicDashboardKpis;
+window.flushRenderBasicDashboardKpis = flushRenderBasicDashboardKpis;
 window.refreshDashboardKpis = refreshDashboardKpis;
 window.buildKpiHoverDetails = buildKpiHoverDetails;
 window.initKpiHoverUi = initKpiHoverUi;
