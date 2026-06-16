@@ -12,6 +12,7 @@ declare
   access_row public.user_access;
   matched public.employees;
   linked text;
+  normalized_role text;
 begin
   if not public.orbis_access_is_approved() then
     return null;
@@ -31,10 +32,12 @@ begin
     return null;
   end if;
 
-  if case
+  normalized_role := case
     when lower(trim(coalesce(access_row.role, ''))) = 'employee' then 'user'
     else lower(trim(coalesce(access_row.role, '')))
-  end not in ('user', 'supervisor') then
+  end;
+
+  if normalized_role not in ('user', 'supervisor') then
     return null;
   end if;
 
@@ -76,10 +79,12 @@ update public.user_access ua
 set linked_employee_id = e.id::text
 from public.employees e
 where (ua.linked_employee_id is null or btrim(ua.linked_employee_id) = '')
-  and case
-    when lower(trim(coalesce(ua.role, ''))) = 'employee' then 'user'
-    else lower(trim(coalesce(ua.role, '')))
-  end in ('user', 'supervisor')
+  and (
+    case
+      when lower(trim(coalesce(ua.role, ''))) = 'employee' then 'user'
+      else lower(trim(coalesce(ua.role, '')))
+    end
+  ) in ('user', 'supervisor')
   and (
     lower(trim(coalesce(e.personal_email, ''))) = lower(trim(ua.email))
     or lower(trim(coalesce(e.work_email, ''))) = lower(trim(ua.email))
