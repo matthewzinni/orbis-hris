@@ -1,5 +1,6 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 import { stopAllDictation } from './dictation';
 import {
   clearCanvasSignature,
@@ -60,44 +61,6 @@ declare global {
 }
 
 let currentIncidentId: string | null = null;
-
-function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
-  if (typeof window.safeGet === 'function') {
-    return window.safeGet(id) as T | null;
-  }
-
-  return document.getElementById(id) as T | null;
-}
-
-function showToast(message: string, type: string = 'success'): void {
-  if (typeof window.showToast === 'function') {
-    window.showToast(message, type);
-    return;
-  }
-
-  console.log(`[${type}] ${message}`);
-}
-
-function todayInputValue(): string {
-  if (typeof window.todayInputValue === 'function') {
-    return window.todayInputValue();
-  }
-
-  return new Date().toISOString().slice(0, 10);
-}
-
-function escapeHtml(value: unknown): string {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function nl2br(value: unknown): string {
-  return escapeHtml(value).replace(/\n/g, '<br>');
-}
 
 function getCurrentEmployee(): IncidentEmployee | null {
   if (typeof window.getCurrentEmployeeForOrbis === 'function') {
@@ -188,27 +151,27 @@ export async function loadEmployeeIncidents(employeeId: string): Promise<void> {
     target.innerHTML = rows
       .map(
         (row) => `
-          <div class="history-item" data-incident-id="${escapeHtml(row.id || '')}">
+          <div class="history-item" data-incident-id="${esc(row.id || '')}">
             <div class="history-top">
               <div>
-                <strong>${escapeHtml(row.incident_type || 'Incident Report')}</strong>
-                <span>${escapeHtml(row.incident_date || row.created_at || '')}</span>
+                <strong>${esc(row.incident_type || 'Incident Report')}</strong>
+                <span>${esc(row.incident_date || row.created_at || '')}</span>
               </div>
 
               <div style="display:flex; gap:6px; align-items:center;">
-                <button class="button soft sm" type="button" data-edit-incident-id="${escapeHtml(row.id || '')}">Edit</button>
-                <button class="button danger sm" type="button" data-delete-incident-id="${escapeHtml(row.id || '')}">Delete</button>
+                <button class="button soft sm" type="button" data-edit-incident-id="${esc(row.id || '')}">Edit</button>
+                <button class="button danger sm" type="button" data-delete-incident-id="${esc(row.id || '')}">Delete</button>
               </div>
             </div>
 
             <div class="history-body">
               <strong>Location:</strong>
-              ${escapeHtml(row.location || '')}
+              ${esc(row.location || '')}
 
               <br><br>
 
               <strong>Status:</strong>
-              ${escapeHtml(row.status || '')}
+              ${esc(row.status || '')}
 
               <br><br>
 

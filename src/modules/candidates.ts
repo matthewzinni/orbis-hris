@@ -25,6 +25,7 @@ import {
   resumeFileLabel,
   uploadCandidateResume,
 } from '../services/candidateResume';
+import { devLog, devWarn, devError } from '../utils/devLog';
 
 interface CandidateRecord {
   id?: string;
@@ -116,7 +117,7 @@ function showToast(message: string, type: string = 'success'): void {
     return;
   }
 
-  console.log(`[${type}] ${message}`);
+  devWarn(`[${type}] ${message}`);
 }
 
 function escapeHtml(value: unknown): string {
@@ -339,7 +340,7 @@ function getInputValue(...ids: string[]): string {
     if (directMatch && typeof directMatch.value === 'string') {
       const value = directMatch.value.trim();
 
-      console.log(`[Candidates] Direct ID match: ${id}`, value);
+      devLog(`[Candidates] Direct ID match: ${id}`, value);
 
       if (value) {
         return value;
@@ -353,7 +354,7 @@ function getInputValue(...ids: string[]): string {
     if (nameMatch && typeof nameMatch.value === 'string') {
       const value = nameMatch.value.trim();
 
-      console.log(`[Candidates] Name match: ${id}`, value);
+      devLog(`[Candidates] Name match: ${id}`, value);
 
       if (value) {
         return value;
@@ -383,7 +384,7 @@ function getCandidateDrawerValues(): CandidateRecord {
     return rect.width > 0 && rect.height > 0;
   });
 
-  console.log(
+  devLog(
     '[Candidates] Candidate drawer fields by order:',
     fields.map((field, index) => ({
       index,
@@ -473,7 +474,7 @@ async function loadCandidateNotesForEmail(candidateId: string): Promise<
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.warn('[Candidates] Could not load notes for email:', error);
+    devWarn('[Candidates] Could not load notes for email:', error);
     return [];
   }
 
@@ -562,7 +563,7 @@ export function inviteCandidateToInterview(): void {
     link.click();
     link.remove();
   } catch (error) {
-    console.warn('[Candidates] Could not launch interview invite mailto:', error);
+    devWarn('[Candidates] Could not launch interview invite mailto:', error);
     window.location.assign(mailtoUrl);
   }
 }
@@ -643,7 +644,7 @@ export async function loadCandidates(): Promise<void> {
       safeGet('candidatesContainer');
 
   if (!target) {
-    console.warn('[Candidates] candidate container not found.');
+    devWarn('[Candidates] candidate container not found.');
 
     return;
   }
@@ -825,7 +826,7 @@ export function editCandidateRecord(record: CandidateRecord): void {
 }
 
 export async function deleteCandidateRecord(candidateId?: string): Promise<void> {
-  console.log('[Candidates] Delete requested:', {
+  devLog('[Candidates] Delete requested:', {
     candidateId,
     currentCandidateId,
   });
@@ -842,7 +843,7 @@ export async function deleteCandidateRecord(candidateId?: string): Promise<void>
   if (!idToDelete) {
     const drawerValues = getCandidateDrawerValues();
 
-    console.log('[Candidates] Resolving delete by drawer values:', drawerValues);
+    devLog('[Candidates] Resolving delete by drawer values:', drawerValues);
 
     let query = supabaseClient
       .from('candidates')
@@ -884,7 +885,7 @@ export async function deleteCandidateRecord(candidateId?: string): Promise<void>
     }
 
     if (data.length > 1) {
-      console.warn('[Candidates] Multiple delete matches found. Deleting newest match first:', data);
+      devWarn('[Candidates] Multiple delete matches found. Deleting newest match first:', data);
       showToast('Multiple matching candidates found. Deleting the newest matching record first.', 'error');
     }
 
@@ -952,12 +953,12 @@ export async function deleteCandidateRecord(candidateId?: string): Promise<void>
 
 export async function saveCandidateRecord(): Promise<void> {
   if (isCandidateSaveInProgress) {
-    console.warn('[Candidates] Save already in progress, ignoring duplicate click.');
+    devWarn('[Candidates] Save already in progress, ignoring duplicate click.');
     return;
   }
 
   isCandidateSaveInProgress = true;
-  console.log('[Candidates] Save candidate clicked.');
+  devLog('[Candidates] Save candidate clicked.');
 
   try {
     const drawerValues = getCandidateDrawerValues();
@@ -1028,7 +1029,7 @@ export async function saveCandidateRecord(): Promise<void> {
 
     const normalizedPayload = sanitizeCandidatePayload(normalizeCandidateNames(candidatePayload));
 
-    console.log('[Candidates] Candidate payload:', normalizedPayload);
+    devLog('[Candidates] Candidate payload:', normalizedPayload);
 
     if (!normalizedPayload.first_name || !normalizedPayload.last_name) {
       showToast('First and last name are required.', 'error');
@@ -1060,7 +1061,7 @@ export async function saveCandidateRecord(): Promise<void> {
         .limit(1);
 
       if (pipelineError) {
-        console.warn('[Candidates] Could not check internal pipeline duplicate:', pipelineError);
+        devWarn('[Candidates] Could not check internal pipeline duplicate:', pipelineError);
       } else if (openPipeline?.length) {
         showToast('This employee already has an open candidate record for another position.', 'error');
         return;
@@ -1086,7 +1087,7 @@ export async function saveCandidateRecord(): Promise<void> {
     }
 
     const saveCandidatePayload = async (payloadToSave: CandidateRecord) => {
-      console.log('[Candidates] Sending candidate payload to Supabase:', payloadToSave);
+      devLog('[Candidates] Sending candidate payload to Supabase:', payloadToSave);
 
       if (currentCandidateId) {
         return supabaseClient
@@ -1124,12 +1125,12 @@ export async function saveCandidateRecord(): Promise<void> {
         break;
       }
 
-      console.warn(`Candidate column missing in Supabase, retrying without: ${missingColumn}`);
+      devWarn(`Candidate column missing in Supabase, retrying without: ${missingColumn}`);
       delete cleanPayload[missingColumn];
       result = await saveCandidatePayload(cleanPayload);
     }
 
-    console.log('[Candidates] Supabase save result:', result);
+    devLog('[Candidates] Supabase save result:', result);
 
     if (result.error) {
       console.error('Candidate save failed:', result.error);
@@ -1353,7 +1354,7 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
     .limit(1);
 
   if (existingEmployee.error) {
-    console.warn(
+    devWarn(
       'Could not check for existing employee before conversion:',
       existingEmployee.error
     );
@@ -1419,7 +1420,7 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
       break;
     }
 
-    console.warn(`Employee column missing in Supabase, retrying without: ${missingColumn}`);
+    devWarn(`Employee column missing in Supabase, retrying without: ${missingColumn}`);
     delete cleanEmployeePayload[missingColumn];
 
     employeeInsert = await supabaseClient.from('employees').insert([cleanEmployeePayload]).select();
@@ -1451,7 +1452,7 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
         String(employeePayload.hire_date || '')
       );
     } catch (err) {
-      console.warn('[Candidates] New hire payroll handoff failed:', err);
+      devWarn('[Candidates] New hire payroll handoff failed:', err);
     }
   }
 
@@ -1906,7 +1907,7 @@ export async function openCandidateDrawer(candidateId: string): Promise<void> {
   const drawer = safeGet('candidateDrawer');
 
   if (!drawer) {
-    console.error('candidateDrawer not found');
+    devError('candidateDrawer not found');
     return;
   }
 
@@ -1935,7 +1936,7 @@ export function openNewCandidateForm(): void {
   const drawer = safeGet('candidateDrawer');
 
   if (!drawer) {
-    console.error('candidateDrawer not found');
+    devError('candidateDrawer not found');
     return;
   }
 
@@ -2033,7 +2034,7 @@ export async function createCandidateFromEmployee(
   const backdrop = safeGet('drawerBackdrop');
   const drawer = safeGet('candidateDrawer');
   if (!drawer) {
-    console.error('candidateDrawer not found');
+    devError('candidateDrawer not found');
     return;
   }
 

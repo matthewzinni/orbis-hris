@@ -32,7 +32,7 @@ declare global {
     loadMyDirectoryPortal?: () => Promise<void>;
     loadMyTimeOffPortal?: () => Promise<void>;
     loadMobileActivityFeed?: (force?: boolean) => Promise<void>;
-    loadJanus?: () => Promise<void>;
+    loadJanus?: (force?: boolean) => Promise<void>;
   }
 }
 

@@ -1,4 +1,5 @@
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { devLog, devWarn } from '../utils/devLog';
 
 export interface DocumentRecord {
   id: string;
@@ -53,7 +54,7 @@ function showOrbisToast(message: string, type: 'success' | 'error' = 'success'):
     return;
   }
 
-  console.log(`[${type}] ${message}`);
+  devWarn(`[${type}] ${message}`);
 }
 
 function getDocumentsSupabaseClient(): any {
@@ -93,7 +94,7 @@ let documentFilters: DocumentFilters = {
 };
 
 export function initializeDocumentsLibrary(): void {
-  console.log('Documents Library initializing...');
+  devLog('Documents Library initializing...');
   injectDocumentUploadModalStyles();
   bindDocumentEvents();
   void loadDocuments();
@@ -132,7 +133,7 @@ export function renderDocumentsLibrary(): void {
   const container = getDocumentsContainer();
 
   if (!container) {
-    console.warn('Documents container not found. Expected #documentsLibrary or #documentsList.');
+    devWarn('Documents container not found. Expected #documentsLibrary or #documentsList.');
     return;
   }
 
@@ -197,9 +198,9 @@ export async function loadDocuments(): Promise<void> {
 
   try {
     const db = getDocumentsSupabaseClient();
-    console.log('Documents Supabase client found:', !!db);
-    console.log('Documents container found:', !!getDocumentsContainer());
-    console.log('Documents Supabase client has .from:', typeof db?.from === 'function');
+    devLog('Documents Supabase client found:', !!db);
+    devLog('Documents container found:', !!getDocumentsContainer());
+    devLog('Documents Supabase client has .from:', typeof db?.from === 'function');
 
     if (!db || typeof db.from !== 'function') {
       console.error('Documents library could not find a usable Supabase client.');
@@ -222,7 +223,7 @@ export async function loadDocuments(): Promise<void> {
     documents = ((data || []) as DocumentRecord[])
       .filter((doc) => doc.is_active !== false)
       .map(normalizeDocumentRecord);
-    console.log('Documents loaded from table:', documents.length, documents);
+    devLog('Documents loaded from table:', documents.length, documents);
 
     if (!documents.length) {
       await loadDocumentsFromStorage();
@@ -257,7 +258,7 @@ async function loadDocumentsFromStorage(): Promise<void> {
     }
 
     documents = storageDocs;
-    console.log('Documents loaded from storage:', documents.length, documents);
+    devLog('Documents loaded from storage:', documents.length, documents);
     renderDocumentsLibrary();
   } catch (err) {
     console.error('Unexpected storage document load error:', err);
@@ -278,7 +279,7 @@ async function listStorageFilesRecursive(
   });
 
   if (error) {
-    console.warn(`Could not read storage bucket ${bucketName}/${folderPath}:`, error);
+    devWarn(`Could not read storage bucket ${bucketName}/${folderPath}:`, error);
     return [];
   }
 
@@ -345,7 +346,7 @@ export async function uploadDocument(payload: UploadDocumentPayload): Promise<vo
       });
 
     if (uploadError && uploadBucket === 'documents') {
-      console.warn(
+      devWarn(
         'Upload to documents bucket failed. Trying document-library bucket...',
         uploadError
       );
@@ -537,9 +538,9 @@ async function deleteDocument(doc: DocumentRecord): Promise<void> {
     const { error: storageError } = await db.storage.from(target.bucket).remove([target.path]);
 
     if (storageError) {
-      console.warn(`Storage delete warning for ${target.bucket}/${target.path}:`, storageError);
+      devWarn(`Storage delete warning for ${target.bucket}/${target.path}:`, storageError);
     } else {
-      console.log(`Deleted storage file: ${target.bucket}/${target.path}`);
+      devLog(`Deleted storage file: ${target.bucket}/${target.path}`);
     }
   }
 
@@ -547,7 +548,7 @@ async function deleteDocument(doc: DocumentRecord): Promise<void> {
     const { error: tableError } = await db.from(DOCUMENT_TABLE).delete().eq('id', doc.id);
 
     if (tableError) {
-      console.warn('Table delete warning:', tableError);
+      devWarn('Table delete warning:', tableError);
     }
   }
 
@@ -575,7 +576,7 @@ async function getUsableDocumentUrl(doc: DocumentRecord, download: boolean): Pro
       return data.signedUrl;
     }
 
-    console.warn('Signed URL failed, falling back to saved URL:', error);
+    devWarn('Signed URL failed, falling back to saved URL:', error);
   }
 
   return normalizeDocumentUrl(doc.file_url || '');
@@ -867,8 +868,8 @@ function injectDocumentUploadModalStyles(): void {
   document.head.appendChild(style);
 }
 
-console.log('documents.ts module loaded');
-console.log('Documents module using buckets:', DOCUMENT_BUCKETS);
+devLog('documents.ts module loaded');
+devLog('Documents module using buckets:', DOCUMENT_BUCKETS);
 
 window.initializeDocumentsLibrary = initializeDocumentsLibrary;
 window.loadDocuments = loadDocuments;

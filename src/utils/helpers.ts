@@ -45,8 +45,8 @@ declare global {
   }
 }
 
-export function safeGet(id: string): HTMLElement | null {
-  return document.getElementById(id);
+export function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
+  return document.getElementById(id) as T | null;
 }
 
 export function setText(id: string, value: unknown): void {

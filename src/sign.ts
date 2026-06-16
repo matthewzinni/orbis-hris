@@ -1,17 +1,8 @@
 import { createTypedSignatureImage } from './ui/signaturePads';
 import { getEdgeFunctionHeaders, getFormSignatureFunctionUrl } from './services/signatureRequests';
 import { formatAcknowledgmentSummaryHtml } from './services/reviewAcknowledgmentSummary';
-
-type SignPayload = {
-  status?: string;
-  title?: string;
-  subtitle?: string;
-  date?: string;
-  summary?: string;
-  employeeName?: string;
-  signerName?: string;
-  error?: string;
-};
+import type { SignPayload } from './types/signing';
+import { esc } from './utils/helpers';
 
 function formatDisplayDate(value: unknown): string {
   const raw = String(value || '').trim();
@@ -28,14 +19,6 @@ function formatDisplayDate(value: unknown): string {
 function getTokenFromUrl(): string {
   const params = new URLSearchParams(window.location.search);
   return String(params.get('token') || params.get('signToken') || '').trim();
-}
-
-function esc(value: unknown): string {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 function renderError(message: string): void {

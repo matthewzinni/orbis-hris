@@ -1,6 +1,7 @@
 import { canAccessPerformanceReviews, isSupervisorUser } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 import { stopAllDictation } from './dictation';
 import { loadPerformanceReviewAttachments } from './employeeDocuments';
 import {
@@ -101,44 +102,6 @@ declare global {
 }
 
 let currentReviewId: string | null = null;
-
-function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
-  if (typeof window.safeGet === 'function') {
-    return window.safeGet(id) as T | null;
-  }
-
-  return document.getElementById(id) as T | null;
-}
-
-function showToast(message: string, type: string = 'success'): void {
-  if (typeof window.showToast === 'function') {
-    window.showToast(message, type);
-    return;
-  }
-
-  console.log(`[${type}] ${message}`);
-}
-
-function todayInputValue(): string {
-  if (typeof window.todayInputValue === 'function') {
-    return window.todayInputValue();
-  }
-
-  return new Date().toISOString().slice(0, 10);
-}
-
-function escapeHtml(value: unknown): string {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function nl2br(value: unknown): string {
-  return escapeHtml(value).replace(/\n/g, '<br>');
-}
 
 function employeeDisplayName(employee: ReviewEmployee | null | undefined): string {
   if (typeof window.employeeDisplayName === 'function') {
@@ -437,17 +400,17 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
     target.innerHTML = rows
       .map(
         (row) => `
-      <div class="history-item" data-review-id="${escapeHtml(row.id || '')}">
+      <div class="history-item" data-review-id="${esc(row.id || '')}">
         <div class="history-top">
           <div>
-            <strong>${escapeHtml(row.review_type || 'Review')}</strong>
-            <span>${escapeHtml(row.review_date || '')}</span>
+            <strong>${esc(row.review_type || 'Review')}</strong>
+            <span>${esc(row.review_date || '')}</span>
           </div>
           <div style="display:flex; gap:6px; align-items:center;">
-            <button class="button soft sm" type="button" data-edit-review-id="${escapeHtml(row.id || '')}">Edit</button>
+            <button class="button soft sm" type="button" data-edit-review-id="${esc(row.id || '')}">Edit</button>
             ${
               showReviewDelete
-                ? `<button class="button danger sm" type="button" data-delete-review-id="${escapeHtml(row.id || '')}">Delete</button>`
+                ? `<button class="button danger sm" type="button" data-delete-review-id="${esc(row.id || '')}">Delete</button>`
                 : ''
             }
           </div>

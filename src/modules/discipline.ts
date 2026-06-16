@@ -1,5 +1,6 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 import { stopAllDictation } from './dictation';
 import { requestAndCopyEmployeeSigningLink } from '../services/employeeAcknowledgmentSigning';
 import {
@@ -61,44 +62,6 @@ declare global {
 }
 
 let currentDisciplineId: string | null = null;
-
-function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
-  if (typeof window.safeGet === 'function') {
-    return window.safeGet(id) as T | null;
-  }
-
-  return document.getElementById(id) as T | null;
-}
-
-function showToast(message: string, type: string = 'success'): void {
-  if (typeof window.showToast === 'function') {
-    window.showToast(message, type);
-    return;
-  }
-
-  console.log(`[${type}] ${message}`);
-}
-
-function todayInputValue(): string {
-  if (typeof window.todayInputValue === 'function') {
-    return window.todayInputValue();
-  }
-
-  return new Date().toISOString().slice(0, 10);
-}
-
-function escapeHtml(value: unknown): string {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function nl2br(value: unknown): string {
-  return escapeHtml(value).replace(/\n/g, '<br>');
-}
 
 function getCurrentEmployee(): DisciplineEmployee | null {
   return window.currentEmployee || null;
@@ -236,26 +199,26 @@ export async function loadEmployeeDiscipline(employeeId: string): Promise<void> 
     target.innerHTML = rows
       .map(
         (row) => `
-      <div class="history-item" data-discipline-id="${escapeHtml(row.id || '')}">
+      <div class="history-item" data-discipline-id="${esc(row.id || '')}">
         <div class="history-top">
           <div>
-            <strong>${escapeHtml(row.issue_type || 'Discipline Report')}</strong>
-            <span>${escapeHtml(row.incident_date || row.created_at || '')}</span>
+            <strong>${esc(row.issue_type || 'Discipline Report')}</strong>
+            <span>${esc(row.incident_date || row.created_at || '')}</span>
           </div>
           <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-            <button class="button soft sm" type="button" data-edit-discipline-id="${escapeHtml(row.id || '')}">Edit</button>
+            <button class="button soft sm" type="button" data-edit-discipline-id="${esc(row.id || '')}">Edit</button>
             ${
               row.employee_signature
-                ? `<button class="button soft sm" type="button" data-pdf-discipline-id="${escapeHtml(row.id || '')}">Generate PDF</button>`
-                : `<button class="button primary sm" type="button" data-request-discipline-id="${escapeHtml(row.id || '')}">Copy signing link</button>
-                   <button class="button soft sm" type="button" data-pdf-discipline-id="${escapeHtml(row.id || '')}">Generate PDF</button>`
+                ? `<button class="button soft sm" type="button" data-pdf-discipline-id="${esc(row.id || '')}">Generate PDF</button>`
+                : `<button class="button primary sm" type="button" data-request-discipline-id="${esc(row.id || '')}">Copy signing link</button>
+                   <button class="button soft sm" type="button" data-pdf-discipline-id="${esc(row.id || '')}">Generate PDF</button>`
             }
-            <button class="button danger sm" type="button" data-delete-discipline-id="${escapeHtml(row.id || '')}">Delete</button>
+            <button class="button danger sm" type="button" data-delete-discipline-id="${esc(row.id || '')}">Delete</button>
           </div>
         </div>
         <div class="history-body">
-          <strong>Level:</strong> ${escapeHtml(row.discipline_level || '')}<br><br>
-          <strong>Status:</strong> ${escapeHtml(row.report_status || '')}<br><br>
+          <strong>Level:</strong> ${esc(row.discipline_level || '')}<br><br>
+          <strong>Status:</strong> ${esc(row.report_status || '')}<br><br>
           <strong>Description:</strong><br>${nl2br(row.description || '')}<br><br>
           <strong>Action Taken:</strong><br>${nl2br(row.action_taken || '')}
         </div>

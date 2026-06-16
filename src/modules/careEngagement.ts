@@ -545,7 +545,8 @@ async function confirmDeleteCareItem(itemId: string): Promise<void> {
     showToast('HR admin access is required to delete care items.', 'error');
     return;
   }
-  const confirmed = await showOrbisConfirm('Delete this care item?', 'Delete care item', {
+  const confirmed = await showOrbisConfirm('Delete this care item?', {
+    title: 'Delete care item',
     danger: true,
     confirmLabel: 'Delete',
   });
@@ -569,8 +570,7 @@ async function confirmDeletePulseSnapshot(snapshotId: string): Promise<void> {
   const snapshot = cachedDataset?.pulseSnapshots.find((row) => row.id === snapshotId);
   const confirmed = await showOrbisConfirm(
     `Delete pulse snapshot${snapshot?.periodLabel ? ` "${snapshot.periodLabel}"` : ''}?`,
-    'Delete pulse snapshot',
-    { danger: true, confirmLabel: 'Delete' }
+    { title: 'Delete pulse snapshot', danger: true, confirmLabel: 'Delete' }
   );
   if (!confirmed || !snapshot?.id) return;
 
@@ -590,7 +590,8 @@ async function confirmDeleteRecognition(entryId: string): Promise<void> {
     showToast('HR admin access is required to delete recognition entries.', 'error');
     return;
   }
-  const confirmed = await showOrbisConfirm('Delete this recognition entry?', 'Delete recognition', {
+  const confirmed = await showOrbisConfirm('Delete this recognition entry?', {
+    title: 'Delete recognition',
     danger: true,
     confirmLabel: 'Delete',
   });
@@ -612,8 +613,7 @@ async function editorDeleteMatrix(cell: CareMatrixCellEntry): Promise<void> {
   }
   const confirmed = await showOrbisConfirm(
     'Clear this matrix cell? Initiatives and gaps will be removed.',
-    'Clear matrix cell',
-    { danger: true, confirmLabel: 'Clear' }
+    { title: 'Clear matrix cell', danger: true, confirmLabel: 'Clear' }
   );
   if (!confirmed) return;
 

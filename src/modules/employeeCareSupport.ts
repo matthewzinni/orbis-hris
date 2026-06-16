@@ -108,11 +108,11 @@ function renderList(targetId: string, html: string, emptyMessage: string): void 
   el.innerHTML = html || `<div class="empty">${esc(emptyMessage)}</div>`;
 }
 
-function actionButtons(editAttr: string, editId: string, deleteAttr: string): string {
+function actionButtons(editAttr: string, editId: string, deleteAttr: string, deleteId?: string): string {
   return `
     <div class="toolbar" style="margin-top:8px;gap:8px;">
       <button type="button" class="button soft sm" data-${editAttr}="${esc(editId)}">Edit</button>
-      <button type="button" class="button danger sm" data-${deleteAttr}="${esc(editId)}">Delete</button>
+      <button type="button" class="button danger sm" data-${deleteAttr}="${esc(deleteId ?? editId)}">Delete</button>
     </div>
   `;
 }
@@ -283,7 +283,8 @@ async function confirmDeleteDrawerRecord(
   onDelete: () => void | Promise<void>,
   employeeId: string
 ): Promise<void> {
-  const confirmed = await showOrbisConfirm(`Delete this ${label}?`, `Delete ${label}`, {
+  const confirmed = await showOrbisConfirm(`Delete this ${label}?`, {
+    title: `Delete ${label}`,
     danger: true,
     confirmLabel: 'Delete',
   });

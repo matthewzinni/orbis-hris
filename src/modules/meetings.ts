@@ -1,6 +1,7 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { initMeetingDictation, stopMeetingDictation } from './dictation';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 
 interface MeetingRecord {
   id?: string;
@@ -57,44 +58,6 @@ declare global {
 }
 
 let currentMeetingId: string | null = null;
-
-function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
-  if (typeof window.safeGet === 'function') {
-    return window.safeGet(id) as T | null;
-  }
-
-  return document.getElementById(id) as T | null;
-}
-
-function showToast(message: string, type: string = 'success'): void {
-  if (typeof window.showToast === 'function') {
-    window.showToast(message, type);
-    return;
-  }
-
-  console.log(`[${type}] ${message}`);
-}
-
-function todayInputValue(): string {
-  if (typeof window.todayInputValue === 'function') {
-    return window.todayInputValue();
-  }
-
-  return new Date().toISOString().slice(0, 10);
-}
-
-function escapeHtml(value: unknown): string {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
-}
-
-function nl2br(value: unknown): string {
-  return escapeHtml(value).replace(/\n/g, '<br>');
-}
 
 function getCurrentEmployee(): MeetingEmployee | null {
   if (typeof window.getCurrentEmployeeForOrbis === 'function') {
@@ -182,22 +145,22 @@ export async function loadEmployeeMeetings(employeeId: string): Promise<void> {
     target.innerHTML = rows
       .map(
         (row) => `
-            <div class="history-item" data-meeting-id="${escapeHtml(row.id || '')}">
+            <div class="history-item" data-meeting-id="${esc(row.id || '')}">
               <div class="history-top">
                 <div>
-                  <strong>${escapeHtml(row.meeting_type || 'Meeting Record')}</strong>
-                  <span>${escapeHtml(row.meeting_date || row.created_at || '')}</span>
+                  <strong>${esc(row.meeting_type || 'Meeting Record')}</strong>
+                  <span>${esc(row.meeting_date || row.created_at || '')}</span>
                 </div>
 
                 <div style="display:flex; gap:6px; align-items:center;">
-                  <button class="button soft sm" type="button" data-edit-meeting-id="${escapeHtml(row.id || '')}">Edit</button>
-                  <button class="button danger sm" type="button" data-delete-meeting-id="${escapeHtml(row.id || '')}">Delete</button>
+                  <button class="button soft sm" type="button" data-edit-meeting-id="${esc(row.id || '')}">Edit</button>
+                  <button class="button danger sm" type="button" data-delete-meeting-id="${esc(row.id || '')}">Delete</button>
                 </div>
               </div>
 
               <div class="history-body">
                 <strong>Subject:</strong><br>
-                ${escapeHtml(row.subject || '')}
+                ${esc(row.subject || '')}
 
                 <br><br>
 
@@ -207,7 +170,7 @@ export async function loadEmployeeMeetings(employeeId: string): Promise<void> {
                 <br><br>
 
                 <strong>Follow-Up Date:</strong><br>
-                ${escapeHtml(row.follow_up_date || '')}
+                ${esc(row.follow_up_date || '')}
               </div>
             </div>
           `

@@ -1,4 +1,5 @@
 // Window globals still referenced by legacy HTML and migration bridges
+export {};
 
 declare global {
   interface Window {

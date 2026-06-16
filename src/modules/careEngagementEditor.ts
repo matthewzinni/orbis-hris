@@ -787,8 +787,7 @@ export async function deleteCareEngagementEditor(): Promise<void> {
 
   const confirmed = await showOrbisConfirm(
     'Delete this record? This cannot be undone.',
-    'Delete care record',
-    { danger: true, confirmLabel: 'Delete' }
+    { title: 'Delete care record', danger: true, confirmLabel: 'Delete' }
   );
 
   if (!confirmed) return;

@@ -4,18 +4,8 @@ import {
   type SignatureFormType,
 } from '../services/signatureRequests';
 import { formatAcknowledgmentSummaryHtml } from '../services/reviewAcknowledgmentSummary';
+import type { SignPayload } from '../types/signing';
 import { createTypedSignatureImage } from '../ui/signaturePads';
-
-type SignPayload = {
-  status?: string;
-  title?: string;
-  subtitle?: string;
-  date?: string;
-  summary?: string;
-  employeeName?: string;
-  signerName?: string;
-  error?: string;
-};
 
 let activeToken = '';
 
