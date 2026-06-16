@@ -827,16 +827,6 @@ function bindCareEngagementEvents(): void {
   });
 }
 
-declare global {
-  interface Window {
-    loadCareEngagement?: () => Promise<void>;
-    ensureCareEngagementLoaded?: (force?: boolean) => void;
-    applyCareEngagementCenterAccess?: () => void;
-    openCareEngagementView?: () => void;
-    getCareEngagementDataset?: () => CareEngagementDataset | null;
-  }
-}
-
 function registerCareEngagementGlobals(): void {
   window.loadCareEngagement = loadCareEngagement;
   window.ensureCareEngagementLoaded = ensureCareEngagementLoaded;

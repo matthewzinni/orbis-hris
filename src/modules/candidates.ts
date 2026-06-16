@@ -50,51 +50,6 @@ interface CandidateRecord {
   [key: string]: unknown;
 }
 
-declare global {
-  interface Window {
-    loadCandidates?: () => Promise<void>;
-
-    saveCandidateRecord?: () => Promise<void>;
-    saveCandidate?: () => Promise<void>;
-    saveCandidateProfile?: () => Promise<void>;
-
-    editCandidateRecord?: (record: CandidateRecord) => void;
-
-    deleteCandidateRecord?: (candidateId?: string) => Promise<void>;
-
-    moveCandidateToStage?: (candidateId: string, newStage: string) => Promise<void>;
-
-    convertCandidateToEmployee?: (candidateId: string) => Promise<void>;
-
-    convertCurrentCandidateToEmployee?: () => Promise<void>;
-
-    refreshCandidatesView?: () => Promise<void>;
-
-    showToast?: (message: string, type?: string) => void;
-
-    safeGet?: (id: string) => HTMLElement | null;
-
-    renderBasicDashboardKpis?: () => void;
-
-    loadEmployees?: () => Promise<void>;
-    loadAllDashboardData?: () => Promise<void>;
-
-    openCandidateDrawer?: (candidateId: string) => Promise<void>;
-    closeCandidateDrawer?: () => void;
-    closeActiveDrawer?: () => void;
-    isCandidateDrawerOpen?: () => boolean;
-    closeEmployeeDrawer?: () => void;
-    switchCandidateTab?: (tabName: string) => void;
-    openNewCandidateForm?: () => void;
-    createCandidateFromEmployee?: () => Promise<void>;
-    inviteCandidateToInterview?: () => void;
-    emailCandidateSummaryToLeadership?: () => Promise<void>;
-    setText?: (id: string, value: unknown) => void;
-    todayInputValue?: () => string;
-    closeDrawer?: () => void;
-  }
-}
-
 let currentCandidateId: string | null = null;
 let currentLinkedEmployeeId: string | null = null;
 let resumeEmployeeDrawerOnCandidateClose = false;
@@ -128,7 +83,6 @@ function escapeHtml(value: unknown): string {
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
 }
-
 
 function nl2br(value: unknown): string {
   return escapeHtml(value).replace(/\n/g, '<br>');

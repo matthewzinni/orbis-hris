@@ -395,25 +395,6 @@ export function formatEmployeeDueDateLine(
   return label ? `${name} • ${label}` : name;
 }
 
-declare global {
-  interface Window {
-    cleanEmployeeNameValue?: (value: unknown) => string;
-    employeeDisplayName?: (
-      employee: EmployeeLike | null | undefined
-    ) => string;
-    isActiveDashboardEmployee?: (
-      employee: EmployeeLike | null | undefined
-    ) => boolean;
-    isInHouseFteEmployee?: (
-      employee: EmployeeLike | null | undefined
-    ) => boolean;
-    countInHouseFteEmployees?: (employees: EmployeeLike[]) => number;
-    daysUntilDate?: (
-      dateValue: unknown
-    ) => number | null;
-  }
-}
-
 window.cleanEmployeeNameValue =
   cleanEmployeeNameValue;
 

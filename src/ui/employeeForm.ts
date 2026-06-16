@@ -102,17 +102,6 @@ export async function saveEmployeeForm(): Promise<void> {
   showToast('Employee save is not available.', 'error');
 }
 
-declare global {
-  interface Window {
-    cleanEmployeeFormNameValue?: (value: unknown) => string;
-    getEmployeeFormData?: () => Record<string, unknown>;
-    populateEmployeeForm?: (employee: EmployeeFormRow) => void;
-    resetEmployeeForm?: () => void;
-    saveEmployeeForm?: () => Promise<void>;
-    saveEmployeeRecord?: () => Promise<void>;
-  }
-}
-
 window.cleanEmployeeFormNameValue = cleanEmployeeFormNameValue;
 window.getEmployeeFormData = getEmployeeFormData;
 window.populateEmployeeForm = populateEmployeeForm;

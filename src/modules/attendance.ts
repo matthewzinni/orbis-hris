@@ -18,13 +18,6 @@ import { loadApprovedLeaveOutToday } from '../services/leaveRequests';
 import { employeeDisplayName } from '../services/employeeUtils';
 import { getEmployees, normalizeEmployeeStatus } from './employees';
 
-declare global {
-  interface Window {
-    loadAttendance?: (force?: boolean) => Promise<void>;
-    applyAttendanceAccess?: () => void;
-  }
-}
-
 type EmployeeRow = {
   id?: string;
   dbId?: string;

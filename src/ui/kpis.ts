@@ -99,29 +99,6 @@ type LatestReviewEntry = {
   sortDate: string;
 };
 
-declare global {
-  interface Window {
-    EMPLOYEES?: KpiEmployeeRecord[];
-    ALL_EMPLOYEES?: KpiEmployeeRecord[];
-    currentEmployeeRoster?: KpiEmployeeRecord[];
-    renderBasicDashboardKpis?: (employees?: KpiEmployeeRecord[]) => void;
-    refreshDashboardKpis?: (employees?: KpiEmployeeRecord[]) => void;
-    renderKpiEmployeeMetrics?: () => void;
-    refreshTurnoverKpisFromSupabase?: () => Promise<void>;
-    buildKpiHoverDetails?: () => void;
-    initKpiHoverUi?: () => void;
-    syncKpiCardTooltip?: (card: Element | null, text: string) => void;
-    updateTurnoverRiskKpi?: (rate: number, subtext: string) => void;
-    currentImpactPlayerRosterMap?: Record<string, ImpactPlayerMeta>;
-    currentAtRiskRosterMap?: Record<string, AtRiskMeta>;
-    hrIntelligenceContext?: import('../services/hrIntelligence').HrIntelligenceContext;
-    loadSummaryMetrics?: () => Promise<void>;
-    compareText?: (a: unknown, b: unknown) => number;
-    safeSet?: (id: string, value: unknown) => void;
-    setText?: (id: string, value: unknown) => void;
-  }
-}
-
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
 }

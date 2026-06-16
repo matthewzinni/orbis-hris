@@ -219,21 +219,6 @@ export function updateEmployeeRowBadges(): void {
   });
 }
 
-declare global {
-  interface Window {
-    getEmployeeMapKeys?: (employee: EmployeeRow) => string[];
-    getEmployeeRiskMeta?: (employee: EmployeeRow) => FlagMeta | null;
-    getEmployeeImpactMeta?: (employee: EmployeeRow) => FlagMeta | null;
-    isEmployeeAtRisk?: (employee: EmployeeRow) => boolean;
-    isEmployeeImpactPlayer?: (employee: EmployeeRow) => boolean;
-    hasActiveRiskMeta?: (meta: FlagMeta | null | undefined) => boolean;
-    hasActiveImpactMeta?: (meta: FlagMeta | null | undefined) => boolean;
-    buildRiskBadgeHtml?: (meta: FlagMeta | null) => string;
-    buildImpactBadgeHtml?: (meta: FlagMeta | null) => string;
-    updateEmployeeRowBadges?: () => void;
-  }
-}
-
 window.getEmployeeMapKeys = getEmployeeMapKeys;
 window.getEmployeeRiskMeta = getEmployeeRiskMeta;
 window.getEmployeeImpactMeta = getEmployeeImpactMeta;

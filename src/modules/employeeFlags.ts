@@ -405,18 +405,6 @@ function bindEmployeeFlagButtons(): void {
 
 bindEmployeeFlagButtons();
 
-declare global {
-  interface Window {
-    loadEmployeeManualAtRisk?: (employeeId: string) => Promise<void>;
-    loadEmployeeManualImpactPlayer?: (employeeId: string) => Promise<void>;
-    markEmployeeAtRisk?: () => Promise<void>;
-    clearAtRiskStatus?: () => Promise<void>;
-    markImpactPlayer?: () => Promise<void>;
-    clearImpactPlayerStatus?: () => Promise<void>;
-    loadImpactPlayersFallback?: () => Promise<void>;
-  }
-}
-
 window.loadEmployeeManualAtRisk = loadEmployeeManualAtRisk;
 window.loadEmployeeManualImpactPlayer = loadEmployeeManualImpactPlayer;
 window.markEmployeeAtRisk = markEmployeeAtRisk;

@@ -132,14 +132,4 @@ function bindDashboardSyncRetry(): void {
   });
 }
 
-declare global {
-  interface Window {
-    loadAllDashboardData?: () => Promise<void>;
-    updateDashboardSyncStatus?: (
-      status: DashboardSyncStatus,
-      syncedAt?: Date
-    ) => void;
-  }
-}
-
 window.updateDashboardSyncStatus = updateDashboardSyncStatus;

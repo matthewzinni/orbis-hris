@@ -155,14 +155,6 @@ export function refreshEmployeeDrawerRiskSignalsIfOpen(): void {
   renderEmployeeDrawerRiskSignals(employee);
 }
 
-declare global {
-  interface Window {
-    renderEmployeeDrawerRiskSignals?: typeof renderEmployeeDrawerRiskSignals;
-    refreshEmployeeDrawerRiskSignalsIfOpen?: typeof refreshEmployeeDrawerRiskSignalsIfOpen;
-    clearEmployeeDrawerRiskSignals?: typeof clearEmployeeDrawerRiskSignals;
-  }
-}
-
 window.renderEmployeeDrawerRiskSignals = renderEmployeeDrawerRiskSignals;
 window.refreshEmployeeDrawerRiskSignalsIfOpen = refreshEmployeeDrawerRiskSignalsIfOpen;
 window.clearEmployeeDrawerRiskSignals = clearEmployeeDrawerRiskSignals;

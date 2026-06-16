@@ -1011,30 +1011,6 @@ export async function refreshOrbisWorkspace(): Promise<void> {
   }
 }
 
-declare global {
-  interface Window {
-    loadDashboardOverview?: () => Promise<void>;
-    loadAllDashboardData?: () => Promise<void>;
-    refreshOrbisWorkspace?: () => Promise<void>;
-    loadReviewDashboardFallback?: () => Promise<void>;
-    loadReviewDashboard?: () => Promise<void>;
-    loadExecutiveInsightFallback?: () => Promise<void>;
-    loadRiskEmployeesFallback?: () => Promise<void>;
-    loadImpactPlayersFallback?: () => Promise<void>;
-    getOrCreateDashboardSectionBody?: (
-      title: string,
-      id: string
-    ) => HTMLElement | null;
-    cleanReviewDashboardLooseCount?: () => void;
-    currentAtRiskRosterMap?: Record<string, unknown>;
-    currentImpactPlayerRosterMap?: Record<string, unknown>;
-    initKpiHoverUi?: () => void;
-    buildKpiHoverDetails?: () => void;
-    buildRiskPreview?: () => void;
-    updateWorkspaceAlerts?: () => void;
-  }
-}
-
 window.loadDashboardOverview = loadDashboardOverview;
 window.loadAllDashboardData = loadAllDashboardData;
 window.refreshOrbisWorkspace = refreshOrbisWorkspace;

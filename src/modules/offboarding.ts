@@ -112,14 +112,6 @@ export async function toggleOffboardingTask(taskId: string, isComplete: boolean)
   }
 }
 
-declare global {
-  interface Window {
-    loadOffboardingTasks?: (employeeId: string) => Promise<void>;
-    toggleOffboardingTask?: (taskId: string, isComplete: boolean) => Promise<void>;
-    createDefaultOffboardingTasks?: (employeeId: string) => Promise<void>;
-  }
-}
-
 window.loadOffboardingTasks = loadOffboardingTasks;
 window.toggleOffboardingTask = toggleOffboardingTask;
 window.createDefaultOffboardingTasks = createDefaultOffboardingTasks;

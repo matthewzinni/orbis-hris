@@ -127,12 +127,4 @@ export async function generateAvailableEmployeeId(
   return formatEmployeeId(prefix, nextSequence);
 }
 
-declare global {
-  interface Window {
-    EMPLOYEES?: Record<string, unknown>[];
-    ALL_EMPLOYEES?: Record<string, unknown>[];
-    generateAvailableEmployeeId?: () => Promise<string>;
-  }
-}
-
 window.generateAvailableEmployeeId = () => generateAvailableEmployeeId();

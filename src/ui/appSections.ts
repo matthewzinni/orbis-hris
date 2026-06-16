@@ -14,28 +14,6 @@ export interface AppSection {
   onEnter?: () => void;
 }
 
-declare global {
-  interface Window {
-    currentMainView?: string;
-    showAppSection?: (sectionId: string) => void;
-    ensureInvestigationsLoaded?: (force?: boolean) => void;
-    loadInvestigations?: () => Promise<void>;
-    ensureCareEngagementLoaded?: (force?: boolean) => void;
-    loadCareEngagement?: () => Promise<void>;
-    loadAttendance?: (force?: boolean) => Promise<void>;
-    loadHrInbox?: (force?: boolean) => Promise<void>;
-    loadOrgChart?: () => Promise<void>;
-    renderOrgChart?: () => void;
-    loadMyProfilePortal?: () => Promise<void>;
-    loadMyTasksPortal?: () => Promise<void>;
-    loadMyHandbookPortal?: () => Promise<void>;
-    loadMyDirectoryPortal?: () => Promise<void>;
-    loadMyTimeOffPortal?: () => Promise<void>;
-    loadMobileActivityFeed?: (force?: boolean) => Promise<void>;
-    loadJanus?: (force?: boolean) => Promise<void>;
-  }
-}
-
 async function ensureCandidatesSectionReady(): Promise<void> {
   const employees = (window as { EMPLOYEES?: unknown[] }).EMPLOYEES;
 

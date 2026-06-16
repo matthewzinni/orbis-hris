@@ -850,16 +850,6 @@ function bindReportsEvents(): void {
 
 bindReportsEvents();
 
-declare global {
-  interface Window {
-    loadReportsSection?: (force?: boolean) => Promise<void>;
-    exportReportsStayInterviewsCsv?: () => void;
-    exportReportsHeadcountCsv?: () => void;
-    exportReportsErTrendsCsv?: () => void;
-    printReportsSection?: () => void;
-  }
-}
-
 window.loadReportsSection = loadReportsSection;
 window.exportReportsStayInterviewsCsv = exportReportsStayInterviewsCsv;
 window.exportReportsHeadcountCsv = exportReportsHeadcountCsv;

@@ -183,12 +183,4 @@ export function normalizeEmployee(
   };
 }
 
-declare global {
-  interface Window {
-    normalizeEmployee?: (
-      employee: NormalizableEmployee | null | undefined
-    ) => NormalizedEmployee | null;
-  }
-}
-
 window.normalizeEmployee = normalizeEmployee;

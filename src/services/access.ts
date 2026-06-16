@@ -1524,52 +1524,6 @@ function applyPerformanceReviewTabAccess(employee?: EmployeeLike | null): void {
   }
 }
 
-declare global {
-  interface Window {
-    currentUserRole?: string;
-    currentUserAccess?: UserAccessRow | null;
-    getUserRole?: () => Promise<string | null>;
-    isAdminUser?: () => boolean;
-    canManageEmployeeRecords?: () => boolean;
-    isSupervisorUser?: () => boolean;
-    canAccessPerformanceReviews?: (employee?: EmployeeLike | null) => boolean;
-    canEditEmployeeAdmin?: (employee?: EmployeeLike | null) => boolean;
-    employeeMatchesSupervisorAccess?: (employee: EmployeeLike) => boolean;
-    applyAdminDashboardView?: () => void;
-    applySupervisorDashboardView?: () => void;
-    clearOrbisSessionState?: () => void;
-    currentFilteredEmployees?: unknown[];
-    isActiveDashboardEmployee?: (employee: EmployeeLike) => boolean;
-    updateTopbarSignedInLabel?: (fallbackEmail?: string) => void;
-    resolveSignedInUserLabel?: (
-      access?: UserAccessRow | null,
-      fallbackEmail?: string
-    ) => string;
-    currentUserEmail?: string;
-    applyRoleLocks?: () => void;
-    applyAddEmployeeAsCandidateAccess?: () => void;
-    applyRolePermissions?: () => void;
-    ensureDeleteEmployeeButton?: () => HTMLButtonElement | null;
-    runDeleteEmployee?: () => void;
-    runTerminateEmployee?: () => void;
-    isCreatingEmployee?: boolean;
-    currentEmergencyContactId?: string | null;
-    applyAttendanceAccess?: () => void;
-    applyHrInboxAccess?: () => void;
-    applyLeaveAccess?: () => void;
-    applyEmployeePortalView?: () => void;
-    applyRoleNavigation?: () => void;
-    canAccessOrbisApp?: () => boolean;
-    canAccessAppSection?: (sectionId: string) => boolean;
-    isEmployeeUser?: () => boolean;
-    getLinkedEmployeeId?: () => string;
-    loadMyTimeOffPortal?: () => Promise<void>;
-    loadHrInbox?: (force?: boolean) => Promise<void>;
-    getHrInboxItems?: () => import('./hrInbox').HrInboxItem[];
-    __hrInboxCache?: import('./hrInbox').HrInboxItem[];
-  }
-}
-
 window.currentUserRole = currentUserRole;
 window.currentUserAccess = currentUserAccess;
 window.getUserRole = getUserRole;

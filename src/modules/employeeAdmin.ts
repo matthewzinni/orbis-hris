@@ -808,27 +808,6 @@ export function createEmployee(): void {
   openNewEmployeeForm();
 }
 
-declare global {
-  interface Window {
-    populateEmployeeAdminForm?: (employee: EmployeeRow) => void;
-    updateEmployeeById?: (
-      employeeId: string,
-      payload: EmployeeRow
-    ) => Promise<{ data: EmployeeRow | null; error: Error | null }>;
-    deleteEmployeeById?: (employeeId: string) => Promise<{ error: Error | null }>;
-    runDeleteEmployee?: () => Promise<void>;
-    runTerminateEmployee?: () => Promise<void>;
-    openNewEmployeeForm?: () => void;
-    clearEmployeeAdminForm?: () => void;
-    createEmployee?: () => void;
-    sanitizeVisibleEmployeeNameFields?: () => void;
-    resetEmployeeForm?: () => void;
-    renderEmployeeDrawerIdentityHeader?: (employee: EmployeeRow | null | undefined) => void;
-    syncEmployeeTerminationDateFieldVisibility?: (status?: unknown) => void;
-    updateBenefitsEligibilityHint?: (employee?: EmployeeRow | null) => void;
-  }
-}
-
 window.populateEmployeeAdminForm = populateEmployeeAdminForm;
 window.updateBenefitsEligibilityHint = updateBenefitsEligibilityHint;
 window.updateEmployeeById = updateEmployeeById;

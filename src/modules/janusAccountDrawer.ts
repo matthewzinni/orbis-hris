@@ -30,16 +30,6 @@ import {
 } from './janusContactEmailUi';
 import { initJanusMeetingDictation, stopJanusMeetingDictation } from './dictation';
 
-declare global {
-  interface Window {
-    openJanusAccountDrawer?: (accountId?: string, tab?: string) => Promise<void>;
-    closeJanusAccountDrawer?: () => void;
-    saveJanusAccountRecord?: () => Promise<void>;
-    isJanusAccountDrawerOpen?: () => boolean;
-    applyJanusDrawerAccess?: () => void;
-  }
-}
-
 let currentJanusAccountId: string | null = null;
 let editingContactId: string | null = null;
 let janusDrawerBound = false;

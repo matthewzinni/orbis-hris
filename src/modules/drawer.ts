@@ -68,43 +68,6 @@ interface DrawerEmployeeRecord {
   [key: string]: unknown;
 }
 
-declare global {
-  interface Window {
-    openEmployeeDrawer?: (employeeId: string) => Promise<void>;
-
-    closeEmployeeDrawer?: () => void;
-
-    switchDrawerTab?: (tabName: string) => void;
-
-    refreshEmployeeDrawer?: () => Promise<void>;
-
-    saveEmployeeRecord?: () => Promise<void>;
-    deleteEmployeeRecord?: () => Promise<void>;
-
-    selectedEmployeeId?: string | null;
-
-    currentEmployee?: DrawerEmployeeRecord;
-
-    loadEmployeeReviews?: (employeeId: string) => Promise<void>;
-    loadEmployeeDiscipline?: (employeeId: string) => Promise<void>;
-    loadEmployeeIncidents?: (employeeId: string) => Promise<void>;
-    loadEmployeeMeetings?: (employeeId: string) => Promise<void>;
-    loadStayInterviews?: (employeeId: string) => Promise<void>;
-    loadEmergencyContacts?: (employeeId: string) => Promise<void>;
-    loadEmployeeDocuments?: (employeeId: string) => Promise<void>;
-    loadEmployeeCareSupport?: (employeeId: string) => Promise<void>;
-
-    openDrawer?: (employee: DrawerEmployeeRecord) => void;
-    switchTab?: (tabName: string) => void;
-
-    closeDrawer?: () => void;
-    syncOpenedEmployeeRecordId?: (employeeId: string) => void;
-    isCreatingEmployee?: boolean;
-    loadAllDashboardData?: () => Promise<void>;
-    syncEmployeeTerminationDateFieldVisibility?: (status?: unknown) => void;
-  }
-}
-
 let selectedEmployee: DrawerEmployeeRecord | null = null;
 
 /** Primary key captured when the drawer opens — never read from the form. */

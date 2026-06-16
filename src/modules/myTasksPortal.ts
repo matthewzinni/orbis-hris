@@ -31,16 +31,6 @@ import {
   onboardingDueStatus,
 } from '../services/onboardingWorkflow';
 
-declare global {
-  interface Window {
-    refreshMobileTasksUi?: () => Promise<void>;
-    loadMyTasksPortal?: () => Promise<void>;
-    toggleMyOnboardingTask?: (taskId: string, isComplete: boolean) => Promise<void>;
-    acknowledgeHandbookFromPortal?: (documentId: string) => Promise<void>;
-    acknowledgePolicyFromPortal?: (assignmentId: string, documentId?: string) => Promise<void>;
-  }
-}
-
 let cachedPolicyDocs: HandbookDocument[] = [];
 
 let cachedHandbookDocs: HandbookDocument[] = [];

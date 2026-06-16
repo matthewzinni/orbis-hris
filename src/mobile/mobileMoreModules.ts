@@ -391,22 +391,6 @@ export function initMobileMoreModules(): void {
   renderMobileSettingsNav();
 }
 
-declare global {
-  interface Window {
-    renderMobileOperationsCards?: (issues: OperationsIssue[]) => void;
-    renderMobileInvestigationCards?: (rows: Investigation[]) => void;
-    renderMobileCareCards?: (items: CareTrackerItem[]) => void;
-    renderMobileCandidateCards?: (rows: CandidateRow[]) => void;
-    renderMobileAttendanceRollCall?: (rows: AttendanceRollRow[]) => void;
-    renderMobileAbsenceCards?: (rows: AbsenceRow[]) => void;
-    renderMobileOrgChartDrill?: () => void;
-    renderMobileSettingsNav?: () => void;
-    openOperationsIssueDrawer?: (id: string) => Promise<void>;
-    openInvestigationDrawer?: (id: string) => Promise<void>;
-    openEmployeeDrawer?: (id: string) => Promise<void>;
-  }
-}
-
 window.renderMobileOperationsCards = renderMobileOperationsCards;
 window.renderMobileInvestigationCards = renderMobileInvestigationCards;
 window.renderMobileCareCards = renderMobileCareCards;

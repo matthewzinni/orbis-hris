@@ -107,8 +107,3 @@ export function refreshMobilePortalUi(): void {
 
 window.refreshMobilePortalUi = refreshMobilePortalUi;
 
-declare global {
-  interface Window {
-    refreshMobilePortalUi?: () => void;
-  }
-}

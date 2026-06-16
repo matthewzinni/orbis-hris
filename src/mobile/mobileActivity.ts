@@ -160,14 +160,4 @@ export function initMobileActivity(): void {
   bindMobileActivityEvents();
 }
 
-declare global {
-  interface Window {
-    loadMobileActivityFeed?: (force?: boolean) => Promise<void>;
-    openEmployeeDrawer?: (employeeId: string) => Promise<void>;
-    openDrawerByEmployeeId?: (id: string) => Promise<void>;
-    switchDrawerTab?: (tabName: string) => void;
-    switchTab?: (tabName: string) => void;
-  }
-}
-
 window.loadMobileActivityFeed = loadMobileActivityFeed;

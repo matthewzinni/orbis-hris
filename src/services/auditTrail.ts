@@ -159,20 +159,6 @@ export async function recordAuditEvent(
   }
 }
 
-declare global {
-  interface Window {
-    currentUserEmail?: string;
-    currentUserRole?: string;
-    getAuditTrail?: () => AuditEntry[];
-    buildEmployeeChangeLog?: (oldEmployee: EmployeeRow, newEmployee: EmployeeRow) => string;
-    recordAuditEvent?: (
-      action: string,
-      employee: EmployeeRow | null | undefined,
-      details?: string
-    ) => void | Promise<void>;
-  }
-}
-
 window.getAuditTrail = getAuditTrail;
 window.buildEmployeeChangeLog = buildEmployeeChangeLog;
 window.recordAuditEvent = recordAuditEvent;

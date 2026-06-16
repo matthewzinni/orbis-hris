@@ -40,10 +40,12 @@ type OrbisRosterWindow = Window & {
   currentFilteredEmployees?: RosterEmployee[];
   rosterViewMode?: string;
   currentEmployee?: RosterEmployee;
+  currentUser?: { email?: string; name?: string } | null;
   isCreatingEmployee?: boolean;
   currentAtRiskRosterMap?: Record<string, unknown>;
   currentImpactPlayerRosterMap?: Record<string, unknown>;
   openEmployeeDrawer?: (id: string) => Promise<void>;
+  openDrawer?: (employee: RosterEmployee) => void;
   syncOpenedEmployeeRecordId?: (id: string) => void;
   loadEmployees?: () => Promise<unknown>;
   renderEmployeeRoster?: () => void;
@@ -59,10 +61,31 @@ type OrbisRosterWindow = Window & {
   showToast?: (message: string, type?: string) => void;
   populateEmployeeAdminForm?: (employee: RosterEmployee) => void;
   updateEmployeeRowBadges?: () => void;
-  OrbisServices?: { employees?: { delete: (id: string) => Promise<{ error?: { message?: string } | null }> } };
+  OrbisServices?: {
+    employees?: {
+      delete?: (id: string) => Promise<{ error?: { message?: string } | null }>;
+      getAll?: () => Promise<{ data?: RosterEmployee[] }>;
+    };
+  };
+  __suppressAuditDirty?: boolean;
+  __employeeDirtyFields?: Set<string>;
+  __employeeUpdateToastBind?: boolean;
+  __employeeUpdateToastPending?: boolean;
+  __employeeBeforeUpdate?: Record<string, unknown>;
+  __employeeAdminBind?: boolean;
+  __employeeAdminAuditBaseline?: Record<string, unknown>;
 };
 
 const win = window as OrbisRosterWindow;
+
+function asFormField(el: HTMLElement | null): HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null {
+  return el as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | null;
+}
+
+function eventTargetElement(target: EventTarget | null): Element | null {
+  return target instanceof Element ? target : null;
+}
+
 
 function getEmployeesList(): RosterEmployee[] {
   return Array.isArray(win.EMPLOYEES) ? win.EMPLOYEES : [];
@@ -462,22 +485,23 @@ function populateEmployeeAdminByVisibleOrder(employee) {
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
     };
-    const setValue = (field, value) => {
-        if (!field) return;
+    const setValue = (field: Element | null, value: unknown) => {
+        if (!field || !('value' in field)) return;
+        const input = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
         const previousSuppress = window.__suppressAuditDirty;
         window.__suppressAuditDirty = true;
         const nextValue = value ?? '';
         if (field.tagName === 'SELECT') {
-            const match = Array.from(field.options || []).find(option => {
+            const match = Array.from((field as HTMLSelectElement).options || []).find((option) => {
                 return String(option.value).toLowerCase() === String(nextValue).toLowerCase()
                     || String(option.textContent).trim().toLowerCase() === String(nextValue).toLowerCase();
             });
-            field.value = match ? match.value : nextValue;
+            input.value = match ? match.value : String(nextValue);
         } else {
-            field.value = nextValue;
+            input.value = String(nextValue);
         }
-        field.dispatchEvent(new Event('input', { bubbles: true }));
-        field.dispatchEvent(new Event('change', { bubbles: true }));
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
         window.__suppressAuditDirty = previousSuppress;
     };
     const fields = Array.from(adminScope.querySelectorAll('input, select, textarea')).filter(isVisible);
@@ -564,8 +588,8 @@ function bindEmployeeUpdateToast() {
     });
 
     document.addEventListener('click', (e) => {
-        const clickedButton = e.target.closest('button');
-        const saveButton = e.target.closest('#saveEmployeeBtn') || clickedButton;
+        const clickedButton = eventTargetElement(e.target)?.closest('button');
+        const saveButton = eventTargetElement(e.target)?.closest('#saveEmployeeBtn') || clickedButton;
         const buttonText = (saveButton?.textContent || '').trim().toLowerCase();
         const isUpdateButton = !!saveButton && (saveButton.id === 'saveEmployeeBtn' || buttonText.includes('update employee')); if (!isUpdateButton) return; const isExistingEmployee = !!window.currentEmployee && !window.isCreatingEmployee;
         if (!isExistingEmployee) return; console.log('[Orbis Audit] Update Employee click detected. Preparing audit log.'); window.__employeeUpdateToastPending = true;
@@ -646,9 +670,9 @@ function getEmployeeSnapshotFromRosterRow(employeeId) {
 }
 
 function getFilteredRosterEmployees() {
-    const searchTerm = safeGet('globalSearch')?.value?.toLowerCase().trim() || '';
-    const departmentFilter = String(safeGet('deptFilter')?.value || '').trim();
-    const explicitStatusFilter = String(safeGet('statusFilter')?.value || '').trim().toUpperCase();
+    const searchTerm = asFormField(safeGet('globalSearch'))?.value?.toLowerCase().trim() || '';
+    const departmentFilter = String(asFormField(safeGet('deptFilter'))?.value || '').trim();
+    const explicitStatusFilter = String(asFormField(safeGet('statusFilter'))?.value || '').trim().toUpperCase();
     const rosterMode = String(window.rosterViewMode || 'active').trim().toLowerCase();
     const employees = getEmployeesList();
     return employees
@@ -784,8 +808,8 @@ function renderEmployeeRoster() {
             </tr>
         `;
     }).join('');
-    if (typeof updateEmployeeRowBadges === 'function') {
-        updateEmployeeRowBadges();
+    if (typeof win.updateEmployeeRowBadges === 'function') {
+        win.updateEmployeeRowBadges?.();
     }
     // Re-bind At-Risk KPI hover after roster updates
     if (typeof bindAtRiskKpiHover === 'function') {
@@ -804,7 +828,7 @@ async function openDrawerByEmployeeId(employeeId) {
         showToast('Employee could not be found.', 'error');
         return;
     }
-    let rosterSnapshot = getEmployeeSnapshotFromRosterRow(employeeId);
+    let rosterSnapshot: Record<string, unknown> = getEmployeeSnapshotFromRosterRow(employeeId);
     if (!rosterSnapshot.employee_id) {
         rosterSnapshot = {
             ...rosterSnapshot,
@@ -832,15 +856,15 @@ async function openDrawerByEmployeeId(employeeId) {
 
     if (typeof window.openEmployeeDrawer === 'function') {
         await window.openEmployeeDrawer(recordId);
-    } else if (typeof openDrawer === 'function') {
-        openDrawer(drawerEmployee);
+    } else if (typeof win.openDrawer === 'function') {
+        win.openDrawer(drawerEmployee);
     } else {
         showToast('Employee drawer is not available.', 'error');
         return;
     }
 
-    if (typeof populateEmployeeAdminForm === 'function') {
-        populateEmployeeAdminForm(drawerEmployee);
+    if (typeof win.populateEmployeeAdminForm === 'function') {
+        win.populateEmployeeAdminForm(drawerEmployee);
     }
     populateEmployeeAdminFallback(drawerEmployee);
     populateEmployeeAdminByVisibleOrder(drawerEmployee);
@@ -887,15 +911,15 @@ async function deleteEmployeeQuick(employeeId) {
         }
     );
     if (!confirmed) return;
-    const { error } = await OrbisServices.employees.delete(employeeId);
+    const { error } = await win.OrbisServices!.employees!.delete!(employeeId);
     if (error) {
         console.error(error);
         showToast(`Could not delete employee: ${error.message || 'Unknown error'}`, 'error');
         return;
     }
     showToast('Employee deleted.');
-    if (typeof loadEmployees === 'function') {
-        await loadEmployees();
+    if (typeof win.loadEmployees === 'function') {
+        await win.loadEmployees();
     } else {
         renderEmployeeRoster();
     }
@@ -920,7 +944,7 @@ function ensureRosterViewTabs() {
         button.onclick = () => {
             window.rosterViewMode = mode;
             if (statusFilter) {
-                statusFilter.value = '';
+                asFormField(statusFilter)!.value = '';
             }
             Array.from(tabs.querySelectorAll('button')).forEach(btn => {
                 const active = btn.dataset.rosterMode === mode;
@@ -944,7 +968,7 @@ function ensureRosterViewTabs() {
 function bindRosterEvents() {
     bindEmployeeUpdateToast();
     ensureRosterViewTabs();
-    const searchInput = safeGet('globalSearch') || document.querySelector('#employeeSearch, #searchInput, input[type="search"], input[placeholder*="Search"], input[placeholder*="search"]');
+    const searchInput = (safeGet('globalSearch') || document.querySelector('#employeeSearch, #searchInput, input[type="search"], input[placeholder*="Search"], input[placeholder*="search"]')) as HTMLInputElement | null;
     const departmentFilter = safeGet('deptFilter');
     const statusFilter = safeGet('statusFilter');
     const clearFiltersBtn = safeGet('clearFiltersBtn');
@@ -1010,7 +1034,7 @@ function clearRosterFilters(): void {
     const departmentFilter = safeGet('deptFilter') as HTMLSelectElement | null;
     const statusFilter = safeGet('statusFilter') as HTMLSelectElement | null;
 
-    if (searchInput) searchInput.value = '';
+    if (searchInput) (searchInput as HTMLInputElement).value = '';
     if (departmentFilter) departmentFilter.value = '';
     if (statusFilter) statusFilter.value = '';
     window.rosterViewMode = 'active';
@@ -1025,12 +1049,12 @@ window.clearFilters = clearRosterFilters;
 if (!window.__employeeAdminBind) {
     window.__employeeAdminBind = true;
     document.addEventListener('click', (e) => {
-        const tab = e.target.closest('button, .tab, [data-tab]');
+        const tab = eventTargetElement(e.target)?.closest('button, .tab, [data-tab]');
         if (!tab) return; const text = (tab.textContent || '').toLowerCase();
         const isEmployeeAdmin = text.includes('employee admin') || tab.getAttribute('data-tab') === 'employee-admin';
-        const isHistoryTab = text.includes('history') || tab.getAttribute('data-tab') === 'history'; if (isEmployeeAdmin && window.currentEmployee && !window.isCreatingEmployee && typeof populateEmployeeAdminForm === 'function') {
+        const isHistoryTab = text.includes('history') || tab.getAttribute('data-tab') === 'history'; if (isEmployeeAdmin && window.currentEmployee && !window.isCreatingEmployee && typeof win.populateEmployeeAdminForm === 'function') {
             setTimeout(() => {
-                populateEmployeeAdminForm(window.currentEmployee);
+                win.populateEmployeeAdminForm!(window.currentEmployee!);
                 if (typeof populateEmployeeAdminFallback === 'function') {
                     populateEmployeeAdminFallback(window.currentEmployee);
                 }
@@ -1044,7 +1068,7 @@ if (!window.__employeeAdminBind) {
                     return label === 'employee id' || input.placeholder?.trim().toLowerCase() === 'employee id';
                 });
                 if (visibleEmployeeIdField && currentEmployeeId) {
-                    visibleEmployeeIdField.value = currentEmployeeId;
+                    visibleEmployeeIdField.value = String(currentEmployeeId);
                     visibleEmployeeIdField.dispatchEvent(new Event('input', { bubbles: true }));
                     visibleEmployeeIdField.dispatchEvent(new Event('change', { bubbles: true }));
                     lockEmployeeIdField(visibleEmployeeIdField);
@@ -1080,7 +1104,7 @@ window.refreshEmployeeRoster = async function () {
     }
 };
 
-function getEmployeeAdminFormSnapshot() {
+function getEmployeeAdminFormSnapshot(): Record<string, unknown> {
     return {};
 }
 
@@ -1129,7 +1153,7 @@ function getLocalAuditLogsForEmployee() {
     return JSON.parse(localStorage.getItem('orbis_audit_log') || '[]');
 }
 
-function renderEmployeeAuditLogViewer() {
+function renderEmployeeAuditLogViewer(_employee?: RosterEmployee | null) {
     return;
 }
 function unlockRosterSearchInput() {
@@ -1137,8 +1161,9 @@ function unlockRosterSearchInput() {
 
     if (!searchInput) return;
 
-    searchInput.disabled = false;
-    searchInput.readOnly = false;
+    const searchField = searchInput as HTMLInputElement;
+    searchField.disabled = false;
+    searchField.readOnly = false;
     searchInput.removeAttribute('disabled');
     searchInput.removeAttribute('readonly');
     searchInput.style.pointerEvents = 'auto';
@@ -1172,7 +1197,7 @@ window.getEmployeeAdminFormSnapshot = getEmployeeAdminFormSnapshot;
 window.getEmployeeAdminFieldByLabel = getEmployeeAdminFieldByLabel;
 window.setEmployeeAdminAuditBaseline = setEmployeeAdminAuditBaseline;
 window.getEmployeeAdminAuditBaseline = getEmployeeAdminAuditBaseline;
-window.getEmployeeAdminFieldKey = getEmployeeAdminFieldKey;
+window.getEmployeeAdminFieldKey = getEmployeeAdminFieldKey as Window['getEmployeeAdminFieldKey'];
 window.bindEmployeeAdminDirtyTracking = bindEmployeeAdminDirtyTracking;
 window.cleanEmployeeAdminVisibleNameFields = cleanEmployeeAdminVisibleNameFields;
 window.getMeaningfulEmployeeAuditChanges = getMeaningfulEmployeeAuditChanges;
@@ -1184,7 +1209,7 @@ window.getLocalAuditLogsForEmployee = getLocalAuditLogsForEmployee;
 window.renderEmployeeAuditLogViewer = renderEmployeeAuditLogViewer;
 
 setTimeout(() => {
-    const searchInput = safeGet('globalSearch');
+    const searchInput = safeGet('globalSearch') as HTMLInputElement | null;
     if (searchInput) {
         searchInput.disabled = false;
         searchInput.readOnly = false;
@@ -1200,7 +1225,7 @@ setInterval(() => {
 }, 750);
 
 function getAtRiskKpiHoverNames() {
-    const riskMap = window.currentAtRiskRosterMap || (typeof currentAtRiskRosterMap !== 'undefined' ? currentAtRiskRosterMap : {}) || {};
+    const riskMap = win.currentAtRiskRosterMap || {};
     const employees = getEmployeesList();
     const names = []; const addNameValue = (value) => {
         if (!value) return; if (typeof value === 'string') {

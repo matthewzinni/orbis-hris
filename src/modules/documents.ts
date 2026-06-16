@@ -33,17 +33,6 @@ export interface UploadDocumentPayload {
   file: File;
 }
 
-declare global {
-  interface Window {
-    supabase: any;
-    supabaseClient?: any;
-    getOrbisSupabaseClient?: () => any;
-    initializeDocumentsLibrary?: () => void;
-    orbisSupabase?: any;
-    db?: any;
-  }
-}
-
 const DOCUMENT_TABLE = 'document_library';
 const DOCUMENT_BUCKETS = ['documents', 'document-library'];
 const DOCUMENT_UPLOAD_BUCKET = 'documents';

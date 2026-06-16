@@ -31,23 +31,6 @@ interface EmergencyContactEmployee {
   [key: string]: unknown;
 }
 
-declare global {
-  interface Window {
-    currentEmployee?: EmergencyContactEmployee;
-    currentEmergencyContactId?: string | null;
-
-    loadEmergencyContacts?: (employeeId: string) => Promise<void>;
-    saveEmergencyContact?: () => Promise<void>;
-    deleteEmergencyContact?: () => Promise<void>;
-    setEmergencyContactPriority?: (contactId: string, rank: number) => Promise<void>;
-    resetEmergencyContactForm?: () => void;
-
-    showToast?: (message: string, type?: string) => void;
-    safeGet?: (id: string) => HTMLElement | null;
-    applyRolePermissions?: () => void;
-  }
-}
-
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
     return window.safeGet(id) as T | null;

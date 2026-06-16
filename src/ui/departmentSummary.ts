@@ -87,12 +87,5 @@ export function renderDepartmentSummary(): void {
     .join('');
 }
 
-declare global {
-  interface Window {
-    populateDepartmentFilter?: () => void;
-    renderDepartmentSummary?: () => void;
-  }
-}
-
 window.populateDepartmentFilter = populateDepartmentFilter;
 window.renderDepartmentSummary = renderDepartmentSummary;

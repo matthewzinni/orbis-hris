@@ -11,19 +11,6 @@ type CandidateNote = {
   created_at?: string;
 };
 
-declare global {
-  interface Window {
-    currentCandidateId?: string | null;
-    currentCandidateNoteId?: string | null;
-    switchCandidateTab?: (tabName: string) => void;
-    loadCandidateNotes?: (candidateId?: string) => Promise<void>;
-    saveCandidateNote?: () => Promise<void>;
-    deleteCandidateNote?: (noteId: string) => Promise<void>;
-    startCandidateNoteEdit?: (note: CandidateNote) => void;
-    cancelCandidateNoteEdit?: () => void;
-  }
-}
-
 let currentCandidateNoteId: string | null = null;
 
 function getResolvedCandidateId(candidateId: string | null = null): string {

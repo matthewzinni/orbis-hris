@@ -40,16 +40,6 @@ export function hideDashboardLoadingSkeletons(): void {
   hideKpiGridLoading();
 }
 
-declare global {
-  interface Window {
-    showRosterTableSkeleton?: (rowCount?: number) => void;
-    showKpiGridLoading?: () => void;
-    hideKpiGridLoading?: () => void;
-    showDashboardLoadingSkeletons?: () => void;
-    hideDashboardLoadingSkeletons?: () => void;
-  }
-}
-
 window.showRosterTableSkeleton = showRosterTableSkeleton;
 window.showKpiGridLoading = showKpiGridLoading;
 window.hideKpiGridLoading = hideKpiGridLoading;

@@ -13,13 +13,6 @@ import {
 } from '../services/leaveRequests';
 import { switchMainView } from '../ui/navigation';
 
-declare global {
-  interface Window {
-    loadManagerHome?: (force?: boolean) => Promise<void>;
-    applyManagerHomeAccess?: () => void;
-  }
-}
-
 let managerHomeBound = false;
 let cachedSnapshot: ManagerHomeSnapshot | null = null;
 

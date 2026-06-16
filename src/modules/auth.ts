@@ -551,21 +551,6 @@ export function initAuthBindings(): void {
   }
 }
 
-declare global {
-  interface Window {
-    signIn?: typeof signIn;
-    registerAccount?: typeof registerAccount;
-    setAuthMode?: typeof setAuthMode;
-    signOut?: typeof signOut;
-    showAuthenticatedOrbisView?: () => void;
-    showAuthView?: () => void;
-    bootstrapOrbisAfterAuth?: () => Promise<void>;
-    clearOrbisSessionState?: () => void;
-    getUserRole?: () => Promise<string | null>;
-    isSignInFlowActive?: () => boolean;
-  }
-}
-
 window.isSignInFlowActive = isSignInFlowActive;
 
 window.signIn = signIn;

@@ -13,38 +13,6 @@ type EmployeeLike = {
   name?: string;
 };
 
-declare global {
-  interface Window {
-    getCurrentEmployeeForOrbis?: () => EmployeeLike | null;
-    currentEmployee?: EmployeeLike | null;
-    safeGet?: (id: string) => HTMLElement | null;
-    setText?: (id: string, value: unknown) => void;
-    setHTML?: (id: string, value: unknown) => void;
-    esc?: (value: unknown) => string;
-    nl2br?: (value: unknown) => string;
-    fmtDate?: (value: unknown) => string;
-    fmtDateTime?: (value: unknown) => string;
-    toInputDate?: (value: unknown) => string;
-    todayInputValue?: () => string;
-    getCurrentEmployeeDisplayName?: () => string;
-    getCurrentEmployeeDisplayId?: () => string;
-    statusBadge?: (status: unknown) => string;
-    compareText?: (a: unknown, b: unknown) => number;
-    showToast?: (message: string, type?: string) => void;
-    printField?: (label: string, value: string) => string;
-    printEmployeeInfo?: (extraFieldsHTML?: string) => string;
-    printSection?: (title: string, contentHTML: string) => string;
-    printRecord?: (title: string, contentHTML: string) => void;
-    printNote?: () => void;
-    printDiscipline?: () => void;
-    printIncident?: () => void;
-    printStayInterview?: () => void;
-    printMeeting?: () => void;
-    printReview?: () => void;
-    canAccessPerformanceReviews?: (employee?: EmployeeLike | null) => boolean;
-  }
-}
-
 export function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
 }

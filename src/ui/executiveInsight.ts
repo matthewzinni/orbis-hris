@@ -90,13 +90,5 @@ export function loadExecutiveInsight(): void {
   insightEl.classList.add('orbis-fade-in');
 }
 
-declare global {
-  interface Window {
-    hrIntelligenceContext?: HrIntelligenceContext;
-    loadExecutiveInsight?: () => void;
-    buildExecutiveInsightFromState?: typeof buildExecutiveInsightFromState;
-  }
-}
-
 window.loadExecutiveInsight = loadExecutiveInsight;
 window.buildExecutiveInsightFromState = buildExecutiveInsightFromState;

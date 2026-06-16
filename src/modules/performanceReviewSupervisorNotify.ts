@@ -138,10 +138,4 @@ export async function loadPerformanceReviewSupervisorNotify(): Promise<void> {
   }
 }
 
-declare global {
-  interface Window {
-    loadPerformanceReviewSupervisorNotify?: () => Promise<void>;
-  }
-}
-
 window.loadPerformanceReviewSupervisorNotify = loadPerformanceReviewSupervisorNotify;

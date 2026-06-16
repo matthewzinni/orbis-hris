@@ -11,13 +11,6 @@ import {
   type PayrollHandoffRecord,
 } from '../services/payrollHandoff';
 
-declare global {
-  interface Window {
-    loadEmployeePayrollHandoffs?: (employeeId: string) => Promise<void>;
-    logManualPayrollHandoff?: () => Promise<void>;
-  }
-}
-
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
     return window.safeGet(id) as T | null;

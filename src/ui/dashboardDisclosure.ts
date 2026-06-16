@@ -39,12 +39,5 @@ export function initDashboardDisclosure(root: ParentNode = document): void {
   initOrbisDisclosure(root);
 }
 
-declare global {
-  interface Window {
-    initOrbisDisclosure?: typeof initOrbisDisclosure;
-    initDashboardDisclosure?: typeof initDashboardDisclosure;
-  }
-}
-
 window.initOrbisDisclosure = initOrbisDisclosure;
 window.initDashboardDisclosure = initDashboardDisclosure;

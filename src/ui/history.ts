@@ -27,27 +27,6 @@ type TimelineItem = {
   text?: string;
 };
 
-declare global {
-  interface Window {
-    currentEmployee?: {
-      id?: string;
-      dbId?: string;
-      employee_id?: string;
-    } | null;
-    loadEmployeeHistory?: (employeeId: string) => Promise<void>;
-    getResolvedHistoryEmployeeId?: (employeeId?: string | null) => string;
-    renderHistoryList?: (
-      containerId: string,
-      records: HistoryRecord[],
-      emptyMessage?: string
-    ) => void;
-    appendHistoryItem?: (containerId: string, record: HistoryRecord) => void;
-    clearHistoryList?: (containerId: string, emptyMessage?: string) => void;
-    getAuditTrail?: () => ActivityRecord[];
-    getOrCreateDashboardSectionBody?: (title: string, id: string) => HTMLElement | null;
-  }
-}
-
 function escapeHtml(value: unknown): string {
   return String(value ?? '')
     .replaceAll('&', '&amp;')

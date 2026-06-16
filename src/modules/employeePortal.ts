@@ -14,14 +14,6 @@ import {
   ptoPanelHeaderLabel,
 } from '../services/ptoBalance';
 
-declare global {
-  interface Window {
-    refreshMobilePortalUi?: () => void;
-    loadMyTimeOffPortal?: () => Promise<void>;
-    submitMyTimeOffRequest?: () => Promise<void>;
-  }
-}
-
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
     return window.safeGet(id) as T | null;

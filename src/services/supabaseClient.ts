@@ -33,13 +33,6 @@ export const supabaseClient = createClient(
 );
 export const supabase = supabaseClient;
 
-declare global {
-  interface Window {
-    supabaseClient: typeof supabaseClient;
-    supabase: typeof supabase;
-  }
-}
-
 window.supabaseClient = supabaseClient;
 window.supabase = supabaseClient;
 

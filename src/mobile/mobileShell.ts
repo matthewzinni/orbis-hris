@@ -17,12 +17,6 @@ import { initMobileForms } from './mobileForms';
 import { initMobileNotifications } from './mobileNotifications';
 import { initMobileMoreModules } from './mobileMoreModules';
 
-declare global {
-  interface Window {
-    refreshMobileNavigation?: () => void;
-  }
-}
-
 function esc(value: string): string {
   if (typeof window.esc === 'function') {
     return window.esc(value);

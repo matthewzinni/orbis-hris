@@ -269,14 +269,6 @@ export function bootErSigningFromUrl(): void {
 
 bindErSigningModal();
 
-declare global {
-  interface Window {
-    openErSigningModal?: (token: string) => Promise<void>;
-    queueEmployeeSignatureAndOpenPdf?: typeof queueEmployeeSignatureAndOpenPdf;
-    bootErSigningFromUrl?: () => void;
-  }
-}
-
 window.openErSigningModal = openErSigningModal;
 window.queueEmployeeSignatureAndOpenPdf = queueEmployeeSignatureAndOpenPdf;
 window.bootErSigningFromUrl = bootErSigningFromUrl;

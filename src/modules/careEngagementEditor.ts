@@ -908,13 +908,5 @@ export function bindCareEngagementEditorEvents(): void {
   applyCareConfidentialitySelectHelp('careNoteConfidentialityInput');
 }
 
-declare global {
-  interface Window {
-    closeCareEngagementDrawer?: () => void;
-    invalidateEmployeeCareSupportCache?: () => void;
-    loadEmployeeCareSupport?: (employeeId: string) => Promise<void>;
-  }
-}
-
 window.closeCareEngagementDrawer = closeCareEngagementDrawer;
 

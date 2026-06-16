@@ -341,10 +341,4 @@ function bindWorkspaceAlerts(): void {
 
 bindWorkspaceAlerts();
 
-declare global {
-  interface Window {
-    updateWorkspaceAlerts?: () => void;
-  }
-}
-
 window.updateWorkspaceAlerts = updateWorkspaceAlerts;

@@ -10,12 +10,6 @@ import {
 import { buildOrgChart, type OrgChartNode } from '../services/orgChartBuilder';
 import { employeeDisplayName } from '../services/employeeUtils';
 
-declare global {
-  interface Window {
-    loadMyDirectoryPortal?: () => Promise<void>;
-  }
-}
-
 let cachedDirectory: DirectoryEmployee[] = [];
 let activeDirectoryView: 'list' | 'chart' = 'list';
 

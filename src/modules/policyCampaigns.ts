@@ -15,12 +15,6 @@ import {
 } from '../services/policyCampaigns';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
-declare global {
-  interface Window {
-    loadPolicyCampaignsAdmin?: () => Promise<void>;
-  }
-}
-
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
     return window.safeGet(id) as T | null;

@@ -5,15 +5,6 @@
 
 import { appState } from './core/state';
 
-declare global {
-  interface Window {
-    __orbisMainBoot?: boolean;
-    __orbisBootComplete?: boolean;
-    loadEmployees?: () => Promise<unknown[]>;
-    syncOpenedEmployeeRecordId?: (employeeId: string) => void;
-  }
-}
-
 export function syncEmployeeStateFromWindow(): void {
   const win = window as {
     EMPLOYEES?: unknown[];

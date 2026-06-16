@@ -47,51 +47,6 @@ type DrawerUiEmployee = Record<string, unknown> & {
   tenure_bracket?: string;
 };
 
-declare global {
-  interface Window {
-    EMPLOYEES?: DrawerUiEmployee[];
-    currentEmployee?: DrawerUiEmployee | null;
-    isCreatingEmployee?: boolean;
-    safeGet?: (id: string) => HTMLElement | null;
-    esc?: (value: unknown) => string;
-    switchTab?: (tabName: string) => void;
-    setText?: (id: string, value: unknown) => void;
-    resetDrawerForms?: () => void;
-    setCurrentEmployeeForOrbis?: (employee: DrawerUiEmployee | null) => void;
-    populateEmployeeForm?: (employee: DrawerUiEmployee) => void;
-    ensureDeleteEmployeeButton?: () => void;
-    runTerminateEmployee?: () => void;
-    applyRolePermissions?: () => void;
-    loadEmployeeNotes?: (employeeId: string) => void;
-    loadEmployeeDiscipline?: (employeeId: string) => void;
-    loadEmployeeMeetings?: (employeeId: string) => void;
-    loadEmergencyContacts?: (employeeId: string) => void;
-    loadEmployeeDocuments?: (employeeId: string) => void;
-    loadEmployeeReviews?: (employeeId: string) => void;
-    loadEmployeeIncidents?: (employeeId: string) => void;
-    loadStayInterviews?: (employeeId: string) => void;
-    loadEmployeeOnboarding?: (employeeId: string) => void;
-    loadEmployeeManualAtRisk?: (employeeId: string) => void;
-    loadEmployeeManualImpactPlayer?: (employeeId: string) => void;
-    loadEmployeeHistory?: (employeeId: string) => void;
-    markEmployeeAtRisk?: () => void;
-    clearAtRiskStatus?: () => void;
-    markImpactPlayer?: () => void;
-    clearImpactPlayerStatus?: () => void;
-    openDrawer?: (employee: DrawerUiEmployee) => void;
-    closeDrawer?: () => void;
-    switchDrawerTab?: (tabName: string) => void;
-    bindDrawerEvents?: () => void;
-    forcePopulateEmployeeAdminPanel?: (employee: DrawerUiEmployee | null | undefined) => void;
-    drawerEscapeKeyBound?: boolean;
-    drawerFocusTrapBound?: boolean;
-    getResolvedDrawerEmployeeId?: (employee?: DrawerUiEmployee | null) => string | null;
-    getDrawerHeaderEmployeeId?: () => string;
-    formatDrawerDateForDisplay?: (value: unknown) => string;
-    getNextUpcomingAnniversaryDate?: (value: unknown) => string;
-  }
-}
-
 function domGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
     return window.safeGet(id) as T | null;
@@ -189,8 +144,6 @@ function cleanDrawerEmployeeNameValue(value: unknown): string {
         .replace(/\s+/g, ' ')
         .trim();
 }
-
-
 
 function cleanVisibleDrawerNameInputs() {
     const possibleFirstNameIds = ['empFirstName', 'firstName', 'employeeFirstName', 'firstNameInput'];
@@ -966,7 +919,6 @@ export function bindDrawerEvents(): void {
         window.initAccessibleDrawerTabs();
     }
 }
-
 
 window.getResolvedDrawerEmployeeId = getResolvedDrawerEmployeeId;
 window.openDrawer = openDrawer;

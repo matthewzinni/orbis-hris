@@ -1,16 +1,25 @@
-import { supabaseClient } from '../services/supabaseClient';
-import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  bindHistoryItemActions,
+  clearRecordEditModeUi,
+  deleteEmployeeRecordRow,
+  getDrawerEmployee,
+  getEmployeeId,
+  loadEmployeeRecordHistory,
+  renderBasicDashboardKpisIfAvailable,
+  saveEmployeeRecordRow,
+  setDrawerInputValue,
+  setRecordEditModeUi,
+  type EmployeeRecordRow,
+} from '../services/employeeRecordCrud';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
-import { stopAllDictation } from './dictation';
 import {
   clearCanvasSignature,
   getCanvasSignature,
   setCanvasSignature,
 } from '../ui/signaturePads';
+import { stopAllDictation } from './dictation';
 
-interface IncidentRecord {
-  id?: string;
-  employee_id?: string;
+interface IncidentRecord extends EmployeeRecordRow {
   incident_date?: string;
   incident_type?: string;
   location?: string;
@@ -21,136 +30,60 @@ interface IncidentRecord {
   employee_signature?: string;
   manager_signature?: string;
   witness_signature?: string;
-  created_at?: string;
-  created_by?: string;
-  [key: string]: unknown;
 }
 
-interface IncidentEmployee {
-  id?: string;
-  dbId?: string;
-  employee_id?: string;
-  displayId?: string;
-  first_name?: string;
-  last_name?: string;
-  first?: string;
-  last?: string;
-  [key: string]: unknown;
-}
-
-declare global {
-  interface Window {
-    currentEmployee?: IncidentEmployee;
-    currentIncidentId?: string | null;
-
-    loadEmployeeIncidents?: (employeeId: string) => Promise<void>;
-    loadIncidentReports?: (employeeId: string) => Promise<void>;
-    loadEmployeeIncidentReports?: (employeeId: string) => Promise<void>;
-    saveIncidentRecord?: () => Promise<void>;
-    saveIncidentReport?: () => Promise<void>;
-    editIncidentRecord?: (record: IncidentRecord) => void;
-    deleteIncidentRecord?: (recordId: string, employeeId: string) => Promise<void>;
-
-    showToast?: (message: string, type?: string) => void;
-    safeGet?: (id: string) => HTMLElement | null;
-    todayInputValue?: () => string;
-    getCurrentEmployeeForOrbis?: () => IncidentEmployee | null;
-
-    renderBasicDashboardKpis?: () => void;
-  }
-}
+const TABLE = 'incident_reports';
+const EDIT_UI = {
+  saveButtonId: 'saveIncidentBtn',
+  saveLabel: 'Save Incident Record',
+  updateLabel: 'Update Incident Record',
+  cancelButtonId: 'cancelIncidentEditBtn',
+  editStatusId: 'incidentEditStatus',
+  editStatusText: 'Editing saved incident record',
+};
 
 let currentIncidentId: string | null = null;
 
-function getCurrentEmployee(): IncidentEmployee | null {
-  if (typeof window.getCurrentEmployeeForOrbis === 'function') {
-    return window.getCurrentEmployeeForOrbis();
-  }
+function resetIncidentForm(): void {
+  setDrawerInputValue('incidentDate', todayInputValue());
+  setDrawerInputValue('incidentType', '');
+  setDrawerInputValue('incidentLocation', '');
+  setDrawerInputValue('incidentStatus', '');
+  setDrawerInputValue('incidentDescription', '');
+  setDrawerInputValue('incidentCorrectiveAction', '');
+  setDrawerInputValue('incidentFollowUp', '');
 
-  return window.currentEmployee || null;
+  const refused = safeGet<HTMLInputElement>('incidentRefusedToSign');
+  if (refused) refused.checked = false;
+
+  clearCanvasSignature('incidentEmployeeSignature', 'incidentEmployeeSigStatus');
+  clearCanvasSignature('incidentManagerSignature', 'incidentManagerSigStatus');
+  clearCanvasSignature('incidentWitnessSignature', 'incidentWitnessSigStatus');
 }
 
-function getEmployeeId(employee: IncidentEmployee | null): string {
-  return String(employee?.dbId || employee?.employee_id || employee?.id || employee?.displayId || '');
+function buildIncidentPayload(employeeId: string): IncidentRecord {
+  return {
+    employee_id: employeeId,
+    incident_date: safeGet<HTMLInputElement>('incidentDate')?.value || todayInputValue(),
+    incident_type: safeGet<HTMLInputElement>('incidentType')?.value || '',
+    location: safeGet<HTMLInputElement>('incidentLocation')?.value || '',
+    description: safeGet<HTMLTextAreaElement>('incidentDescription')?.value || '',
+    follow_up:
+      safeGet<HTMLTextAreaElement>('incidentCorrectiveAction')?.value ||
+      safeGet<HTMLTextAreaElement>('incidentFollowUp')?.value ||
+      '',
+    status: safeGet<HTMLSelectElement>('incidentStatus')?.value || '',
+    refused_to_sign: safeGet<HTMLInputElement>('incidentRefusedToSign')?.checked || false,
+    employee_signature: getCanvasSignature('incidentEmployeeSignature'),
+    manager_signature: getCanvasSignature('incidentManagerSignature'),
+    witness_signature: getCanvasSignature('incidentWitnessSignature'),
+  };
 }
 
-function getEmployeeLookupIds(employee: IncidentEmployee | null, fallbackId?: string): string[] {
-  return [
-    employee?.dbId,
-    employee?.employee_id,
-    employee?.id,
-    employee?.displayId,
-    fallbackId,
-  ]
-    .filter(Boolean)
-    .map(String)
-    .filter((value, index, array) => array.indexOf(value) === index);
-}
-
-function setInputValue(id: string, value: unknown): void {
-  const input = safeGet<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id);
-  if (!input) return;
-
-  input.value = String(value ?? '');
-}
-
-async function refreshIncidentDependentUi(employeeId: string): Promise<void> {
-  await loadEmployeeIncidents(employeeId);
-
-  if (typeof window.renderBasicDashboardKpis === 'function') {
-    window.renderBasicDashboardKpis();
-  }
-}
-
-export async function loadEmployeeIncidents(employeeId: string): Promise<void> {
-  const target = safeGet('incidentsHistory');
-
-  if (!target) {
-    console.warn('[Incidents] incidentsHistory container not found.');
-    return;
-  }
-
-  target.innerHTML = '<div class="empty">Loading incidents...</div>';
-
-  try {
-    const activeEmployee = getCurrentEmployee();
-    const primaryEmployeeId = String(employeeId || getEmployeeId(activeEmployee) || '').trim();
-    const employeeIds = getEmployeeLookupIds(activeEmployee, primaryEmployeeId);
-
-    if (!primaryEmployeeId && !employeeIds.length) {
-      target.innerHTML = '<div class="empty">Open an employee to view incidents.</div>';
-      return;
-    }
-
-    const idsToSearch = employeeIds.length ? employeeIds : [primaryEmployeeId];
-
-    const { data, error } = await supabaseClient
-      .from('incident_reports')
-      .select('*')
-      .in('employee_id', idsToSearch);
-
-    if (error) {
-      console.error('[Incidents] Could not load incident records:', error);
-      target.innerHTML = '<div class="empty">Could not load incident records.</div>';
-      return;
-    }
-
-    const rows = ((data || []) as IncidentRecord[]).sort((a, b) => {
-      const dateA = String(a.incident_date || a.created_at || '');
-      const dateB = String(b.incident_date || b.created_at || '');
-      return dateB.localeCompare(dateA);
-    });
-
-    console.log('[Incidents] Incident rows returned:', rows.length, rows);
-
-    if (!rows.length) {
-      target.innerHTML = '<div class="empty">No incident records found for this employee.</div>';
-      return;
-    }
-
-    target.innerHTML = rows
-      .map(
-        (row) => `
+function renderIncidentRows(rows: IncidentRecord[]): string {
+  return rows
+    .map(
+      (row) => `
           <div class="history-item" data-incident-id="${esc(row.id || '')}">
             <div class="history-top">
               <div>
@@ -185,29 +118,39 @@ export async function loadEmployeeIncidents(employeeId: string): Promise<void> {
             </div>
           </div>
         `
-      )
-      .join('');
+    )
+    .join('');
+}
 
-    target.querySelectorAll<HTMLButtonElement>('[data-edit-incident-id]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const incidentId = button.dataset.editIncidentId;
-        const record = rows.find((row) => String(row.id) === String(incidentId));
-        if (!record) return;
-        editIncidentRecord(record);
-      });
-    });
+async function refreshIncidentDependentUi(employeeId: string): Promise<void> {
+  await loadEmployeeIncidents(employeeId);
+  renderBasicDashboardKpisIfAvailable();
+}
 
-    target.querySelectorAll<HTMLButtonElement>('[data-delete-incident-id]').forEach((button) => {
-      button.addEventListener('click', async () => {
-        const incidentId = button.dataset.deleteIncidentId;
-        if (!incidentId) return;
-        await deleteIncidentRecord(incidentId, primaryEmployeeId || idsToSearch[0]);
+export async function loadEmployeeIncidents(employeeId: string): Promise<void> {
+  await loadEmployeeRecordHistory<IncidentRecord>({
+    historyContainerId: 'incidentsHistory',
+    table: TABLE,
+    employeeId,
+    logPrefix: 'Incidents',
+    loadingMessage: 'Loading incidents...',
+    noEmployeeMessage: 'Open an employee to view incidents.',
+    emptyMessage: 'No incident records found for this employee.',
+    errorMessage: 'Could not load incident records.',
+    dateFields: ['incident_date', 'created_at'],
+    renderRows: renderIncidentRows,
+    bindActions: (container, rows, reloadEmployeeId) => {
+      bindHistoryItemActions({
+        container,
+        rows,
+        editDataAttribute: 'data-edit-incident-id',
+        deleteDataAttribute: 'data-delete-incident-id',
+        getRowId: (row) => String(row.id || ''),
+        onEdit: editIncidentRecord,
+        onDelete: (rowId) => deleteIncidentRecord(rowId, reloadEmployeeId),
       });
-    });
-  } catch (err) {
-    console.error('[Incidents] Unexpected incident history failure:', err);
-    target.innerHTML = '<div class="empty">Could not load incident records.</div>';
-  }
+    },
+  });
 }
 
 export function editIncidentRecord(record: IncidentRecord): void {
@@ -216,17 +159,15 @@ export function editIncidentRecord(record: IncidentRecord): void {
   currentIncidentId = record.id || null;
   window.currentIncidentId = currentIncidentId;
 
-  setInputValue('incidentDate', record.incident_date || todayInputValue());
-  setInputValue('incidentType', record.incident_type || '');
-  setInputValue('incidentLocation', record.location || '');
-  setInputValue('incidentDescription', record.description || '');
-  setInputValue('incidentCorrectiveAction', record.follow_up || '');
-  setInputValue('incidentStatus', record.status || '');
+  setDrawerInputValue('incidentDate', record.incident_date || todayInputValue());
+  setDrawerInputValue('incidentType', record.incident_type || '');
+  setDrawerInputValue('incidentLocation', record.location || '');
+  setDrawerInputValue('incidentDescription', record.description || '');
+  setDrawerInputValue('incidentCorrectiveAction', record.follow_up || '');
+  setDrawerInputValue('incidentStatus', record.status || '');
 
   const refused = safeGet<HTMLInputElement>('incidentRefusedToSign');
-  if (refused) {
-    refused.checked = record.refused_to_sign === true;
-  }
+  if (refused) refused.checked = record.refused_to_sign === true;
 
   setCanvasSignature(
     'incidentEmployeeSignature',
@@ -244,51 +185,26 @@ export function editIncidentRecord(record: IncidentRecord): void {
     String(record.witness_signature || '')
   );
 
-  const saveButton = safeGet('saveIncidentBtn');
-  if (saveButton) saveButton.textContent = 'Update Incident Record';
-
-  const editStatus = safeGet('incidentEditStatus');
-  if (editStatus) {
-    editStatus.textContent = 'Editing saved incident record';
-    editStatus.classList.remove('hidden');
-  }
-
-  safeGet('cancelIncidentEditBtn')?.classList.remove('hidden');
-
+  setRecordEditModeUi(EDIT_UI);
   showToast('Incident record loaded for editing.');
 }
 
 export async function deleteIncidentRecord(incidentId: string, employeeId: string): Promise<void> {
-  if (!incidentId) return;
-  if (
-    !(await showOrbisConfirm('Delete this incident record?', {
-      title: 'Delete incident',
-      confirmLabel: 'Delete',
-      danger: true,
-    }))
-  ) {
-    return;
-  }
+  const deleted = await deleteEmployeeRecordRow(
+    TABLE,
+    incidentId,
+    { message: 'Delete this incident record?', title: 'Delete incident' },
+    'Incidents'
+  );
 
-  const { error } = await supabaseClient
-    .from('incident_reports')
-    .delete()
-    .eq('id', incidentId);
-
-  if (error) {
-    console.error('Incident delete failed:', error);
-    showToast(error.message || 'Could not delete incident record.', 'error');
-    return;
-  }
+  if (!deleted) return;
 
   showToast('Incident record deleted.');
 
   if (String(currentIncidentId || '') === String(incidentId)) {
     currentIncidentId = null;
     window.currentIncidentId = null;
-
-    const saveButton = safeGet('saveIncidentBtn');
-    if (saveButton) saveButton.textContent = 'Save Incident Record';
+    clearRecordEditModeUi(EDIT_UI);
   }
 
   await refreshIncidentDependentUi(employeeId);
@@ -296,73 +212,26 @@ export async function deleteIncidentRecord(incidentId: string, employeeId: strin
 
 export async function saveIncidentRecord(): Promise<void> {
   stopAllDictation();
-  const activeEmployee = getCurrentEmployee();
-  const employeeId = getEmployeeId(activeEmployee);
 
+  const employeeId = getEmployeeId(getDrawerEmployee());
   if (!employeeId) {
     showToast('Open an employee before saving an incident record.', 'error');
     return;
   }
 
-  const incidentPayload: IncidentRecord = {
-    employee_id: employeeId,
-    incident_date: safeGet<HTMLInputElement>('incidentDate')?.value || todayInputValue(),
-    incident_type: safeGet<HTMLInputElement>('incidentType')?.value || '',
-    location: safeGet<HTMLInputElement>('incidentLocation')?.value || '',
-    description: safeGet<HTMLTextAreaElement>('incidentDescription')?.value || '',
-    follow_up:
-      safeGet<HTMLTextAreaElement>('incidentCorrectiveAction')?.value ||
-      safeGet<HTMLTextAreaElement>('incidentFollowUp')?.value ||
-      '',
-    status: safeGet<HTMLSelectElement>('incidentStatus')?.value || '',
-    refused_to_sign: safeGet<HTMLInputElement>('incidentRefusedToSign')?.checked || false,
-    employee_signature: getCanvasSignature('incidentEmployeeSignature'),
-    manager_signature: getCanvasSignature('incidentManagerSignature'),
-    witness_signature: getCanvasSignature('incidentWitnessSignature'),
-  };
-
+  const incidentPayload = buildIncidentPayload(employeeId);
   if (!incidentPayload.incident_type && !incidentPayload.description) {
     showToast('Enter an incident type or description before saving.', 'error');
     return;
   }
 
   const incidentId = currentIncidentId || window.currentIncidentId;
-
-  const saveIncidentPayload = async (payloadToSave: IncidentRecord) => {
-    if (incidentId) {
-      return supabaseClient
-        .from('incident_reports')
-        .update(payloadToSave)
-        .eq('id', incidentId)
-        .select();
-    }
-
-    return supabaseClient
-      .from('incident_reports')
-      .insert([payloadToSave])
-      .select();
-  };
-
-  const cleanPayload: IncidentRecord = { ...incidentPayload };
-  let result = await saveIncidentPayload(cleanPayload);
-
-  while (result.error) {
-    const message = String(result.error.message || '');
-
-    if (result.error.code !== 'PGRST204' || !/'([^']+)' column/.test(message)) {
-      break;
-    }
-
-    const missingColumn = message.match(/'([^']+)' column/)?.[1];
-
-    if (!missingColumn || !(missingColumn in cleanPayload)) {
-      break;
-    }
-
-    console.warn(`Incident column missing in Supabase, retrying without: ${missingColumn}`);
-    delete cleanPayload[missingColumn];
-    result = await saveIncidentPayload(cleanPayload);
-  }
+  const result = await saveEmployeeRecordRow<IncidentRecord>(
+    TABLE,
+    incidentPayload,
+    incidentId,
+    { logPrefix: 'Incidents' }
+  );
 
   if (result.error) {
     console.error('Incident save failed:', result.error);
@@ -370,36 +239,17 @@ export async function saveIncidentRecord(): Promise<void> {
     return;
   }
 
-  const savedIncident = Array.isArray(result.data) ? (result.data[0] as IncidentRecord | undefined) : undefined;
+  const savedIncident = Array.isArray(result.data)
+    ? (result.data[0] as IncidentRecord | undefined)
+    : undefined;
   const reloadEmployeeId = String(savedIncident?.employee_id || employeeId);
 
   showToast(incidentId ? 'Incident record updated.' : 'Incident record saved.');
 
   currentIncidentId = null;
   window.currentIncidentId = null;
-
-  const saveButton = safeGet('saveIncidentBtn');
-  if (saveButton) saveButton.textContent = 'Save Incident Record';
-
-  safeGet('cancelIncidentEditBtn')?.classList.add('hidden');
-  safeGet('incidentEditStatus')?.classList.add('hidden');
-
-  setInputValue('incidentDate', todayInputValue());
-  setInputValue('incidentType', '');
-  setInputValue('incidentLocation', '');
-  setInputValue('incidentStatus', '');
-  setInputValue('incidentDescription', '');
-  setInputValue('incidentCorrectiveAction', '');
-  setInputValue('incidentFollowUp', '');
-
-  const refused = safeGet<HTMLInputElement>('incidentRefusedToSign');
-  if (refused) {
-    refused.checked = false;
-  }
-
-  clearCanvasSignature('incidentEmployeeSignature', 'incidentEmployeeSigStatus');
-  clearCanvasSignature('incidentManagerSignature', 'incidentManagerSigStatus');
-  clearCanvasSignature('incidentWitnessSignature', 'incidentWitnessSigStatus');
+  clearRecordEditModeUi(EDIT_UI);
+  resetIncidentForm();
 
   await refreshIncidentDependentUi(reloadEmployeeId);
 }

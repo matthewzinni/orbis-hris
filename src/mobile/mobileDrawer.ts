@@ -1,14 +1,5 @@
 import { isMobileLayout } from './mobileLayout';
 
-declare global {
-  interface Window {
-    closeDrawer?: () => void;
-    closeActiveDrawer?: () => void;
-    switchDrawerTab?: (tabName: string) => void;
-    switchTab?: (tabName: string) => void;
-  }
-}
-
 function closeEmployeeDrawerOnMobile(): void {
   if (typeof window.closeActiveDrawer === 'function') {
     window.closeActiveDrawer();

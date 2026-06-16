@@ -105,12 +105,6 @@ export function showOrbisConfirm(
   });
 }
 
-declare global {
-  interface Window {
-    showOrbisConfirm?: typeof showOrbisConfirm;
-  }
-}
-
 window.showOrbisConfirm = showOrbisConfirm;
 
 bindConfirmModalEvents();

@@ -43,26 +43,6 @@ interface StayInterviewEmployee {
   [key: string]: unknown;
 }
 
-declare global {
-  interface Window {
-    currentEmployee?: StayInterviewEmployee;
-    currentStayInterviewId?: string | null;
-
-    loadStayInterviews?: (employeeId: string) => Promise<void>;
-    saveStayInterview?: () => Promise<void>;
-    editStayInterview?: (stayInterviewId: string) => Promise<void>;
-    deleteStayInterview?: (stayInterviewId: string) => Promise<void>;
-    cancelStayInterviewEdit?: () => void;
-    generateStayInterviewSummary?: () => Promise<void>;
-
-    showToast?: (message: string, type?: string) => void;
-    safeGet?: (id: string) => HTMLElement | null;
-    todayInputValue?: () => string;
-    switchTab?: (tabName: string) => void;
-    getCurrentEmployeeForOrbis?: () => StayInterviewEmployee | null;
-  }
-}
-
 let currentStayInterviewId: string | null = null;
 let stayInterviewUiBound = false;
 

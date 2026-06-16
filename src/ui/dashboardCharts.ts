@@ -201,10 +201,4 @@ export function renderManagerHomeCharts(
   ].join('');
 }
 
-declare global {
-  interface Window {
-    renderDashboardCharts?: (employees?: EmployeeRow[]) => void;
-  }
-}
-
 window.renderDashboardCharts = renderDashboardCharts;

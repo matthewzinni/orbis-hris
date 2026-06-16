@@ -64,13 +64,4 @@ export async function refreshMobileTasksBadge(): Promise<void> {
   applyMobileTabBadges();
 }
 
-declare global {
-  interface Window {
-    refreshMobileTasksBadge?: () => Promise<void>;
-    __hrInboxCache?: import('../services/hrInbox').HrInboxItem[];
-    getHrInboxItems?: () => import('../services/hrInbox').HrInboxItem[];
-    loadHrInbox?: (force?: boolean) => Promise<void>;
-  }
-}
-
 window.refreshMobileTasksBadge = refreshMobileTasksBadge;

@@ -281,18 +281,6 @@ export async function toggleOnboardingTask(taskId: string, isComplete: boolean):
   await loadOnboardingTasks(getCurrentEmployeeId());
 }
 
-declare global {
-  interface Window {
-    loadOnboardingTasks?: (employeeId: string) => Promise<void>;
-    toggleOnboardingTask?: (taskId: string, isComplete: boolean) => Promise<void>;
-    updateOnboardingTaskField?: (
-      taskId: string,
-      patch: Partial<Pick<OnboardingTaskRecord, 'due_date' | 'assigned_to' | 'show_in_portal'>>
-    ) => Promise<void>;
-    createDefaultOnboardingTasks?: (employeeId: string) => Promise<void>;
-  }
-}
-
 window.loadOnboardingTasks = loadOnboardingTasks;
 window.toggleOnboardingTask = toggleOnboardingTask;
 window.updateOnboardingTaskField = updateOnboardingTaskField;

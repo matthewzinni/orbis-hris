@@ -94,10 +94,4 @@ export function initMobileHome(): void {
   refreshMobileHomeLayout();
 }
 
-declare global {
-  interface Window {
-    renderMobileStayInterviewCards?: (rows: StayInterviewMobileRow[]) => void;
-  }
-}
-
 window.renderMobileStayInterviewCards = renderMobileStayInterviewCards;

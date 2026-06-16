@@ -470,15 +470,5 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
   }
 }
 
-declare global {
-  interface Window {
-    loadEmployeeCareSupport?: (employeeId: string) => Promise<void>;
-    invalidateEmployeeCareSupportCache?: () => void;
-    ensureCareEngagementLoaded?: (force?: boolean) => void;
-    getCurrentEmployeeForOrbis?: () => EmployeeLike | null;
-    currentEmployee?: EmployeeLike | null;
-  }
-}
-
 window.loadEmployeeCareSupport = loadEmployeeCareSupport;
 window.invalidateEmployeeCareSupportCache = invalidateEmployeeCareSupportCache;

@@ -1,15 +1,5 @@
 import { resolveAppSection, showAppSection } from './appSections';
 
-declare global {
-  interface Window {
-    openCandidatesView?: () => void;
-    openEmployeesView?: () => void;
-    openDashboardView?: () => void;
-    switchMainView?: (sectionId: string) => void;
-    currentMainView?: string;
-  }
-}
-
 export function switchMainView(sectionId: string): void {
   const switched = showAppSection(sectionId);
   if (!switched) return;

@@ -9,15 +9,6 @@ import {
 import { switchMainView } from './navigation';
 import { renderOutTodayCard } from '../modules/leaveRequests';
 
-declare global {
-  interface Window {
-    __hrInboxCache?: HrInboxItem[];
-    loadHrInbox?: (force?: boolean) => Promise<void>;
-    applyHrInboxAccess?: () => void;
-    getHrInboxItems?: () => HrInboxItem[];
-  }
-}
-
 let inboxLoading = false;
 let inboxFilter: 'all' | 'overdue' | 'due_soon' = 'all';
 let inboxBound = false;

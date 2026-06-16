@@ -13,27 +13,6 @@ type EmployeeNote = {
   note_text?: string;
 };
 
-declare global {
-  interface Window {
-    currentEmployee?: {
-      id?: string;
-      dbId?: string;
-      employee_id?: string;
-    } | null;
-    currentNoteId?: string | null;
-    switchTab?: (tabName: string) => void;
-    loadRecentActivity?: () => Promise<void>;
-    loadSummaryMetrics?: () => Promise<void>;
-    loadReviewDashboard?: () => Promise<void>;
-    getResolvedNoteEmployeeId?: (employeeId?: string | null) => string;
-    startNoteEdit?: (note: EmployeeNote) => void;
-    cancelNoteEdit?: () => void;
-    saveEmployeeNote?: () => Promise<void>;
-    deleteNote?: (noteId: string) => Promise<void>;
-    loadEmployeeNotes?: (employeeId: string) => Promise<void>;
-  }
-}
-
 let currentNoteId: string | null = null;
 
 function getResolvedNoteEmployeeId(employeeId: string | null = null): string {

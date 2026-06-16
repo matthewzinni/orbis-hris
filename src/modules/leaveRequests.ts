@@ -28,17 +28,6 @@ import {
 } from '../services/access';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
-declare global {
-  interface Window {
-    loadEmployeeLeaveRequests?: (employeeId: string) => Promise<void>;
-    submitEmployeeLeaveRequest?: () => Promise<void>;
-    approveLeaveRequestById?: (requestId: string) => Promise<void>;
-    denyLeaveRequestById?: (requestId: string) => Promise<void>;
-    cancelLeaveRequestById?: (requestId: string) => Promise<void>;
-    applyLeaveAccess?: () => void;
-  }
-}
-
 function esc(value: unknown): string {
   if (typeof window.esc === 'function') {
     return window.esc(value);

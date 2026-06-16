@@ -1,4 +1,27 @@
-async function fetchEmployeeAuditLogs(employeeId) {
+import { supabaseClient } from './supabaseClient';
+import { esc } from '../utils/helpers';
+
+type FormField = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+function getEmployeePublicId(employee: Record<string, unknown>, fallbackName = ''): string {
+  if (typeof window.getEmployeePublicId === 'function') {
+    return window.getEmployeePublicId(employee, fallbackName);
+  }
+  return String(employee.employee_id || employee.employeeId || employee.id || '').trim();
+}
+
+function cleanRosterEmployeeNameValue(value: unknown): string {
+  if (typeof window.cleanRosterEmployeeNameValue === 'function') {
+    return window.cleanRosterEmployeeNameValue(value);
+  }
+  return String(value || '').trim();
+}
+
+function eventTargetElement(target: EventTarget | null): Element | null {
+  return target instanceof Element ? target : null;
+}
+
+async function fetchEmployeeAuditLogs(employeeId: string) {
     if (!employeeId) {
         return [];
     } try {
@@ -7,7 +30,7 @@ async function fetchEmployeeAuditLogs(employeeId) {
             client = window.supabaseClient;
         } else if (window.supabase?.from) {
             client = window.supabase;
-        } else if (typeof supabaseClient !== 'undefined' && supabaseClient?.from) {
+        } else if (supabaseClient?.from) {
             client = supabaseClient;
         }
         if (!client) {
@@ -266,7 +289,7 @@ async function fetchEmployeeAuditLogs(employeeId) {
         });
         if (!label) return '';
         const wrapper = label.parentElement;
-        const field = wrapper?.querySelector('input, select, textarea') || null;
+        const field = wrapper?.querySelector('input, select, textarea') as FormField | null;
         return field?.value ?? '';
     };
     return {
@@ -292,7 +315,7 @@ async function fetchEmployeeAuditLogs(employeeId) {
     });
     if (!label) return null;
     const wrapper = label.parentElement;
-    return wrapper?.querySelector('input, select, textarea') || null;
+    return wrapper?.querySelector('input, select, textarea') as FormField | null;
 } function setEmployeeAdminAuditBaseline(snapshot = getEmployeeAdminFormSnapshot()) {
     const fieldLabels = {
         employee_id: 'EMPLOYEE ID',
@@ -380,7 +403,7 @@ async function fetchEmployeeAuditLogs(employeeId) {
     if (window.__employeeAdminDirtyBind) return;
     window.__employeeAdminDirtyBind = true;
     window.__employeeDirtyFields = window.__employeeDirtyFields || new Set(); document.addEventListener('focusin', (e) => {
-        const field = e.target.closest('input, select, textarea');
+        const field = eventTargetElement(e.target)?.closest('input, select, textarea') as FormField | null;
         if (!field) return;
         const key = getEmployeeAdminFieldKey(field);
         if (!key || key === 'employee_id') return;
@@ -389,7 +412,7 @@ async function fetchEmployeeAuditLogs(employeeId) {
         }
     }); document.addEventListener('input', (e) => {
         if (window.__suppressAuditDirty) return;
-        const field = e.target.closest('input, select, textarea');
+        const field = eventTargetElement(e.target)?.closest('input, select, textarea') as FormField | null;
         if (!field) return;
         const key = getEmployeeAdminFieldKey(field);
         if (!key || key === 'employee_id') return;
@@ -402,7 +425,7 @@ async function fetchEmployeeAuditLogs(employeeId) {
         }
     }); document.addEventListener('change', (e) => {
         if (window.__suppressAuditDirty) return;
-        const field = e.target.closest('input, select, textarea');
+        const field = eventTargetElement(e.target)?.closest('input, select, textarea') as FormField | null;
         if (!field) return;
         const key = getEmployeeAdminFieldKey(field);
         if (!key || key === 'employee_id') return;

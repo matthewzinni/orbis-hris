@@ -24,16 +24,6 @@ import {
   janusFormatAddress,
 } from '../types/janusTypes';
 
-declare global {
-  interface Window {
-    loadJanus?: (force?: boolean) => Promise<void>;
-    applyJanusAccess?: () => void;
-    openJanusAccountDrawer?: (accountId?: string, tab?: string) => Promise<void>;
-    closeJanusAccountDrawer?: () => void;
-    isJanusAccountDrawerOpen?: () => boolean;
-  }
-}
-
 let cachedJanusAccounts: JanusAccount[] = [];
 let cachedJanusContacts: JanusContactWithAccount[] = [];
 let janusListBound = false;

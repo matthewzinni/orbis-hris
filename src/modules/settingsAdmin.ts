@@ -1192,10 +1192,4 @@ if (document.readyState === 'loading') {
   initSettingsAdminModule();
 }
 
-declare global {
-  interface Window {
-    loadSettingsAdmin?: (force?: boolean) => Promise<void>;
-  }
-}
-
 window.loadSettingsAdmin = loadSettingsAdmin;

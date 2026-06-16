@@ -23,13 +23,6 @@ type CandidateSearchRow = {
   email?: string;
 };
 
-declare global {
-  interface Window {
-    openCommandPalette?: () => void;
-    closeCommandPalette?: () => void;
-  }
-}
-
 const ACTION_COMMANDS: CommandItem[] = [
   {
     id: 'nav-dashboard',

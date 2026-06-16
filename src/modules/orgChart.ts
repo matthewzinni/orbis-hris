@@ -6,13 +6,6 @@ import {
 } from '../services/orgChartBuilder';
 import { employeeDisplayName, type EmployeeLike } from '../services/employeeUtils';
 
-declare global {
-  interface Window {
-    renderOrgChart?: () => void;
-    loadOrgChart?: () => Promise<void>;
-  }
-}
-
 function esc(value: unknown): string {
   if (typeof window.esc === 'function') {
     return window.esc(value);

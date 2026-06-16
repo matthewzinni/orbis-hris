@@ -711,8 +711,3 @@ export function initJanusAccountPanels(getAccountId: () => string | null): void 
   clearMeetingForm();
 }
 
-declare global {
-  interface Window {
-    loadJanus?: (force?: boolean) => Promise<void>;
-  }
-}

@@ -94,20 +94,6 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
   }
 }
 
-declare global {
-  interface Window {
-    resetEmployeeDrawerTabLoadState?: () => void;
-    invalidateEmployeeDrawerTab?: (tabName: string) => void;
-    loadEmployeeDrawerTab?: (tabName: string, employeeId?: string) => void;
-    loadEmployeeHistory?: (employeeId: string) => void;
-    loadEmployeeManualAtRisk?: (employeeId: string) => void;
-    loadEmployeeManualImpactPlayer?: (employeeId: string) => void;
-    loadOnboardingTasks?: (employeeId: string) => Promise<void>;
-    loadOffboardingTasks?: (employeeId: string) => Promise<void>;
-    loadEmployeePayrollHandoffs?: (employeeId: string) => Promise<void>;
-  }
-}
-
 window.resetEmployeeDrawerTabLoadState = resetEmployeeDrawerTabLoadState;
 window.invalidateEmployeeDrawerTab = invalidateEmployeeDrawerTab;
 window.loadEmployeeDrawerTab = loadEmployeeDrawerTab;

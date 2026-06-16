@@ -59,12 +59,5 @@ export function setEmployeeDrawerCreateMode(active: boolean): void {
   drawer.dataset.creatingEmployee = active ? 'true' : 'false';
 }
 
-declare global {
-  interface Window {
-    ensureDrawerLayout?: typeof ensureDrawerLayout;
-    setEmployeeDrawerCreateMode?: typeof setEmployeeDrawerCreateMode;
-  }
-}
-
 window.ensureDrawerLayout = ensureDrawerLayout;
 window.setEmployeeDrawerCreateMode = setEmployeeDrawerCreateMode;

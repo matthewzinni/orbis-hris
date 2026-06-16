@@ -227,16 +227,4 @@ export function initMobileTasks(): void {
   void refreshMobileTasksUi();
 }
 
-declare global {
-  interface Window {
-    refreshMobileTasksUi?: () => Promise<void>;
-    switchMainView?: (sectionId: string) => void;
-    openEmployeeDrawer?: (employeeId: string) => Promise<void>;
-    openInvestigationDrawer?: (id: string) => Promise<void>;
-    openOperationsIssueDrawer?: (id: string) => Promise<void>;
-    switchDrawerTab?: (tabName: string) => void;
-    switchTab?: (tabName: string) => void;
-  }
-}
-
 window.refreshMobileTasksUi = refreshMobileTasksUi;

@@ -266,14 +266,4 @@ export function getEmployeesOnLeave(): EmployeeRecord[] {
   );
 }
 
-declare global {
-  interface Window {
-    EMPLOYEES?: EmployeeRecord[];
-    ALL_EMPLOYEES?: EmployeeRecord[];
-    currentEmployeeRoster?: EmployeeRecord[];
-    currentFilteredEmployees?: EmployeeRecord[];
-    loadEmployees?: () => Promise<EmployeeRecord[]>;
-  }
-}
-
 window.loadEmployees = loadEmployees;

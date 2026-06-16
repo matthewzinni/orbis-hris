@@ -34,25 +34,6 @@ import {
   OPERATIONS_STATUSES,
 } from '../types/operationsTypes';
 
-declare global {
-  interface Window {
-    loadOperationsIssues?: () => Promise<void>;
-    ensureOperationsIssuesLoaded?: (force?: boolean) => void;
-    exportOperationsIssuesCsv?: () => void;
-    openOperationsView?: () => void;
-    openNewOperationsIssueForm?: () => void;
-    openOperationsIssueDrawer?: (issueId: string) => Promise<void>;
-    closeOperationsIssueDrawer?: () => void;
-    saveOperationsIssueRecord?: () => Promise<void>;
-    deleteOperationsIssueRecord?: () => Promise<void>;
-    deleteOperationsIssueById?: (issueId: string) => Promise<void>;
-    cancelOperationsIssueEdit?: () => void;
-    isOperationsIssueDrawerOpen?: () => boolean;
-    closeActiveDrawer?: () => void;
-    applyOperationsCenterAccess?: () => void;
-  }
-}
-
 let currentOperationsIssueId: string | null = null;
 let cachedOperationsIssues: OperationsIssue[] = [];
 let assigneeOptionsCache: { email: string; name: string }[] = [];

@@ -202,10 +202,4 @@ export function initStayInterviewOrgInsights(): void {
 
 bindStayInterviewOrgInsightsEvents();
 
-declare global {
-  interface Window {
-    initStayInterviewOrgInsights?: () => void;
-  }
-}
-
 window.initStayInterviewOrgInsights = initStayInterviewOrgInsights;

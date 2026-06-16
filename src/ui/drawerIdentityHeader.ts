@@ -175,18 +175,6 @@ export function mountLegacyDrawerHeader(
   }
 }
 
-declare global {
-  interface Window {
-    esc?: (value: unknown) => string;
-    mountDrawerIdentityHeader?: typeof mountDrawerIdentityHeader;
-    mountLegacyDrawerHeader?: typeof mountLegacyDrawerHeader;
-    hideDrawerLegacyHeader?: typeof hideDrawerLegacyHeader;
-    restoreDrawerLegacyHeader?: typeof restoreDrawerLegacyHeader;
-    removeDrawerIdentityHeader?: typeof removeDrawerIdentityHeader;
-    restoreDrawerTabPlacement?: typeof restoreDrawerTabPlacement;
-  }
-}
-
 window.mountDrawerIdentityHeader = mountDrawerIdentityHeader;
 window.mountLegacyDrawerHeader = mountLegacyDrawerHeader;
 window.hideDrawerLegacyHeader = hideDrawerLegacyHeader;

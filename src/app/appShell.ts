@@ -139,28 +139,6 @@ export function ensureDrawerTabFallbacks(
   });
 }
 
-declare global {
-  interface Window {
-    switchTab?: (tabName: string) => void;
-    sanitizeDisciplineAutofillLeak?: (forceClear?: boolean) => void;
-    getCurrentEmployeeForOrbis?: () => Record<string, unknown> | null;
-    setCurrentEmployeeForOrbis?: (employee: Record<string, unknown> | null) => void;
-    ensureDrawerTabFallbacks?: (employee?: Record<string, unknown> | null) => void;
-    currentEmployee?: Record<string, unknown> | null;
-    currentSort?: { column: string; direction: string };
-    renderRoster?: () => void;
-    renderEmployeeRoster?: () => void;
-    closeDrawer?: () => void;
-    initCommandPalette?: () => void;
-    initAccessibleDrawerTabs?: () => void;
-    activateDrawerTab?: (
-      kind: 'employee' | 'candidate',
-      tabName: string,
-      focusTab?: boolean
-    ) => boolean;
-  }
-}
-
 window.switchTab = switchTab;
 window.sanitizeDisciplineAutofillLeak = sanitizeDisciplineAutofillLeak;
 window.getCurrentEmployeeForOrbis = getCurrentEmployeeForOrbis;

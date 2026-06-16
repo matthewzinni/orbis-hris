@@ -57,25 +57,6 @@ import {
   normalizeInvestigationStatus,
 } from '../types/investigationsTypes';
 
-declare global {
-  interface Window {
-    loadInvestigations?: () => Promise<void>;
-    ensureInvestigationsLoaded?: (force?: boolean) => void;
-    exportInvestigationsCsv?: () => void;
-    openInvestigationsView?: () => void;
-    openNewInvestigationForm?: () => void;
-    openInvestigationDrawer?: (investigationId: string) => Promise<void>;
-    closeInvestigationDrawer?: () => void;
-    saveInvestigationRecord?: () => Promise<void>;
-    deleteInvestigationRecord?: () => Promise<void>;
-    deleteInvestigationById?: (investigationId: string) => Promise<void>;
-    cancelInvestigationEdit?: () => void;
-    isInvestigationDrawerOpen?: () => boolean;
-    applyInvestigationsCenterAccess?: () => void;
-    generateInvestigationGuidance?: () => Promise<void>;
-  }
-}
-
 let currentInvestigationId: string | null = null;
 let cachedInvestigations: Investigation[] = [];
 let cachedInterviews: InvestigationInterview[] = [];

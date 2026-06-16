@@ -21,17 +21,6 @@ import {
 } from '../services/employeeSelfService';
 import { employeePersonalEmail, employeeWorkEmail } from '../services/employeeUtils';
 
-declare global {
-  interface Window {
-    refreshMobilePortalUi?: () => void;
-    loadMyProfilePortal?: () => Promise<void>;
-    saveMyProfileContactInfo?: () => Promise<void>;
-    saveMyEmergencyContactPortal?: () => Promise<void>;
-    deleteMyEmergencyContactPortal?: () => Promise<void>;
-    resetMyEmergencyContactForm?: () => void;
-  }
-}
-
 let currentMyEmergencyContactId: string | null = null;
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {

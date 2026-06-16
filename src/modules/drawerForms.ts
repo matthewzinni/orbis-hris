@@ -132,22 +132,6 @@ export function resetDrawerForms(): void {
   ].forEach((id) => safeGet(id)?.classList.add('hidden'));
 }
 
-declare global {
-  interface Window {
-    getEmployeeAdminPanel?: () => HTMLElement | null;
-    resetDrawerEntryForms?: () => void;
-    resetDrawerForms?: () => void;
-    resetEmergencyContactForm?: () => void;
-    currentDisciplineReportId?: string | null;
-    currentNoteId?: string | null;
-    currentMeetingId?: string | null;
-    currentReviewId?: string | null;
-    currentIncidentReportId?: string | null;
-    currentStayInterviewId?: string | null;
-    reviewAttachmentContextId?: string | null;
-  }
-}
-
 window.getEmployeeAdminPanel = getEmployeeAdminPanel;
 window.resetDrawerEntryForms = resetDrawerEntryForms;
 window.resetDrawerForms = resetDrawerForms;

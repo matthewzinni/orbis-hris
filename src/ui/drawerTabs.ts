@@ -348,13 +348,6 @@ export function initAccessibleDrawerTabs(): void {
   });
 }
 
-declare global {
-  interface Window {
-    initAccessibleDrawerTabs?: () => void;
-    activateDrawerTab?: (kind: DrawerTabKind, tabName: string, focusTab?: boolean) => void;
-  }
-}
-
 window.initAccessibleDrawerTabs = initAccessibleDrawerTabs;
 window.activateDrawerTab = activateDrawerTab;
 

@@ -212,9 +212,3 @@ export function bindCareEmployeeSelectAutoFill(
   });
 }
 
-declare global {
-  interface Window {
-    EMPLOYEES?: EmployeeLike[];
-    loadEmployees?: () => Promise<unknown>;
-  }
-}

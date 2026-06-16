@@ -28,22 +28,6 @@ interface EmployeeDocumentEmployee {
   [key: string]: unknown;
 }
 
-declare global {
-  interface Window {
-    currentEmployee?: EmployeeDocumentEmployee;
-
-    loadEmployeeDocuments?: (employeeId: string) => Promise<void>;
-    uploadEmployeeDocument?: () => Promise<void>;
-    deleteEmployeeDocument?: (docId: string) => Promise<void>;
-    loadPerformanceReviewAttachments?: (employeeId: string) => Promise<void>;
-    uploadPerformanceReviewAttachment?: () => Promise<void>;
-    reviewAttachmentContextId?: string | null;
-
-    showToast?: (message: string, type?: string) => void;
-    safeGet?: (id: string) => HTMLElement | null;
-  }
-}
-
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
     return window.safeGet(id) as T | null;

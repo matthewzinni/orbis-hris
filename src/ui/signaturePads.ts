@@ -600,24 +600,6 @@ export function initErSignaturePads(formPrefix: 'discipline' | 'incident' | 'rev
   scrubAllSignatureNameInputs();
 }
 
-declare global {
-  interface Window {
-    clearSig?: (canvasId: string, statusId: string) => void;
-    initDisciplineSignaturePads?: () => void;
-    initIncidentSignaturePads?: () => void;
-    initReviewSignaturePads?: () => void;
-    scrubAllSignatureNameInputs?: () => void;
-    setSignatureRequestContext?: (context: SignatureRequestContext | null) => void;
-    requestEmployeeSignatureLink?: (
-      formType: SignatureFormType,
-      recordId: string,
-      employeeId: string,
-      signerName?: string,
-      signerEmail?: string
-    ) => Promise<void>;
-  }
-}
-
 window.clearSig = clearSignaturePad;
 window.initDisciplineSignaturePads = () => initErSignaturePads('discipline');
 window.initIncidentSignaturePads = () => initErSignaturePads('incident');

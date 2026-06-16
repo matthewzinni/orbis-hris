@@ -12,18 +12,6 @@ type RosterEmployee = Record<string, unknown> & {
   displayStatusLabel?: string;
 };
 
-declare global {
-  interface Window {
-    getFilteredRosterEmployees?: () => RosterEmployee[];
-    currentFilteredEmployees?: RosterEmployee[];
-    renderMobileEmployeeRoster?: () => void;
-    statusBadge?: (status: unknown) => string;
-    openDrawerByEmployeeId?: (id: string) => Promise<void>;
-    loadEmployees?: () => Promise<void>;
-    renderEmployeeRoster?: () => void;
-  }
-}
-
 function esc(value: unknown): string {
   if (typeof window.esc === 'function') {
     return window.esc(value);
