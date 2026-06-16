@@ -1,6 +1,8 @@
 import { supabaseClient } from './supabaseClient';
-import type { Investigation } from '../types/investigationsTypes';
-import { formatInvestigationLabel } from '../types/investigationsTypes';
+import {
+  type Investigation,
+  formatInvestigationLabel,
+} from '../types/investigationsTypes';
 import { resolveInvestigatorEmail } from './investigationsAccess';
 
 export async function recordInvestigationAudit(

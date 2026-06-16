@@ -1,0 +1,113 @@
+          id="orbisSectionAttendance"
+          class="orbis-app-section hidden"
+          data-section="attendanceView"
+          aria-hidden="true"
+        >
+          <div class="page" id="attendancePage">
+            <div class="toolbar attendance-toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Check Present or Absent per person, then save (Leave status unchanged)</span>
+              </div>
+              <div class="toolbar-right attendance-manual-actions">
+                <button class="button primary" id="attendanceSaveBtn" type="button">Save attendance</button>
+              </div>
+            </div>
+            <div class="kpi-grid compact-grid">
+              <div class="kpi-card">
+                <div class="kpi-label">Present</div>
+                <div class="kpi-value" id="attendancePresentCount">—</div>
+                <div class="kpi-sub">Checked in roll call</div>
+              </div>
+              <div class="kpi-card warm-accent">
+                <div class="kpi-label">Absent</div>
+                <div class="kpi-value" id="attendanceAbsentCount">—</div>
+                <div class="kpi-sub">Absent box checked</div>
+              </div>
+              <div class="kpi-card alert">
+                <div class="kpi-label">Repeat absences</div>
+                <div class="kpi-value" id="attendanceRepeatAbsenceCount">—</div>
+                <div class="kpi-sub">2+ absences in the past 4 weeks</div>
+              </div>
+            </div>
+            <div class="card attendance-absence-report-card" id="attendanceAbsenceReportCard">
+              <div class="card-header attendance-absence-report-header">
+                <div>
+                  <span>Repeated absences</span>
+                  <p class="muted attendance-absence-report-sub">
+                    Employees marked absent on 2 or more roll calls in the past 4 weeks.
+                  </p>
+                </div>
+                <button class="button soft sm" id="attendanceAbsenceReportRefreshBtn" type="button">
+                  Refresh
+                </button>
+              </div>
+              <div class="card-body">
+                <div id="mobileAttendanceAbsences" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                <div class="table-wrap orbis-desktop-module-table">
+                  <table class="attendance-absence-report-table">
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>ID</th>
+                        <th>Department</th>
+                        <th>Absences</th>
+                        <th>Dates absent</th>
+                      </tr>
+                    </thead>
+                    <tbody id="attendanceAbsenceReportBody">
+                      <tr>
+                        <td colspan="5" class="empty">Loading absence report…</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div class="card attendance-roll-call-card">
+              <div class="card-header attendance-roll-call-header">
+                <div class="attendance-roll-call-title">
+                  <span>Roll call</span>
+                  <span class="muted attendance-roll-call-meta"
+                    >As of <span id="attendanceAsOf">—</span> · <span id="attendanceSource">Manual</span></span
+                  >
+                </div>
+                <div class="attendance-roll-call-controls">
+                  <div class="field">
+                    <label for="attendanceDateInput">Date</label>
+                    <input class="input" id="attendanceDateInput" type="date" />
+                  </div>
+                  <button class="button soft" id="attendanceMarkAllPresentBtn" type="button">
+                    All present
+                  </button>
+                  <button class="button soft" id="attendanceMarkAllAbsentBtn" type="button">
+                    All absent
+                  </button>
+                  <button class="button soft" id="attendanceClearAllBtn" type="button">Clear all</button>
+                </div>
+              </div>
+              <div class="card-body attendance-roll-call-body">
+                <div id="mobileAttendanceRollCall" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                <div class="table-wrap attendance-table-scroll orbis-desktop-module-table">
+                  <table class="attendance-checklist-table">
+                    <thead>
+                      <tr>
+                        <th class="attendance-check-col">Present</th>
+                        <th class="attendance-check-col">Absent</th>
+                        <th>Name</th>
+                        <th>ID</th>
+                        <th>Department</th>
+                      </tr>
+                    </thead>
+                    <tbody id="attendanceChecklistBody">
+                      <tr>
+                        <td colspan="5" class="empty">Loading employees…</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section

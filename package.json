@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "lint": "eslint src",
     "test": "npm run build",
     "db:login": "supabase login",
     "db:link": "supabase link",
@@ -31,8 +32,12 @@
   },
   "homepage": "https://github.com/matthewzinni/orbis-hris#readme",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0",
+    "globals": "^17.6.0",
     "supabase": "^2.101.0",
     "typescript": "^6.0.3",
+    "typescript-eslint": "^8.61.1",
     "vite": "^8.0.16"
   },
   "dependencies": {

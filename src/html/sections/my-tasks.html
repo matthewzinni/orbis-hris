@@ -1,0 +1,86 @@
+          id="orbisSectionMyTasks"
+          class="orbis-app-section hidden"
+          data-section="myTasksView"
+          aria-hidden="true"
+        >
+          <div class="page employee-portal-page" id="myTasksPage">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Pending tasks, handbook review, and signed acknowledgments</span>
+              </div>
+            </div>
+            <div
+              class="card orbis-mobile-hr-tasks-card hidden"
+              id="mobileHrTasksCard"
+              data-hr-inbox-access
+            >
+              <div class="card-header">
+                <span>HR action items</span>
+                <button class="button soft sm" type="button" id="mobileHrTasksRefreshBtn">
+                  Refresh
+                </button>
+              </div>
+              <div class="card-body">
+                <p class="muted" id="mobileHrTasksSummary">Loading HR items…</p>
+                <div id="mobileHrTasksList" class="orbis-mobile-hr-task-list"></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Needs your attention</div>
+              <div class="card-body">
+                <div id="myTasksPendingList" class="employee-portal-task-list">
+                  <div class="muted">Loading tasks…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card hidden" id="performanceReviewSupervisorNotifyCard">
+              <div class="card-header">Supervisor review follow-up</div>
+              <div class="card-body">
+                <p class="muted employee-portal-help">
+                  Email each supervisor a list of 90-day and annual performance reviews due on their team.
+                </p>
+                <div id="performanceReviewSupervisorNotifyList" class="performance-review-supervisor-notify-list">
+                  <div class="muted">Loading supervisor review lists…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Employee handbook</div>
+              <div class="card-body">
+                <p class="muted employee-portal-help">
+                  Read the BTW handbook, then acknowledge it above when you are done.
+                </p>
+                <div id="myTasksHandbookList">
+                  <div class="muted">Loading handbook…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Onboarding checklist</div>
+              <div class="card-body employee-portal-body">
+                <p class="muted employee-portal-help">
+                  Mark each item complete after you sign and return the form to HR.
+                </p>
+                <div class="employee-portal-onboarding-summary">
+                  <span id="myTasksOnboardingSummary" class="muted"></span>
+                  <div class="employee-portal-onboarding-progress-track">
+                    <div class="employee-portal-onboarding-progress-bar" id="myTasksOnboardingProgress"></div>
+                  </div>
+                </div>
+                <div id="myTasksOnboardingList" class="employee-portal-onboarding-list">
+                  <div class="muted">Loading…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Completed acknowledgments</div>
+              <div class="card-body">
+                <div id="myTasksCompletedList" class="employee-portal-task-list">
+                  <div class="muted">Loading…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section

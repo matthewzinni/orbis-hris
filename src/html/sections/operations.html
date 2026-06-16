@@ -1,0 +1,145 @@
+          id="orbisSectionOperations"
+          class="orbis-app-section hidden"
+          data-section="operationsView"
+          aria-hidden="true"
+          data-operations-access
+        >
+        <section id="operationsCenterTop" class="page" data-operations-access>
+          <div class="page-header">
+            <div>
+              <h1>Operations Resolution Center</h1>
+              <p>
+                Track software problems, workflow bottlenecks, equipment failures, and process
+                improvement items across the company.
+              </p>
+            </div>
+            <button
+              class="button soft"
+              id="refreshOperationsIssuesBtn"
+              type="button"
+            >
+              Refresh
+            </button>
+            <button class="button soft" id="exportOperationsIssuesBtn" type="button">
+              Export CSV
+            </button>
+            <button
+              class="button primary"
+              id="newOperationsIssueBtn"
+              type="button"
+            >
+              ＋ Report Issue
+            </button>
+          </div>
+
+          <div class="kpi-grid" id="operationsKpiGrid">
+            <div class="kpi-card alert" id="cardOpsOpenIssues">
+              <div class="kpi-label">Open Issues</div>
+              <div class="kpi-value" id="kOpsOpenIssues">—</div>
+              <div class="kpi-sub">Active operational issues</div>
+            </div>
+            <div class="kpi-card alert" id="cardOpsCritical">
+              <div class="kpi-label">Critical Issues</div>
+              <div class="kpi-value" id="kOpsCritical">—</div>
+              <div class="kpi-sub">Urgent or critical impact</div>
+            </div>
+            <div class="kpi-card warn" id="cardOpsAging">
+              <div class="kpi-label">Aging Issues</div>
+              <div class="kpi-value" id="kOpsAging">—</div>
+              <div class="kpi-sub">Open 7+ days</div>
+            </div>
+            <div class="kpi-card warn" id="cardOpsRecurring">
+              <div class="kpi-label">Recurring Problems</div>
+              <div class="kpi-value" id="kOpsRecurring">—</div>
+              <div class="kpi-sub">Flagged as recurring</div>
+            </div>
+            <div class="kpi-card good" id="cardOpsAvgResolution">
+              <div class="kpi-label">Avg Resolution Time</div>
+              <div class="kpi-value" id="kOpsAvgResolution">—</div>
+              <div class="kpi-sub">Resolved issues (90 days)</div>
+            </div>
+            <div class="kpi-card" id="cardOpsTopSystem">
+              <div class="kpi-label">Top Reported System</div>
+              <div class="kpi-value" id="kOpsTopSystem" style="font-size: 1.1rem">—</div>
+              <div class="kpi-sub">Most frequent system affected</div>
+            </div>
+          </div>
+
+          <div class="layout">
+            <div class="stack">
+              <div class="card" id="operationsIssuesCard">
+                <div class="card-header">
+                  <span>Operations Issues</span>
+                  <span class="muted" id="operationsIssuesCount">Loading issues...</span>
+                </div>
+                <div class="card-body">
+                  <div class="toolbar" style="margin-bottom: 12px">
+                    <div class="toolbar-left">
+                      <input
+                        class="input"
+                        id="opsIssuesSearchInput"
+                        type="search"
+                        placeholder="Search issues..."
+                      />
+                      <select class="select" id="opsIssuesStatusFilter">
+                        <option value="">All Statuses</option>
+                      </select>
+                      <select class="select" id="opsIssuesCategoryFilter">
+                        <option value="">All Categories</option>
+                      </select>
+                      <select class="select" id="opsIssuesDepartmentFilter">
+                        <option value="">All Departments</option>
+                      </select>
+                      <select class="select" id="opsIssuesPriorityFilter">
+                        <option value="">All Priorities</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div id="mobileOperationsList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                  <div class="table-wrap orbis-desktop-module-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Title</th>
+                          <th>Category</th>
+                          <th>Department</th>
+                          <th>Priority</th>
+                          <th>Status</th>
+                          <th>Assigned To</th>
+                          <th>Created</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="operationsIssuesBody">
+                        <tr>
+                          <td colspan="8" class="empty">Loading operational issues...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="stack">
+              <div class="card">
+                <div class="card-header">Issues by Department</div>
+                <div class="card-body">
+                  <div id="operationsDeptBreakdown" class="history-list">
+                    <div class="empty">Loading department breakdown...</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Software with Most Complaints</div>
+                <div class="card-body">
+                  <div id="operationsSoftwareBreakdown" class="history-list">
+                    <div class="empty">Loading software breakdown...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        </section>
+
+        <section

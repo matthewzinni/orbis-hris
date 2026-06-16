@@ -1,7 +1,6 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { canViewOperationsIssue } from '../services/operationsAccess';
-import type { OperationsIssue } from '../types/operationsTypes';
-import { formatOperationsLabel } from '../types/operationsTypes';
+import { type OperationsIssue, formatOperationsLabel } from '../types/operationsTypes';
 
 function safeGet(id: string): HTMLElement | null {
   if (typeof window.safeGet === 'function') {

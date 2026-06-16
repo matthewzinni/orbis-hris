@@ -14,9 +14,9 @@ import {
   type JanusContactWithAccount,
   type JanusSearchResult,
 } from '../services/janusStore';
-import type { JanusAccount } from '../types/janusTypes';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import {
+  type JanusAccount,
   formatJanusDateLabel,
   janusAccountStatusLabel,
   janusAccountTypeLabel,
@@ -652,6 +652,3 @@ export async function loadJanus(force = false): Promise<void> {
 
 bindJanusListUi();
 applyJanusAccess();
-
-window.loadJanus = loadJanus;
-window.applyJanusAccess = applyJanusAccess;

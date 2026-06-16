@@ -1,0 +1,96 @@
+          id="orbisSectionEmployees"
+          class="orbis-app-section hidden"
+          data-section="employeesView"
+          aria-hidden="true"
+        >
+          <div class="page">
+            <div class="toolbar employees-toolbar">
+              <div class="toolbar-left">
+                <input
+                  class="input"
+                  id="globalSearch"
+                  type="search"
+                  placeholder="Search roster… or press ⌘K for commands"
+                  aria-label="Search employees by name, ID, position, department, or supervisor. Press Command K or Control K for the command palette."
+                />
+                <button
+                  type="button"
+                  class="button soft orbis-mobile-filter-btn"
+                  id="mobileRosterFilterBtn"
+                  aria-haspopup="dialog"
+                  aria-controls="orbisMobileRosterFilterSheet"
+                >
+                  Filters
+                </button>
+                <select class="select" id="deptFilter">
+                  <option value="">All Departments</option>
+                </select>
+                <select class="select" id="statusFilter">
+                  <option value="">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="LEAVE">Leave</option>
+                  <option value="ABSENT">Absent</option>
+                  <option value="TERMINATED">Terminated</option>
+                </select>
+              </div>
+              <div class="toolbar-right">
+                <button
+                  class="button primary toolbar-primary"
+                  id="addEmployeeBtn"
+                  type="button"
+                  onclick="openNewEmployeeForm()"
+                >
+                  ＋ Add Employee
+                </button>
+                <button
+                  class="button soft"
+                  id="clearFiltersBtn"
+                  type="button"
+                  onclick="clearFilters()"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            </div>
+            <div class="card" id="employeeRosterCard">
+              <div class="card-header">
+                <span>Employee Roster</span>
+                <span class="muted" id="empCount">Loading employees...</span>
+              </div>
+              <div class="card-body">
+                <div
+                  id="mobileRosterPullIndicator"
+                  class="orbis-mobile-pull-indicator"
+                  aria-hidden="true"
+                >
+                  Pull to refresh
+                </div>
+                <div
+                  id="mobileEmployeeRosterList"
+                  class="orbis-mobile-roster-list hidden"
+                  aria-live="polite"
+                ></div>
+                <div class="table-wrap orbis-desktop-roster-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th data-sort="id">ID</th>
+                        <th data-sort="name">Name</th>
+                        <th data-sort="dept">Department</th>
+                        <th data-sort="position">Position</th>
+                        <th data-sort="supervisor">Supervisor</th>
+                        <th data-sort="hireDate">Hire Date</th>
+                        <th data-sort="terminationDate" class="roster-col-terminated">Terminated</th>
+                        <th data-sort="status">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="employeeRosterBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section

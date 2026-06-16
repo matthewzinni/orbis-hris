@@ -22,8 +22,12 @@ import {
   updateJanusMeeting,
 } from '../services/janusStore';
 import { showOrbisConfirm } from '../ui/confirmModal';
-import type { JanusAccount, JanusActivity, JanusContact, JanusDocument, JanusMeeting } from '../types/janusTypes';
 import {
+  type JanusAccount,
+  type JanusActivity,
+  type JanusContact,
+  type JanusDocument,
+  type JanusMeeting,
   formatJanusDateLabel,
   janusActivityTypeLabel,
   janusDocumentTypeLabel,

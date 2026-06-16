@@ -1,0 +1,59 @@
+          id="orbisSectionDocuments"
+          class="orbis-app-section hidden"
+          data-section="documentsView"
+          aria-hidden="true"
+        >
+        <section id="documentsPage" class="page">
+          <div class="page-header">
+            <div>
+              <h1>Document Library</h1>
+              <p>Policies, forms, handbooks, and HR documents.</p>
+            </div>
+
+            <button id="uploadDocumentBtn" class="button primary" type="button">
+              Upload Document
+            </button>
+            <input id="documentUploadInput" type="file" hidden />
+          </div>
+
+          <div class="documents-toolbar">
+            <input type="search" id="documentsSearchInput" placeholder="Search documents..." />
+            <button id="documentsSearchBtn" class="button soft" type="button">Search</button>
+
+            <select id="documentsCategoryFilter">
+              <option value="All">All Categories</option>
+              <option value="Handbooks">Handbooks</option>
+              <option value="Standalone Forms">Standalone Forms</option>
+              <option value="Policies">Policies</option>
+              <option value="Safety">Safety</option>
+              <option value="Benefits">Benefits</option>
+              <option value="Onboarding">Onboarding</option>
+              <option value="Investigations">Investigations</option>
+              <option value="Performance Reviews">Performance Reviews</option>
+              <option value="Discipline">Discipline</option>
+              <option value="Spanish Versions">Spanish Versions</option>
+              <option value="Archived">Archived</option>
+            </select>
+          </div>
+
+          <div id="policyCampaignsPanel" class="card policy-campaigns-panel hidden admin-only" data-admin-only>
+            <div class="card-header policy-campaigns-panel">
+              <div>
+                <h2 style="margin: 0 0 0.25rem">Policy acknowledgment campaigns</h2>
+                <p class="muted" style="margin: 0">
+                  Assign handbook or policy documents by department and role. Track completion and escalate overdue acknowledgments.
+                </p>
+              </div>
+              <button id="policyCampaignNewBtn" class="button primary" type="button">New campaign</button>
+            </div>
+            <div class="card-body">
+              <div id="policyCampaignsList"></div>
+              <div id="policyCampaignEditor" class="hidden"></div>
+            </div>
+          </div>
+
+          <div id="documentsList" class="documents-grid"></div>
+        </section>
+        </section>
+
+        <section

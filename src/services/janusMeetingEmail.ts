@@ -1,6 +1,10 @@
 import { buildMailtoUrl } from '../utils/mailto';
-import type { JanusAccount, JanusContact } from '../types/janusTypes';
-import { formatJanusDateLabel, janusContactDisplayName } from '../types/janusTypes';
+import {
+  type JanusAccount,
+  type JanusContact,
+  formatJanusDateLabel,
+  janusContactDisplayName,
+} from '../types/janusTypes';
 import {
   openJanusMailto,
   resolveJanusSenderName,

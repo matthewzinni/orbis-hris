@@ -12,8 +12,9 @@ import {
   type JanusContactDraft,
 } from '../services/janusStore';
 import { showOrbisConfirm } from '../ui/confirmModal';
-import type { JanusAccount, JanusContact } from '../types/janusTypes';
 import {
+  type JanusAccount,
+  type JanusContact,
   JANUS_ACCOUNT_STATUSES,
   JANUS_ACCOUNT_TYPES,
   janusAccountStatusLabel,

@@ -3,8 +3,10 @@ import {
   resolveInvestigatorDisplayName,
   resolveInvestigatorEmail,
 } from '../services/investigationsAccess';
-import type { InvestigationTimelineEvent } from '../types/investigationsTypes';
-import { formatInvestigationLabel } from '../types/investigationsTypes';
+import {
+  type InvestigationTimelineEvent,
+  formatInvestigationLabel,
+} from '../types/investigationsTypes';
 
 function escapeHtml(value: unknown): string {
   return String(value ?? '')

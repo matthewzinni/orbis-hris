@@ -1,0 +1,284 @@
+        <aside class="drawer" id="candidateDrawer">
+          <div id="candidateDrawerChrome" class="drawer-chrome"></div>
+          <div class="drawer-header">
+            <div>
+              <h2 class="drawer-title" id="candidateDrawerTitle">Candidate</h2>
+              <div class="drawer-sub" id="candidateDrawerSub">Candidate Profile</div>
+            </div>
+            <button class="drawer-close" type="button" onclick="closeCandidateDrawer()">
+              Close
+            </button>
+          </div>
+          <div class="drawer-body">
+            <div class="tabs drawer-tablist" aria-label="Candidate record sections">
+              <button
+                class="tab-btn active"
+                data-candidate-tab="profile"
+                type="button"
+              >
+                Profile
+              </button>
+              <button
+                class="tab-btn"
+                data-candidate-tab="notes"
+                type="button"
+              >
+                Notes
+              </button>
+              <button
+                class="tab-btn"
+                data-candidate-tab="interview"
+                type="button"
+              >
+                Interview
+              </button>
+            </div>
+            <section class="tab-panel active" id="candidate-tab-profile">
+              <div class="card">
+                <div class="card-header">Candidate Record</div>
+                <div class="card-body">
+                  <input id="candidateLinkedEmployeeIdInput" type="hidden" value="" />
+                  <div class="candidate-internal-banner hidden" id="candidateInternalBanner"></div>
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="candidateFirstNameInput">First Name</label>
+                      <input id="candidateFirstNameInput" type="text" placeholder="First name" />
+                    </div>
+                    <div class="field">
+                      <label for="candidateLastNameInput">Last Name</label>
+                      <input id="candidateLastNameInput" type="text" placeholder="Last name" />
+                    </div>
+                    <div class="field">
+                      <label for="candidateEmailInput">Email</label>
+                      <input id="candidateEmailInput" type="email" placeholder="Email" />
+                    </div>
+                    <div class="field">
+                      <label for="candidatePhoneInput">Phone</label>
+                      <input id="candidatePhoneInput" type="text" placeholder="Phone" />
+                    </div>
+                    <div class="field">
+                      <label for="candidatePositionInput">Position</label>
+                      <input id="candidatePositionInput" type="text" placeholder="Position" />
+                    </div>
+                    <div class="field">
+                      <label for="candidateDepartmentInput">Department</label>
+                      <input id="candidateDepartmentInput" type="text" placeholder="Department" />
+                    </div>
+                    <div class="field">
+                      <label for="candidateStageInput">Stage</label>
+                      <select id="candidateStageInput">
+                        <option value="Applied">Applied</option>
+                        <option value="Screening">Screening</option>
+                        <option value="Interviewing">Interviewing</option>
+                        <option value="Offer">Offer</option>
+                        <option value="Hired">Hired</option>
+                        <option value="Rejected">Rejected</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="candidateSourceInput">Source</label>
+                      <input
+                        id="candidateSourceInput"
+                        type="text"
+                        placeholder="Indeed, Referral, etc."
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="candidateAppliedDateInput">Applied Date</label>
+                      <input id="candidateAppliedDateInput" type="date" />
+                    </div>
+                  </div>
+                  <div class="field candidate-resume-field">
+                    <label for="candidateResumeInput">Resume</label>
+                    <p class="muted candidate-resume-hint" id="candidateResumeStatus">
+                      No resume attached
+                    </p>
+                    <div class="candidate-resume-actions">
+                      <input
+                        id="candidateResumeInput"
+                        type="file"
+                        class="hidden"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      />
+                      <button class="button soft" id="candidateResumeAttachBtn" type="button">
+                        Attach resume
+                      </button>
+                      <button
+                        class="button soft hidden"
+                        id="candidateResumeViewBtn"
+                        type="button"
+                      >
+                        View resume
+                      </button>
+                      <button
+                        class="button soft hidden"
+                        id="candidateResumeRemoveBtn"
+                        type="button"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="candidateNotesInput">Profile Summary</label>
+                    <textarea
+                      id="candidateNotesInput"
+                      rows="4"
+                      placeholder="Short pipeline summary saved on the candidate profile..."
+                    ></textarea>
+                  </div>
+                  <div class="candidate-actions-row candidate-summary-email-row">
+                    <button class="button soft" id="emailCandidateSummaryBtn" type="button">
+                      Email Trent &amp; Brent
+                    </button>
+                    <span class="muted candidate-summary-email-hint">
+                      Sends profile summary and notes to leadership (Cc: you).
+                    </span>
+                  </div>
+                  <div class="candidate-actions-row">
+                    <button class="button primary" id="saveCandidateBtn" type="button">
+                      Save Candidate
+                    </button>
+                    <button class="button soft" type="button" onclick="openNewCandidateForm()">
+                      New Candidate
+                    </button>
+                    <button
+                      class="button danger"
+                      id="deleteCandidateBtn"
+                      type="button"
+                      onclick="deleteCandidateRecord()"
+                    >
+                      Delete Candidate
+                    </button>
+                    <button
+                      class="button soft"
+                      id="convertCandidateFromDrawerBtn"
+                      type="button"
+                      onclick="convertCurrentCandidateToEmployee()"
+                    >
+                      Convert to Employee
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="candidate-tab-notes">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Add Candidate Note</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="candidateNoteDate">Note Date</label>
+                      <input id="candidateNoteDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="candidateNoteType">Note Type</label>
+                      <select id="candidateNoteType">
+                        <option value="">Select type</option>
+                        <option value="General">General</option>
+                        <option value="Phone Screen">Phone Screen</option>
+                        <option value="Interview">Interview</option>
+                        <option value="Reference Check">Reference Check</option>
+                        <option value="Offer Discussion">Offer Discussion</option>
+                        <option value="Follow-Up">Follow-Up</option>
+                        <option value="Rejection Feedback">Rejection Feedback</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="candidateNoteText">Note</label>
+                      <textarea
+                        id="candidateNoteText"
+                        rows="7"
+                        placeholder="Interview notes, recruiter observations, follow-ups..."
+                      ></textarea>
+                    </div>
+                    <button
+                      class="button primary"
+                      id="saveCandidateNoteBtn"
+                      type="button"
+                      onclick="saveCandidateNote()"
+                    >
+                      Save Note
+                    </button>
+                    <button
+                      class="button soft hidden"
+                      id="cancelCandidateNoteEditBtn"
+                      type="button"
+                      onclick="cancelCandidateNoteEdit()"
+                    >
+                      Cancel Edit
+                    </button>
+                    <div class="muted hidden" id="candidateNoteEditStatus" style="margin-top: 10px">
+                      Editing an existing note.
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Note History</div>
+                  <div class="card-body">
+                    <div id="candidateNotesHistory" class="history-list">
+                      <div class="empty">Open a saved candidate to view note history.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="candidate-tab-interview" hidden>
+              <div class="card">
+                <div class="card-header">Interview Planning</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="candidateInterviewType">Interview Type</label>
+                      <select id="candidateInterviewType">
+                        <option value="">Select interview type</option>
+                        <option value="Phone Screen">Phone Screen</option>
+                        <option value="Video Interview">Video Interview</option>
+                        <option value="Onsite Interview">Onsite Interview</option>
+                        <option value="Panel Interview">Panel Interview</option>
+                        <option value="Final Interview">Final Interview</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="candidateInterviewStatus">Interview Status</label>
+                      <select id="candidateInterviewStatus">
+                        <option value="">Not scheduled</option>
+                        <option value="Scheduled">Scheduled</option>
+                        <option value="Confirmed">Confirmed</option>
+                        <option value="Completed">Completed</option>
+                        <option value="No Show">No Show</option>
+                        <option value="Cancelled">Cancelled</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="candidateInterviewDate">Interview Date</label>
+                      <input id="candidateInterviewDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="candidateInterviewTime">Interview Time</label>
+                      <input id="candidateInterviewTime" type="time" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="candidateInterviewNotes">Interview Notes</label>
+                    <textarea
+                      id="candidateInterviewNotes"
+                      rows="6"
+                      placeholder="Agenda, interviewers, location/link, and preparation notes..."
+                    ></textarea>
+                  </div>
+                  <div class="candidate-actions-row">
+                    <button
+                      class="button primary"
+                      type="button"
+                      onclick="inviteCandidateToInterview()"
+                    >
+                      Invite to Interview
+                    </button>
+                    <span class="muted">Opens your email client with interview invite details pre-filled.</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </aside>

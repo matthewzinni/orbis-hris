@@ -17,7 +17,6 @@ import './styles/manager-home.css';
 import './styles/onboarding.css';
 import './styles/policy-campaigns.css';
 import './styles/dashboard-charts.css';
-import './styles/janus.css';
 import './styles/er-signing-modal.css';
 import './styles/er-acknowledgment-print.css';
 import './ui/dashboardCharts';
@@ -40,7 +39,6 @@ import {
 } from './bootstrap';
 import './core/legacyGlobals';
 import './services/employeeNormalizer';
-import './services/access';
 import './modules/drawerForms';
 import './ui/history';
 import './ui/drawerLayout';
@@ -50,8 +48,6 @@ import './ui/drawerTabs';
 import './modules/employeeDrawerTabLoads';
 import './modules/drawer';
 import './modules/notes';
-import './ui/appSections';
-import './ui/navigation';
 import './ui/workspaceAlerts';
 import './ui/hrInbox';
 import './modules/payrollHandoff';
@@ -68,9 +64,7 @@ import './modules/myDirectoryPortal';
 import './modules/employees';
 import './modules/orgChart';
 import './modules/attendance';
-import './modules/janus';
-import './modules/janusAccountDrawer';
-import './modules/janusAccountPanels';
+import './modules/lazyJanus';
 import './modules/dashboardBoot';
 import './modules/managerHome';
 import './ui/executiveInsight';
@@ -168,7 +162,7 @@ import {
   openInvestigationsView,
   openNewInvestigationForm,
   saveInvestigationRecord,
-} from './modules/investigations';
+} from './modules/lazyInvestigations';
 import './ui/loadingUi';
 import './ui/dashboardRetry';
 import './ui/confirmModal';

@@ -1,0 +1,223 @@
+          id="orbisSectionCareEngagement"
+          class="orbis-app-section hidden"
+          data-section="careEngagementView"
+          aria-hidden="true"
+          data-care-engagement-access
+        >
+        <section
+          id="careEngagementCenterTop"
+          class="page care-engagement-page"
+          data-care-engagement-access
+        >
+          <div class="page-header">
+            <div>
+              <h1>Care & Engagement</h1>
+              <p>
+                Track employee support, recognition, wellness trends, care gaps, and culture
+                initiatives.
+              </p>
+            </div>
+            <button class="button soft" id="refreshCareEngagementBtn" type="button">
+              Refresh
+            </button>
+            <button class="button soft" id="newCareItemBtn" type="button" data-care-engagement-manage>
+              ＋ New Care Item
+            </button>
+            <button class="button primary" id="logCareRecognitionBtn" type="button" data-care-engagement-manage>
+              ＋ Log Recognition
+            </button>
+          </div>
+
+          <p
+            id="careEngagementReadOnlyBanner"
+            class="care-read-only-banner hidden"
+            role="note"
+          >
+            View-only: you can review organization care metrics and trends here. Adding or editing
+            records requires HR admin access.
+          </p>
+
+          <div class="kpi-grid care-kpi-grid" id="careEngagementKpiGrid">
+            <div class="kpi-card warm-accent" id="cardCareOpenItems">
+              <div class="kpi-label">Open Care Items</div>
+              <div class="kpi-value" id="kCareOpenItems">—</div>
+              <div class="kpi-sub">Active support cases</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareFollowUp">
+              <div class="kpi-label">Employees Needing Follow-Up</div>
+              <div class="kpi-value" id="kCareFollowUp">—</div>
+              <div class="kpi-sub">Scheduled or overdue touchpoints</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareRecognitionMonth">
+              <div class="kpi-label">Recognition This Month</div>
+              <div class="kpi-value" id="kCareRecognitionMonth">—</div>
+              <div class="kpi-sub">Kudos, milestones, and nominations</div>
+            </div>
+            <div class="kpi-card warn warm-accent" id="cardCareGaps">
+              <div class="kpi-label">Care Gaps Identified</div>
+              <div class="kpi-value" id="kCareGaps">—</div>
+              <div class="kpi-sub">Matrix gaps and open needs</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareInitiatives">
+              <div class="kpi-label">Active Support Initiatives</div>
+              <div class="kpi-value" id="kCareInitiatives">—</div>
+              <div class="kpi-sub">Current or in-progress programs</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareCheckIns">
+              <div class="kpi-label">Upcoming Check-Ins</div>
+              <div class="kpi-value" id="kCareCheckIns">—</div>
+              <div class="kpi-sub">Next 14 days</div>
+            </div>
+            <div class="kpi-card warm-accent" id="cardCareStayInterviews">
+              <div class="kpi-label">Stay Interviews Due</div>
+              <div class="kpi-value" id="kCareStayInterviews">—</div>
+              <div class="kpi-sub" id="kCareStayInterviewsSub">Retention signal from roster stay dates</div>
+            </div>
+          </div>
+
+          <div class="card care-matrix-card" id="careMatrixCard">
+            <div class="card-header">Care Matrix</div>
+            <div class="card-body">
+              <p class="muted" id="careMatrixHelpText" style="margin: 0 0 12px">
+                Map support across stakeholder groups and care dimensions. Click a cell for details;
+                double-click to edit, or use Edit in the detail panel below.
+              </p>
+              <div class="care-matrix-wrap">
+                <table class="care-matrix-table" aria-label="Care matrix">
+                  <thead>
+                    <tr>
+                      <th scope="col">Stakeholder</th>
+                      <th scope="col">Physical</th>
+                      <th scope="col">Emotional</th>
+                      <th scope="col">Spiritual / Values-Based</th>
+                    </tr>
+                  </thead>
+                  <tbody id="careMatrixBody">
+                    <tr>
+                      <td colspan="4" class="empty">Loading care matrix...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div id="careMatrixDetailPanel" class="hidden" aria-live="polite"></div>
+            </div>
+          </div>
+
+          <div class="layout" style="margin-top: 18px">
+            <div class="stack">
+              <div class="card care-tracker-card" id="careTrackerCard">
+                <div class="card-header">
+                  <span>Care Item Tracker</span>
+                  <span class="muted" id="careTrackerCount">Loading items...</span>
+                </div>
+                <div class="card-body">
+                  <div class="toolbar" style="margin-bottom: 12px">
+                    <input
+                      class="input"
+                      id="careSearchInput"
+                      type="search"
+                      placeholder="Search care items..."
+                    />
+                  </div>
+                  <div id="mobileCareList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                  <div class="table-wrap orbis-desktop-module-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>Department</th>
+                          <th>Type</th>
+                          <th>Need or Concern</th>
+                          <th>Action Taken</th>
+                          <th>Owner</th>
+                          <th>Follow-Up</th>
+                          <th>Status</th>
+                          <th>Confidentiality</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="careTrackerBody">
+                        <tr>
+                          <td colspan="10" class="empty">Loading care items...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div id="careItemDetailPanel" class="hidden" aria-live="polite"></div>
+                </div>
+              </div>
+            </div>
+            <div class="stack">
+              <div class="card care-recognition-card">
+                <div class="card-header">Recognition</div>
+                <div class="card-body care-recognition-list">
+                  <p class="muted" style="margin: 0 0 10px">
+                    Kudos, Iron Shift nominations, anniversaries, above-and-beyond moments, and peer
+                    recognition.
+                  </p>
+                  <div id="careRecognitionList" class="history-list">
+                    <div class="empty">Loading recognition...</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card care-pulse-card" id="carePulseCard">
+                <div class="card-header care-pulse-card-header">
+                  <span>Pulse Surveys</span>
+                  <button
+                    class="button soft sm"
+                    id="recordCarePulseBtn"
+                    type="button"
+                    data-care-engagement-manage
+                  >
+                    ＋ Record results
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div
+                    id="carePulseDemoBanner"
+                    class="care-pulse-demo-banner hidden"
+                    role="status"
+                  >
+                    <strong>Demo snapshot</strong> — sample scores from seed data. Record a new pulse
+                    period below to replace this on the dashboard.
+                  </div>
+                  <div
+                    id="carePulseLiveBanner"
+                    class="care-pulse-live-banner hidden"
+                    role="status"
+                  >
+                    <strong>Latest pulse period</strong> — aggregate scores HR entered from your survey
+                    tool (not individual anonymous responses in Orbis).
+                  </div>
+                  <p class="muted" style="margin: 0 0 10px">
+                    <span id="carePulsePeriod">—</span> · <span id="carePulseResponses">—</span>
+                  </p>
+                  <div class="care-pulse-grid" id="carePulseGrid">
+                    <div id="carePulseOverall"></div>
+                    <div id="carePulseWorkload"></div>
+                    <div id="carePulseCommunication"></div>
+                    <div id="carePulseRecognition"></div>
+                    <div id="carePulseBelonging"></div>
+                  </div>
+                  <div class="field" style="margin-top: 14px">
+                    <label>Open comments summary</label>
+                    <p id="carePulseComments" class="muted" style="margin: 6px 0 0">—</p>
+                  </div>
+                  <div class="field" style="margin-top: 16px">
+                    <label>Pulse history</label>
+                    <div id="carePulseHistoryList" class="history-list">
+                      <div class="empty">Loading pulse history...</div>
+                    </div>
+                  </div>
+                  <p class="muted" style="margin: 12px 0 0; font-size: 0.8rem">
+                    Enter rolled-up scores after each pulse (Microsoft Forms, Culture Amp, etc.). Orbis
+                    stores period averages and themes — not raw employee submissions.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        </section>
+
+        <section

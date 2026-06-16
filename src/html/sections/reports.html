@@ -1,0 +1,370 @@
+          id="orbisSectionReports"
+          class="orbis-app-section hidden admin-only"
+          data-section="reportsView"
+          aria-hidden="true"
+          data-admin-only
+        >
+          <div class="page" id="reportsPage">
+            <div class="card hidden" id="reportsAdminGate">
+              <div class="card-header">Admin access required</div>
+              <div class="card-body">
+                <p class="muted" style="margin: 0">
+                  Reports and analytics are limited to Orbis admin users.
+                </p>
+              </div>
+            </div>
+            <div id="reportsAdminContent">
+            <div class="toolbar reports-toolbar">
+              <div class="toolbar-left">
+                <span class="muted">HR metrics and exports for your current scope</span>
+              </div>
+              <div class="toolbar-right">
+                <button class="button soft" id="reportsRefreshBtn" type="button">Refresh</button>
+                <button class="button soft" id="exportReportsHeadcountCsvBtn" type="button">
+                  Export headcount CSV
+                </button>
+                <button class="button soft" id="exportReportsStayCsvBtn" type="button">
+                  Export stay interviews CSV
+                </button>
+                <button class="button soft" id="exportReportsErCsvBtn" type="button">
+                  Export ER trends CSV
+                </button>
+                <button class="button soft" id="printReportsBtn" type="button">Print</button>
+              </div>
+            </div>
+            <div class="detail-grid reports-metric-grid" id="reportsMetricGrid">
+              <div class="detail-card">
+                <div class="detail-label">Active headcount</div>
+                <div class="detail-value" id="reportsKpiActiveHc">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">In-house FTE</div>
+                <div class="detail-value" id="reportsKpiInHouseFte">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Departments</div>
+                <div class="detail-value" id="reportsKpiDepartments">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Stay interviews due</div>
+                <div class="detail-value" id="reportsKpiReviewsDue">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Performance reviews due</div>
+                <div class="detail-value" id="reportsKpiPerformanceReviewsDue">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">At-risk employees</div>
+                <div class="detail-value" id="reportsKpiAtRisk">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Open discipline</div>
+                <div class="detail-value" id="reportsKpiOpenDiscipline">—</div>
+              </div>
+              <div class="detail-card">
+                <div class="detail-label">Turnover rate</div>
+                <div class="detail-value" id="reportsKpiTurnover">—</div>
+              </div>
+            </div>
+            <div class="layout layout-reports">
+              <div class="stack">
+                <div
+                  class="card orbis-disclosure-card is-expanded"
+                  data-orbis-disclosure
+                  data-orbis-disclosure-start="open"
+                >
+                  <div class="card-header orbis-disclosure-header">
+                    <span>Stay interview report</span>
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+                      <span class="muted" id="reportsStayInterviewCount">Loading...</span>
+                      <button
+                        type="button"
+                        class="orbis-disclosure-toggle"
+                        data-orbis-disclosure-toggle
+                        aria-expanded="true"
+                      >
+                        Hide table
+                      </button>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <div class="orbis-disclosure-summary">
+                    <div class="detail-grid" style="margin-bottom: 0">
+                      <div class="detail-card">
+                        <div class="detail-label">Overdue</div>
+                        <div class="detail-value" id="reportsStayOverdue">—</div>
+                      </div>
+                      <div class="detail-card">
+                        <div class="detail-label">Due in 30 days</div>
+                        <div class="detail-value" id="reportsStayDueSoon">—</div>
+                      </div>
+                      <div class="detail-card">
+                        <div class="detail-label">Completed (30 days)</div>
+                        <div class="detail-value" id="reportsStayCompleted">—</div>
+                      </div>
+                    </div>
+                    </div>
+                    <div class="orbis-disclosure-panel" data-orbis-disclosure-panel>
+                    <div class="table-wrap reports-table-wrap" style="margin-top: 16px">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Employee</th>
+                            <th>Department</th>
+                            <th>Next stay interview</th>
+                            <th>Last stay interview</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody id="reportsStayInterviewBody">
+                          <tr>
+                            <td colspan="6" class="empty">Loading stay interview report...</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="stack">
+                <div class="card">
+                  <div class="card-header">Headcount by department</div>
+                  <div class="card-body">
+                    <div class="mini-table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Department</th>
+                            <th>Headcount</th>
+                          </tr>
+                        </thead>
+                        <tbody id="reportsDeptHeadcountBody">
+                          <tr>
+                            <td colspan="2" class="empty">Loading headcount...</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Additional workforce metrics</div>
+                  <div class="card-body">
+                    <div class="reports-extra-metrics">
+                      <div><span class="muted">Turnover risk score</span><strong id="reportsKpiTurnoverRisk">—</strong></div>
+                      <div><span class="muted">New hire turnover</span><strong id="reportsKpiNewHireTurnover">—</strong></div>
+                      <div><span class="muted">On leave</span><strong id="reportsKpiOnLeave">—</strong></div>
+                      <div><span class="muted">Impact players</span><strong id="reportsKpiImpactPlayers">—</strong></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="card stay-org-themes-card orbis-disclosure-card"
+              data-orbis-disclosure
+              data-orbis-disclosure-start="open"
+              id="stayOrgThemesCard"
+            >
+              <div class="card-header orbis-disclosure-header">
+                <span>Stay interview themes (leadership)</span>
+                <button
+                  type="button"
+                  class="orbis-disclosure-toggle"
+                  data-orbis-disclosure-toggle
+                  aria-expanded="true"
+                >
+                  Hide details
+                </button>
+              </div>
+              <div class="card-body">
+                <p class="muted" style="margin: 0 0 12px">
+                  AI synthesizes common themes across completed stay interviews — what is going well,
+                  obstacles, and retention signals — with employee names attached so leadership knows
+                  who raised each theme for follow-up.
+                </p>
+                <div class="stay-org-themes-toolbar">
+                  <label>
+                    <span class="muted">Look back</span>
+                    <select id="stayOrgThemesMonths" aria-label="Months of stay interviews to include">
+                      <option value="6">Last 6 months</option>
+                      <option value="12" selected>Last 12 months</option>
+                      <option value="18">Last 18 months</option>
+                      <option value="24">Last 24 months</option>
+                    </select>
+                  </label>
+                  <button class="button primary" id="stayOrgThemesGenerateBtn" type="button">
+                    Generate themes
+                  </button>
+                  <button class="button soft hidden" id="stayOrgThemesCopyBtn" type="button">
+                    Copy report
+                  </button>
+                  <button class="button soft hidden" id="stayOrgThemesEmailBtn" type="button">
+                    Email Trent &amp; Brent
+                  </button>
+                </div>
+                <p class="muted stay-org-themes-status" id="stayOrgThemesStatus">
+                  Select a date range and generate themes when ready.
+                </p>
+                <div class="stay-org-themes-report-wrap hidden" id="stayOrgThemesReportWrap">
+                  <div class="stay-org-themes-report-header">
+                    <span class="muted" id="stayOrgThemesSourceBadge"></span>
+                  </div>
+                  <pre class="stay-org-themes-report" id="stayOrgThemesReport"></pre>
+                </div>
+              </div>
+            </div>
+            <div
+              class="card reports-er-card orbis-disclosure-card"
+              data-orbis-disclosure
+              data-orbis-disclosure-start="collapsed"
+            >
+              <div class="card-header orbis-disclosure-header">
+                <span>Discipline &amp; incident trends</span>
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+                  <span class="muted" id="reportsErTrendsSubtitle">Loading...</span>
+                  <button
+                    type="button"
+                    class="orbis-disclosure-toggle"
+                    data-orbis-disclosure-toggle
+                    aria-expanded="false"
+                  >
+                    Show details
+                  </button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="orbis-disclosure-summary">
+                <div class="detail-grid reports-er-summary">
+                  <div class="detail-card">
+                    <div class="detail-label">Open discipline</div>
+                    <div class="detail-value" id="reportsErOpenDiscipline">—</div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-label">Open incidents</div>
+                    <div class="detail-value" id="reportsErOpenIncidents">—</div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-label">Discipline (90 days)</div>
+                    <div class="detail-value" id="reportsErDiscipline90">—</div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-label">Incidents (90 days)</div>
+                    <div class="detail-value" id="reportsErIncidents90">—</div>
+                  </div>
+                </div>
+                </div>
+                <div class="orbis-disclosure-panel" data-orbis-disclosure-panel hidden>
+                <div class="layout layout-reports-er">
+                  <div class="stack">
+                    <div class="reports-subsection">
+                      <div class="reports-subheading">Monthly discipline</div>
+                      <div class="mini-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Month</th>
+                              <th>Cases</th>
+                            </tr>
+                          </thead>
+                          <tbody id="reportsDisciplineMonthlyBody">
+                            <tr>
+                              <td colspan="2" class="empty">Loading...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="reports-subsection">
+                      <div class="reports-subheading">Discipline by issue type</div>
+                      <div class="mini-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Issue type</th>
+                              <th>Count</th>
+                            </tr>
+                          </thead>
+                          <tbody id="reportsDisciplineByTypeBody">
+                            <tr>
+                              <td colspan="2" class="empty">Loading...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="stack">
+                    <div class="reports-subsection">
+                      <div class="reports-subheading">Monthly incidents</div>
+                      <div class="mini-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Month</th>
+                              <th>Reports</th>
+                            </tr>
+                          </thead>
+                          <tbody id="reportsIncidentMonthlyBody">
+                            <tr>
+                              <td colspan="2" class="empty">Loading...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div class="reports-subsection">
+                      <div class="reports-subheading">Incidents by type</div>
+                      <div class="mini-table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Type</th>
+                              <th>Count</th>
+                            </tr>
+                          </thead>
+                          <tbody id="reportsIncidentByTypeBody">
+                            <tr>
+                              <td colspan="2" class="empty">Loading...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="reports-subsection" style="margin-top: 16px">
+                  <div class="reports-subheading-row">
+                    <div class="reports-subheading">Recent employee relations activity</div>
+                    <span class="muted" id="reportsErRecentCount">Loading...</span>
+                  </div>
+                  <div class="table-wrap reports-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Type</th>
+                          <th>Date</th>
+                          <th>Employee</th>
+                          <th>Department</th>
+                          <th>Category</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody id="reportsErRecentBody">
+                        <tr>
+                          <td colspan="6" class="empty">Loading recent activity...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+        </section>
+
+        <section

@@ -1,0 +1,138 @@
+        <aside class="drawer hidden" id="operationsIssueDrawer" aria-hidden="true">
+          <div class="drawer-header">
+            <div>
+              <h2 class="drawer-title" id="operationsIssueDrawerTitle">Operational Issue</h2>
+              <div class="drawer-sub" id="operationsIssueDrawerSub">Operations Resolution Center</div>
+            </div>
+            <button class="drawer-close" type="button" onclick="closeOperationsIssueDrawer()">
+              Close
+            </button>
+          </div>
+          <div class="drawer-body">
+            <div class="card">
+              <div class="card-header">Issue Details</div>
+              <div class="card-body">
+                <div class="two-col">
+                  <div class="field">
+                    <label for="opsIssueTitleInput">Issue Title</label>
+                    <input id="opsIssueTitleInput" type="text" placeholder="Brief issue title" />
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueCategoryInput">Category</label>
+                    <select id="opsIssueCategoryInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueSystemInput">Software / System Affected</label>
+                    <input
+                      id="opsIssueSystemInput"
+                      type="text"
+                      placeholder="ShipStation, scanner, ERP, etc."
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueDepartmentInput">Department</label>
+                    <select id="opsIssueDepartmentInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueImpactInput">Impact Level</label>
+                    <select id="opsIssueImpactInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssuePriorityInput">Priority</label>
+                    <select id="opsIssuePriorityInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueStatusInput">Status</label>
+                    <select id="opsIssueStatusInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueAssignedToInput">Assigned To</label>
+                    <select id="opsIssueAssignedToInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueDueDateInput">Due Date</label>
+                    <input id="opsIssueDueDateInput" type="date" />
+                  </div>
+                  <div class="field">
+                    <label for="opsIssueRecurringInput" style="display: flex; align-items: center; gap: 8px">
+                      <input id="opsIssueRecurringInput" type="checkbox" />
+                      Recurring issue
+                    </label>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="opsIssueDescriptionInput">Description</label>
+                  <textarea
+                    id="opsIssueDescriptionInput"
+                    rows="5"
+                    placeholder="What happened, who is affected, and what is blocked?"
+                  ></textarea>
+                </div>
+                <div class="field">
+                  <label for="opsIssueRootCauseInput">Root Cause</label>
+                  <textarea
+                    id="opsIssueRootCauseInput"
+                    rows="3"
+                    placeholder="Underlying cause once identified"
+                  ></textarea>
+                </div>
+                <div class="field">
+                  <label for="opsIssueResolutionNotesInput">Resolution Notes</label>
+                  <textarea
+                    id="opsIssueResolutionNotesInput"
+                    rows="3"
+                    placeholder="Fix applied, workaround, or next steps"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Attachments</div>
+              <div class="card-body">
+                <div class="field">
+                  <label for="opsIssueAttachmentBtn">Add attachment</label>
+                  <div class="button-row file-upload-row">
+                    <button
+                      class="button soft"
+                      id="opsIssueAttachmentBtn"
+                      type="button"
+                    >
+                      Choose File
+                    </button>
+                    <span class="muted file-upload-name" id="opsIssueAttachmentFileName"
+                      >No file chosen</span
+                    >
+                  </div>
+                  <input
+                    id="opsIssueAttachmentInput"
+                    type="file"
+                    accept="image/*,.pdf,.txt"
+                    hidden
+                  />
+                </div>
+                <div id="operationsIssueAttachments" class="history-list" style="margin-top: 12px">
+                  <div class="empty">Save the issue to upload screenshots or files.</div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Activity</div>
+              <div class="card-body">
+                <div id="operationsIssueActivity" class="history-list">
+                  <div class="empty">Activity will appear after the issue is saved.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="drawer-actions drawer-footer">
+            <button class="button primary" id="saveOperationsIssueBtn" type="button">
+              Save Issue
+            </button>
+            <button class="button soft" id="cancelOperationsIssueBtn" type="button">
+              Cancel
+            </button>
+            <button class="button danger hidden" id="deleteOperationsIssueBtn" type="button">
+              Delete Issue
+            </button>
+          </div>
+        </aside>

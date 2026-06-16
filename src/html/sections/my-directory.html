@@ -1,0 +1,62 @@
+          id="orbisSectionMyDirectory"
+          class="orbis-app-section hidden"
+          data-section="myDirectoryView"
+          aria-hidden="true"
+        >
+          <div class="page employee-portal-page" id="myDirectoryPage">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Company directory — names, titles, and departments only</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header employee-directory-header">
+                <span>Directory</span>
+                <span class="muted" id="myDirectorySummary"></span>
+              </div>
+              <div class="card-body employee-portal-body">
+                <div class="employee-directory-toolbar">
+                  <input
+                    class="input employee-directory-search"
+                    id="myDirectorySearchInput"
+                    type="search"
+                    placeholder="Search by name, department, title, or supervisor…"
+                    autocomplete="off"
+                  />
+                  <div class="employee-directory-view-toggle" role="tablist" aria-label="Directory view">
+                    <button
+                      class="button soft active"
+                      id="myDirectoryViewListBtn"
+                      type="button"
+                      role="tab"
+                      aria-selected="true"
+                    >
+                      List
+                    </button>
+                    <button
+                      class="button soft"
+                      id="myDirectoryViewChartBtn"
+                      type="button"
+                      role="tab"
+                      aria-selected="false"
+                    >
+                      Org chart
+                    </button>
+                  </div>
+                </div>
+                <div id="myDirectoryListPanel">
+                  <div id="myDirectoryList" class="employee-directory-list">
+                    <div class="muted">Loading directory…</div>
+                  </div>
+                </div>
+                <div id="myDirectoryChartPanel" class="hidden">
+                  <div id="myDirectoryChart" class="org-chart-tree employee-directory-chart">
+                    <div class="muted">Loading org chart…</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section

@@ -1,7 +1,10 @@
 // Supervisor scoping, roster indexes, and per-employee permission checks.
 import { supabaseClient } from './supabaseClient';
-import type { EmployeeLike, UserAccessRow } from './accessTypes';
-import { parseSupervisedEmployeeIds } from './accessTypes';
+import {
+  type EmployeeLike,
+  type UserAccessRow,
+  parseSupervisedEmployeeIds,
+} from './accessTypes';
 import {
   getCurrentUserAccess,
   isAdminUser,

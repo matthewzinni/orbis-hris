@@ -1,0 +1,102 @@
+        <nav
+          id="orbisMobileTabBar"
+          class="orbis-mobile-tabbar hidden"
+          aria-label="Main navigation"
+          aria-hidden="true"
+        ></nav>
+        <div
+          id="orbisMobileRosterFilterSheet"
+          class="orbis-mobile-sheet"
+          aria-hidden="true"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="orbisMobileRosterFilterTitle"
+        >
+          <div class="orbis-mobile-sheet-backdrop" id="orbisMobileRosterFilterBackdrop"></div>
+          <div class="orbis-mobile-sheet-panel">
+            <div class="orbis-mobile-sheet-header">
+              <h2 id="orbisMobileRosterFilterTitle">Roster filters</h2>
+              <button type="button" class="orbis-mobile-sheet-close" id="orbisMobileRosterFilterClose">
+                Close
+              </button>
+            </div>
+            <div class="orbis-mobile-filter-form">
+              <div class="field">
+                <label for="orbisMobileDeptFilter">Department</label>
+                <select class="select" id="orbisMobileDeptFilter" data-mobile-filter-sync="deptFilter"></select>
+              </div>
+              <div class="field">
+                <label for="orbisMobileStatusFilter">Status</label>
+                <select class="select" id="orbisMobileStatusFilter" data-mobile-filter-sync="statusFilter">
+                  <option value="">All Statuses</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="INACTIVE">Inactive</option>
+                  <option value="LEAVE">Leave</option>
+                  <option value="ABSENT">Absent</option>
+                  <option value="TERMINATED">Terminated</option>
+                </select>
+              </div>
+              <div class="orbis-mobile-filter-actions">
+                <button type="button" class="button soft" id="orbisMobileRosterFilterClear">Clear</button>
+                <button type="button" class="button primary" id="orbisMobileRosterFilterApply">Apply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div
+          id="orbisMobileNotificationsSheet"
+          class="orbis-mobile-sheet"
+          aria-hidden="true"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="orbisMobileNotificationsTitle"
+        >
+          <div class="orbis-mobile-sheet-backdrop" id="orbisMobileNotificationsBackdrop"></div>
+          <div class="orbis-mobile-sheet-panel">
+            <div class="orbis-mobile-sheet-header">
+              <h2 id="orbisMobileNotificationsTitle">Notifications</h2>
+              <button
+                type="button"
+                class="orbis-mobile-sheet-close"
+                id="orbisMobileNotificationsClose"
+              >
+                Close
+              </button>
+            </div>
+            <p class="muted orbis-mobile-notifications-summary" id="orbisMobileNotificationsSummary"></p>
+            <div id="orbisMobileNotificationsList" class="orbis-mobile-notifications-list"></div>
+          </div>
+        </div>
+        <div
+          id="orbisMobileMoreSheet"
+          class="orbis-mobile-sheet"
+          aria-hidden="true"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="orbisMobileMoreTitle"
+        >
+          <div class="orbis-mobile-sheet-backdrop" id="orbisMobileMoreBackdrop"></div>
+          <div class="orbis-mobile-sheet-panel">
+            <div class="orbis-mobile-sheet-header">
+              <h2 id="orbisMobileMoreTitle">More</h2>
+              <button type="button" class="orbis-mobile-sheet-close" id="orbisMobileMoreClose">
+                Close
+              </button>
+            </div>
+            <nav id="orbisMobileMoreNav" class="orbis-mobile-more-nav" aria-label="More modules"></nav>
+          </div>
+        </div>
+    </div>
+    <div class="orbis-confirm-backdrop" id="erSigningBackdrop" role="presentation">
+      <div
+        class="card er-signing-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="erSigningTitle"
+        aria-describedby="erSigningMeta"
+      >
+        <h2 id="erSigningTitle" style="margin: 0 0 0.25rem">Document acknowledgment</h2>
+        <p class="muted er-signing-meta" id="erSigningMeta"></p>
+        <div id="erSigningBody"></div>
+      </div>
+    </div>

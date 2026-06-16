@@ -42,12 +42,10 @@ import {
   renderInvestigationTimeline,
   timelineEventForStatus,
 } from './investigationTimeline';
-import type {
-  Investigation,
-  InvestigationInterview,
-  InvestigationSubject,
-} from '../types/investigationsTypes';
 import {
+  type Investigation,
+  type InvestigationInterview,
+  type InvestigationSubject,
   formatInvestigationLabel,
   INVESTIGATION_CATEGORIES,
   INVESTIGATION_OUTCOMES,
@@ -1810,24 +1808,4 @@ function bindInvestigationsEvents(): void {
   });
 }
 
-function registerInvestigationsWindowGlobals(): void {
-  const globalRef = globalThis as typeof globalThis & Window;
-
-  globalRef.loadInvestigations = loadInvestigations;
-  globalRef.ensureInvestigationsLoaded = ensureInvestigationsLoaded;
-  globalRef.exportInvestigationsCsv = exportInvestigationsCsv;
-  globalRef.openInvestigationsView = openInvestigationsView;
-  globalRef.openNewInvestigationForm = openNewInvestigationForm;
-  globalRef.openInvestigationDrawer = openInvestigationDrawer;
-  globalRef.closeInvestigationDrawer = closeInvestigationDrawer;
-  globalRef.saveInvestigationRecord = saveInvestigationRecord;
-  globalRef.deleteInvestigationRecord = deleteInvestigationRecord;
-  globalRef.deleteInvestigationById = deleteInvestigationById;
-  globalRef.cancelInvestigationEdit = cancelInvestigationEdit;
-  globalRef.isInvestigationDrawerOpen = isInvestigationDrawerOpen;
-  globalRef.applyInvestigationsCenterAccess = applyInvestigationsCenterAccess;
-  globalRef.generateInvestigationGuidance = generateInvestigationGuidance;
-}
-
-registerInvestigationsWindowGlobals();
 bindInvestigationsEvents();

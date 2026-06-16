@@ -1,0 +1,54 @@
+          id="orbisSectionCandidates"
+          class="orbis-app-section hidden"
+          data-section="candidatesView"
+          aria-hidden="true"
+        >
+          <div class="page">
+            <div class="toolbar candidates-toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Candidate pipeline</span>
+              </div>
+              <div class="toolbar-right">
+                <button
+                  class="button primary"
+                  id="addCandidateToolbarBtn"
+                  type="button"
+                  onclick="openNewCandidateForm()"
+                >
+                  ＋ Add Candidate
+                </button>
+              </div>
+            </div>
+            <div class="card" id="candidatesCard">
+              <div class="card-header">
+                <span>Candidate Pipeline</span>
+                <span class="muted" id="candidateCount">Loading candidates...</span>
+              </div>
+              <div class="card-body">
+                <div id="mobileCandidatesList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                <div class="table-wrap orbis-desktop-module-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Position</th>
+                        <th>Department</th>
+                        <th>Stage</th>
+                        <th>Source</th>
+                        <th>Applied Date</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="candidateBody">
+                      <tr>
+                        <td colspan="7" class="empty">Loading candidates...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section

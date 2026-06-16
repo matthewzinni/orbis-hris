@@ -1,0 +1,1840 @@
+        <aside
+          class="drawer"
+          id="employeeDrawer"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="employeeDrawerTitle"
+          aria-hidden="true"
+        >
+          <div id="employeeDrawerChrome" class="drawer-chrome"></div>
+          <div
+            id="employeeDrawerRiskSignals"
+            class="employee-drawer-risk-signals hidden"
+            role="region"
+            aria-label="Risk signals"
+          ></div>
+          <div class="drawer-header">
+            <div>
+              <h2 class="drawer-title" id="drawerTitle">Employee</h2>
+              <div class="drawer-sub" id="drawerSub">Profile</div>
+            </div>
+            <button class="drawer-close" id="drawerClose" type="button" onclick="closeActiveDrawer()">
+              Close
+            </button>
+          </div>
+          <div class="drawer-body">
+            <div class="tabs drawer-tablist" aria-label="Employee record sections">
+              <button
+                class="tab-btn active"
+                data-tab="profile"
+                type="button"
+              >
+                Profile
+              </button>
+              <button class="tab-btn" data-tab="notes" type="button">
+                Notes
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="discipline"
+                type="button"
+              >
+                Discipline
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="incidents"
+                type="button"
+              >
+                Incident Reports
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="stay-interviews"
+                type="button"
+              >
+                Stay Interviews
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="meetings"
+                type="button"
+              >
+                Meetings
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="reviews"
+                type="button"
+              >
+                Performance Review
+              </button>
+              <button class="tab-btn admin-only hidden" data-tab="care-support" type="button">
+                Care & Support
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="emergency"
+                type="button"
+              >
+                Emergency
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="onboarding"
+                type="button"
+              >
+                Onboarding
+              </button>
+              <button
+                class="tab-btn admin-only hidden"
+                data-tab="offboarding"
+                type="button"
+                data-admin-only
+              >
+                Offboarding
+              </button>
+              <button class="tab-btn hidden" data-tab="time-off" type="button" data-leave-access>
+                Time off
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="documents"
+                type="button"
+              >
+                Documents
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="history"
+                type="button"
+              >
+                History
+              </button>
+              <button
+                class="tab-btn"
+                data-tab="employee"
+                type="button"
+              >
+                Employee Admin
+              </button>
+            </div>
+            <section class="tab-panel active" id="tab-profile">
+              <div class="card">
+                <div class="card-header">Employee Profile</div>
+                <div class="card-body">
+                  <div class="detail-grid" id="drawerDetails"></div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-notes">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Add HR Note</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="noteDate">Note Date</label>
+                      <input id="noteDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="noteType">Note Type</label>
+                      <select id="noteType">
+                        <option value="">Select type</option>
+                        <option value="General">General</option>
+                        <option value="Coaching">Coaching</option>
+                        <option value="Attendance">Attendance</option>
+                        <option value="Performance">Performance</option>
+                        <option value="Recognition">Recognition</option>
+                        <option value="Follow-Up">Follow-Up</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="noteText">Note</label>
+                      <textarea
+                        id="noteText"
+                        rows="7"
+                        placeholder="Enter note details..."
+                      ></textarea>
+                    </div>
+                    <button
+                      class="button primary"
+                      id="saveNoteBtn"
+                      type="button"
+                      onclick="saveEmployeeNote()"
+                    >
+                      Save Note
+                    </button>
+                    <button
+                      class="button soft hidden"
+                      id="cancelNoteEditBtn"
+                      type="button"
+                      onclick="cancelNoteEdit()"
+                    >
+                      Cancel Edit
+                    </button>
+                    <button class="button soft" type="button" onclick="printNote()">
+                      Print / PDF
+                    </button>
+                    <div class="muted hidden" id="noteEditStatus" style="margin-top: 10px">
+                      Editing saved note
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Note History</div>
+                  <div class="card-body">
+                    <div id="notesHistory" class="history-list">
+                      <div class="empty">No notes loaded yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-discipline">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Add Discipline Report</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="disciplineDate">Incident Date</label>
+                      <input id="disciplineDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="disciplineType">Issue Type</label>
+                      <select id="disciplineType">
+                        <option value="">Select issue type</option>
+                        <option value="Attendance">Attendance</option>
+                        <option value="Performance">Performance</option>
+                        <option value="Conduct">Conduct</option>
+                        <option value="Safety">Safety</option>
+                        <option value="Policy Violation">Policy Violation</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="disciplineLevel">Level</label>
+                      <select id="disciplineLevel">
+                        <option value="">Select Level</option>
+                        <option value="Level 1 - Coaching">Level 1 - Coaching</option>
+                        <option value="Level 2 - Verbal Warning">Level 2 - Verbal Warning</option>
+                        <option value="Level 3 - Written Warning">Level 3 - Written Warning</option>
+                        <option value="Level 4 - Final Warning">Level 4 - Final Warning</option>
+                        <option value="Level 5 - Termination">Level 5 - Termination</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="disciplineDescription">Description</label>
+                      <textarea
+                        id="disciplineDescription"
+                        rows="6"
+                        placeholder="Describe the issue..."
+                      ></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="disciplineAction">Action Taken</label>
+                      <textarea
+                        id="disciplineAction"
+                        rows="5"
+                        placeholder="Document the corrective action..."
+                      ></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="disciplineStatus">Status</label>
+                      <select id="disciplineStatus">
+                        <option value="Open">Open</option>
+                        <option value="Pending Follow-Up">Pending Follow-Up</option>
+                        <option value="Closed">Closed</option>
+                      </select>
+                    </div>
+                    <div class="detail-card" style="margin-top: 16px">
+                      <div
+                        style="
+                          font-size: 12px;
+                          font-weight: 700;
+                          text-transform: uppercase;
+                          letter-spacing: 0.05em;
+                          color: #667085;
+                          margin-bottom: 10px;
+                        "
+                      >
+                        Signature Acknowledgement
+                      </div>
+                      <label
+                        style="
+                          display: flex;
+                          align-items: center;
+                          gap: 10px;
+                          font-size: 14px;
+                          color: #344054;
+                        "
+                      >
+                        <input type="checkbox" id="disciplineRefusedToSign" />
+                        Employee refused to sign
+                      </label>
+                      <div
+                        style="
+                          margin-top: 14px;
+                          display: grid;
+                          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                          gap: 16px;
+                        "
+                      >
+                        <div>
+                          <canvas
+                            id="disciplineEmployeeSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="disciplineEmployeeSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig(
+                                  'disciplineEmployeeSignature',
+                                  'disciplineEmployeeSigStatus'
+                                )
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div style="font-size: 12px; color: #667085; margin-top: 4px">
+                            Employee Signature
+                          </div>
+                        </div>
+                        <div>
+                          <canvas
+                            id="disciplineManagerSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="disciplineManagerSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('disciplineManagerSignature', 'disciplineManagerSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div style="font-size: 12px; color: #667085; margin-top: 4px">
+                            Manager Signature
+                          </div>
+                        </div>
+                        <div>
+                          <canvas
+                            id="disciplineWitnessSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="disciplineWitnessSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('disciplineWitnessSignature', 'disciplineWitnessSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div style="font-size: 12px; color: #667085; margin-top: 4px">
+                            Witness Signature
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="button-row">
+                      <button
+                        class="button primary"
+                        id="saveDisciplineBtn"
+                        type="button"
+                        onclick="saveDisciplineReport()"
+                      >
+                        Save Discipline Report
+                      </button>
+                      <button class="button soft" type="button" onclick="printDiscipline()">
+                        Print / PDF
+                      </button>
+                      <button
+                        class="button soft hidden"
+                        id="cancelDisciplineEditBtn"
+                        type="button"
+                        onclick="cancelDisciplineEdit()"
+                      >
+                        Cancel Edit
+                      </button>
+                    </div>
+                    <div class="muted hidden" id="disciplineEditStatus" style="margin-top: 10px">
+                      Editing existing discipline report
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Discipline History</div>
+                  <div class="card-body">
+                    <div id="disciplineHistory" class="history-list">
+                      <div class="empty">No discipline reports loaded yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-incidents">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Add Incident Report</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="incidentDate">Incident Date</label>
+                      <input id="incidentDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="incidentType">Incident Type</label>
+                      <select id="incidentType">
+                        <option value="">Select incident type</option>
+                        <option value="Safety">Safety</option>
+                        <option value="Injury">Injury</option>
+                        <option value="Property Damage">Property Damage</option>
+                        <option value="Near Miss">Near Miss</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Conduct">Conduct</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="incidentLocation">Location</label>
+                      <input id="incidentLocation" type="text" placeholder="Where did it happen?" />
+                    </div>
+                    <div class="field">
+                      <label for="incidentDescription">Description</label>
+                      <textarea
+                        id="incidentDescription"
+                        rows="6"
+                        placeholder="Describe what happened..."
+                      ></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="incidentFollowUp">Follow-Up / Corrective Action</label>
+                      <textarea
+                        id="incidentFollowUp"
+                        rows="5"
+                        placeholder="Document follow-up actions..."
+                      ></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="incidentStatus">Status</label>
+                      <select id="incidentStatus">
+                        <option value="Open">Open</option>
+                        <option value="Under Review">Under Review</option>
+                        <option value="Closed">Closed</option>
+                      </select>
+                    </div>
+                    <div class="detail-card" style="margin-top: 16px">
+                      <div
+                        style="
+                          font-size: 12px;
+                          font-weight: 700;
+                          text-transform: uppercase;
+                          letter-spacing: 0.05em;
+                          color: #667085;
+                          margin-bottom: 10px;
+                        "
+                      >
+                        Signature Acknowledgement
+                      </div>
+                      <label
+                        style="
+                          display: flex;
+                          align-items: center;
+                          gap: 10px;
+                          font-size: 14px;
+                          color: #344054;
+                        "
+                      >
+                        <input type="checkbox" id="incidentRefusedToSign" />
+                        Employee refused to sign
+                      </label>
+                      <div
+                        style="
+                          margin-top: 14px;
+                          display: grid;
+                          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                          gap: 16px;
+                        "
+                      >
+                        <div>
+                          <canvas
+                            id="incidentEmployeeSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="incidentEmployeeSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig(
+                                  'incidentEmployeeSignature',
+                                  'incidentEmployeeSigStatus'
+                                )
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div style="font-size: 12px; color: #667085; margin-top: 4px">
+                            Employee Signature
+                          </div>
+                        </div>
+                        <div>
+                          <canvas
+                            id="incidentManagerSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="incidentManagerSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('incidentManagerSignature', 'incidentManagerSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div style="font-size: 12px; color: #667085; margin-top: 4px">
+                            Manager Signature
+                          </div>
+                        </div>
+                        <div>
+                          <canvas
+                            id="incidentWitnessSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="incidentWitnessSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('incidentWitnessSignature', 'incidentWitnessSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div style="font-size: 12px; color: #667085; margin-top: 4px">
+                            Witness Signature
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="button-row">
+                      <button
+                        class="button primary"
+                        id="saveIncidentBtn"
+                        type="button"
+                        onclick="saveIncidentRecord()"
+                      >
+                        Save Incident Report
+                      </button>
+                      <button class="button soft" type="button" onclick="printIncident()">
+                        Print / PDF
+                      </button>
+                      <button
+                        class="button soft hidden"
+                        id="cancelIncidentEditBtn"
+                        type="button"
+                        onclick="cancelIncidentEdit()"
+                      >
+                        Cancel Edit
+                      </button>
+                    </div>
+                    <div class="muted hidden" id="incidentEditStatus" style="margin-top: 10px">
+                      Editing existing incident report
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Incident Report History</div>
+                  <div class="card-body">
+                    <div id="incidentsHistory" class="history-list">
+                      <div class="empty">No incident reports loaded yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-stay-interviews">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Stay Interview Questionnaire</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="stayInterviewDate">Interview Date</label>
+                      <input id="stayInterviewDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="stayInterviewType">Interview Type</label>
+                      <select id="stayInterviewType">
+                        <option value="">Select interview type</option>
+                        <option value="30-Day">30-Day</option>
+                        <option value="90-Day">90-Day</option>
+                        <option value="6-Month">6-Month</option>
+                        <option value="Annual">Annual</option>
+                        <option value="Retention Risk">Retention Risk</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="stayQ1"
+                        >What do you look forward to when you come to work each day?</label
+                      >
+                      <textarea id="stayQ1" rows="3" placeholder="Employee response..."></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="stayQ2">What is going well in your role right now?</label>
+                      <textarea id="stayQ2" rows="3" placeholder="Employee response..."></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="stayQ3"
+                        >What frustrations, obstacles, or stress points are you experiencing?</label
+                      >
+                      <textarea id="stayQ3" rows="3" placeholder="Employee response..."></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="stayQ4"
+                        >What would make your job more satisfying or easier?</label
+                      >
+                      <textarea id="stayQ4" rows="3" placeholder="Employee response..."></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="stayQ5"
+                        >Do you feel supported by your supervisor and team? Why or why not?</label
+                      >
+                      <textarea id="stayQ5" rows="3" placeholder="Employee response..."></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="stayQ6"
+                        >What might cause you to consider leaving BTW Global?</label
+                      >
+                      <textarea id="stayQ6" rows="3" placeholder="Employee response..."></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="stayQ7">What can we do to help you stay and succeed here?</label>
+                      <textarea id="stayQ7" rows="3" placeholder="Employee response..."></textarea>
+                    </div>
+                    <div class="field">
+                      <div
+                        style="
+                          display: flex;
+                          align-items: center;
+                          justify-content: space-between;
+                          gap: 10px;
+                          flex-wrap: wrap;
+                          margin-bottom: 6px;
+                        "
+                      >
+                        <label for="stayManagerSummary" style="margin: 0">HR / Manager Summary</label>
+                        <button
+                          class="button soft sm"
+                          id="generateStayInterviewSummaryBtn"
+                          type="button"
+                        >
+                          Generate AI summary
+                        </button>
+                      </div>
+                      <textarea
+                        id="stayManagerSummary"
+                        rows="4"
+                        placeholder="Summarize themes, action items, and follow-up — or use Generate AI summary above."
+                      ></textarea>
+                      <p class="muted" style="margin: 8px 0 0; font-size: 0.82rem">
+                        Uses AI to synthesize Q1–Q7 into an HR-ready summary (requires Supabase Edge
+                        Function setup). Falls back to a structured draft if AI is unavailable.
+                        Review and edit before saving.
+                      </p>
+                    </div>
+                    <div class="button-row">
+                      <button
+                        class="button primary"
+                        id="saveStayInterviewBtn"
+                        type="button"
+                        onclick="saveStayInterview()"
+                      >
+                        Save Stay Interview
+                      </button>
+                      <button class="button soft" type="button" onclick="printStayInterview()">
+                        Print / PDF
+                      </button>
+                      <button
+                        class="button soft hidden"
+                        id="cancelStayInterviewEditBtn"
+                        type="button"
+                        onclick="cancelStayInterviewEdit()"
+                      >
+                        Cancel Edit
+                      </button>
+                    </div>
+                    <div class="muted hidden" id="stayInterviewEditStatus" style="margin-top: 10px">
+                      Editing existing stay interview
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Stay Interview History</div>
+                  <div class="card-body">
+                    <div id="stayInterviewHistory" class="history-list">
+                      <div class="empty">No stay interviews loaded yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-meetings">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Add Meeting Record</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="meetingDate">Meeting Date</label>
+                      <input id="meetingDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="meetingType">Meeting Type</label>
+                      <select id="meetingType">
+                        <option value="">Select meeting type</option>
+                        <option value="Check-In">Check-In</option>
+                        <option value="Coaching">Coaching</option>
+                        <option value="Review">Review</option>
+                        <option value="Investigation">Investigation</option>
+                        <option value="Stay Interview">Stay Interview</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="meetingSubject">Subject</label>
+                      <input id="meetingSubject" type="text" placeholder="Meeting subject" />
+                    </div>
+                    <div class="field" id="meetingDictationField">
+                      <label>Voice dictation</label>
+                      <div class="dictation-consent" id="meetingDictationConsent" role="note">
+                        Before using dictation, make sure everyone in the meeting knows notes are
+                        being transcribed. Speech recognition runs in your browser; Orbis does not
+                        save or upload meeting audio.
+                      </div>
+                      <label class="dictation-consent-check" for="meetingDictationConsentCheck">
+                        <input type="checkbox" id="meetingDictationConsentCheck" />
+                        I confirm participants were informed that notes are being transcribed.
+                      </label>
+                      <div class="button-row">
+                        <button
+                          class="button soft"
+                          type="button"
+                          id="meetingDictationStartBtn"
+                          disabled
+                        >
+                          Start Dictation
+                        </button>
+                        <button
+                          class="button soft hidden"
+                          type="button"
+                          id="meetingDictationStopBtn"
+                        >
+                          Stop Dictation
+                        </button>
+                      </div>
+                      <div
+                        class="dictation-status muted"
+                        id="meetingDictationStatus"
+                        aria-live="polite"
+                      >
+                        Not started
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label for="meetingNotes">Notes</label>
+                      <textarea
+                        id="meetingNotes"
+                        rows="7"
+                        placeholder="Document the meeting discussion..."
+                      ></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="meetingFollowUpDate">Follow-Up Date</label>
+                      <input id="meetingFollowUpDate" type="date" />
+                    </div>
+                    
+                    <div class="button-row">
+                      <button
+                        class="button primary"
+                        id="saveMeetingBtn"
+                        type="button"
+                        onclick="saveMeetingRecord()"
+                      >
+                        Save Meeting
+                      </button>
+                      <button class="button soft" type="button" onclick="printMeeting()">
+                        Print / PDF
+                      </button>
+                      <button
+                        class="button soft hidden"
+                        id="cancelMeetingEditBtn"
+                        type="button"
+                        onclick="cancelMeetingEdit()"
+                      >
+                        Cancel Edit
+                      </button>
+                    </div>
+                    <div class="muted hidden" id="meetingEditStatus" style="margin-top: 10px">
+                      Editing existing meeting record
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Meeting History</div>
+                  <div class="card-body">
+                    <div id="meetingsHistory" class="history-list">
+                      <div class="empty">No meetings loaded yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-reviews">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Performance Review</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="reviewDate">Review Date</label>
+                      <input id="reviewDate" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="reviewType">Review Type</label>
+                      <select id="reviewType">
+                        <option value="">Select review type</option>
+                        <option value="30-Day">30-Day</option>
+                        <option value="60-Day">60-Day</option>
+                        <option value="90-Day">90-Day</option>
+                        <option value="Annual">Annual</option>
+                        <option value="Coaching">Coaching</option>
+                        <option value="Promotion Review">Promotion Review</option>
+                        <option value="Corrective Action Follow-Up">
+                          Corrective Action Follow-Up
+                        </option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Quality of Work</label>
+                      <select id="reviewQuality">
+                        <option value="">Select</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                        <option value="Unacceptable">Unacceptable</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Attendance & Punctuality</label>
+                      <select id="reviewAttendance">
+                        <option value="">Select</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                        <option value="Unacceptable">Unacceptable</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Reliability / Dependability</label>
+                      <select id="reviewReliability">
+                        <option value="">Select</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                        <option value="Unacceptable">Unacceptable</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Communication Skills</label>
+                      <select id="reviewCommunication">
+                        <option value="">Select</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                        <option value="Unacceptable">Unacceptable</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Judgement & Decision-Making</label>
+                      <select id="reviewJudgement">
+                        <option value="">Select</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                        <option value="Unacceptable">Unacceptable</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Initiative & Flexibility</label>
+                      <select id="reviewInitiative">
+                        <option value="">Select</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                        <option value="Unacceptable">Unacceptable</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Cooperation & Teamwork</label>
+                      <select id="reviewTeamwork">
+                        <option value="">Select</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                        <option value="Unacceptable">Unacceptable</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Knowledge of Position</label>
+                      <select id="reviewKnowledge">
+                        <option value="">Select</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                        <option value="Unacceptable">Unacceptable</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label>Training & Development</label>
+                      <select id="reviewTraining">
+                        <option value="">Select</option>
+                        <option value="Exceeds Expectations">Exceeds Expectations</option>
+                        <option value="Meets Expectations">Meets Expectations</option>
+                        <option value="Needs Improvement">Needs Improvement</option>
+                        <option value="Unacceptable">Unacceptable</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="reviewStrengths"
+                        >What are this employee's strongest contributions?</label
+                      >
+                      <textarea
+                        id="reviewStrengths"
+                        rows="4"
+                        placeholder="Document strengths, wins, and value to the team..."
+                      ></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="reviewImprovements">What specific areas need improvement?</label>
+                      <textarea
+                        id="reviewImprovements"
+                        rows="4"
+                        placeholder="Document gaps, coaching needs, and expectations..."
+                      ></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="reviewEmployeeComments">Employee Comments / Feedback</label>
+                      <textarea
+                        id="reviewEmployeeComments"
+                        rows="4"
+                        placeholder="Document the employee's perspective, concerns, or goals..."
+                      ></textarea>
+                    </div>
+                    <div class="field">
+                      <label for="reviewManagerComments">Manager Action Plan / Next Steps</label>
+                      <textarea
+                        id="reviewManagerComments"
+                        rows="4"
+                        placeholder="Document next steps, accountability, support, and follow-up timing..."
+                      ></textarea>
+                    </div>
+                    <div class="detail-card" style="margin-top: 16px">
+                      <div
+                        style="
+                          font-size: 12px;
+                          font-weight: 700;
+                          text-transform: uppercase;
+                          letter-spacing: 0.05em;
+                          color: #667085;
+                          margin-bottom: 10px;
+                        "
+                      >
+                        Signature Acknowledgement
+                      </div>
+                      <label
+                        style="
+                          display: flex;
+                          align-items: center;
+                          gap: 10px;
+                          font-size: 14px;
+                          color: #344054;
+                        "
+                      >
+                        <input type="checkbox" id="reviewRefusedToSign" />
+                        Employee refused to sign
+                      </label>
+                      <div
+                        style="
+                          margin-top: 14px;
+                          display: grid;
+                          grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                          gap: 16px;
+                        "
+                      >
+                        <div>
+                          <canvas
+                            id="reviewEmployeeSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="reviewEmployeeSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('reviewEmployeeSignature', 'reviewEmployeeSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div style="font-size: 12px; color: #667085; margin-top: 4px">
+                            Employee Signature
+                          </div>
+                        </div>
+                        <div>
+                          <canvas
+                            id="reviewManagerSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="reviewManagerSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('reviewManagerSignature', 'reviewManagerSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div style="font-size: 12px; color: #667085; margin-top: 4px">
+                            Manager Signature
+                          </div>
+                        </div>
+                        <div>
+                          <canvas
+                            id="reviewWitnessSignature"
+                            style="
+                              border: 1px solid #cbd5e1;
+                              border-radius: 10px;
+                              width: 100%;
+                              height: 120px;
+                            "
+                          ></canvas>
+                          <div
+                            style="display: flex; justify-content: space-between; margin-top: 6px"
+                          >
+                            <span
+                              id="reviewWitnessSigStatus"
+                              style="font-size: 12px; color: #667085"
+                            >
+                              Not signed
+                            </span>
+                            <button
+                              class="button soft"
+                              type="button"
+                              onclick="
+                                clearSig('reviewWitnessSignature', 'reviewWitnessSigStatus')
+                              "
+                            >
+                              Clear
+                            </button>
+                          </div>
+                          <div style="font-size: 12px; color: #667085; margin-top: 4px">
+                            Witness Signature
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="button-row">
+                      <button
+                        class="button primary"
+                        id="saveReviewBtn"
+                        type="button"
+                        onclick="saveEmployeeReview()"
+                      >
+                        Save Review
+                      </button>
+                      <button class="button soft" type="button" onclick="printReview()">
+                        Print / PDF
+                      </button>
+                      <button
+                        class="button soft hidden"
+                        id="cancelReviewEditBtn"
+                        type="button"
+                        onclick="cancelReviewEdit()"
+                      >
+                        Cancel Edit
+                      </button>
+                    </div>
+                    <div class="muted hidden" id="reviewEditStatus" style="margin-top: 10px">
+                      Editing existing performance review
+                    </div>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Review History</div>
+                  <div class="card-body">
+                    <div id="reviewsHistory" class="history-list">
+                      <div class="empty">No reviews loaded yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="card" style="margin-top: 14px">
+                <div class="card-header">Review attachments</div>
+                <div class="card-body">
+                  <p class="muted" style="margin: 0 0 12px; font-size: 13px">
+                    Files are stored on the employee record and linked to the review you last saved or
+                    opened for editing.
+                  </p>
+                  <div
+                    class="button-row file-upload-row"
+                    style="align-items: flex-end; flex-wrap: wrap; gap: 12px"
+                  >
+                    <div class="field" style="flex: 1; min-width: 200px; margin: 0">
+                      <label for="reviewAttachmentFile">Attach file</label>
+                      <input id="reviewAttachmentFile" type="file" />
+                    </div>
+                    <button
+                      class="button primary"
+                      type="button"
+                      id="reviewAttachmentUploadBtn"
+                      onclick="uploadPerformanceReviewAttachment()"
+                    >
+                      Upload
+                    </button>
+                  </div>
+                  <div
+                    id="reviewAttachmentsList"
+                    class="history-list"
+                    style="margin-top: 14px"
+                  >
+                    <div class="empty muted">Open or save a review to attach files.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-onboarding">
+              <div class="card">
+                <div class="card-header">Onboarding checklist</div>
+                <div class="card-body">
+                  <p class="muted" style="margin: 0 0 10px; font-size: 0.82rem; line-height: 1.45">
+                    Standard packet: W-4, NC-4, I-9, and Standalone Form Packet. I-9 is due within 3
+                    business days of hire. Tasks marked “Show in employee portal” appear in My Tasks.
+                  </p>
+                  <div
+                    id="onboardingI9Banner"
+                    class="onboarding-i9-banner hidden"
+                    role="status"
+                  ></div>
+                  <div id="onboardingSummary" class="muted">Loading onboarding...</div>
+                  <div
+                    style="
+                      margin: 10px 0;
+                      background: #eef3f9;
+                      border-radius: 999px;
+                      height: 10px;
+                      overflow: hidden;
+                    "
+                  >
+                    <div
+                      id="onboardingProgressBar"
+                      style="height: 10px; width: 0%; background: #3b82f6"
+                    ></div>
+                  </div>
+                  <div id="onboardingChecklist" class="history-list">
+                    <div class="empty">No onboarding items loaded yet.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel admin-only hidden" id="tab-offboarding" data-admin-only>
+              <div class="card">
+                <div class="card-header">Offboarding checklist</div>
+                <div class="card-body">
+                  <p class="muted" style="margin: 0 0 10px; font-size: 0.82rem; line-height: 1.45">
+                    Standard separation workflow: exit interview through final payroll and access removal.
+                  </p>
+                  <div id="offboardingSummary" class="muted">Loading offboarding...</div>
+                  <div
+                    style="
+                      margin: 10px 0;
+                      background: #eef3f9;
+                      border-radius: 999px;
+                      height: 10px;
+                      overflow: hidden;
+                    "
+                  >
+                    <div
+                      id="offboardingProgressBar"
+                      style="height: 10px; width: 0%; background: #dc2626"
+                    ></div>
+                  </div>
+                  <div id="offboardingChecklist" class="history-list">
+                    <div class="empty">No offboarding items loaded yet.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel hidden" id="tab-time-off" data-leave-access>
+              <div class="card" id="leaveRequestPanel">
+                <div class="card-header" id="leaveRequestPanelHeader">Time Off</div>
+                <div class="card-body">
+                  <p class="muted leave-balance-meta" id="leaveRequestBalanceMeta" style="margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45"></p>
+                  <p class="muted" style="margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45">
+                    Baseline hours come from QuickBooks Time (already net of past approved PTO). Only new requests approved in Orbis reduce the remaining balance.
+                  </p>
+                  <div id="leaveRequestForm" class="leave-request-form">
+                    <div class="field">
+                      <label for="leaveRequestTypeInput">Type</label>
+                      <select id="leaveRequestTypeInput" class="input">
+                        <option value="pto">PTO</option>
+                        <option value="sick">Sick</option>
+                        <option value="bereavement">Bereavement</option>
+                        <option value="fmla">FMLA</option>
+                        <option value="unpaid">Unpaid</option>
+                        <option value="other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="leaveRequestStartInput">Start date</label>
+                      <input class="input" id="leaveRequestStartInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="leaveRequestEndInput">End date</label>
+                      <input class="input" id="leaveRequestEndInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="leaveRequestHoursInput">Hours</label>
+                      <input
+                        class="input"
+                        id="leaveRequestHoursInput"
+                        type="number"
+                        min="0"
+                        step="0.25"
+                        placeholder="8"
+                        required
+                      />
+                    </div>
+                    <div class="field field--check">
+                      <label class="checkbox-label" for="leaveRequestIntermittentInput">
+                        <input id="leaveRequestIntermittentInput" type="checkbox" />
+                        Intermittent / partial
+                      </label>
+                    </div>
+                    <div class="field field--wide">
+                      <label for="leaveRequestNotesInput">Notes</label>
+                      <textarea
+                        class="input"
+                        id="leaveRequestNotesInput"
+                        rows="2"
+                        placeholder="Optional context for approver"
+                      ></textarea>
+                    </div>
+                    <div class="field field--check">
+                      <label class="checkbox-label" for="leaveRequestSetStatusInput">
+                        <input id="leaveRequestSetStatusInput" type="checkbox" checked />
+                        On approve, set employee to Leave if dates include today
+                      </label>
+                    </div>
+                    <div class="field">
+                      <button class="button primary" id="leaveRequestSubmitBtn" type="button">
+                        Submit request
+                      </button>
+                    </div>
+                  </div>
+                  <div id="leaveRequestList" class="history-list" style="margin-top: 16px">
+                    <div class="empty">No leave requests loaded yet.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-documents">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Upload Signed Document</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="docType">Document Type</label>
+                      <select id="docType">
+                        <option value="">Select document type</option>
+                        <option value="W-4">W-4</option>
+                        <option value="NC-4">NC-4</option>
+                        <option value="I-9">I-9</option>
+                        <option value="Standalone Form Packet">Standalone Form Packet</option>
+                        <option value="Handbook Acknowledgment">Handbook Acknowledgment</option>
+                        <option value="Policy Acknowledgment">Policy Acknowledgment</option>
+                        <option value="Discipline Form">Discipline Form</option>
+                        <option value="Training Sign-Off">Training Sign-Off</option>
+                        <option value="Benefits Form">Benefits Form</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="docFile">File</label>
+                      <input id="docFile" type="file" />
+                    </div>
+                    <button
+                      class="button primary"
+                      id="uploadDocBtn"
+                      type="button"
+                      onclick="uploadEmployeeDocument()"
+                    >
+                      Upload Document
+                    </button>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Document History</div>
+                  <div class="card-body">
+                    <div id="docHistory" class="history-list">
+                      <div class="empty">No documents loaded yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-emergency">
+              <div class="two-col">
+                <div class="card">
+                  <div class="card-header">Emergency Contact</div>
+                  <div class="card-body">
+                    <div class="field">
+                      <label for="ecName">Contact Name</label>
+                      <input id="ecName" type="text" placeholder="Full name" />
+                    </div>
+                    <div class="field">
+                      <label for="ecRelationship">Relationship</label>
+                      <input
+                        id="ecRelationship"
+                        type="text"
+                        placeholder="Spouse, parent, sibling..."
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="ecPhone">Phone</label>
+                      <input id="ecPhone" type="text" placeholder="Primary phone" />
+                    </div>
+                    <div class="field">
+                      <label for="ecAltPhone">Alternate Phone</label>
+                      <input id="ecAltPhone" type="text" placeholder="Alternate phone" />
+                    </div>
+                    <div class="field">
+                      <label for="ecNotes">Notes</label>
+                      <textarea id="ecNotes" rows="5" placeholder="Any extra notes..."></textarea>
+                    </div>
+                    <button
+                      class="button primary"
+                      id="saveECBtn"
+                      type="button"
+                      onclick="saveEmergencyContact()"
+                    >
+                      Save Emergency Contact
+                    </button>
+                    <button
+                      class="button danger hidden"
+                      id="deleteECBtn"
+                      type="button"
+                      onclick="deleteEmergencyContact()"
+                      style="margin-left: 10px"
+                    >
+                      Delete Emergency Contact
+                    </button>
+                  </div>
+                </div>
+                <div class="card">
+                  <div class="card-header">Current Emergency Contact</div>
+                  <div class="card-body">
+                    <div id="ecHistory" class="history-list">
+                      <div class="empty">No emergency contact loaded yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel" id="tab-history">
+              <div class="card">
+                <div class="card-header">Employee History</div>
+                <div class="card-body">
+                  <div id="historyFeed" class="history-list">
+                    <div class="empty">No history loaded yet.</div>
+                  </div>
+                </div>
+              </div>
+            </section>
+            <section class="tab-panel admin-only hidden" id="tab-care-support">
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Care Items (Tracker)</div>
+                  <div class="card-body">
+                    <div id="employeeCareItemsList" class="history-list">
+                      <div class="empty">Open an employee to view care items.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Care Notes</div>
+                  <div class="card-body">
+                    <div id="employeeCareNotesList" class="history-list">
+                      <div class="empty">Open an employee to view care notes.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Follow-Up Items</div>
+                  <div class="card-body">
+                    <div id="employeeCareFollowUpsList" class="history-list">
+                      <div class="empty">No follow-up items.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Recognition History</div>
+                  <div class="card-body">
+                    <div id="employeeCareRecognitionList" class="history-list">
+                      <div class="empty">No recognition history.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Support Resources Shared</div>
+                  <div class="card-body">
+                    <div id="employeeCareResourcesList" class="history-list">
+                      <div class="empty">No resources shared.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="care-drawer-section">
+                <div class="card">
+                  <div class="card-header">Wellness & Check-In History</div>
+                  <div class="card-body">
+                    <div id="employeeCareWellnessList" class="history-list">
+                      <div class="empty">No check-in history.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p class="muted" style="font-size: 0.8rem; margin: 0">
+                HR/admin only · Synced with Care &amp; Engagement tracker (<code>care_items</code> and
+                related tables).
+              </p>
+            </section>
+            <section class="tab-panel" id="tab-employee">
+              <div class="card">
+                <div class="card-header">Employee Record Management</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="employeeIdInput">Employee ID</label>
+                      <input id="employeeIdInput" type="text" placeholder="Employee ID" />
+                    </div>
+                    <div class="field">
+                      <label for="employeeStatusInput">Status</label>
+                      <select id="employeeStatusInput">
+                        <option value="ACTIVE">Active</option>
+                        <option value="INACTIVE">Inactive</option>
+                        <option value="LEAVE">Leave</option>
+                        <option value="ABSENT">Absent</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="employeeFirstNameInput">First Name</label>
+                      <input id="employeeFirstNameInput" type="text" placeholder="First name" />
+                    </div>
+                    <div class="field">
+                      <label for="employeeLastNameInput">Last Name</label>
+                      <input id="employeeLastNameInput" type="text" placeholder="Last name" />
+                    </div>
+                    <div class="field">
+                      <label for="employeeDepartmentInput">Department</label>
+                      <input id="employeeDepartmentInput" type="text" placeholder="Department" />
+                    </div>
+                    <div class="field">
+                      <label for="employeePositionInput">Position</label>
+                      <input id="employeePositionInput" type="text" placeholder="Position" />
+                    </div>
+                    <div class="field">
+                      <label for="employeeSupervisorInput">Supervisor</label>
+                      <input id="employeeSupervisorInput" type="text" placeholder="Supervisor" />
+                    </div>
+                    <div class="field">
+                      <label for="employeePayTypeInput">Pay Type</label>
+                      <input
+                        id="employeePayTypeInput"
+                        type="text"
+                        placeholder="Hourly, Salary, etc."
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="employeeStandardHoursInput">Standard Hours</label>
+                      <input
+                        id="employeeStandardHoursInput"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="40"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="employeeBenefitsStatusInput">Benefits Status</label>
+                      <input
+                        id="employeeBenefitsStatusInput"
+                        type="text"
+                        placeholder="Enrolled, waived, pending, etc."
+                      />
+                      <p
+                        id="employeeBenefitsEligibilityHint"
+                        class="muted"
+                        style="margin: 6px 0 0; font-size: 0.82rem; line-height: 1.45"
+                      >
+                        Eligible for benefits 90 calendar days after hire date. Orbis auto-sets
+                        status to Eligible and logs a payroll handoff when that date is reached.
+                      </p>
+                    </div>
+                    <div class="field">
+                      <label for="employeeHireDateInput">Hire Date</label>
+                      <input id="employeeHireDateInput" type="date" />
+                    </div>
+                    <div class="field employee-termination-date-field" id="employeeTerminationDateField" hidden>
+                      <label for="employeeTerminationDateInput">Termination Date</label>
+                      <input id="employeeTerminationDateInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="employeeNextReviewInput">Next Stay Interview Date</label>
+                      <input id="employeeNextReviewInput" type="date" />
+                      <p class="muted" style="margin: 6px 0 0; font-size: 0.82rem; line-height: 1.45">
+                        Auto-scheduled when you save a stay interview: 6 months after the latest
+                        interview. If that date is a Saturday, it moves to the Friday before; Sunday
+                        moves to the Monday after.
+                      </p>
+                    </div>
+                    <div class="field">
+                      <label for="employeeAnniversaryDateInput">Anniversary Date</label>
+                      <input id="employeeAnniversaryDateInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="employeeTenureBracketInput">Tenure Bracket</label>
+                      <input
+                        id="employeeTenureBracketInput"
+                        type="text"
+                        placeholder="0-6 months, 1-2 years, etc."
+                        autocomplete="section-orbis-admin tenure"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="employeeWorkEmailInput">Work email</label>
+                      <input
+                        id="employeeWorkEmailInput"
+                        type="email"
+                        placeholder="Optional — company address"
+                        autocomplete="section-orbis-admin work-email"
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="employeePersonalEmailInput">Personal email</label>
+                      <input
+                        id="employeePersonalEmailInput"
+                        type="email"
+                        placeholder="Used for PTO portal sign-in if no work email"
+                        autocomplete="section-orbis-admin home-email"
+                      />
+                      <p class="muted" style="margin: 6px 0 0; font-size: 0.82rem; line-height: 1.45">
+                        Hourly and floor employees usually sign in with this address via
+                        <strong>Email me a sign-in link</strong> on the login page.
+                      </p>
+                    </div>
+                    <div class="field">
+                      <label for="employeePhoneInput">Phone</label>
+                      <input
+                        id="employeePhoneInput"
+                        type="tel"
+                        placeholder="Mobile or primary phone"
+                        autocomplete="section-orbis-admin tel"
+                      />
+                    </div>
+                    <div class="field employee-remote-field">
+                      <label class="checkbox-label" for="employeeIsRemoteInput">
+                        <input id="employeeIsRemoteInput" type="checkbox" />
+                        Overseas / remote employee
+                      </label>
+                      <p class="muted" style="margin: 6px 0 0; font-size: 0.82rem; line-height: 1.45">
+                        Excludes this person from the Attendance roll call. Shown as overseas / remote in the
+                        employee profile.
+                      </p>
+                    </div>
+                  </div>
+                  <div class="admin-only hidden" id="payrollHandoffPanel" data-admin-only>
+                    <div class="payroll-handoff-heading">Payroll handoff</div>
+                    <p class="muted payroll-handoff-help">
+                      Log changes you send to external payroll. Saving this employee can auto-create entries when
+                      status, department, title, pay type, or benefits change.
+                    </p>
+                    <div class="payroll-handoff-form">
+                      <div class="field">
+                        <label for="payrollHandoffTypeInput">Change type</label>
+                        <select id="payrollHandoffTypeInput" class="input">
+                          <option value="new_hire">New hire</option>
+                          <option value="termination">Termination</option>
+                          <option value="rate">Pay type / rate</option>
+                          <option value="title">Title</option>
+                          <option value="department">Department</option>
+                          <option value="benefits">Benefits</option>
+                          <option value="status">Status</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div class="field">
+                        <label for="payrollHandoffEffectiveInput">Effective date</label>
+                        <input class="input" id="payrollHandoffEffectiveInput" type="date" />
+                      </div>
+                      <div class="field field--wide">
+                        <label for="payrollHandoffSummaryInput">Summary</label>
+                        <input
+                          class="input"
+                          id="payrollHandoffSummaryInput"
+                          type="text"
+                          placeholder="e.g. Raise to $24/hr effective 6/15"
+                        />
+                      </div>
+                      <div class="field">
+                        <button class="button soft" id="payrollHandoffLogBtn" type="button">
+                          Log for payroll
+                        </button>
+                      </div>
+                    </div>
+                    <div id="payrollHandoffList"></div>
+                  </div>
+                  <div
+                    class="admin-only hidden"
+                    id="employeeInternalMobilitySection"
+                    data-admin-only="true"
+                    style="margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px"
+                  >
+                    <div style="font-weight: 800; margin-bottom: 8px; color: var(--navy)">
+                      Internal mobility
+                    </div>
+                    <p class="muted" style="margin: 0 0 12px; font-size: 0.88rem; line-height: 1.45">
+                      Add this employee to the candidate pipeline for another position without creating a
+                      duplicate roster record.
+                    </p>
+                    <button
+                      class="button soft"
+                      id="addEmployeeAsCandidateBtn"
+                      type="button"
+                      onclick="createCandidateFromEmployee()"
+                    >
+                      Add as Candidate
+                    </button>
+                  </div>
+                  <div class="button-row" style="margin-top: 8px">
+                    <button
+                      class="button primary"
+                      id="saveEmployeeBtn"
+                      type="button"
+                    >
+                      Save Employee
+                    </button>
+                    <button
+                      class="button soft"
+                      id="newEmployeeBtn"
+                      type="button"
+                      onclick="openNewEmployeeForm()"
+                    >
+                      New Employee
+                    </button>
+                    <button
+                      class="button danger"
+                      id="deleteEmployeeBtn"
+                      type="button"
+                      onclick="runDeleteEmployee()"
+                    >
+                      Delete Employee
+                    </button>
+                  </div>
+                  <div
+                    style="margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px"
+                  >
+                    <div style="font-weight: 800; margin-bottom: 10px; color: var(--navy)">
+                      At-Risk Flag
+                    </div>
+                    <div class="field">
+                      <label for="atRiskReasonInput">Reason for Flagging</label>
+                      <textarea
+                        id="atRiskReasonInput"
+                        rows="4"
+                        placeholder="Example: Employee seems disengaged, withdrawn, or showing behavioral changes..."
+                      ></textarea>
+                    </div>
+                    <div class="button-row">
+                      <button id="markAtRiskBtn" class="button warn" type="button">
+                        Mark At-Risk
+                      </button>
+                      <button id="clearAtRiskBtn" class="button soft" type="button">
+                        Remove At-Risk
+                      </button>
+                    </div>
+                    <div class="muted" style="margin-top: 8px">
+                      Use this when something feels off but is not captured in a formal review.
+                    </div>
+                  </div>
+                  <div
+                    style="margin-top: 20px; border-top: 1px solid var(--line); padding-top: 16px"
+                  >
+                    <div style="font-weight: 800; margin-bottom: 10px; color: var(--navy)">
+                      Impact Player Flag
+                    </div>
+                    <div class="field">
+                      <label for="impactPlayerReasonInput">Reason for Recognition</label>
+                      <textarea
+                        id="impactPlayerReasonInput"
+                        rows="4"
+                        placeholder="Example: Consistently goes above and beyond, mentors others, high ownership, strong performance..."
+                      ></textarea>
+                    </div>
+                    <div class="button-row">
+                      <button id="markImpactPlayerBtn" class="button success" type="button">
+                        Mark Impact Player
+                      </button>
+                      <button id="clearImpactPlayerBtn" class="button soft" type="button">
+                        Remove Impact Player
+                      </button>
+                    </div>
+                    <div class="muted" style="margin-top: 8px">
+                      Use this when someone is making a noticeable positive impact that deserves
+                      recognition beyond scores alone.
+                    </div>
+                  </div>
+                  <div class="muted" style="margin-top: 10px">
+                    HR administrators can create, update, and delete employee records. Supervisors can
+                    update employee admin and flags for their direct reports.
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </aside>

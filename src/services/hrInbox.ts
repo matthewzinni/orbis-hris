@@ -37,8 +37,10 @@ import {
   loadEmployees,
   normalizeEmployeeStatus,
 } from '../modules/employees';
-import type { Investigation } from '../types/investigationsTypes';
-import { normalizeInvestigationStatus } from '../types/investigationsTypes';
+import {
+  type Investigation,
+  normalizeInvestigationStatus,
+} from '../types/investigationsTypes';
 import {
   loadPendingPayrollHandoffs,
   payrollChangeTypeLabel,

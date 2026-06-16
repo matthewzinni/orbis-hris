@@ -24,8 +24,8 @@ import {
   recordOperationsIssueEvent,
   renderOperationsIssueEvents,
 } from './operationsIssueEvents';
-import type { OperationsIssue } from '../types/operationsTypes';
 import {
+  type OperationsIssue,
   formatOperationsLabel,
   normalizeOperationsStatus,
   OPERATIONS_CATEGORIES,

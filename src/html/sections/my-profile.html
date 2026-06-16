@@ -1,0 +1,100 @@
+          id="orbisSectionMyProfile"
+          class="orbis-app-section hidden"
+          data-section="myProfileView"
+          aria-hidden="true"
+        >
+          <div class="page employee-portal-page" id="myProfilePage">
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <span class="muted">Your job details and contact information</span>
+              </div>
+            </div>
+            <nav
+              id="mobilePortalQuickLinks"
+              class="orbis-mobile-portal-quicklinks hidden"
+              aria-label="Quick links"
+            ></nav>
+            <div class="card">
+              <div class="card-header">
+                <span id="myProfilePageTitle">My Profile</span>
+              </div>
+              <div class="card-body employee-portal-body">
+                <div class="detail-grid" id="myProfileReadOnlyGrid">
+                  <div class="muted">Loading…</div>
+                </div>
+                <form id="myProfileContactForm" class="employee-portal-form" autocomplete="off">
+                  <h3 class="employee-portal-section-title">Contact info you can update</h3>
+                  <div class="field-grid two-col">
+                    <div class="field">
+                      <label for="myProfilePhoneInput">Mobile / phone</label>
+                      <input class="input" id="myProfilePhoneInput" type="tel" autocomplete="tel" />
+                    </div>
+                    <div class="field">
+                      <label for="myProfilePersonalEmailInput">Personal email</label>
+                      <input
+                        class="input"
+                        id="myProfilePersonalEmailInput"
+                        type="email"
+                        autocomplete="email"
+                      />
+                    </div>
+                  </div>
+                  <p class="muted employee-portal-help">
+                    Job title, department, and supervisor are managed by HR. Update your phone and
+                    personal email here so we can reach you.
+                  </p>
+                  <button class="button primary" id="myProfileSaveBtn" type="button">
+                    Save contact info
+                  </button>
+                </form>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header employee-portal-ec-header">
+                <span>Emergency contacts</span>
+                <button class="button soft" id="myEcAddBtn" type="button">+ Add contact</button>
+              </div>
+              <div class="card-body employee-portal-body">
+                <div class="employee-portal-ec-layout">
+                  <div class="employee-portal-ec-list-wrap">
+                    <div id="myEcList" class="employee-portal-ec-list">
+                      <div class="muted">Loading…</div>
+                    </div>
+                  </div>
+                  <form id="myEcForm" class="employee-portal-form" autocomplete="off">
+                    <div class="field">
+                      <label for="myEcName">Contact name</label>
+                      <input class="input" id="myEcName" type="text" required />
+                    </div>
+                    <div class="field">
+                      <label for="myEcRelationship">Relationship</label>
+                      <input class="input" id="myEcRelationship" type="text" placeholder="Spouse, parent, etc." />
+                    </div>
+                    <div class="field-grid two-col">
+                      <div class="field">
+                        <label for="myEcPhone">Phone</label>
+                        <input class="input" id="myEcPhone" type="tel" />
+                      </div>
+                      <div class="field">
+                        <label for="myEcAltPhone">Alternate phone</label>
+                        <input class="input" id="myEcAltPhone" type="tel" />
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label for="myEcNotes">Notes (optional)</label>
+                      <textarea class="input" id="myEcNotes" rows="2"></textarea>
+                    </div>
+                    <div class="employee-portal-ec-actions">
+                      <button class="button primary" id="myEcSaveBtn" type="button">Save contact</button>
+                      <button class="button danger hidden" id="myEcDeleteBtn" type="button">
+                        Delete
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section

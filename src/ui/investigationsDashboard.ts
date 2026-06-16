@@ -1,6 +1,9 @@
 import { supabaseClient } from '../services/supabaseClient';
-import type { Investigation } from '../types/investigationsTypes';
-import { formatInvestigationLabel, normalizeInvestigationStatus } from '../types/investigationsTypes';
+import {
+  type Investigation,
+  formatInvestigationLabel,
+  normalizeInvestigationStatus,
+} from '../types/investigationsTypes';
 
 function safeGet(id: string): HTMLElement | null {
   if (typeof window.safeGet === 'function') {

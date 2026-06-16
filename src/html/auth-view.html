@@ -1,0 +1,89 @@
+    <div id="authView" class="auth-shell auth-shell--branded">
+      <div class="auth-brand-hero">
+        <img class="orbis-brand-mark" src="/orbis-logo.svg" width="120" height="120" alt="" />
+        <div class="orbis-brand-lockup">
+          <span class="orbis-brand-name">ORBIS</span>
+          <span class="orbis-brand-tagline">BUILD • SOLVE • ELEVATE</span>
+        </div>
+        <p class="orbis-brand-product">HR Intelligence &amp; Operations · BTW Global</p>
+      </div>
+      <div class="auth-card">
+        <form
+          class="auth-body"
+          id="authForm"
+          method="post"
+          action="#"
+          novalidate
+          onsubmit="event.preventDefault(); return false;"
+        >
+          <div class="field">
+            <label for="loginEmail">Email</label>
+            <input
+              id="loginEmail"
+              name="email"
+              type="email"
+              inputmode="email"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              placeholder="you@company.com"
+              autocomplete="username"
+            />
+          </div>
+          <div class="field">
+            <label for="loginPassword">Password</label>
+            <input
+              id="loginPassword"
+              name="password"
+              type="password"
+              placeholder="Password"
+              autocomplete="current-password"
+            />
+          </div>
+          <div id="authRegisterPanel" class="auth-mode-panel hidden">
+            <div class="field">
+              <label for="registerDisplayName">Your name (optional)</label>
+              <input
+                id="registerDisplayName"
+                name="displayName"
+                type="text"
+                placeholder="First and last name"
+                autocomplete="name"
+              />
+            </div>
+            <div class="field">
+              <label for="registerPasswordConfirm">Confirm password</label>
+              <input
+                id="registerPasswordConfirm"
+                name="passwordConfirm"
+                type="password"
+                placeholder="Re-enter password"
+                autocomplete="new-password"
+              />
+            </div>
+          </div>
+          <div class="auth-submit-row">
+            <button class="button primary auth-submit-btn" id="authSubmitBtn" type="submit">
+              Sign in
+            </button>
+          </div>
+          <p class="auth-mode-switch">
+            <button class="auth-mode-link" id="authModeToggle" type="button">
+              Need an account? Create one
+            </button>
+          </p>
+          <div
+            id="loginError"
+            class="login-error hidden"
+            role="alert"
+            aria-live="polite"
+          ></div>
+          <div class="muted" style="margin-top: 14px">
+            New users create an account with email and password. An <strong>admin must approve</strong>
+            your access and choose your level: <strong>user</strong> (your profile + PTO),
+            <strong>supervisor</strong> (direct reports), or <strong>admin</strong> (full HRIS).
+          </div>
+        </form>
+      </div>
+      <p class="orbis-legal-footer">Copyright © 2026 | BTW Global, LLC</p>
+    </div>

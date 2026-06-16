@@ -1,0 +1,281 @@
+        <aside class="drawer hidden" id="investigationDrawer" aria-hidden="true">
+          <div class="drawer-header">
+            <div>
+              <h2 class="drawer-title" id="investigationDrawerTitle">Investigation</h2>
+              <div class="drawer-sub" id="investigationDrawerSub">HR investigation workflow</div>
+            </div>
+            <button class="drawer-close" type="button" onclick="closeInvestigationDrawer()">
+              Close
+            </button>
+          </div>
+          <div class="drawer-body">
+            <div class="tabs drawer-tablist" aria-label="Investigation sections">
+              <button class="tab-btn active" type="button" data-investigation-tab="case">
+                Case
+              </button>
+              <button class="tab-btn" type="button" data-investigation-tab="guidance">
+                AI Guidance
+              </button>
+              <button class="tab-btn" type="button" data-investigation-tab="interviews">
+                Interviews
+              </button>
+              <button class="tab-btn" type="button" data-investigation-tab="evidence">
+                Evidence
+              </button>
+              <button class="tab-btn" type="button" data-investigation-tab="timeline">
+                Timeline
+              </button>
+            </div>
+
+            <div data-investigation-panel="case">
+              <div class="card">
+                <div class="card-header">Case Details</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="invTitleInput">Case Title</label>
+                      <input id="invTitleInput" type="text" placeholder="Short case title" />
+                    </div>
+                    <div class="field">
+                      <label for="invCategoryInput">Category</label>
+                      <select id="invCategoryInput"></select>
+                    </div>
+                    <div class="field">
+                      <label for="invStatusInput">Status</label>
+                      <select id="invStatusInput"></select>
+                    </div>
+                    <div class="field">
+                      <label for="invSeverityInput">Severity</label>
+                      <select id="invSeverityInput"></select>
+                    </div>
+                    <div class="field" style="grid-column: 1 / -1">
+                      <label for="invTargetedEmployeesInput">Targeted Employees</label>
+                      <select id="invTargetedEmployeesInput" multiple size="6"></select>
+                      <div class="muted" style="margin-top: 6px">
+                        Employees the allegation or wrongdoing is against. Hold Ctrl (Windows) or Cmd
+                        (Mac) to select multiple.
+                      </div>
+                    </div>
+                    <div class="field" style="grid-column: 1 / -1">
+                      <label for="invFocusEmployeesInput">Focus</label>
+                      <select id="invFocusEmployeesInput" multiple size="6"></select>
+                      <div class="muted" style="margin-top: 6px">
+                        Hold Ctrl (Windows) or Cmd (Mac) to select multiple employees.
+                      </div>
+                    </div>
+                    <div class="field">
+                      <label for="invOpenedAtInput">Opened Date</label>
+                      <input id="invOpenedAtInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="invTargetDateInput">Target Completion</label>
+                      <input id="invTargetDateInput" type="date" />
+                    </div>
+                    <div class="field">
+                      <label for="invSourceInput">Source of Complaint</label>
+                      <input
+                        id="invSourceInput"
+                        type="text"
+                        placeholder="Hotline, manager report, anonymous, etc."
+                      />
+                    </div>
+                    <div class="field">
+                      <label for="invReportedByInput">Reported By</label>
+                      <select id="invReportedByInput"></select>
+                    </div>
+                    <div class="field">
+                      <span class="field-label">Assigned Investigator</span>
+                      <div id="invInvestigatorDisplay" class="muted">
+                        Matthew Zinni · matthew.zinni@btwglobal.com
+                      </div>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="invAllegationInput">Allegation Summary</label>
+                    <textarea
+                      id="invAllegationInput"
+                      rows="4"
+                      placeholder="What was reported? Include dates and context."
+                    ></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="invWitnessesInput">Witnesses (notes)</label>
+                    <textarea
+                      id="invWitnessesInput"
+                      rows="2"
+                      placeholder="Names or roles of witnesses to interview"
+                    ></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="invConfidentialNotesInput">Confidential Notes</label>
+                    <textarea
+                      id="invConfidentialNotesInput"
+                      rows="3"
+                      placeholder="Internal investigator notes"
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+              <div class="card hidden" id="invClosedFieldsPanel">
+                <div class="card-header">Findings &amp; Outcome</div>
+                <div class="card-body">
+                  <div class="field">
+                    <label for="invFindingsInput">Findings Summary</label>
+                    <textarea id="invFindingsInput" rows="4"></textarea>
+                  </div>
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="invOutcomeInput">Outcome</label>
+                      <select id="invOutcomeInput"></select>
+                    </div>
+                    <div class="field">
+                      <label for="invFollowUpDateInput">Follow-up Date</label>
+                      <input id="invFollowUpDateInput" type="date" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="invRecommendedActionInput">Recommended Action</label>
+                    <textarea id="invRecommendedActionInput" rows="3"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden" data-investigation-panel="guidance" aria-hidden="true">
+              <div class="card">
+                <div class="card-header">Findings, Recommendation &amp; Compliance</div>
+                <div class="card-body">
+                  <div class="investigation-guidance-disclaimer" role="note">
+                    AI-assisted analysis for investigators. Reviews interview notes and case facts to
+                    draft a preliminary finding, recommended outcome, and action — plus federal /
+                    North Carolina checkpoints when discipline may apply.
+                    <strong>Not legal advice</strong> — have employment counsel review final
+                    decisions.
+                  </div>
+                  <div class="button-row" style="margin: 12px 0">
+                    <button
+                      class="button soft"
+                      id="generateInvestigationGuidanceBtn"
+                      type="button"
+                    >
+                      Generate AI guidance
+                    </button>
+                  </div>
+                  <div class="field">
+                    <label for="invAiGuidanceInput">HR guidance notes</label>
+                    <textarea
+                      id="invAiGuidanceInput"
+                      rows="16"
+                      placeholder="Click Generate AI guidance to analyze interview notes and draft a preliminary finding, recommended outcome, and next steps. Edit before saving."
+                    ></textarea>
+                    <p class="muted" style="margin: 8px 0 0; font-size: 0.82rem">
+                      Uses the same OpenAI setup as Stay Interview summaries (Supabase Edge
+                      Function). Saves with the case when you click Save Investigation.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden" data-investigation-panel="interviews" aria-hidden="true">
+              <div class="card">
+                <div class="card-header">Log Interview</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="invInterviewTypeInput">Interview Type</label>
+                      <select id="invInterviewTypeInput"></select>
+                    </div>
+                    <div class="field">
+                      <label for="invInterviewDateInput">Interview Date</label>
+                      <input id="invInterviewDateInput" type="date" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="invInterviewNotesInput">Interview Notes</label>
+                    <textarea id="invInterviewNotesInput" rows="5"></textarea>
+                  </div>
+                  <button class="button soft" id="addInvestigationInterviewBtn" type="button">
+                    Add Interview
+                  </button>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Interview History</div>
+                <div class="card-body">
+                  <div id="investigationInterviewsList" class="history-list">
+                    <div class="empty">Save the case to log interviews.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden" data-investigation-panel="evidence" aria-hidden="true">
+              <div class="card">
+                <div class="card-header">Upload Evidence</div>
+                <div class="card-body">
+                  <div class="field">
+                    <label for="invEvidenceUploadBtn">File</label>
+                    <div class="button-row file-upload-row">
+                      <button class="button soft" id="invEvidenceUploadBtn" type="button">
+                        Choose File
+                      </button>
+                      <span class="muted file-upload-name" id="invEvidenceFileName"
+                        >No file chosen</span
+                      >
+                    </div>
+                    <input
+                      id="invEvidenceUploadInput"
+                      type="file"
+                      accept="image/*,.pdf,.txt,.eml"
+                      hidden
+                    />
+                  </div>
+                  <div class="two-col" style="margin-top: 12px">
+                    <div class="field">
+                      <label for="invEvidenceLinkTitleInput">Link Title</label>
+                      <input id="invEvidenceLinkTitleInput" type="text" />
+                    </div>
+                    <div class="field">
+                      <label for="invEvidenceLinkUrlInput">URL</label>
+                      <input id="invEvidenceLinkUrlInput" type="url" placeholder="https://..." />
+                    </div>
+                  </div>
+                  <button class="button soft" id="addInvestigationEvidenceLinkBtn" type="button">
+                    Add Link
+                  </button>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Evidence Locker</div>
+                <div class="card-body">
+                  <div id="investigationEvidenceList" class="history-list">
+                    <div class="empty">Save the case to attach evidence.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hidden" data-investigation-panel="timeline" aria-hidden="true">
+              <div class="card">
+                <div class="card-header">Investigation Timeline</div>
+                <div class="card-body">
+                  <div id="investigationTimelineList" class="history-list">
+                    <div class="empty">Timeline will populate as you work the case.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="drawer-actions drawer-footer">
+            <button class="button primary" id="saveInvestigationBtn" type="button">
+              Save Case
+            </button>
+            <button class="button soft" id="cancelInvestigationBtn" type="button">
+              Cancel
+            </button>
+            <button class="button danger hidden" id="deleteInvestigationBtn" type="button">
+              Delete Case
+            </button>
+          </div>
+        </aside>

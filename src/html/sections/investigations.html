@@ -1,0 +1,151 @@
+          id="orbisSectionInvestigations"
+          class="orbis-app-section hidden admin-only"
+          data-section="investigationsView"
+          aria-hidden="true"
+          data-investigations-access
+          data-admin-only
+        >
+        <section id="investigationsCenterTop" class="page" data-investigations-access>
+          <div class="page-header">
+            <div>
+              <h1>HR Investigations</h1>
+              <p>
+                Conduct confidential workplace investigations with structured interviews,
+                evidence, findings, and audit trail.
+              </p>
+            </div>
+            <button class="button soft" id="refreshInvestigationsBtn" type="button">
+              Refresh
+            </button>
+            <button class="button soft" id="exportInvestigationsBtn" type="button">
+              Export CSV
+            </button>
+            <button class="button primary" id="newInvestigationBtn" type="button">
+              ＋ Open Case
+            </button>
+          </div>
+
+          <div class="kpi-grid" id="investigationsKpiGrid">
+            <div class="kpi-card alert" id="cardInvOpenCases">
+              <div class="kpi-label">Open Cases</div>
+              <div class="kpi-value" id="kInvOpenCases">—</div>
+              <div class="kpi-sub">Active investigations</div>
+            </div>
+            <div class="kpi-card alert" id="cardInvHighSeverity">
+              <div class="kpi-label">High Severity</div>
+              <div class="kpi-value" id="kInvHighSeverity">—</div>
+              <div class="kpi-sub">High or critical open cases</div>
+            </div>
+            <div class="kpi-card warn" id="cardInvOverdue">
+              <div class="kpi-label">Overdue</div>
+              <div class="kpi-value" id="kInvOverdue">—</div>
+              <div class="kpi-sub">Past target completion date</div>
+            </div>
+            <div class="kpi-card good" id="cardInvClosedMonth">
+              <div class="kpi-label">Closed This Month</div>
+              <div class="kpi-value" id="kInvClosedMonth">—</div>
+              <div class="kpi-sub">Cases closed in current month</div>
+            </div>
+            <div class="kpi-card" id="cardInvAvgDaysOpen">
+              <div class="kpi-label">Avg Days Open</div>
+              <div class="kpi-value" id="kInvAvgDaysOpen">—</div>
+              <div class="kpi-sub">Open cases only</div>
+            </div>
+          </div>
+
+          <div class="layout">
+            <div class="stack">
+              <div
+                class="card orbis-disclosure-card is-expanded"
+                id="investigationsCasesCard"
+                data-orbis-disclosure
+                data-orbis-disclosure-start="open"
+              >
+                <div class="card-header orbis-disclosure-header">
+                  <span>Investigation Cases</span>
+                  <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+                    <span class="muted" id="investigationsTableCount">Loading cases...</span>
+                    <button
+                      type="button"
+                      class="orbis-disclosure-toggle"
+                      data-orbis-disclosure-toggle
+                      aria-expanded="true"
+                    >
+                      Hide table
+                    </button>
+                  </div>
+                </div>
+                <div class="card-body">
+                  <p class="muted orbis-disclosure-summary" style="margin: 0 0 4px">
+                    Search, filter, and open investigation cases. Use the table for case actions.
+                  </p>
+                  <div class="orbis-disclosure-panel" data-orbis-disclosure-panel>
+                  <div class="toolbar" style="margin-bottom: 12px">
+                    <div class="toolbar-left">
+                      <input
+                        class="input"
+                        id="invSearchInput"
+                        type="search"
+                        placeholder="Search cases..."
+                      />
+                      <select class="select" id="invStatusFilter">
+                        <option value="">All Statuses</option>
+                      </select>
+                      <select class="select" id="invCategoryFilter">
+                        <option value="">All Categories</option>
+                      </select>
+                      <select class="select" id="invSeverityFilter">
+                        <option value="">All Severities</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div id="mobileInvestigationsList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                  <div class="table-wrap orbis-desktop-module-table">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Case #</th>
+                          <th>Title</th>
+                          <th>Targeted Employee(s)</th>
+                          <th>Category</th>
+                          <th>Severity</th>
+                          <th>Status</th>
+                          <th>Investigator</th>
+                          <th>Opened</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="investigationsTableBody">
+                        <tr>
+                          <td colspan="9" class="empty">Loading investigations...</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="stack">
+              <div class="card">
+                <div class="card-header">Open Cases by Status</div>
+                <div class="card-body">
+                  <div id="investigationsStatusBreakdown" class="history-list">
+                    <div class="empty">Loading status breakdown...</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">Open Cases by Category</div>
+                <div class="card-body">
+                  <div id="investigationsCategoryBreakdown" class="history-list">
+                    <div class="empty">Loading category breakdown...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        </section>
+
+        <section

@@ -1,0 +1,58 @@
+          id="orbisSectionOrgChart"
+          class="orbis-app-section hidden"
+          data-section="orgChartView"
+          aria-hidden="true"
+        >
+          <div class="page">
+            <div class="card" id="orgChartPage">
+              <div class="card-header">
+                <span>Organization Chart</span>
+                <span class="muted org-chart-summary" id="orgChartSummary"></span>
+              </div>
+              <div class="card-body">
+                <div class="org-chart-toolbar">
+                  <div class="org-chart-toolbar-left">
+                    <label class="checkbox-label">
+                      <input type="checkbox" id="orgChartActiveOnly" checked />
+                      Active employees only
+                    </label>
+                    <span class="muted" style="font-size: 0.85rem">
+                      Built from each employee’s Supervisor field on the roster.
+                    </span>
+                  </div>
+                  <div class="toolbar-right">
+                    <button class="button soft" type="button" id="orgChartRefreshBtn">Refresh</button>
+                    <button class="button soft" type="button" id="orgChartPrintBtn">Print</button>
+                  </div>
+                </div>
+                <div id="mobileOrgChartDrill" class="orbis-mobile-orgchart-drill hidden" aria-live="polite"></div>
+                <div id="orgChartTree" class="org-chart-tree" role="tree" aria-label="Reporting hierarchy">
+                  <p class="empty">Loading org chart…</p>
+                </div>
+              </div>
+            </div>
+            <div class="card hidden" id="orgChartUnlinkedCard">
+              <div class="card-header">Supervisor not in roster</div>
+              <div class="card-body">
+                <p class="muted" style="margin-bottom: 12px">
+                  These employees have a supervisor on file who does not match anyone in your current
+                  view. They still appear in the tree as top-level nodes.
+                </p>
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Supervisor on file</th>
+                      </tr>
+                    </thead>
+                    <tbody id="orgChartUnlinkedBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section

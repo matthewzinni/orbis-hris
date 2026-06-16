@@ -1,0 +1,127 @@
+          id="orbisSectionSettings"
+          class="orbis-app-section hidden admin-only"
+          data-section="settingsView"
+          aria-hidden="true"
+          data-admin-only
+        >
+          <div class="page" id="settingsPage">
+            <div class="card hidden" id="settingsAdminGate">
+              <div class="card-header">Admin access required</div>
+              <div class="card-body">
+                <p class="muted" style="margin: 0">
+                  Settings and system administration are limited to Orbis admin users.
+                </p>
+              </div>
+            </div>
+            <div id="settingsAdminContent">
+              <nav id="mobileSettingsNav" class="orbis-mobile-settings-nav hidden" aria-label="Settings sections"></nav>
+              <div class="toolbar settings-toolbar">
+                <div class="toolbar-left">
+                  <span class="muted">User access and recent audit activity</span>
+                </div>
+                <div class="toolbar-right">
+                  <button class="button primary" id="settingsAddUserBtn" type="button">Add user</button>
+                  <button class="button soft" id="settingsRefreshBtn" type="button">Refresh</button>
+                </div>
+              </div>
+              <div class="layout layout-settings">
+                <div class="stack">
+                  <div class="card" id="settingsPendingApprovalsCard">
+                    <div class="card-header">
+                      <span>Pending account requests</span>
+                      <span class="muted" id="settingsPendingApprovalsCount">Loading...</span>
+                    </div>
+                    <div class="card-body">
+                      <p class="muted" style="margin: 0 0 12px">
+                        Employees already on the roster sign up with the same personal or work email on file
+                        (e.g. Ryan Bird uses <strong>r.tbird10@gmail.com</strong> → links to <strong>BTW2105</strong>).
+                        You choose access: <strong>user</strong> (only their PTO),
+                        <strong>supervisor</strong> (direct reports), or <strong>admin</strong> (everything).
+                      </p>
+                      <div
+                        id="settingsPendingApprovalForm"
+                        class="settings-pending-approval-form hidden"
+                        hidden
+                      ></div>
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Email</th>
+                              <th>Name</th>
+                              <th>Linked employee</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody id="settingsPendingApprovalsBody">
+                            <tr>
+                              <td colspan="4" class="empty">Loading pending requests...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card" id="settingsUserAccessCard">
+                    <div class="card-header">
+                      <span>Approved user access</span>
+                      <span class="muted" id="settingsUserAccessCount">Loading...</span>
+                    </div>
+                    <div class="card-body">
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Email</th>
+                              <th>Display name</th>
+                              <th>Role</th>
+                              <th>Status</th>
+                              <th>PTO employee ID</th>
+                              <th title="Manager on the employee roster record">Supervisor</th>
+                              <th title="Supervisor role only: BTW ids of active direct reports from roster">Team IDs</th>
+                              <th>Can delete</th>
+                              <th>Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody id="settingsUserAccessBody">
+                            <tr>
+                              <td colspan="9" class="empty">Loading user access...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="stack">
+                  <div class="card" id="settingsAuditLogCard">
+                    <div class="card-header">
+                      <span>Recent audit log</span>
+                      <span class="muted" id="settingsAuditLogCount">Loading...</span>
+                    </div>
+                    <div class="card-body">
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Employee</th>
+                              <th>Action</th>
+                              <th>Summary</th>
+                              <th>Changed by</th>
+                              <th>Changed at</th>
+                            </tr>
+                          </thead>
+                          <tbody id="settingsAuditLogBody">
+                            <tr>
+                              <td colspan="5" class="empty">Loading audit log...</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>

@@ -1,0 +1,462 @@
+        <section
+          id="orbisSectionDashboard"
+          class="orbis-app-section active"
+          data-section="dashboardView"
+          aria-hidden="false"
+        >
+          <div class="page" id="dashboardTop">
+            <div class="card hidden manager-home-card" id="managerHomeCard" data-supervisor-dashboard-only>
+              <div class="card-header">
+                <span>Manager Home</span>
+                <div class="manager-home-header-actions">
+                  <button class="button soft sm" id="managerHomeAttendanceBtn" type="button">
+                    Team attendance
+                  </button>
+                  <button class="button soft sm" id="managerHomeRosterBtn" type="button">
+                    Full roster
+                  </button>
+                  <button class="button soft sm" id="managerHomeRefreshBtn" type="button">Refresh</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <p class="muted manager-home-summary" id="managerHomeSummary">Loading your team…</p>
+                <div class="manager-home-metrics">
+                  <div class="manager-home-metric">
+                    <div class="manager-home-metric-value" id="managerHomeMetricTeamValue">—</div>
+                    <div class="manager-home-metric-label" id="managerHomeMetricTeamLabel">Team members</div>
+                  </div>
+                  <div class="manager-home-metric">
+                    <div class="manager-home-metric-value" id="managerHomeMetricOutValue">—</div>
+                    <div class="manager-home-metric-label" id="managerHomeMetricOutLabel">Out today</div>
+                  </div>
+                  <div class="manager-home-metric">
+                    <div class="manager-home-metric-value" id="managerHomeMetricStayValue">—</div>
+                    <div class="manager-home-metric-label" id="managerHomeMetricStayLabel">Stay interviews overdue</div>
+                  </div>
+                  <div class="manager-home-metric">
+                    <div class="manager-home-metric-value" id="managerHomeMetricLeaveValue">—</div>
+                    <div class="manager-home-metric-label" id="managerHomeMetricLeaveLabel">Pending leave</div>
+                  </div>
+                </div>
+                <div class="manager-home-charts" id="managerHomeCharts" aria-label="Team charts"></div>
+                <div class="manager-home-grid">
+                  <section class="manager-home-panel">
+                    <h3 class="manager-home-panel-title">Needs your attention</h3>
+                    <div class="manager-home-attention-list" id="managerHomeAttentionList">
+                      <div class="muted">Loading…</div>
+                    </div>
+                  </section>
+                  <section class="manager-home-panel">
+                    <h3 class="manager-home-panel-title">Out today</h3>
+                    <div class="manager-home-out-list" id="managerHomeOutTodayList">
+                      <div class="muted">Loading…</div>
+                    </div>
+                  </section>
+                </div>
+                <section class="manager-home-panel">
+                  <h3 class="manager-home-panel-title">Team roster</h3>
+                  <div class="mini-table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Employee</th>
+                          <th>Department</th>
+                          <th>Position</th>
+                          <th>Status</th>
+                          <th>Stay interview</th>
+                        </tr>
+                      </thead>
+                      <tbody id="managerHomeRosterBody">
+                        <tr>
+                          <td colspan="5" class="empty">Loading team…</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              </div>
+            </div>
+            <div id="dashboardLegacyKpiGrid">
+            <div class="kpi-grid dashboard-kpi-grid">
+          <div class="kpi-card" id="cardActiveHC">
+            <div class="kpi-label">Active Headcount</div>
+            <div class="kpi-value" id="kActiveHC">—</div>
+            <div class="kpi-sub">Live workforce snapshot</div>
+          </div>
+          <div class="kpi-card good" id="cardInHouseFte">
+            <div class="kpi-label" style="display: flex; align-items: center; gap: 6px">
+              In-House FTE
+              <span
+                class="info-icon"
+                id="kInHouseFteInfo"
+                title="Active employees on payroll in house: excludes contract, part-time, overseas/remote, and Brent/Trent Wynne. Used to track the 50 FTE insurance threshold."
+                style="cursor: help; font-size: 0.8rem; color: var(--muted)"
+                >ⓘ</span
+              >
+            </div>
+            <div class="kpi-value" id="kInHouseFte">—</div>
+            <div class="kpi-sub" id="kInHouseFteSub">Full-time in-house headcount for insurance planning</div>
+          </div>
+          <div class="kpi-card good" id="cardDepartments">
+            <div class="kpi-label">Departments</div>
+            <div class="kpi-value" id="kDepartments">—</div>
+            <div class="kpi-sub">Operational structure coverage</div>
+          </div>
+          <div class="kpi-card alert" id="cardTurnoverRisk">
+            <div class="kpi-label" style="display: flex; align-items: center; gap: 6px">
+              Turnover Risk
+              <span
+                class="info-icon"
+                title="Includes everyone flagged at-risk (low review, manual HR flag, or open discipline), plus operations load and early tenure. Investigations and overdue stay interviews do not affect this score."
+                style="cursor: help; font-size: 0.8rem; color: var(--muted)"
+                >ⓘ</span
+              >
+            </div>
+            <div class="kpi-value" id="kTurnoverRisk">—</div>
+            <div class="kpi-sub" id="kTurnoverRiskSub">Weighted early-tenure retention risk</div>
+          </div>
+          <div class="kpi-card warn" id="cardTurnover">
+            <div class="kpi-label">Turnover Rate</div>
+            <div class="kpi-value" id="kTurnover">0.0%</div>
+            <div class="kpi-sub" id="kTurnoverSubtext">
+              Terminated employees retained for turnover tracking
+            </div>
+          </div>
+          <div class="kpi-card warn" id="cardNewHireTurnover">
+            <div class="kpi-label">New Hire Turnover</div>
+            <div class="kpi-value" id="kNewHireTurnover">0.0%</div>
+            <div class="kpi-sub" id="kNewHireTurnoverSubtext">First 90 days</div>
+          </div>
+          <div
+            class="kpi-card alert"
+            id="cardAtRiskEmployees"
+          >
+            <div class="kpi-label">At-Risk Employees</div>
+            <div class="kpi-value" id="kAtRiskEmployees">—</div>
+            <div class="kpi-sub" id="kAtRiskEmployeesSub">
+              Flagged from low review scores, manual HR notes, or severe open discipline (final warning+)
+            </div>
+          </div>
+          <div class="kpi-card warn" id="cardOnLeave">
+            <div class="kpi-label">Employees on Leave</div>
+            <div class="kpi-value" id="kOnLeave">—</div>
+            <div class="kpi-sub">Employees currently in leave status</div>
+          </div>
+          <div class="kpi-card alert" id="cardOpenDiscipline">
+            <div class="kpi-label">Open Discipline Cases</div>
+            <div class="kpi-value" id="kOpenDiscipline">—</div>
+            <div class="kpi-sub">Cases requiring HR follow-up</div>
+          </div>
+          <div class="kpi-card warn" id="cardReviewsDue">
+            <div class="kpi-label" style="display: flex; align-items: center; gap: 6px">
+              Stay Interviews Due
+              <span
+                id="kReviewsDueInfo"
+                class="info-icon"
+                title="Counts active employees whose next stay interview date is today or earlier."
+                style="cursor: help; font-size: 0.8rem; color: var(--muted)"
+                >ⓘ</span
+              >
+            </div>
+            <div class="kpi-value" id="kReviewsDue">—</div>
+            <div class="kpi-sub">Active employees with overdue stay interviews</div>
+          </div>
+          <div class="kpi-card warn" id="cardPerformanceReviewsDue">
+            <div class="kpi-label" style="display: flex; align-items: center; gap: 6px">
+              Performance Reviews Due
+              <span
+                id="kPerformanceReviewsDueInfo"
+                class="info-icon"
+                title="90-day and annual performance reviews overdue or due within 7 days."
+                style="cursor: help; font-size: 0.8rem; color: var(--muted)"
+                >ⓘ</span
+              >
+            </div>
+            <div class="kpi-value" id="kPerformanceReviewsDue">—</div>
+            <div class="kpi-sub" id="kPerformanceReviewsDueSub">
+              90-day and annual reviews overdue or due soon
+            </div>
+          </div>
+          <div class="kpi-card good" id="cardImpactPlayers">
+            <div class="kpi-label">Impact Players</div>
+            <div class="kpi-value" id="kImpactPlayers">—</div>
+            <div class="kpi-sub">
+              High-performing employees based on recent reviews and recognition
+            </div>
+          </div>
+        </div>
+            </div>
+            <div
+              class="card dashboard-charts-card"
+              id="dashboardChartsCard"
+              data-supervisor-dashboard-hide="true"
+            >
+              <div class="card-header">Workforce visuals</div>
+              <div class="card-body">
+                <div class="dashboard-charts-grid" id="dashboardChartsGrid">
+                  <div class="muted">Loading charts…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card dashboard-quick-links" id="dashboardQuickLinks" data-supervisor-dashboard-hide="true">
+              <div class="card-header">Quick Links</div>
+              <div class="card-body">
+                <div class="dashboard-quick-links-grid">
+                  <button class="button soft" type="button" data-nav-view="employeesView">
+                    Employee Roster
+                  </button>
+                  <button class="button soft" type="button" data-nav-view="orgChartView">
+                    Org Chart
+                  </button>
+                  <button class="button soft" type="button" data-nav-view="candidatesView">
+                    Candidate Pipeline
+                  </button>
+                  <button
+                    class="button soft"
+                    id="addCandidateBtn"
+                    type="button"
+                    onclick="openNewCandidateForm()"
+                  >
+                    ＋ Add Candidate
+                  </button>
+                  <button class="button soft" type="button" data-nav-view="documentsView">
+                    Document Library
+                  </button>
+                  <button
+                    class="button soft hidden"
+                    type="button"
+                    data-nav-view="myTasksView"
+                    data-personal-portal-link
+                  >
+                    My Tasks &amp; Handbook
+                  </button>
+                  <button
+                    class="button soft hidden"
+                    type="button"
+                    data-nav-view="myProfileView"
+                    data-personal-portal-link
+                  >
+                    My Profile
+                  </button>
+                  <button
+                    class="button soft hidden"
+                    type="button"
+                    data-nav-view="myDirectoryView"
+                    data-personal-portal-link
+                  >
+                    Directory
+                  </button>
+                  <button
+                    class="button soft hidden"
+                    type="button"
+                    data-nav-view="myTimeOffView"
+                    data-personal-portal-link
+                  >
+                    My Time Off
+                  </button>
+                  <button class="button soft" type="button" data-nav-view="operationsView"
+                    data-operations-access
+                  >
+                    Operations Center
+                  </button>
+                  <button
+                    class="button soft admin-only hidden"
+                    type="button"
+                    data-nav-view="investigationsView"
+                    data-investigations-access
+                    data-admin-only
+                  >
+                    Investigations
+                  </button>
+                  <button
+                    class="button soft admin-only hidden"
+                    type="button"
+                    data-nav-view="reportsView"
+                    data-admin-only
+                  >
+                    Reports
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="card hidden" id="hrInboxCard" data-hr-inbox-access data-supervisor-dashboard-hide="true">
+              <div class="card-header hr-inbox-header">
+                <div>
+                  <span>HR Inbox</span>
+                  <span class="hr-inbox-overdue-badge hidden" id="hrInboxOverdueBadge" aria-hidden="true"></span>
+                </div>
+                <div class="hr-inbox-header-actions">
+                  <div class="hr-inbox-filters" role="group" aria-label="Filter inbox">
+                    <button
+                      type="button"
+                      class="hr-inbox-filter-btn active"
+                      data-hr-inbox-filter="all"
+                      aria-pressed="true"
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      class="hr-inbox-filter-btn"
+                      data-hr-inbox-filter="overdue"
+                      aria-pressed="false"
+                    >
+                      Overdue
+                    </button>
+                    <button
+                      type="button"
+                      class="hr-inbox-filter-btn"
+                      data-hr-inbox-filter="due_soon"
+                      aria-pressed="false"
+                    >
+                      This week
+                    </button>
+                  </div>
+                  <button class="button soft" id="hrInboxRefreshBtn" type="button">Refresh</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <p class="muted hr-inbox-summary" id="hrInboxSummary">Loading inbox…</p>
+                <div class="hr-inbox-list" id="hrInboxList" role="list">
+                  <div class="hr-inbox-empty muted">Loading inbox…</div>
+                </div>
+              </div>
+            </div>
+            <div class="card hidden" id="hrInboxOutTodayCard" data-leave-access data-supervisor-dashboard-hide="true">
+              <div class="card-header">Out today</div>
+              <div class="card-body">
+                <p class="muted" style="margin: 0 0 8px; font-size: 0.82rem">
+                  Approved time off covering today.
+                </p>
+                <div class="hr-inbox-out-today-list" id="hrInboxOutTodayList">
+                  <div class="muted">Loading…</div>
+                </div>
+              </div>
+            </div>
+        <div class="layout layout-dashboard-overview" id="dashboardLegacyOverview" data-supervisor-dashboard-hide="true">
+          <div class="stack">
+            <div class="card">
+              <div class="card-header">Leadership Snapshot</div>
+              <div class="card-body">
+                <div class="mini-table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Department</th>
+                        <th>Headcount</th>
+                      </tr>
+                    </thead>
+                    <tbody id="deptSummaryBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div
+              class="card orbis-disclosure-card is-expanded"
+              id="reviewDashboardCard"
+              data-orbis-disclosure
+              data-orbis-disclosure-start="open"
+            >
+              <div class="card-header orbis-disclosure-header">
+                <span>Stay Interview Dashboard</span>
+                <button
+                  type="button"
+                  class="orbis-disclosure-toggle"
+                  data-orbis-disclosure-toggle
+                  aria-expanded="true"
+                >
+                  Hide details
+                </button>
+              </div>
+              <div class="card-body">
+                <div class="orbis-disclosure-summary">
+                <div class="detail-grid" id="reviewDashboardSummary" style="margin-bottom: 0">
+                  <div class="detail-card">
+                    <div class="detail-label">Overdue Interviews</div>
+                    <div class="detail-value" id="reviewDashboardOverdue" data-stay-interview-metric="overdue">—</div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-label">Due in 30 Days</div>
+                    <div class="detail-value" id="reviewDashboardDueSoon" data-stay-interview-metric="due-soon">—</div>
+                  </div>
+                  <div class="detail-card">
+                    <div class="detail-label">Completed in 30 Days</div>
+                    <div class="detail-value" id="reviewDashboardCompleted" data-stay-interview-metric="completed">—</div>
+                  </div>
+                </div>
+                </div>
+                <div class="orbis-disclosure-panel" data-orbis-disclosure-panel>
+                <div id="mobileStayInterviewList" class="orbis-mobile-module-list hidden" aria-live="polite" style="margin-top: 16px"></div>
+                <div class="mini-table-wrap orbis-desktop-module-table" style="margin-top: 16px">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Department</th>
+                        <th>Next Stay Interview</th>
+                        <th>Last Stay Interview</th>
+                        <th>Interview Type</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="reviewDashboardBody">
+                      <tr>
+                        <td colspan="6" class="empty">Loading stay interview dashboard...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">Executive Insight</div>
+              <div class="card-body">
+                <div id="executiveInsight" class="history-list">
+                  <div class="history-item">
+                    <div class="history-body">Loading executive insight...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header">At-Risk Employees</div>
+              <div class="card-body">
+                <div id="riskEmployees" class="history-list">
+                  <div class="empty">Loading at-risk employees...</div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="card orbis-disclosure-card"
+              data-orbis-disclosure
+              data-orbis-disclosure-start="collapsed"
+            >
+              <div class="card-header orbis-disclosure-header">
+                <span>Impact Players</span>
+                <button
+                  type="button"
+                  class="orbis-disclosure-toggle"
+                  data-orbis-disclosure-toggle
+                  aria-expanded="false"
+                >
+                  Show details
+                </button>
+              </div>
+              <div class="card-body">
+                <p class="muted orbis-disclosure-summary" style="margin: 0">
+                  High performers from reviews and recognition — expand for names.
+                </p>
+                <div class="orbis-disclosure-panel" data-orbis-disclosure-panel hidden>
+                <div id="impactPlayers" class="history-list" style="margin-top: 12px">
+                  <div class="empty">Loading impact players...</div>
+                </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+          </div>
+        </section>
+
+        <section
