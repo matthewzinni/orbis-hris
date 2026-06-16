@@ -13,6 +13,7 @@ export {
   isAdminUser,
   isJanusUser,
   isJanusReadonlyUser,
+  hasJanusAccessGrant,
   isSupervisorUser,
   isEmployeeUser,
   isPortalUser,

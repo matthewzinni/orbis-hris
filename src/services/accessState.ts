@@ -68,6 +68,10 @@ export function isJanusReadonlyUser(): boolean {
   return String(currentUserRole || '').toLowerCase() === 'janus_readonly';
 }
 
+export function hasJanusAccessGrant(): boolean {
+  return Boolean(currentUserAccess?.janus_access);
+}
+
 export function isSupervisorUser(): boolean {
   return String(currentUserRole || '').toLowerCase() === 'supervisor';
 }

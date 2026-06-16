@@ -118,6 +118,7 @@ function readRowFromForm(root: ParentNode, originalEmail: string): UserAccessRow
   const supervisorInput = root.querySelector<HTMLInputElement>('[data-field="supervisor_name"]');
   const scopedIdsInput = root.querySelector<HTMLTextAreaElement>('[data-field="supervised_employee_ids"]');
   const canDeleteInput = root.querySelector<HTMLInputElement>('[data-field="can_delete"]');
+  const janusAccessInput = root.querySelector<HTMLInputElement>('[data-field="janus_access"]');
   const linkedIdInput = root.querySelector<HTMLInputElement>('[data-field="linked_employee_id"]');
 
   const email = normalizeUserEmail(emailInput?.value || originalEmail);
@@ -143,6 +144,7 @@ function readRowFromForm(root: ParentNode, originalEmail: string): UserAccessRow
     supervised_employee_ids: supervisedEmployeeIds,
     linked_employee_id: String(linkedIdInput?.value || '').trim() || null,
     can_delete: Boolean(canDeleteInput?.checked),
+    janus_access: Boolean(janusAccessInput?.checked),
     approval_status: 'approved',
   };
 }
@@ -198,6 +200,7 @@ function renderUserAccessViewRow(row: UserAccessRow): string {
       <td>${esc(row.linked_employee_id || '—')}</td>
       <td>${esc(fileSupervisorLabel(row))}</td>
       <td class="muted" style="max-width: 240px; font-size: 0.85rem; word-break: break-all" title="Supervisor role: direct-report BTW ids from roster">${esc(teamIdsLabel(row, 120))}</td>
+      <td>${row.janus_access ? 'Yes' : '—'}</td>
       <td>${row.can_delete ? 'Yes' : 'No'}</td>
       <td>
         <div class="settings-user-actions table-actions">
@@ -379,6 +382,12 @@ function renderPendingApprovalForm(row: UserAccessRow): void {
       </div>
       <div class="field">
         <label class="settings-delete-check">
+          <input type="checkbox" data-field="janus_access"${row.janus_access ? ' checked' : ''} />
+          Janus CRM access (view and edit)
+        </label>
+      </div>
+      <div class="field">
+        <label class="settings-delete-check">
           <input type="checkbox" data-field="can_delete"${row.can_delete ? ' checked' : ''} />
           Allow delete
         </label>
@@ -437,6 +446,12 @@ function renderUserAccessEditRow(row: UserAccessRow, isNew: boolean): string {
       </td>
       <td>${renderSupervisorEditCell(row)}</td>
       <td>${renderSupervisorTeamEditCell(row)}</td>
+      <td>
+        <label class="settings-delete-check" title="View and edit Janus CRM without changing primary role">
+          <input type="checkbox" data-field="janus_access"${row.janus_access ? ' checked' : ''} />
+          Janus
+        </label>
+      </td>
       <td>
         <label class="settings-delete-check">
           <input type="checkbox" data-field="can_delete"${row.can_delete ? ' checked' : ''} />
@@ -500,7 +515,7 @@ function renderUserAccessTableBody(): void {
 
   if (!parts.length) {
     body.innerHTML =
-      '<tr><td colspan="9" class="empty">No approved users yet. Use Add user or approve pending requests.</td></tr>';
+      '<tr><td colspan="10" class="empty">No approved users yet. Use Add user or approve pending requests.</td></tr>';
     return;
   }
 
@@ -672,6 +687,7 @@ async function saveUserAccessRow(
           supervised_employee_ids: payload.supervised_employee_ids,
           linked_employee_id: payload.linked_employee_id,
           can_delete: payload.can_delete,
+          janus_access: Boolean(payload.janus_access),
           approval_status: 'approved',
         })
         .eq('email', lookupEmail)
@@ -997,7 +1013,7 @@ async function loadUserAccessTable(): Promise<void> {
   if (!body) return;
 
   body.innerHTML =
-    '<tr><td colspan="9" class="empty">Loading user access...</td></tr>';
+    '<tr><td colspan="10" class="empty">Loading user access...</td></tr>';
 
   const pendingBody = document.getElementById('settingsPendingApprovalsBody');
   if (pendingBody) {
@@ -1017,7 +1033,7 @@ async function loadUserAccessTable(): Promise<void> {
   if (error) {
     console.error('[Settings] user_access load failed:', error);
     body.innerHTML =
-      '<tr><td colspan="9" class="empty">Could not load user access records.</td></tr>';
+      '<tr><td colspan="10" class="empty">Could not load user access records.</td></tr>';
     if (countEl) countEl.textContent = 'Load failed';
     if (pendingBody) {
       pendingBody.innerHTML =

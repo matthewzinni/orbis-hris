@@ -11,6 +11,7 @@ import {
   getCurrentUserAccess,
   getCurrentUserRole,
   getLinkedEmployeeId,
+  hasJanusAccessGrant,
   isAdminUser,
   isEmployeeUser,
   isJanusReadonlyUser,
@@ -278,11 +279,11 @@ export async function getUserRole(): Promise<string | null> {
 }
 
 export function canAccessJanus(): boolean {
-  return isAdminUser() || isJanusUser() || isJanusReadonlyUser();
+  return isAdminUser() || isJanusUser() || isJanusReadonlyUser() || hasJanusAccessGrant();
 }
 
 export function canEditJanus(): boolean {
-  return isAdminUser() || isJanusUser();
+  return isAdminUser() || isJanusUser() || hasJanusAccessGrant();
 }
 
 export function canManageEmployeeRecords(): boolean {

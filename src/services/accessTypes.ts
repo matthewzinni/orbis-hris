@@ -8,6 +8,8 @@ export type UserAccessRow = {
   /** employees.id for role=user (self-service PTO portal). */
   linked_employee_id?: string | null;
   can_delete?: boolean;
+  /** View + edit Janus CRM without changing primary role (admin/supervisor/user). */
+  janus_access?: boolean;
   approval_status?: 'pending' | 'approved' | 'rejected' | string;
 };
 
