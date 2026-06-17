@@ -115,6 +115,23 @@ export function employeeMatchesPerformanceReviewScope(
   return supervisorNames.some((name) => supervisorNameMatches(employeeSupervisor, name));
 }
 
+/** Same HR leadership set as performance-review org-wide access. */
+export const ATTENDANCE_ORG_WIDE_EMAILS = PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS;
+
+/** Org-wide attendance roll call (Matthew, Trent, Brent only). */
+export function hasOrgWideAttendanceAccess(): boolean {
+  return canEmailSupervisorsPerformanceReviews();
+}
+
+/** Attendance: org-wide leaders see everyone; filtered admins and supervisors see direct reports only. */
+export function employeeMatchesAttendanceScope(
+  employee: EmployeeLike | null | undefined
+): boolean {
+  if (!isAdminUser() && !isSupervisorUser()) return false;
+  if (hasOrgWideAttendanceAccess()) return true;
+  return employeeMatchesPerformanceReviewScope(employee);
+}
+
 /** Performance reviews: HR leadership org-wide; other admins/supervisors direct reports only. */
 export function canAccessPerformanceReviews(employee?: EmployeeLike | null): boolean {
   if (Boolean(window.isCreatingEmployee)) return false;

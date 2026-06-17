@@ -1,4 +1,5 @@
-import { employeeMatchesSupervisorAccess, isAdminUser } from './access';
+import { employeeMatchesAttendanceScope } from './access';
+import type { EmployeeLike } from './accessTypes';
 import { normalizePeopleList, type AttendancePerson } from './attendance';
 import { employeeDisplayName } from './employeeUtils';
 import { supabaseClient } from './supabaseClient';
@@ -60,10 +61,9 @@ function resolveEmployeeFromKeys(
   return undefined;
 }
 
-function employeeInScope(employee: EmployeeRow | undefined, roster: EmployeeRow[]): boolean {
-  if (!employee) return isAdminUser();
-  if (isAdminUser()) return true;
-  return employeeMatchesSupervisorAccess(employee);
+function employeeInScope(employee: EmployeeRow | undefined, _roster: EmployeeRow[]): boolean {
+  if (!employee) return false;
+  return employeeMatchesAttendanceScope(employee as EmployeeLike);
 }
 
 export async function loadRepeatedAbsenceReport(options?: {

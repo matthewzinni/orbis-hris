@@ -1,4 +1,8 @@
-import { isAdminUser, isSupervisorUser } from '../services/access';
+import {
+  employeeMatchesAttendanceScope,
+  isAdminUser,
+  isSupervisorUser,
+} from '../services/access';
 import {
   ATTENDANCE_LOOKBACK_DAYS,
   ATTENDANCE_REPEAT_ABSENCE_MIN,
@@ -155,7 +159,10 @@ function isRollCallRosterEmployee(employee: EmployeeRow): boolean {
 
 function getRollCallEmployees(): EmployeeRow[] {
   return sortEmployeesByName(getEmployees()).filter(
-    (employee) => !isRemoteEmployee(employee) && isRollCallRosterEmployee(employee)
+    (employee) =>
+      !isRemoteEmployee(employee) &&
+      isRollCallRosterEmployee(employee) &&
+      employeeMatchesAttendanceScope(employee)
   );
 }
 
