@@ -1,9 +1,5 @@
 import { HR_ADVISORY_CORE } from '../_shared/hrAdvisoryPrompt.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { jsonResponse, requireOrbisAuth } from '../_shared/orbisEdgeAuth.ts';
 
 const SYSTEM_PROMPT = `${HR_ADVISORY_CORE}
 
@@ -34,13 +30,6 @@ type RequestBody = {
   responses?: ResponseItem[];
 };
 
-function jsonResponse(body: Record<string, unknown>, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
 function buildUserPrompt(body: RequestBody): string {
   const lines: string[] = [];
 
@@ -69,53 +58,15 @@ function buildUserPrompt(body: RequestBody): string {
   return lines.join('\n');
 }
 
-/** Validate JWT without bundling @supabase/supabase-js (smaller cold start, fewer boot failures). */
-async function getUserIdFromJwt(
-  supabaseUrl: string,
-  supabaseAnonKey: string,
-  authHeader: string
-): Promise<string | null> {
-  const res = await fetch(`${supabaseUrl}/auth/v1/user`, {
-    headers: {
-      Authorization: authHeader,
-      apikey: supabaseAnonKey,
-    },
-  });
-
-  if (!res.ok) {
-    return null;
-  }
-
-  const body = (await res.json()) as { id?: string };
-  return typeof body?.id === 'string' && body.id.length > 0 ? body.id : null;
-}
-
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  if (req.method !== 'POST') {
-    return jsonResponse({ error: 'Method not allowed' }, 405);
-  }
+  const auth = await requireOrbisAuth(
+    req,
+    'orbis_can_access_stay_interview_ai',
+    'summarize-stay-interview'
+  );
+  if (!auth.ok) return auth.response;
 
   try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return jsonResponse({ error: 'Missing authorization' }, 401);
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return jsonResponse({ error: 'Server configuration error' }, 500);
-    }
-
-    const userId = await getUserIdFromJwt(supabaseUrl, supabaseAnonKey, authHeader);
-    if (!userId) {
-      return jsonResponse({ error: 'Unauthorized' }, 401);
-    }
-
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiKey) {
       return jsonResponse(

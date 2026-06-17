@@ -1,4 +1,4 @@
-import { isAdminUser } from '../services/access';
+import { hasOrgWidePerformanceReviewAccess } from '../services/access';
 import {
   generateStayInterviewOrgThemes,
   StayInterviewOrgThemesError,
@@ -67,8 +67,8 @@ function renderOrgThemesReport(text: string, meta: { source: string; interviewCo
 }
 
 async function runOrgThemesGeneration(): Promise<void> {
-  if (!isAdminUser()) {
-    showToast('Admin access required for stay interview themes.', 'error');
+  if (!hasOrgWidePerformanceReviewAccess()) {
+    showToast('HR leadership access required for stay interview themes.', 'error');
     return;
   }
 
