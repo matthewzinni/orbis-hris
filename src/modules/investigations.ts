@@ -693,8 +693,11 @@ export async function loadInvestigations(): Promise<void> {
   }
 
   try {
-    await ensureInvestigationsEmployeeRosterLoaded();
-    cachedInvestigations = await fetchAllInvestigations();
+    const [, investigations] = await Promise.all([
+      ensureInvestigationsEmployeeRosterLoaded(),
+      fetchAllInvestigations(),
+    ]);
+    cachedInvestigations = investigations;
     populateFilterSelects();
     renderInvestigationsTable(cachedInvestigations);
     loadInvestigationsDashboardMetrics(cachedInvestigations);
@@ -1000,7 +1003,37 @@ function hideOtherDrawers(): void {
 }
 
 export async function openInvestigationDrawer(investigationId: string): Promise<void> {
-  const investigation = cachedInvestigations.find((row) => String(row.id) === String(investigationId));
+  let investigation = cachedInvestigations.find((row) => String(row.id) === String(investigationId));
+
+  if (!investigation?.id) {
+    if (!investigationsHydrated) {
+      await loadInvestigations();
+      investigation = cachedInvestigations.find((row) => String(row.id) === String(investigationId));
+    }
+
+    if (!investigation?.id) {
+      const { data, error } = await supabaseClient
+        .from('investigations')
+        .select('*, investigation_subjects(*)')
+        .eq('id', investigationId)
+        .maybeSingle();
+
+      if (error || !data) {
+        showToast('Investigation not found.', 'error');
+        return;
+      }
+
+      investigation = data as Investigation;
+      const existingIndex = cachedInvestigations.findIndex(
+        (row) => String(row.id) === String(investigationId)
+      );
+      if (existingIndex >= 0) {
+        cachedInvestigations[existingIndex] = investigation;
+      } else {
+        cachedInvestigations.push(investigation);
+      }
+    }
+  }
 
   if (!investigation?.id) {
     showToast('Investigation not found.', 'error');
@@ -1669,6 +1702,14 @@ export function ensureInvestigationsLoaded(force = false): void {
   }
 
   void loadInvestigations();
+}
+
+export async function ensureInvestigationsReady(): Promise<void> {
+  if (!canAccessInvestigationsCenter()) return;
+
+  if (investigationsHydrated) return;
+
+  await loadInvestigations();
 }
 
 export function openInvestigationsView(): void {

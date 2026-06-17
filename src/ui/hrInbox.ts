@@ -45,6 +45,11 @@ async function openInboxRoute(route: HrInboxRoute): Promise<void> {
 
   if (route.type === 'investigation') {
     switchMainView('investigationsView');
+    if (typeof window.ensureInvestigationsReady === 'function') {
+      await window.ensureInvestigationsReady();
+    } else if (typeof window.loadInvestigations === 'function') {
+      await window.loadInvestigations();
+    }
     if (typeof window.openInvestigationDrawer === 'function') {
       await window.openInvestigationDrawer(route.investigationId);
     }

@@ -134,6 +134,7 @@ declare global {
     requestEmployeeSignatureLink?: ( formType: SignatureFormType, recordId: string, employeeId: string, signerName?: string, signerEmail?: string ) => Promise<void>;
     showAppSection?: (sectionId: string) => void;
     ensureInvestigationsLoaded?: (force?: boolean) => void;
+    ensureInvestigationsReady?: () => Promise<void>;
     loadInvestigations?: () => Promise<void>;
     ensureCareEngagementLoaded?: (force?: boolean) => void;
     loadCareEngagement?: () => Promise<void>;

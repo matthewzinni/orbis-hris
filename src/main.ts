@@ -156,6 +156,7 @@ import {
   deleteInvestigationById,
   deleteInvestigationRecord,
   ensureInvestigationsLoaded,
+  ensureInvestigationsReady,
   exportInvestigationsCsv,
   isInvestigationDrawerOpen,
   loadInvestigations,
@@ -163,7 +164,7 @@ import {
   openInvestigationsView,
   openNewInvestigationForm,
   saveInvestigationRecord,
-} from './modules/lazyInvestigations';
+} from './modules/investigations';
 import './ui/loadingUi';
 import './ui/dashboardRetry';
 import './ui/confirmModal';
@@ -267,6 +268,7 @@ function registerLegacyBridges(): void {
 
   bridge.loadInvestigations = loadInvestigations;
   bridge.ensureInvestigationsLoaded = ensureInvestigationsLoaded;
+  bridge.ensureInvestigationsReady = ensureInvestigationsReady;
   bridge.exportInvestigationsCsv = exportInvestigationsCsv;
   bridge.openInvestigationsView = openInvestigationsView;
   bridge.openNewInvestigationForm = openNewInvestigationForm;
@@ -299,6 +301,7 @@ function registerLegacyBridges(): void {
 
   globalThis.loadInvestigations = loadInvestigations;
   globalThis.ensureInvestigationsLoaded = ensureInvestigationsLoaded;
+  globalThis.ensureInvestigationsReady = ensureInvestigationsReady;
   globalThis.exportInvestigationsCsv = exportInvestigationsCsv;
   globalThis.openInvestigationsView = openInvestigationsView;
   globalThis.openNewInvestigationForm = openNewInvestigationForm;
