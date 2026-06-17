@@ -966,7 +966,12 @@ function ensureRosterViewTabs() {
     defaultTab.click();
 }
 
+let rosterEventsBound = false;
+
 function bindRosterEvents() {
+    if (rosterEventsBound) return;
+    rosterEventsBound = true;
+
     bindEmployeeUpdateToast();
     ensureRosterViewTabs();
     const searchInput = (safeGet('globalSearch') || document.querySelector('#employeeSearch, #searchInput, input[type="search"], input[placeholder*="Search"], input[placeholder*="search"]')) as HTMLInputElement | null;

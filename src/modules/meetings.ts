@@ -192,7 +192,11 @@ export async function saveMeetingRecord(): Promise<void> {
     TABLE,
     meetingPayload,
     meetingId,
-    { logPrefix: 'Meetings', stripMissingColumns: false }
+    {
+      logPrefix: 'Meetings',
+      stripMissingColumns: false,
+      updateMatch: meetingId ? { employee_id: employeeId } : undefined,
+    }
   );
 
   if (result.error) {

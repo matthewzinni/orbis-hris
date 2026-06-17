@@ -127,4 +127,54 @@ export async function generateAvailableEmployeeId(
   return formatEmployeeId(prefix, nextSequence);
 }
 
+function isDuplicateEmployeeIdError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  if (error.code === '23505') return true;
+  return /duplicate key|unique constraint/i.test(String(error.message || ''));
+}
+
+/** Insert a new employee, retrying with the next available ID on duplicate-key conflicts. */
+export async function insertEmployeeRecordWithRetry<T extends Record<string, unknown>>(
+  payload: T,
+  maxAttempts = 3
+): Promise<{
+  data: T[] | null;
+  error: { message?: string; code?: string } | null;
+  employeeId: string;
+}> {
+  let employeeId = String(payload.id || '').trim();
+
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (!employeeId) {
+      employeeId = await generateAvailableEmployeeId();
+    }
+
+    const attemptPayload = { ...payload, id: employeeId };
+    const { data, error } = await supabaseClient
+      .from('employees')
+      .insert([attemptPayload])
+      .select();
+
+    if (!error) {
+      return {
+        data: (data || []) as T[],
+        error: null,
+        employeeId,
+      };
+    }
+
+    if (!isDuplicateEmployeeIdError(error) || attempt === maxAttempts - 1) {
+      return { data: null, error, employeeId };
+    }
+
+    employeeId = await generateAvailableEmployeeId();
+  }
+
+  return {
+    data: null,
+    error: { message: 'Could not allocate a unique employee ID.' },
+    employeeId,
+  };
+}
+
 window.generateAvailableEmployeeId = () => generateAvailableEmployeeId();

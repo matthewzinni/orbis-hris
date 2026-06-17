@@ -33,6 +33,11 @@ export function getAccessApprovalStatus(
   return 'none';
 }
 
+/** True when user_access has an explicit supervisor team list (including empty). */
+export function hasExplicitSupervisorScope(access: UserAccessRow | null | undefined): boolean {
+  return access?.supervised_employee_ids != null;
+}
+
 /** Normalize UUID list from user_access (PostgREST may return string[] or JSON). */
 export function parseSupervisedEmployeeIds(access: UserAccessRow | null | undefined): string[] {
   const raw = access?.supervised_employee_ids;

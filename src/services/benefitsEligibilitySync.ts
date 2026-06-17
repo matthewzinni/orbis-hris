@@ -1,12 +1,15 @@
 /**
- * Auto-mark benefits eligible at 90 days from hire and log payroll handoff.
- * Runs when an admin loads the employee roster (idempotent).
+ * Batch benefits eligibility sync and local roster patching helpers.
  */
 
 import { isAdminUser } from './access';
 import { recordAuditEvent } from './auditTrail';
 import {
   AUTO_BENEFITS_ELIGIBLE_STATUS,
+  isBenefitsAlreadyAutoEligible,
+  isBenefitsStatusAwaitingAutoEligible,
+} from './benefitsEligibilityRules';
+import {
   BENEFITS_ELIGIBILITY_WAIT_DAYS,
   type EmployeeLike,
   employeeDisplayName,
@@ -20,46 +23,35 @@ import { supabaseClient } from './supabaseClient';
 
 let syncInFlight = false;
 
+export type BenefitsEligibilitySyncResult = {
+  updatedCount: number;
+  updatedEmployeeIds: string[];
+};
+
 function employeeKey(employee: EmployeeLike): string {
   return String(employee.id || employee.dbId || employee.employee_id || '').trim();
 }
 
-function normalizeBenefitsStatus(status: unknown): string {
-  return String(status || '').trim().toLowerCase();
-}
+async function loadEmployeesWithAutoBenefitsHandoff(employeeIds: string[]): Promise<Set<string>> {
+  if (!employeeIds.length) return new Set();
 
-/** Empty or interim labels HR uses before the 90-day mark — safe to overwrite. */
-export function isBenefitsStatusAwaitingAutoEligible(status: unknown): boolean {
-  const normalized = normalizeBenefitsStatus(status);
-  if (!normalized) return true;
-
-  if (normalized === normalizeBenefitsStatus(AUTO_BENEFITS_ELIGIBLE_STATUS)) {
-    return false;
-  }
-
-  const protectedTokens = ['enroll', 'waiv', 'declin', 'cobra', 'opt out', 'opt-out'];
-  if (protectedTokens.some((token) => normalized.includes(token))) {
-    return false;
-  }
-
-  return true;
-}
-
-async function hasAutoBenefitsEligibilityHandoff(employeeId: string): Promise<boolean> {
   const { data, error } = await supabaseClient
     .from('payroll_handoffs')
-    .select('id')
-    .eq('employee_id', employeeId)
+    .select('employee_id')
+    .in('employee_id', employeeIds)
     .eq('change_type', 'benefits')
-    .contains('payload', { auto_benefits_eligibility: true })
-    .limit(1);
+    .contains('payload', { auto_benefits_eligibility: true });
 
   if (error) {
     console.warn('[BenefitsEligibility] Handoff lookup failed:', error);
-    return false;
+    return new Set();
   }
 
-  return Boolean(data?.length);
+  return new Set(
+    (data || [])
+      .map((row) => String((row as { employee_id?: string }).employee_id || '').trim())
+      .filter(Boolean)
+  );
 }
 
 async function logBenefitsEligibilityHandoff(
@@ -69,10 +61,6 @@ async function logBenefitsEligibilityHandoff(
   const employeeId = employeeKey(employee);
   const effectiveDate = getBenefitsEligibilityDateIso(employee);
   if (!employeeId || !effectiveDate) return false;
-
-  if (await hasAutoBenefitsEligibilityHandoff(employeeId)) {
-    return false;
-  }
 
   const name = employeeDisplayName(employee);
   const row = await createPayrollHandoff({
@@ -93,72 +81,122 @@ async function logBenefitsEligibilityHandoff(
   return Boolean(row);
 }
 
-async function applyAutoBenefitsEligibilityForEmployee(
-  employee: EmployeeLike
-): Promise<boolean> {
+type EligibilityWorkItem = {
+  employee: EmployeeLike;
+  employeeId: string;
+  previousStatus: string;
+  needsStatusUpdate: boolean;
+  needsHandoff: boolean;
+};
+
+function classifyEligibilityWork(employee: EmployeeLike): EligibilityWorkItem | null {
   if (!isActiveDashboardEmployee(employee) || !isBenefitsEligibleEmployee(employee)) {
-    return false;
+    return null;
   }
 
   const employeeId = employeeKey(employee);
-  if (!employeeId) return false;
+  if (!employeeId) return null;
 
   const previousStatus = String(employee.benefits_status || employee.benefitsStatus || '').trim();
   const needsStatusUpdate = isBenefitsStatusAwaitingAutoEligible(previousStatus);
   const needsHandoff =
-    !needsStatusUpdate &&
-    normalizeBenefitsStatus(previousStatus) ===
-      normalizeBenefitsStatus(AUTO_BENEFITS_ELIGIBLE_STATUS);
+    !needsStatusUpdate && isBenefitsAlreadyAutoEligible(previousStatus);
 
   if (!needsStatusUpdate && !needsHandoff) {
-    return false;
+    return null;
   }
 
-  if (needsStatusUpdate) {
-    const { error } = await supabaseClient
-      .from('employees')
-      .update({ benefits_status: AUTO_BENEFITS_ELIGIBLE_STATUS })
-      .eq('id', employeeId);
-
-    if (error) {
-      console.warn('[BenefitsEligibility] Could not update employee:', employeeId, error);
-      return false;
-    }
-
-    await recordAuditEvent(
-      'Benefits Auto-Eligible',
-      employee,
-      `Benefits status set to ${AUTO_BENEFITS_ELIGIBLE_STATUS} (${BENEFITS_ELIGIBILITY_WAIT_DAYS} days after hire).`
-    );
-  }
-
-  try {
-    await logBenefitsEligibilityHandoff(employee, previousStatus);
-  } catch (err) {
-    console.warn('[BenefitsEligibility] Payroll handoff failed:', employeeId, err);
-  }
-
-  return true;
+  return {
+    employee,
+    employeeId,
+    previousStatus,
+    needsStatusUpdate,
+    needsHandoff,
+  };
 }
 
-/** Admin-only batch sync after roster load. Returns count of employees updated. */
+async function runInChunks<T>(
+  items: T[],
+  chunkSize: number,
+  worker: (item: T) => Promise<void>
+): Promise<void> {
+  for (let index = 0; index < items.length; index += chunkSize) {
+    await Promise.all(items.slice(index, index + chunkSize).map((item) => worker(item)));
+  }
+}
+
+/** Admin-only batch sync after roster load. */
 export async function syncAutoBenefitsEligibility(
   employees: EmployeeLike[]
-): Promise<number> {
-  if (!isAdminUser() || syncInFlight) return 0;
+): Promise<BenefitsEligibilitySyncResult> {
+  if (!isAdminUser() || syncInFlight) {
+    return { updatedCount: 0, updatedEmployeeIds: [] };
+  }
 
   syncInFlight = true;
-  let updated = 0;
 
   try {
-    for (const employee of employees) {
-      if (await applyAutoBenefitsEligibilityForEmployee(employee)) {
-        updated += 1;
-      }
+    const workItems = employees
+      .map((employee) => classifyEligibilityWork(employee))
+      .filter((item): item is EligibilityWorkItem => Boolean(item));
+
+    if (!workItems.length) {
+      return { updatedCount: 0, updatedEmployeeIds: [] };
     }
+
+    const statusUpdateIds = workItems
+      .filter((item) => item.needsStatusUpdate)
+      .map((item) => item.employeeId);
+
+    if (statusUpdateIds.length) {
+      const { error } = await supabaseClient
+        .from('employees')
+        .update({ benefits_status: AUTO_BENEFITS_ELIGIBLE_STATUS })
+        .in('id', statusUpdateIds);
+
+      if (error) {
+        console.warn('[BenefitsEligibility] Batch update failed:', error);
+        return { updatedCount: 0, updatedEmployeeIds: [] };
+      }
+
+      await runInChunks(
+        workItems.filter((item) => item.needsStatusUpdate),
+        5,
+        async (item) => {
+          await recordAuditEvent(
+            'Benefits Auto-Eligible',
+            item.employee,
+            `Benefits status set to ${AUTO_BENEFITS_ELIGIBLE_STATUS} (${BENEFITS_ELIGIBILITY_WAIT_DAYS} days after hire).`
+          );
+        }
+      );
+    }
+
+    const handoffCandidates = workItems.filter((item) => item.needsStatusUpdate || item.needsHandoff);
+    const existingHandoffs = await loadEmployeesWithAutoBenefitsHandoff(
+      handoffCandidates.map((item) => item.employeeId)
+    );
+
+    await runInChunks(
+      handoffCandidates.filter((item) => !existingHandoffs.has(item.employeeId)),
+      5,
+      async (item) => {
+        try {
+          await logBenefitsEligibilityHandoff(item.employee, item.previousStatus);
+        } catch (err) {
+          console.warn('[BenefitsEligibility] Payroll handoff failed:', item.employeeId, err);
+        }
+      }
+    );
+
+    const updatedEmployeeIds = workItems.map((item) => item.employeeId);
+    return {
+      updatedCount: updatedEmployeeIds.length,
+      updatedEmployeeIds,
+    };
   } finally {
     syncInFlight = false;
   }
-
-  return updated;
 }
+
+export { isBenefitsStatusAwaitingAutoEligible } from './benefitsEligibilityRules';

@@ -316,7 +316,12 @@ function handleTablistKeydown(event: KeyboardEvent, group: DrawerTabGroup): void
   focusTabAt(group, nextIndex);
 }
 
+const boundDrawerTabGroups = new Set<DrawerTabKind>();
+
 function bindTabGroupEvents(group: DrawerTabGroup): void {
+  if (boundDrawerTabGroups.has(group.kind)) return;
+  boundDrawerTabGroups.add(group.kind);
+
   group.tabs.forEach((tab) => {
     tab.addEventListener('click', () => {
       if (tab.classList.contains('hidden')) return;

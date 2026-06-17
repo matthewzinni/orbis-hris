@@ -538,7 +538,10 @@ export async function saveReviewRecord(): Promise<void> {
     'employee_reviews',
     reviewPayload,
     reviewId,
-    { logPrefix: 'Reviews' }
+    {
+      logPrefix: 'Reviews',
+      updateMatch: reviewId ? { employee_id: employeeId } : undefined,
+    }
   );
 
   if (result.error) {

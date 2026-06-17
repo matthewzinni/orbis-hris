@@ -4,11 +4,14 @@ import {
   switchDrawerTab as switchDrawerTabUi,
 } from '../ui/drawerUi';
 import { showOrbisConfirm } from '../ui/confirmModal';
-import { generateAvailableEmployeeId } from '../services/employeeIds';
+import { generateAvailableEmployeeId, insertEmployeeRecordWithRetry } from '../services/employeeIds';
 import { cleanEmployeeNameValue, employeePersonalEmail, employeePortalSignInEmail, employeeWorkEmail } from '../services/employeeUtils';
 import { createDefaultOnboardingTasks } from './onboarding';
 import { syncStandardOnboardingTasks } from '../services/onboardingStandard';
-import { createDefaultOffboardingTasks } from './offboarding';
+import {
+  applyNewTerminationFieldsToPayload,
+  runEmployeeTerminationSideEffects,
+} from '../services/employeeTermination';
 import {
   canEditEmployeeAdmin,
   isAdminUser,
@@ -119,6 +122,7 @@ function getNextAnniversaryDate(employee: DrawerEmployeeRecord): string {
 }
 
 const EMPLOYEE_RELATED_TABLES = [
+  'payroll_handoffs',
   'onboarding_tasks',
   'offboarding_tasks',
   'leave_requests',
@@ -130,7 +134,19 @@ const EMPLOYEE_RELATED_TABLES = [
   'stay_interviews',
   'emergency_contacts',
   'employee_audit_logs',
+  'employee_documents',
+  'signature_requests',
+  'employee_acknowledgments',
+  'policy_campaign_assignments',
+  'care_items',
+  'care_recognition',
+  'care_employee_notes',
+  'care_follow_ups',
+  'care_resources_shared',
+  'care_wellness_check_ins',
 ] as const;
+
+let isEmployeeSaveInProgress = false;
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
@@ -200,8 +216,8 @@ async function cascadeEmployeeIdChange(
   oldId: string,
   newId: string,
   client: NonNullable<ReturnType<typeof getSupabaseBridgeClient>>
-): Promise<void> {
-  if (!oldId || !newId || oldId === newId) return;
+): Promise<Error | null> {
+  if (!oldId || !newId || oldId === newId) return null;
 
   for (const table of EMPLOYEE_RELATED_TABLES) {
     const { error } = await (client.from!(table) as {
@@ -213,9 +229,42 @@ async function cascadeEmployeeIdChange(
       .eq('employee_id', oldId);
 
     if (error) {
-      console.warn(`[Drawer] Could not cascade employee ID to ${table}:`, error);
+      console.error(`[Drawer] Could not cascade employee ID to ${table}:`, error);
+      return new Error(
+        `Employee saved but related ${table.replaceAll('_', ' ')} records could not be relinked: ${error.message}`
+      );
     }
   }
+
+  const { error: candidateError } = await (client.from!('candidates') as {
+    update: (payload: Record<string, string | null>) => {
+      eq: (column: string, value: string) => Promise<{ error: { message?: string } | null }>;
+    };
+  })
+    .update({ linked_employee_id: newId })
+    .eq('linked_employee_id', oldId);
+
+  if (candidateError) {
+    return new Error(
+      `Employee saved but candidate links could not be relinked: ${candidateError.message}`
+    );
+  }
+
+  const { error: accessError } = await (client.from!('user_access') as {
+    update: (payload: Record<string, string | null>) => {
+      eq: (column: string, value: string) => Promise<{ error: { message?: string } | null }>;
+    };
+  })
+    .update({ linked_employee_id: newId })
+    .eq('linked_employee_id', oldId);
+
+  if (accessError) {
+    return new Error(
+      `Employee saved but portal account links could not be relinked: ${accessError.message}`
+    );
+  }
+
+  return null;
 }
 
 function showDrawer(): void {
@@ -711,6 +760,20 @@ function showToast(message: string, type: string = 'success'): void {
 }
 
 export async function saveEmployeeRecord(): Promise<void> {
+  if (isEmployeeSaveInProgress) {
+    return;
+  }
+
+  isEmployeeSaveInProgress = true;
+
+  try {
+    await saveEmployeeRecordInternal();
+  } finally {
+    isEmployeeSaveInProgress = false;
+  }
+}
+
+async function saveEmployeeRecordInternal(): Promise<void> {
   if (!openedEmployeeRecordId) {
     const current = window.currentEmployee as (DrawerEmployeeRecord & { dbId?: string }) | null;
 
@@ -896,14 +959,22 @@ export async function saveEmployeeRecord(): Promise<void> {
         ''
     )
   );
+  const isNewTermination = status === 'TERMINATED' && statusBefore !== 'TERMINATED';
+
+  Object.assign(
+    payload,
+    applyNewTerminationFieldsToPayload(payload, {
+      isNewTermination,
+      employee: window.currentEmployee as Record<string, unknown> | null | undefined,
+      terminationDate: terminationDate || new Date().toISOString().slice(0, 10),
+    })
+  );
 
   if (isCreating) {
-    const insertResult = await client
-      .from('employees')
-      .insert([payload])
-      .select();
-
+    const insertResult = await insertEmployeeRecordWithRetry(payload);
     const insertError = insertResult.error;
+    editedEmployeeId = insertResult.employeeId;
+
     if (insertError) {
       showToast(insertError.message || 'Could not create employee.', 'error');
       return;
@@ -968,10 +1039,6 @@ export async function saveEmployeeRecord(): Promise<void> {
     payload,
   });
 
-  if (isEmployeeIdChanging) {
-    await cascadeEmployeeIdChange(originalRecordId, editedEmployeeId, client);
-  }
-
   const updateEmployeeById = (window as {
     updateEmployeeById?: (
       employeeId: string,
@@ -998,6 +1065,18 @@ export async function saveEmployeeRecord(): Promise<void> {
     return;
   }
 
+  if (isEmployeeIdChanging) {
+    const cascadeError = await cascadeEmployeeIdChange(
+      originalRecordId,
+      editedEmployeeId,
+      client
+    );
+    if (cascadeError) {
+      showToast(cascadeError.message, 'error');
+      return;
+    }
+  }
+
   showToast('Employee saved.');
 
   if (payload.hire_date) {
@@ -1008,31 +1087,42 @@ export async function saveEmployeeRecord(): Promise<void> {
     }
   }
 
-  if (status === 'TERMINATED' && statusBefore !== 'TERMINATED') {
+  if (isNewTermination) {
     try {
-      await createDefaultOffboardingTasks(editedEmployeeId);
+      const { payrollHandoffs } = await runEmployeeTerminationSideEffects({
+        employeeId: editedEmployeeId,
+        employee: window.currentEmployee as Record<string, unknown> | null | undefined,
+        payrollBefore: payrollBeforeSnapshot,
+        payrollAfter: employeeToPayrollSnapshot(payload),
+      });
+      if (payrollHandoffs > 0) {
+        showToast(
+          `Logged ${payrollHandoffs} payroll handoff${payrollHandoffs === 1 ? '' : 's'} for external payroll.`
+        );
+      }
+      window.invalidateEmployeeDrawerTab?.('employee');
     } catch (err) {
-      console.warn('[Drawer] Offboarding tasks failed:', err);
+      console.warn('[Drawer] Termination side effects failed:', err);
     }
-  }
-
-  try {
-    const handoffCount = await logPayrollHandoffsFromEmployeeSave({
-      employeeId: editedEmployeeId,
-      before: payrollBeforeSnapshot,
-      after: payload,
-    });
-    if (handoffCount > 0) {
-      showToast(
-        `Logged ${handoffCount} payroll handoff${handoffCount === 1 ? '' : 's'} for external payroll.`
-      );
+  } else {
+    try {
+      const handoffCount = await logPayrollHandoffsFromEmployeeSave({
+        employeeId: editedEmployeeId,
+        before: payrollBeforeSnapshot,
+        after: payload,
+      });
+      if (handoffCount > 0) {
+        showToast(
+          `Logged ${handoffCount} payroll handoff${handoffCount === 1 ? '' : 's'} for external payroll.`
+        );
+      }
+      window.invalidateEmployeeDrawerTab?.('employee');
+      if (typeof window.loadHrInbox === 'function') {
+        void window.loadHrInbox(true);
+      }
+    } catch (err) {
+      console.warn('[Drawer] Payroll handoff logging failed:', err);
     }
-    window.invalidateEmployeeDrawerTab?.('employee');
-    if (typeof window.loadHrInbox === 'function') {
-      void window.loadHrInbox(true);
-    }
-  } catch (err) {
-    console.warn('[Drawer] Payroll handoff logging failed:', err);
   }
 
   syncOpenedEmployeeRecordId(editedEmployeeId);

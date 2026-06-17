@@ -80,6 +80,7 @@ export async function saveEmployeeNote(): Promise<void> {
   stopAllDictation();
 
   if (!window.currentEmployee) {
+    showToast('Open an employee before saving a note.', 'error');
     return;
   }
 

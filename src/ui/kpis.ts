@@ -1,5 +1,6 @@
 import { getEmployeeById, loadEmployees } from '../modules/employees';
 import { debounce } from '../utils/helpers';
+import { getReviewAverageScore } from '../utils/reviewScores';
 import { isAdminUser, isSupervisorUser } from '../services/access';
 import {
   buildPerformanceReviewDueCandidates,
@@ -1222,23 +1223,7 @@ export async function loadSummaryMetrics(): Promise<void> {
           !latestReviewByEmployee[employeeId] ||
           String(sortDate) > String(latestReviewByEmployee[employeeId].sortDate)
         ) {
-          const scoreValues = [
-            record.quality_score,
-            record.attendance_score,
-            record.reliability_score,
-            record.communication_score,
-            record.judgement_score,
-            record.initiative_score,
-            record.teamwork_score,
-            record.knowledge_score,
-            record.training_score,
-          ].filter(
-            (value) => value !== null && value !== undefined && value !== '' && Number(value) > 0
-          );
-
-          const avgScore = scoreValues.length
-            ? scoreValues.reduce((sum, value) => sum + Number(value), 0) / scoreValues.length
-            : null;
+          const avgScore = getReviewAverageScore(record as Record<string, unknown>);
 
           latestReviewByEmployee[employeeId] = { avgScore, sortDate: String(sortDate) };
         }

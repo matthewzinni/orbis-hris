@@ -3,7 +3,6 @@ import { supabaseClient } from './supabaseClient';
 import {
   getAccessApprovalStatus,
   normalizeOrbisRole,
-  parseSupervisedEmployeeIds,
   type UserAccessRow,
 } from './accessTypes';
 import {
@@ -323,13 +322,13 @@ export async function ensureLinkedEmployeeRecord(): Promise<string | null> {
   return employeeId || null;
 }
 
-/** Refresh explicit supervisor team ids from roster supervisor field when a stale list exists. */
+/** Refresh explicit supervisor team ids from roster supervisor field (login + stale lists). */
 export async function ensureSupervisorEmployeeScope(): Promise<string[] | null> {
   if (!isSupervisorUser() || !getCurrentUserAccess()) return null;
 
   const access = getCurrentUserAccess();
-  const current = parseSupervisedEmployeeIds(access);
-  if (!current.length) return null;
+  const scopeName = String(access?.supervisor_name || access?.display_name || '').trim();
+  if (!scopeName) return null;
 
   const { data, error } = await supabaseClient.rpc('orbis_sync_my_supervisor_scope');
 
@@ -342,12 +341,10 @@ export async function ensureSupervisorEmployeeScope(): Promise<string[] | null> 
     ? data.map((id) => String(id || '').trim()).filter(Boolean)
     : [];
 
-  if (synced.length) {
-    setSupervisedEmployeeIds(synced);
-    syncAccessToWindow();
-  }
+  setSupervisedEmployeeIds(synced);
+  syncAccessToWindow();
 
-  return synced.length ? synced : null;
+  return synced;
 }
 
 export function canAccessOrbisApp(): boolean {

@@ -86,7 +86,8 @@ export async function deleteEmployeeRecordRow(
   table: string,
   recordId: string,
   confirm: ConfirmOptions & { message: string },
-  logPrefix = 'Record'
+  logPrefix = 'Record',
+  employeeId?: string
 ): Promise<boolean> {
   if (!recordId) return false;
 
@@ -98,7 +99,12 @@ export async function deleteEmployeeRecordRow(
 
   if (!confirmed) return false;
 
-  const { error } = await supabaseClient.from(table).delete().eq('id', recordId);
+  let query = supabaseClient.from(table).delete().eq('id', recordId);
+  if (employeeId) {
+    query = query.eq('employee_id', employeeId);
+  }
+
+  const { error } = await query;
 
   if (error) {
     console.error(`[${logPrefix}] Delete failed:`, error);

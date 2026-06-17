@@ -230,7 +230,10 @@ export async function saveIncidentRecord(): Promise<void> {
     TABLE,
     incidentPayload,
     incidentId,
-    { logPrefix: 'Incidents' }
+    {
+      logPrefix: 'Incidents',
+      updateMatch: incidentId ? { employee_id: employeeId } : undefined,
+    }
   );
 
   if (result.error) {

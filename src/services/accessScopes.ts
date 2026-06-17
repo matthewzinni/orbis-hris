@@ -3,8 +3,12 @@ import { supabaseClient } from './supabaseClient';
 import {
   type EmployeeLike,
   type UserAccessRow,
+  hasExplicitSupervisorScope,
   parseSupervisedEmployeeIds,
 } from './accessTypes';
+import { supervisorNameMatches } from './supervisorNameMatch';
+
+export { supervisorNameMatches };
 import {
   getCurrentUserAccess,
   isAdminUser,
@@ -27,29 +31,12 @@ export function canEmailSupervisorsPerformanceReviews(): boolean {
   return PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS.has(email);
 }
 
-export function supervisorNameMatches(rosterSupervisor: string, accessSupervisor: string): boolean {
-  const supervisorName = String(accessSupervisor || '').trim().toLowerCase();
-  const employeeSupervisor = String(rosterSupervisor || '').trim().toLowerCase();
-
-  if (!supervisorName || !employeeSupervisor) return false;
-
-  const compactAccessName = supervisorName.replace(/[^a-z0-9]/g, '');
-  const compactEmployeeSupervisor = employeeSupervisor.replace(/[^a-z0-9]/g, '');
-
-  return (
-    employeeSupervisor.includes(supervisorName) ||
-    supervisorName.includes(employeeSupervisor) ||
-    compactEmployeeSupervisor.includes(compactAccessName) ||
-    compactAccessName.includes(compactEmployeeSupervisor)
-  );
-}
-
 export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | undefined): boolean {
   if (!isSupervisorUser()) return true;
 
   const access = getCurrentUserAccess();
-  const scopedIds = parseSupervisedEmployeeIds(access);
-  if (scopedIds.length > 0) {
+  if (hasExplicitSupervisorScope(access)) {
+    const scopedIds = parseSupervisedEmployeeIds(access);
     const empId = String(employee?.id || employee?.dbId || '')
       .trim()
       .toLowerCase();
@@ -109,8 +96,8 @@ export function employeeMatchesPerformanceReviewScope(
   if (hasOrgWidePerformanceReviewAccess()) return true;
 
   const access = getCurrentUserAccess();
-  const scopedIds = parseSupervisedEmployeeIds(access);
-  if (scopedIds.length > 0) {
+  if (hasExplicitSupervisorScope(access)) {
+    const scopedIds = parseSupervisedEmployeeIds(access);
     const empId = String(employee?.id || employee?.dbId || '')
       .trim()
       .toLowerCase();

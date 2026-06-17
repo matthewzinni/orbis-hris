@@ -11,8 +11,13 @@ import { showOrbisConfirm } from '../ui/confirmModal';
 import { resetDrawerForms } from './drawerForms';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
 import { openNewEmployeeDrawer } from '../ui/drawerUi';
-import { createDefaultOffboardingTasks } from './offboarding';
-import { createPayrollHandoff } from '../services/payrollHandoff';
+import {
+  buildTerminationUpdatePayload,
+  employeeTerminationDisplayName,
+  payrollSnapshotAfterTermination,
+  runEmployeeTerminationSideEffects,
+} from '../services/employeeTermination';
+import { employeeToPayrollSnapshot } from '../services/payrollHandoff';
 
 type EmployeeRow = Record<string, unknown>;
 
@@ -240,9 +245,9 @@ export async function runTerminateEmployee(): Promise<void> {
     return;
   }
 
-  const employeeName =
-    `${currentEmployee.first || currentEmployee.first_name || ''} ${currentEmployee.last || currentEmployee.last_name || ''}`.trim() ||
-    'this employee';
+  const employeeName = employeeTerminationDisplayName(
+    currentEmployee as Record<string, unknown>
+  );
 
   const confirmed = await showOrbisConfirm(
     `Terminate ${employeeName}? This will mark them as TERMINATED but keep their file.`,
@@ -259,16 +264,16 @@ export async function runTerminateEmployee(): Promise<void> {
     currentEmployee.id || currentEmployee.employee_id || currentEmployee.dbId || ''
   ).trim();
 
+  const termDate = new Date().toISOString().slice(0, 10);
+  const payrollBefore = employeeToPayrollSnapshot(currentEmployee as Record<string, unknown>);
+  const terminationFields = buildTerminationUpdatePayload({
+    employee: currentEmployee as Record<string, unknown>,
+    terminationDate: termDate,
+  });
+
   const { error } = await supabaseClient
     .from('employees')
-    .update({
-      status: 'TERMINATED',
-      termination_date: new Date().toISOString().slice(0, 10),
-      termination_reason: 'Not specified',
-      notes: currentEmployee.notes
-        ? `${currentEmployee.notes}\n\nTerminated employee file retained for turnover history.`
-        : 'Terminated employee file retained for turnover history.',
-    })
+    .update(terminationFields)
     .eq('id', targetId);
 
   if (error) {
@@ -283,26 +288,22 @@ export async function runTerminateEmployee(): Promise<void> {
     'Employee marked terminated with file retained for turnover reporting.'
   );
 
-  const termDate = new Date().toISOString().slice(0, 10);
   try {
-    await createDefaultOffboardingTasks(targetId);
-    await createPayrollHandoff({
-      employee_id: targetId,
-      change_type: 'termination',
-      effective_date: termDate,
-      summary: `Termination — ${employeeName}`,
-      payload: { termination_date: termDate },
+    await runEmployeeTerminationSideEffects({
+      employeeId: targetId,
+      employee: currentEmployee as Record<string, unknown>,
+      payrollBefore,
+      payrollAfter: payrollSnapshotAfterTermination(
+        currentEmployee as Record<string, unknown>,
+        terminationFields
+      ),
     });
   } catch (err) {
-    console.warn('[EmployeeAdmin] Offboarding/payroll handoff failed:', err);
+    console.warn('[EmployeeAdmin] Termination side effects failed:', err);
   }
 
   showToast('Employee terminated. File retained for turnover reporting.', 'success');
   await refreshDashboardAfterEmployeeChange();
-
-  if (typeof window.loadHrInbox === 'function') {
-    void window.loadHrInbox(true);
-  }
 
   if (typeof window.closeDrawer === 'function') {
     window.closeDrawer();

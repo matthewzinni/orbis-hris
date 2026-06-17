@@ -15,6 +15,7 @@ import {
   getUserRole,
 } from '../services/access';
 import { syncAutoBenefitsEligibility } from '../services/benefitsEligibilitySync';
+import { AUTO_BENEFITS_ELIGIBLE_STATUS } from '../services/employeeUtils';
 
 export type EmployeeRecord = Record<string, unknown>;
 
@@ -25,18 +26,48 @@ export type NormalizedEmployeeStatus =
   | 'terminated'
   | 'unknown';
 
-let skipBenefitsEligibilitySync = false;
 let loadEmployeesInFlight: Promise<EmployeeRecord[]> | null = null;
 let loadEmployeesQueued = false;
 let employeeLoadUiRefreshScheduled = false;
 
-function runEmployeeLoadUiRefresh(): void {
+function patchEmployeeRecords(
+  patches: Array<{ id: string; values: Record<string, unknown> }>
+): void {
+  if (!patches.length) return;
+
+  const patchList = (list: EmployeeRecord[] | undefined): void => {
+    if (!Array.isArray(list)) return;
+
+    patches.forEach(({ id, values }) => {
+      const row = list.find((employee) => String(employee.id || '') === id);
+      if (row) {
+        Object.assign(row, values);
+      }
+    });
+  };
+
+  patchList(window.ALL_EMPLOYEES as EmployeeRecord[] | undefined);
+  patchList(window.EMPLOYEES as EmployeeRecord[] | undefined);
+  patchList(window.currentFilteredEmployees as EmployeeRecord[] | undefined);
+  patchList(window.currentEmployeeRoster as EmployeeRecord[] | undefined);
+  patchList(appState.employees as EmployeeRecord[] | undefined);
+
+  if (
+    window.currentEmployee &&
+    patches.some(({ id }) => String((window.currentEmployee as EmployeeRecord).id || '') === id)
+  ) {
+    const currentPatch = patches.find(
+      ({ id }) => String((window.currentEmployee as EmployeeRecord).id || '') === id
+    );
+    if (currentPatch) {
+      Object.assign(window.currentEmployee as EmployeeRecord, currentPatch.values);
+    }
+  }
+}
+
+function runEmployeeRosterUiRefresh(): void {
   if (typeof window.renderRoster === 'function') {
     window.renderRoster();
-  }
-
-  if (typeof window.renderKpiEmployeeMetrics === 'function') {
-    window.renderKpiEmployeeMetrics();
   }
 
   if (typeof window.populateDepartmentFilter === 'function') {
@@ -46,11 +77,19 @@ function runEmployeeLoadUiRefresh(): void {
   if (typeof window.renderDepartmentSummary === 'function') {
     window.renderDepartmentSummary();
   }
+}
+
+function runEmployeeDashboardUiRefresh(): void {
+  if (typeof window.renderKpiEmployeeMetrics === 'function') {
+    window.renderKpiEmployeeMetrics();
+  }
 
   if (typeof window.renderBasicDashboardKpis === 'function') {
     window.renderBasicDashboardKpis();
   }
+}
 
+function runEmployeeAccessUiRefresh(): void {
   if (typeof window.applyOperationsCenterAccess === 'function') {
     window.applyOperationsCenterAccess();
   }
@@ -78,14 +117,12 @@ function runEmployeeLoadUiRefresh(): void {
   if (typeof window.applyLeaveAccess === 'function') {
     window.applyLeaveAccess();
   }
+}
 
-  if (typeof window.ensureOperationsIssuesLoaded === 'function') {
-    window.ensureOperationsIssuesLoaded();
-  }
-
-  if (typeof window.ensureInvestigationsLoaded === 'function') {
-    window.ensureInvestigationsLoaded();
-  }
+function runEmployeeLoadUiRefresh(): void {
+  runEmployeeRosterUiRefresh();
+  runEmployeeDashboardUiRefresh();
+  runEmployeeAccessUiRefresh();
 }
 
 function scheduleEmployeeLoadUiRefresh(): void {
@@ -239,20 +276,25 @@ async function loadEmployeesInternal(): Promise<EmployeeRecord[]> {
 
   scheduleEmployeeLoadUiRefresh();
 
-  if (isAdminUser() && !skipBenefitsEligibilitySync) {
-    void syncAutoBenefitsEligibility(normalizedEmployees).then((count) => {
-      if (!count) return;
+  if (isAdminUser()) {
+    void syncAutoBenefitsEligibility(normalizedEmployees).then((result) => {
+      if (!result.updatedCount) return;
 
-      skipBenefitsEligibilitySync = true;
-      void loadEmployees()
-        .then(() => {
-          if (typeof window.loadHrInbox === 'function') {
-            void window.loadHrInbox(true);
-          }
-        })
-        .finally(() => {
-          skipBenefitsEligibilitySync = false;
-        });
+      patchEmployeeRecords(
+        result.updatedEmployeeIds.map((id) => ({
+          id,
+          values: {
+            benefits_status: AUTO_BENEFITS_ELIGIBLE_STATUS,
+            benefitsStatus: AUTO_BENEFITS_ELIGIBLE_STATUS,
+          },
+        }))
+      );
+
+      scheduleEmployeeLoadUiRefresh();
+
+      if (typeof window.loadHrInbox === 'function') {
+        void window.loadHrInbox(true);
+      }
     });
   }
 
