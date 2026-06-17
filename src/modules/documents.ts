@@ -377,9 +377,15 @@ export async function uploadDocument(payload: UploadDocumentPayload): Promise<vo
 
     if (insertError) {
       console.error(
-        'Document insert failed. File uploaded, but table row was not created:',
+        'Document insert failed. Rolling back uploaded file:',
         insertError
       );
+      const { error: cleanupError } = await db.storage.from(uploadBucket).remove([filePath]);
+      if (cleanupError) {
+        console.error('Document upload rollback failed:', cleanupError);
+      }
+      showOrbisToast(`Document upload failed: ${insertError.message || 'Unknown error'}`, 'error');
+      return;
     }
 
     await loadDocuments();

@@ -67,6 +67,92 @@ async function refreshDashboardAfterEmployeeChange(): Promise<void> {
   }
 }
 
+const EMPLOYEE_DOCUMENTS_BUCKET = 'employee-documents';
+
+const EMPLOYEE_DELETE_RELATED_TABLES = [
+  'payroll_handoffs',
+  'onboarding_tasks',
+  'offboarding_tasks',
+  'leave_requests',
+  'employee_notes',
+  'employee_meetings',
+  'employee_reviews',
+  'discipline_reports',
+  'incident_reports',
+  'stay_interviews',
+  'emergency_contacts',
+  'employee_audit_logs',
+  'signature_requests',
+  'employee_acknowledgments',
+  'policy_campaign_assignments',
+  'care_items',
+  'care_recognition',
+  'care_employee_notes',
+  'care_follow_ups',
+  'care_resources_shared',
+  'care_wellness_check_ins',
+] as const;
+
+async function deleteEmployeeDocumentStorageForEmployee(
+  employeeId: string
+): Promise<Error | null> {
+  const { data: docs, error: fetchError } = await supabaseClient
+    .from('employee_documents')
+    .select('id, file_path')
+    .eq('employee_id', employeeId);
+
+  if (fetchError) {
+    return new Error(fetchError.message || 'Could not load employee documents.');
+  }
+
+  const filePaths = (docs || [])
+    .map((row) => String((row as { file_path?: string }).file_path || '').trim())
+    .filter(Boolean);
+
+  if (filePaths.length) {
+    const { error: storageError } = await supabaseClient.storage
+      .from(EMPLOYEE_DOCUMENTS_BUCKET)
+      .remove(filePaths);
+
+    if (storageError) {
+      return new Error(storageError.message || 'Could not delete employee document files.');
+    }
+  }
+
+  const { error: deleteError } = await supabaseClient
+    .from('employee_documents')
+    .delete()
+    .eq('employee_id', employeeId);
+
+  if (deleteError) {
+    return new Error(deleteError.message || 'Could not delete employee document records.');
+  }
+
+  return null;
+}
+
+async function clearEmployeePortalLinks(employeeId: string): Promise<Error | null> {
+  const { error: candidateError } = await supabaseClient
+    .from('candidates')
+    .update({ linked_employee_id: null })
+    .eq('linked_employee_id', employeeId);
+
+  if (candidateError) {
+    return new Error(candidateError.message || 'Could not clear candidate links.');
+  }
+
+  const { error: accessError } = await supabaseClient
+    .from('user_access')
+    .update({ linked_employee_id: null })
+    .eq('linked_employee_id', employeeId);
+
+  if (accessError) {
+    return new Error(accessError.message || 'Could not clear portal account links.');
+  }
+
+  return null;
+}
+
 export async function deleteEmployeeById(
   employeeId: string
 ): Promise<{ error: Error | null }> {
@@ -75,32 +161,32 @@ export async function deleteEmployeeById(
     return { error: new Error('No employee ID provided') };
   }
 
-  const relatedTables = [
-    'payroll_handoffs',
-    'onboarding_tasks',
-    'offboarding_tasks',
-    'leave_requests',
-    'employee_notes',
-    'employee_meetings',
-    'employee_reviews',
-    'discipline_reports',
-    'incident_reports',
-    'stay_interviews',
-    'emergency_contacts',
-    'employee_audit_log',
-  ];
+  const documentError = await deleteEmployeeDocumentStorageForEmployee(targetId);
+  if (documentError) {
+    return { error: documentError };
+  }
 
-  for (const table of relatedTables) {
+  for (const table of EMPLOYEE_DELETE_RELATED_TABLES) {
     const { error } = await supabaseClient.from(table).delete().eq('employee_id', targetId);
     if (error) {
-      console.warn(`Could not delete related rows from ${table}:`, error);
+      console.error(`Could not delete related rows from ${table}:`, error);
+      return {
+        error: new Error(
+          `Could not delete related ${table.replaceAll('_', ' ')} records: ${error.message}`
+        ),
+      };
     }
+  }
+
+  const linkError = await clearEmployeePortalLinks(targetId);
+  if (linkError) {
+    return { error: linkError };
   }
 
   const { error } = await supabaseClient.from('employees').delete().eq('id', targetId);
   if (error) {
     console.error('Employee delete failed:', error);
-    return { error };
+    return { error: new Error(error.message || 'Could not delete employee.') };
   }
 
   return { error: null };

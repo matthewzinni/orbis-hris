@@ -9,6 +9,7 @@ import {
 } from './drawerIdentityHeader';
 import { ensureDrawerLayout, setEmployeeDrawerCreateMode } from './drawerLayout';
 import { formatBenefitsEligibilitySummary } from '../services/employeeUtils';
+import { resetDrawerForms } from '../modules/drawerForms';
 
 type DrawerUiEmployee = Record<string, unknown> & {
   id?: string;

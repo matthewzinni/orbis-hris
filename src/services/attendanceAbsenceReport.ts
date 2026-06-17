@@ -77,12 +77,10 @@ export async function loadRepeatedAbsenceReport(options?: {
   const endDate = String(options?.endDate || new Date().toISOString().slice(0, 10)).trim();
   const startDate = isoDateDaysAgo(lookbackDays - 1, new Date(`${endDate}T12:00:00`));
 
-  const { data, error } = await supabaseClient
-    .from('attendance_manual_snapshots')
-    .select('attendance_date, absent')
-    .gte('attendance_date', startDate)
-    .lte('attendance_date', endDate)
-    .order('attendance_date', { ascending: true });
+  const { data, error } = await supabaseClient.rpc('orbis_list_attendance_snapshots', {
+    p_from: startDate,
+    p_to: endDate,
+  });
 
   if (error) {
     throw new Error(error.message || 'Could not load attendance history.');

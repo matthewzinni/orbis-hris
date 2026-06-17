@@ -56,8 +56,6 @@ interface KpiEmployeeRecord {
   dept?: string;
   nextReview?: string | Date | null;
   next_review_date?: string;
-  first?: string;
-  last?: string;
   tenure_months?: number | string;
   tenureMonths?: number | string;
   at_risk?: boolean;
@@ -1125,7 +1123,7 @@ export async function loadSummaryMetrics(): Promise<void> {
       supabaseClient
         .from('employee_reviews')
         .select(
-          'employee_id, attendance_score, performance_score, teamwork_score, attitude_score, reliability_score, created_at, review_date'
+          'employee_id, quality_score, attendance_score, reliability_score, communication_score, judgement_score, initiative_score, teamwork_score, knowledge_score, training_score, created_at, review_date'
         ),
       supabaseClient
         .from('employee_notes')
@@ -1206,11 +1204,15 @@ export async function loadSummaryMetrics(): Promise<void> {
           employee_id?: string;
           review_date?: string;
           created_at?: string;
+          quality_score?: number | string;
           attendance_score?: number | string;
-          performance_score?: number | string;
-          teamwork_score?: number | string;
-          attitude_score?: number | string;
           reliability_score?: number | string;
+          communication_score?: number | string;
+          judgement_score?: number | string;
+          initiative_score?: number | string;
+          teamwork_score?: number | string;
+          knowledge_score?: number | string;
+          training_score?: number | string;
         };
         const employeeId = record.employee_id;
         const sortDate = record.review_date || record.created_at || '';
@@ -1221,12 +1223,18 @@ export async function loadSummaryMetrics(): Promise<void> {
           String(sortDate) > String(latestReviewByEmployee[employeeId].sortDate)
         ) {
           const scoreValues = [
+            record.quality_score,
             record.attendance_score,
-            record.performance_score,
-            record.teamwork_score,
-            record.attitude_score,
             record.reliability_score,
-          ].filter((value) => value !== null && value !== undefined && value !== '');
+            record.communication_score,
+            record.judgement_score,
+            record.initiative_score,
+            record.teamwork_score,
+            record.knowledge_score,
+            record.training_score,
+          ].filter(
+            (value) => value !== null && value !== undefined && value !== '' && Number(value) > 0
+          );
 
           const avgScore = scoreValues.length
             ? scoreValues.reduce((sum, value) => sum + Number(value), 0) / scoreValues.length

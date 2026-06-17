@@ -3,6 +3,7 @@
 // =========================
 
 import { supabaseClient } from '../services/supabaseClient';
+import { deleteEmployeeById } from '../modules/employeeAdmin';
 import { showOrbisConfirm } from './confirmModal';
 
 type RosterEmployee = Record<string, unknown> & {
@@ -911,13 +912,13 @@ async function deleteEmployeeQuick(employeeId) {
         }
     );
     if (!confirmed) return;
-    const { error } = await win.OrbisServices!.employees!.delete!(employeeId);
+    const { error } = await deleteEmployeeById(employeeId);
     if (error) {
         console.error(error);
         showToast(`Could not delete employee: ${error.message || 'Unknown error'}`, 'error');
         return;
     }
-    showToast('Employee deleted.');
+    showToast('Employee deleted permanently.');
     if (typeof win.loadEmployees === 'function') {
         await win.loadEmployees();
     } else {

@@ -13,6 +13,8 @@ import {
   canEditEmployeeAdmin,
   isAdminUser,
 } from '../services/access';
+import { deleteEmployeeById } from './employeeAdmin';
+import { recordAuditEvent } from '../services/auditTrail';
 import {
   employeeToPayrollSnapshot,
   logNewHirePayrollHandoff,
@@ -1072,24 +1074,19 @@ export async function deleteEmployeeRecord(): Promise<void> {
     return;
   }
 
-  const client = getSupabaseBridgeClient();
-
-  if (!client?.from) {
-    showToast('Supabase client is not ready.', 'error');
-    return;
-  }
-
-  const { error } = await client
-    .from('employees')
-    .delete()
-    .eq('id', employeeId);
+  const employee = window.currentEmployee as Record<string, unknown> | null;
+  const { error } = await deleteEmployeeById(employeeId);
 
   if (error) {
     showToast(error.message || 'Could not delete employee.', 'error');
     return;
   }
 
-  showToast('Employee deleted.');
+  if (employee) {
+    recordAuditEvent('Deleted Employee', employee, 'Employee record permanently deleted.');
+  }
+
+  showToast('Employee deleted permanently.');
   closeEmployeeDrawer();
 
   const maybeLoadEmployees = (window as any).loadEmployees;

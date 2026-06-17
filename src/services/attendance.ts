@@ -53,11 +53,9 @@ export async function loadManualAttendanceSnapshot(
   const date = String(attendanceDate || '').trim();
   if (!date) return null;
 
-  const { data, error } = await supabaseClient
-    .from('attendance_manual_snapshots')
-    .select('present, absent, timezone, source, updated_at')
-    .eq('attendance_date', date)
-    .maybeSingle();
+  const { data, error } = await supabaseClient.rpc('orbis_get_attendance_snapshot', {
+    p_date: date,
+  });
 
   if (error) {
     if (error.code === '42P01' || /does not exist/i.test(error.message || '')) {
@@ -68,15 +66,16 @@ export async function loadManualAttendanceSnapshot(
     throw new AttendanceSyncError(error.message || 'Could not load saved attendance.');
   }
 
-  if (!data) return null;
-
-  const row = data as {
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  const row = (rows[0] || null) as {
     present?: unknown;
     absent?: unknown;
     timezone?: string | null;
     source?: string | null;
     updated_at?: string | null;
-  };
+  } | null;
+
+  if (!row) return null;
 
   return {
     asOf: String(row.updated_at || new Date().toISOString()),
@@ -96,23 +95,13 @@ export async function saveManualAttendanceSnapshot(
     throw new AttendanceSyncError('Choose a date before saving attendance.');
   }
 
-  const user = (await supabaseClient.auth.getUser()).data.user;
-  const updatedBy =
-    String(user?.email || user?.id || '')
-      .trim() || undefined;
-
-  const { error } = await supabaseClient.from('attendance_manual_snapshots').upsert(
-    {
-      attendance_date: date,
-      present: snapshot.present,
-      absent: snapshot.absent,
-      timezone: snapshot.timezone || null,
-      source: snapshot.source || 'Manual',
-      updated_by: updatedBy,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'attendance_date' }
-  );
+  const { error } = await supabaseClient.rpc('orbis_save_attendance_snapshot', {
+    p_date: date,
+    p_present: snapshot.present,
+    p_absent: snapshot.absent,
+    p_timezone: snapshot.timezone || null,
+    p_source: snapshot.source || 'Manual',
+  });
 
   if (error) {
     if (error.code === '42P01' || /does not exist/i.test(error.message || '')) {

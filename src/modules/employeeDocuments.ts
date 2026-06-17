@@ -297,7 +297,13 @@ export async function uploadEmployeeDocument(): Promise<void> {
 
   if (insertError) {
     console.error('[EmployeeDocuments] DB insert failed:', insertError);
-    showToast(`Saved file but DB insert failed: ${insertError.message}`, 'error');
+    const { error: cleanupError } = await supabaseClient.storage
+      .from(EMPLOYEE_DOCUMENTS_BUCKET)
+      .remove([filePath]);
+    if (cleanupError) {
+      console.error('[EmployeeDocuments] Storage cleanup failed:', cleanupError);
+    }
+    showToast(`Upload failed: ${insertError.message}`, 'error');
     return;
   }
 

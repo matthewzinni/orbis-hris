@@ -1,4 +1,5 @@
 import { HR_ADVISORY_CORE } from '../_shared/hrAdvisoryPrompt.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -175,6 +176,25 @@ async function getUserIdFromJwt(
   return typeof body?.id === 'string' && body.id.length > 0 ? body.id : null;
 }
 
+async function userCanAccessInvestigations(
+  supabaseUrl: string,
+  supabaseAnonKey: string,
+  authHeader: string
+): Promise<boolean> {
+  const client = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: { persistSession: false },
+    global: { headers: { Authorization: authHeader } },
+  });
+
+  const { data, error } = await client.rpc('orbis_can_access_investigations');
+  if (error) {
+    console.error('[investigation-hr-guidance] access check failed:', error.message);
+    return false;
+  }
+
+  return data === true;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -199,6 +219,11 @@ Deno.serve(async (req) => {
     const userId = await getUserIdFromJwt(supabaseUrl, supabaseAnonKey, authHeader);
     if (!userId) {
       return jsonResponse({ error: 'Unauthorized' }, 401);
+    }
+
+    const canAccess = await userCanAccessInvestigations(supabaseUrl, supabaseAnonKey, authHeader);
+    if (!canAccess) {
+      return jsonResponse({ error: 'Forbidden' }, 403);
     }
 
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
