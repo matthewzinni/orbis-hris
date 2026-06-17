@@ -11,14 +11,18 @@ async function ensureJanusModules(): Promise<JanusModule> {
   }
 
   janusModulePromise = (async () => {
-    await import('../styles/janus.css');
-    const [janus] = await Promise.all([
-      import('./janus'),
-      import('./janusAccountDrawer'),
-      import('./janusAccountPanels'),
-    ]);
-    janusModulesLoaded = true;
-    return janus;
+    try {
+      const [janus] = await Promise.all([
+        import('./janus'),
+        import('./janusAccountDrawer'),
+        import('./janusAccountPanels'),
+      ]);
+      janusModulesLoaded = true;
+      return janus;
+    } catch (err) {
+      janusModulePromise = null;
+      throw err;
+    }
   })();
 
   return janusModulePromise;
@@ -44,8 +48,15 @@ export function applyJanusAccess(): void {
 }
 
 export async function loadJanus(force = false): Promise<void> {
-  const janus = await ensureJanusModules();
-  return janus.loadJanus(force);
+  try {
+    const janus = await ensureJanusModules();
+    await janus.loadJanus(force);
+  } catch (err) {
+    console.error('[Janus] Module load failed:', err);
+    if (typeof window.showToast === 'function') {
+      window.showToast('Could not load Janus module. Try a hard refresh.', 'error');
+    }
+  }
 }
 
 export function isJanusModuleLoaded(): boolean {

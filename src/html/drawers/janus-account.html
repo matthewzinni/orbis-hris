@@ -268,6 +268,43 @@
             </div>
 
             <div class="hidden" data-janus-drawer-panel="activity" aria-hidden="true">
+              <div class="card hidden" id="janusActivityFormCard" data-janus-edit-only>
+                <div class="card-header">Log touch</div>
+                <div class="card-body">
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="janusActivityTypeInput">Type</label>
+                      <select id="janusActivityTypeInput" data-janus-activity-field></select>
+                    </div>
+                    <div class="field">
+                      <label for="janusActivityDateInput">Date</label>
+                      <input id="janusActivityDateInput" type="date" data-janus-activity-field />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="janusActivitySubjectInput">Subject</label>
+                    <input
+                      id="janusActivitySubjectInput"
+                      type="text"
+                      data-janus-activity-field
+                      placeholder="Call with Jane, email recap sent…"
+                    />
+                  </div>
+                  <div class="field">
+                    <label for="janusActivityContactInput">Contact (optional)</label>
+                    <select id="janusActivityContactInput" data-janus-activity-field>
+                      <option value="">—</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="janusActivityBodyInput">Notes</label>
+                    <textarea id="janusActivityBodyInput" rows="3" data-janus-activity-field placeholder="Context for the team…"></textarea>
+                  </div>
+                  <div class="button-row">
+                    <button class="button primary" type="button" id="janusSaveActivityBtn">Save activity</button>
+                  </div>
+                </div>
+              </div>
               <div class="card">
                 <div class="card-header">Activity timeline</div>
                 <div class="card-body">

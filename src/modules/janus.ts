@@ -7,12 +7,15 @@ import { importCopperCsv } from '../services/janusCopperImport';
 import {
   deleteJanusAccount,
   fetchJanusAccounts,
+  fetchJanusAccountLastTouchMap,
   fetchJanusContactsAll,
   fetchJanusDashboardData,
   fetchJanusHomeStats,
   searchJanusGlobal,
   type JanusContactWithAccount,
+  type JanusDashboardData,
   type JanusSearchResult,
+  type JanusUpcomingTouch,
 } from '../services/janusStore';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import {
@@ -26,6 +29,17 @@ import {
 
 let cachedJanusAccounts: JanusAccount[] = [];
 let cachedJanusContacts: JanusContactWithAccount[] = [];
+let cachedJanusStats = {
+  accountCount: 0,
+  contactCount: 0,
+  meetingCount: 0,
+  documentCount: 0,
+};
+let cachedJanusDashboard: JanusDashboardData = {
+  recentMeetings: [],
+  upcomingFollowUps: [],
+};
+let cachedJanusLastTouch = new Map<string, string>();
 let janusListBound = false;
 let janusHelpBound = false;
 let searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -146,7 +160,7 @@ function renderJanusStats(stats: {
 
 function renderDashboardPanels(
   recentMeetings: Array<{ id: string; account_id: string; title: string; meeting_date: string; account_name: string }>,
-  upcomingFollowUps: Array<{ id: string; account_id: string; title: string; follow_up_date: string | null; account_name: string }>
+  upcomingFollowUps: JanusUpcomingTouch[]
 ): void {
   const recentEl = safeGet('janusRecentMeetingsList');
   const followEl = safeGet('janusUpcomingFollowUpsList');
@@ -177,13 +191,13 @@ function renderDashboardPanels(
     } else {
       followEl.innerHTML = upcomingFollowUps
         .map(
-          (meeting) => `
-          <div class="history-item" data-janus-open-meeting="${esc(meeting.account_id)}" role="button" tabindex="0">
+          (touch) => `
+          <div class="history-item" data-janus-open-account="${esc(touch.account_id)}" data-janus-open-tab="${touch.kind === 'activity' ? 'activity' : 'meetings'}" role="button" tabindex="0">
             <div class="history-top">
-              <strong>${esc(meeting.account_name)}</strong>
-              <span>Follow up ${esc(formatJanusDateLabel(meeting.follow_up_date))}</span>
+              <strong>${esc(touch.account_name)}</strong>
+              <span>Follow up ${esc(formatJanusDateLabel(touch.touch_date))}</span>
             </div>
-            <div class="history-body muted">${esc(meeting.title)}</div>
+            <div class="history-body muted">${esc(touch.title)}</div>
           </div>
         `
         )
@@ -241,7 +255,10 @@ function renderGlobalSearchResults(results: JanusSearchResult[]): void {
     .join('');
 }
 
-function renderAccountsTable(accounts: JanusAccount[]): void {
+function renderAccountsTable(
+  accounts: JanusAccount[],
+  lastTouchMap: Map<string, string> = cachedJanusLastTouch
+): void {
   const tbody = safeGet('janusAccountsBody');
   const count = safeGet('janusAccountCount');
   const visible = filterAccounts(accounts);
@@ -254,13 +271,14 @@ function renderAccountsTable(accounts: JanusAccount[]): void {
 
   if (!visible.length) {
     tbody.innerHTML =
-      '<tr><td colspan="6" class="empty">No accounts match your filters.</td></tr>';
+      '<tr><td colspan="7" class="empty">No accounts match your filters.</td></tr>';
     return;
   }
 
   tbody.innerHTML = visible
     .map((account) => {
       const address = janusFormatAddress(account);
+      const lastTouch = lastTouchMap.get(account.id);
       const deleteBtn = isAdminUser()
         ? `<button type="button" class="button soft sm" data-janus-delete-account="${esc(account.id)}" data-janus-delete-account-name="${escAttr(account.name)}">Delete</button>`
         : '';
@@ -269,6 +287,7 @@ function renderAccountsTable(accounts: JanusAccount[]): void {
           <td><strong>${esc(account.name)}</strong></td>
           <td>${esc(janusAccountTypeLabel(account.account_type))}</td>
           <td><span class="${statusBadgeClass(account.status)}">${esc(janusAccountStatusLabel(account.status))}</span></td>
+          <td>${esc(lastTouch ? formatJanusDateLabel(lastTouch) : '—')}</td>
           <td>${esc(account.owner_email || '—')}</td>
           <td>${esc(account.phone || address || '—')}</td>
           <td>
@@ -343,11 +362,46 @@ function setJanusLoading(loading: boolean): void {
   const tbody = safeGet('janusAccountsBody');
   const contactsBody = safeGet('janusContactsBody');
   if (loading && tbody) {
-    tbody.innerHTML = '<tr><td colspan="6" class="empty">Loading accounts…</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty">Loading accounts…</td></tr>';
   }
   if (loading && contactsBody) {
     contactsBody.innerHTML = '<tr><td colspan="6" class="empty">Loading contacts…</td></tr>';
   }
+}
+
+function renderJanusLoadError(message: string): void {
+  const summary = safeGet('janusHomeSummary');
+  if (summary) {
+    summary.textContent = message;
+  }
+
+  const recentEl = safeGet('janusRecentMeetingsList');
+  const followEl = safeGet('janusUpcomingFollowUpsList');
+  if (recentEl) {
+    recentEl.innerHTML = `<div class="muted janus-empty">${esc(message)}</div>`;
+  }
+  if (followEl) {
+    followEl.innerHTML = `<div class="muted janus-empty">${esc(message)}</div>`;
+  }
+
+  const tbody = safeGet('janusAccountsBody');
+  const contactsBody = safeGet('janusContactsBody');
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty">${esc(message)}</td></tr>`;
+  }
+  if (contactsBody) {
+    contactsBody.innerHTML = `<tr><td colspan="6" class="empty">${esc(message)}</td></tr>`;
+  }
+}
+
+function renderJanusFromCache(): void {
+  renderJanusStats(cachedJanusStats);
+  renderDashboardPanels(
+    cachedJanusDashboard.recentMeetings,
+    cachedJanusDashboard.upcomingFollowUps
+  );
+  renderAccountsTable(cachedJanusAccounts, cachedJanusLastTouch);
+  renderContactsTable(cachedJanusContacts);
 }
 
 async function handleDeleteAccount(accountId: string, accountName: string): Promise<void> {
@@ -560,12 +614,15 @@ function bindJanusListUi(): void {
 
   document.getElementById('janusPage')?.addEventListener('click', (event) => {
     const item = (event.target as Element | null)?.closest<HTMLElement>(
-      '[data-janus-open-meeting]'
+      '[data-janus-open-meeting], [data-janus-open-account]'
     );
     if (!item || typeof window.openJanusAccountDrawer !== 'function') return;
-    const accountId = item.dataset.janusOpenMeeting || '';
+    const accountId = item.dataset.janusOpenAccount || item.dataset.janusOpenMeeting || '';
     if (!accountId) return;
-    void window.openJanusAccountDrawer(accountId, 'meetings');
+    const tab = item.dataset.janusOpenMeeting
+      ? 'meetings'
+      : item.dataset.janusOpenTab || 'overview';
+    void window.openJanusAccountDrawer(accountId, tab);
   });
 
   safeGet<HTMLInputElement>('janusCopperImportInput')?.addEventListener('change', (event) => {
@@ -615,26 +672,27 @@ export async function loadJanus(force = false): Promise<void> {
   applyJanusAccess();
 
   if (!force && cachedJanusAccounts.length) {
-    renderAccountsTable(cachedJanusAccounts);
-    renderContactsTable(cachedJanusContacts);
+    renderJanusFromCache();
+    void runGlobalSearch();
     return;
   }
 
   setJanusLoading(true);
 
   try {
-    const [stats, accounts, contacts, dashboard] = await Promise.all([
+    const [stats, accounts, contacts, dashboard, lastTouchMap] = await Promise.all([
       fetchJanusHomeStats(),
       fetchJanusAccounts(),
       fetchJanusContactsAll(),
       fetchJanusDashboardData(),
+      fetchJanusAccountLastTouchMap(),
     ]);
+    cachedJanusStats = stats;
     cachedJanusAccounts = accounts;
     cachedJanusContacts = contacts;
-    renderJanusStats(stats);
-    renderDashboardPanels(dashboard.recentMeetings, dashboard.upcomingFollowUps);
-    renderAccountsTable(accounts);
-    renderContactsTable(contacts);
+    cachedJanusDashboard = dashboard;
+    cachedJanusLastTouch = lastTouchMap;
+    renderJanusFromCache();
     await runGlobalSearch();
   } catch (err) {
     console.error('[Janus] Load failed:', err);
@@ -642,10 +700,7 @@ export async function loadJanus(force = false): Promise<void> {
       err && typeof err === 'object' && 'message' in err
         ? String((err as { message?: string }).message)
         : 'Could not load Janus.';
-    const tbody = safeGet('janusAccountsBody');
-    if (tbody) {
-      tbody.innerHTML = `<tr><td colspan="6" class="empty">${esc(message)}</td></tr>`;
-    }
+    renderJanusLoadError(message);
     showToast('Could not load Janus.', 'error');
   }
 }

@@ -82,9 +82,18 @@ export type JanusSearchResult =
   | { kind: 'contact'; contact: JanusContact; account_name: string }
   | { kind: 'meeting'; meeting: JanusMeeting; account_name: string };
 
+export type JanusUpcomingTouch = {
+  id: string;
+  account_id: string;
+  account_name: string;
+  title: string;
+  touch_date: string;
+  kind: 'meeting' | 'activity';
+};
+
 export type JanusDashboardData = {
   recentMeetings: JanusMeetingWithAccount[];
-  upcomingFollowUps: JanusMeetingWithAccount[];
+  upcomingFollowUps: JanusUpcomingTouch[];
 };
 
 function mapMeeting(row: Record<string, unknown>): JanusMeeting {
@@ -113,21 +122,29 @@ function currentUserEmail(): string | null {
 }
 
 export async function fetchJanusHomeStats(): Promise<JanusHomeStats> {
-  const [accounts, contacts, meetings, documents] = await Promise.all([
-    supabaseClient.from('janus_accounts').select('id', { count: 'exact', head: true }),
-    supabaseClient.from('janus_contacts').select('id', { count: 'exact', head: true }),
-    supabaseClient.from('janus_meetings').select('id', { count: 'exact', head: true }),
-    supabaseClient.from('janus_documents').select('id', { count: 'exact', head: true }),
+  const countTable = async (table: 'janus_accounts' | 'janus_contacts' | 'janus_meetings' | 'janus_documents') => {
+    const headRes = await supabaseClient.from(table).select('id', { count: 'exact', head: true });
+    if (!headRes.error) {
+      return headRes.count ?? 0;
+    }
+
+    const { data, error } = await supabaseClient.from(table).select('id');
+    if (error) throw error;
+    return (data || []).length;
+  };
+
+  const [accountCount, contactCount, meetingCount, documentCount] = await Promise.all([
+    countTable('janus_accounts'),
+    countTable('janus_contacts'),
+    countTable('janus_meetings'),
+    countTable('janus_documents'),
   ]);
 
-  const firstError = accounts.error || contacts.error || meetings.error || documents.error;
-  if (firstError) throw firstError;
-
   return {
-    accountCount: accounts.count ?? 0,
-    contactCount: contacts.count ?? 0,
-    meetingCount: meetings.count ?? 0,
-    documentCount: documents.count ?? 0,
+    accountCount,
+    contactCount,
+    meetingCount,
+    documentCount,
   };
 }
 
@@ -457,12 +474,41 @@ function mapMeetingWithAccount(
   };
 }
 
+export async function fetchJanusAccountLastTouchMap(): Promise<Map<string, string>> {
+  const [meetingsRes, activitiesRes] = await Promise.all([
+    supabaseClient.from('janus_meetings').select('account_id, meeting_date'),
+    supabaseClient.from('janus_activities').select('account_id, activity_date'),
+  ]);
+
+  if (meetingsRes.error) throw meetingsRes.error;
+  if (activitiesRes.error) throw activitiesRes.error;
+
+  const map = new Map<string, string>();
+  const bump = (accountId: string, date: string | null | undefined): void => {
+    const normalized = String(date || '').slice(0, 10);
+    if (!normalized) return;
+    const existing = map.get(accountId);
+    if (!existing || normalized > existing) {
+      map.set(accountId, normalized);
+    }
+  };
+
+  (meetingsRes.data || []).forEach((row) => {
+    bump(String(row.account_id || ''), String(row.meeting_date || ''));
+  });
+  (activitiesRes.data || []).forEach((row) => {
+    bump(String(row.account_id || ''), String(row.activity_date || ''));
+  });
+
+  return map;
+}
+
 export async function fetchJanusDashboardData(): Promise<JanusDashboardData> {
   const accounts = await fetchJanusAccounts();
   const accountMap = new Map(accounts.map((a) => [a.id, a.name]));
   const today = new Date().toISOString().slice(0, 10);
 
-  const [recentRes, followRes] = await Promise.all([
+  const [recentRes, meetingFollowRes, activityFollowRes] = await Promise.all([
     supabaseClient
       .from('janus_meetings')
       .select('*')
@@ -474,19 +520,53 @@ export async function fetchJanusDashboardData(): Promise<JanusDashboardData> {
       .not('follow_up_date', 'is', null)
       .gte('follow_up_date', today)
       .order('follow_up_date', { ascending: true })
-      .limit(8),
+      .limit(12),
+    supabaseClient
+      .from('janus_activities')
+      .select('*')
+      .eq('activity_type', 'follow_up')
+      .gte('activity_date', today)
+      .order('activity_date', { ascending: true })
+      .limit(12),
   ]);
 
   if (recentRes.error) throw recentRes.error;
-  if (followRes.error) throw followRes.error;
+  if (meetingFollowRes.error) throw meetingFollowRes.error;
+  if (activityFollowRes.error) throw activityFollowRes.error;
+
+  const upcomingTouches: JanusUpcomingTouch[] = [
+    ...(meetingFollowRes.data || []).map((row) => {
+      const meeting = mapMeeting(row as Record<string, unknown>);
+      return {
+        id: meeting.id,
+        account_id: meeting.account_id,
+        account_name: accountMap.get(meeting.account_id) || 'Account',
+        title: meeting.title,
+        touch_date: String(meeting.follow_up_date || ''),
+        kind: 'meeting' as const,
+      };
+    }),
+    ...(activityFollowRes.data || []).map((row) => {
+      const activity = mapActivity(row as Record<string, unknown>);
+      return {
+        id: activity.id,
+        account_id: activity.account_id,
+        account_name: accountMap.get(activity.account_id) || 'Account',
+        title: activity.subject,
+        touch_date: activity.activity_date,
+        kind: 'activity' as const,
+      };
+    }),
+  ]
+    .filter((touch) => touch.touch_date)
+    .sort((a, b) => a.touch_date.localeCompare(b.touch_date))
+    .slice(0, 8);
 
   return {
     recentMeetings: (recentRes.data || []).map((row) =>
       mapMeetingWithAccount(row as Record<string, unknown>, accountMap)
     ),
-    upcomingFollowUps: (followRes.data || []).map((row) =>
-      mapMeetingWithAccount(row as Record<string, unknown>, accountMap)
-    ),
+    upcomingFollowUps: upcomingTouches,
   };
 }
 

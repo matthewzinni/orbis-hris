@@ -143,7 +143,7 @@ export async function fetchUserAccessRowForEmail(email: string): Promise<UserAcc
   if (!normalized) return null;
 
   const select =
-    'email, display_name, role, supervisor_name, supervised_employee_ids, linked_employee_id, can_delete, approval_status';
+    'email, display_name, role, supervisor_name, supervised_employee_ids, linked_employee_id, can_delete, janus_access, approval_status';
 
   const { data: rpcRow, error: rpcErr } = await supabaseClient.rpc('orbis_get_my_user_access');
   if (!rpcErr && rpcRow) {

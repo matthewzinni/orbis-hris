@@ -110,6 +110,15 @@ export const JANUS_ACCOUNT_STATUSES: JanusAccountStatus[] = [
   'prospect',
 ];
 
+/** Manual activity log types (meetings use the Meetings tab). */
+export const JANUS_ACTIVITY_TYPES: JanusActivityType[] = [
+  'call',
+  'email',
+  'visit',
+  'note',
+  'follow_up',
+];
+
 const ACCOUNT_TYPE_LABELS: Record<JanusAccountType, string> = {
   client: 'Client',
   vendor: 'Vendor',

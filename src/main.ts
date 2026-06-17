@@ -16,6 +16,7 @@ import './styles/employee-portal.css';
 import './styles/manager-home.css';
 import './styles/onboarding.css';
 import './styles/policy-campaigns.css';
+import './styles/janus.css';
 import './styles/dashboard-charts.css';
 import './styles/er-signing-modal.css';
 import './styles/er-acknowledgment-print.css';

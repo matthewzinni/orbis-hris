@@ -28,8 +28,10 @@ import {
   type JanusContact,
   type JanusDocument,
   type JanusMeeting,
+  JANUS_ACTIVITY_TYPES,
   formatJanusDateLabel,
   janusActivityTypeLabel,
+  janusContactDisplayName,
   janusDocumentTypeLabel,
 } from '../types/janusTypes';
 
@@ -68,6 +70,78 @@ function parseAttendees(raw: string): string[] {
     .split(/[,;\n]/)
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+function clearActivityForm(): void {
+  safeGet<HTMLSelectElement>('janusActivityTypeInput')!.value = 'call';
+  safeGet<HTMLInputElement>('janusActivityDateInput')!.value = todayIso();
+  safeGet<HTMLInputElement>('janusActivitySubjectInput')!.value = '';
+  safeGet<HTMLSelectElement>('janusActivityContactInput')!.value = '';
+  safeGet<HTMLTextAreaElement>('janusActivityBodyInput')!.value = '';
+}
+
+function populateActivityTypeSelect(): void {
+  const select = safeGet<HTMLSelectElement>('janusActivityTypeInput');
+  if (!select || select.options.length) return;
+
+  JANUS_ACTIVITY_TYPES.forEach((type) => {
+    const option = document.createElement('option');
+    option.value = type;
+    option.textContent = janusActivityTypeLabel(type);
+    select.appendChild(option);
+  });
+}
+
+function populateActivityContactSelect(contacts: JanusContact[]): void {
+  const select = safeGet<HTMLSelectElement>('janusActivityContactInput');
+  if (!select) return;
+
+  const current = select.value;
+  select.innerHTML = '<option value="">—</option>';
+  contacts.forEach((contact) => {
+    const option = document.createElement('option');
+    option.value = contact.id;
+    option.textContent = janusContactDisplayName(contact);
+    select.appendChild(option);
+  });
+  if (current && contacts.some((contact) => contact.id === current)) {
+    select.value = current;
+  }
+}
+
+async function saveActivityRecord(accountId: string): Promise<void> {
+  if (!canEditJanus()) {
+    showToast('Read-only access.', 'error');
+    return;
+  }
+
+  const subject = String(safeGet<HTMLInputElement>('janusActivitySubjectInput')?.value || '').trim();
+  if (!subject) {
+    showToast('Subject is required.', 'error');
+    return;
+  }
+
+  const contactId = String(safeGet<HTMLSelectElement>('janusActivityContactInput')?.value || '').trim();
+
+  try {
+    await createJanusActivity({
+      account_id: accountId,
+      contact_id: contactId || null,
+      activity_type: (safeGet<HTMLSelectElement>('janusActivityTypeInput')?.value ||
+        'note') as JanusActivity['activity_type'],
+      activity_date: safeGet<HTMLInputElement>('janusActivityDateInput')?.value || todayIso(),
+      subject,
+      body: safeGet<HTMLTextAreaElement>('janusActivityBodyInput')?.value || null,
+    });
+    clearActivityForm();
+    await refreshJanusAccountPanels(accountId, 'activity');
+    showToast('Activity saved.');
+    if (typeof window.loadJanus === 'function') {
+      void window.loadJanus(true);
+    }
+  } catch (err) {
+    showToast(err instanceof Error ? err.message : 'Could not save activity.', 'error');
+  }
 }
 
 function renderMeetingsList(meetings: JanusMeeting[]): void {
@@ -355,11 +429,13 @@ export async function refreshJanusAccountPanels(
   const meetingsPromise = loadMeetings ? fetchJanusMeetings(accountId) : Promise.resolve(null);
   const documentsPromise = loadDocuments ? fetchJanusDocuments(accountId) : Promise.resolve(null);
   const activitiesPromise = loadActivity ? fetchJanusActivities(accountId) : Promise.resolve(null);
+  const contactsPromise = loadActivity ? fetchJanusContacts(accountId) : Promise.resolve(null);
 
-  const [meetings, documents, activities] = await Promise.all([
+  const [meetings, documents, activities, contacts] = await Promise.all([
     meetingsPromise,
     documentsPromise,
     activitiesPromise,
+    contactsPromise,
   ]);
 
   if (meetings) renderMeetingsList(meetings);
@@ -367,6 +443,9 @@ export async function refreshJanusAccountPanels(
     documentCache.clear();
     documents.forEach((doc) => documentCache.set(doc.id, doc));
     renderDocumentsList(documents);
+  }
+  if (contacts) {
+    populateActivityContactSelect(contacts);
   }
   if (activities && meetings) {
     renderActivityTimeline(activities, meetings);
@@ -551,13 +630,15 @@ export function syncJanusPanelsEditAccess(): void {
   const editable = canEditJanus();
   safeGet<HTMLButtonElement>('janusGenerateMeetingSummaryBtn')?.classList.toggle('hidden', !editable);
   safeGet<HTMLButtonElement>('janusSaveMeetingBtn')?.classList.toggle('hidden', !editable);
+  safeGet<HTMLButtonElement>('janusSaveActivityBtn')?.classList.toggle('hidden', !editable);
   safeGet<HTMLButtonElement>('janusUploadDocumentBtn')?.classList.toggle('hidden', !editable);
   safeGet<HTMLButtonElement>('janusEmailMeetingRequestBtn')?.classList.toggle('hidden', !editable);
   safeGet('janusDocumentUploadForm')?.classList.toggle('hidden', !editable);
+  safeGet('janusActivityFormCard')?.classList.toggle('hidden', !editable);
 
   document
     .querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(
-      '[data-janus-meeting-field]'
+      '[data-janus-meeting-field], [data-janus-activity-field]'
     )
     .forEach((field) => {
       field.disabled = !editable;
@@ -570,6 +651,8 @@ export function initJanusAccountPanels(getAccountId: () => string | null): void 
 
   syncJanusPanelsEditAccess();
   initJanusMeetingDictation();
+  populateActivityTypeSelect();
+  clearActivityForm();
 
   safeGet('janusEmailMeetingRequestBtn')?.addEventListener('click', () => {
     launchJanusMeetingRequestEmail();
@@ -585,6 +668,12 @@ export function initJanusAccountPanels(getAccountId: () => string | null): void 
     const accountId = getAccountId();
     if (!accountId) return;
     void saveMeetingRecord(accountId);
+  });
+
+  safeGet('janusSaveActivityBtn')?.addEventListener('click', () => {
+    const accountId = getAccountId();
+    if (!accountId) return;
+    void saveActivityRecord(accountId);
   });
 
   safeGet('janusClearMeetingBtn')?.addEventListener('click', () => {
