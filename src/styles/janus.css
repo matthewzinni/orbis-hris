@@ -10,22 +10,21 @@
 .janus-brand-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .janus-brand-logo {
-  width: 44px;
-  height: 44px;
-  flex: 0 0 44px;
+  width: 96px;
+  height: 96px;
+  flex: 0 0 96px;
 }
 
 .janus-brand-logo img {
-  width: 44px;
-  height: 44px;
+  width: 96px;
+  height: 96px;
   display: block;
-  object-fit: cover;
-  border-radius: 10px;
-  filter: drop-shadow(0 6px 18px rgba(96, 130, 255, 0.42));
+  object-fit: contain;
+  filter: drop-shadow(0 8px 24px rgba(96, 130, 255, 0.5));
 }
 
 .janus-brand-title {
