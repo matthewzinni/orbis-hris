@@ -1,4 +1,5 @@
 -- Role hardening: default deny, leadership admin rows, no company-wide "user" roster leak.
+-- btw-instance-seed: BTW production user_access rows; new instances — run scripts/bootstrap_new_instance.sql after db push.
 
 -- Leadership (Matthew, Trent, Brent) — full admin; never employee portal.
 update public.user_access

@@ -1,4 +1,5 @@
 -- Self-registration with admin approval (replaces magic-link employee portal provisioning).
+-- btw-instance-config: leadership emails excluded from employee portal in RPCs below.
 
 alter table public.user_access
   add column if not exists approval_status text;

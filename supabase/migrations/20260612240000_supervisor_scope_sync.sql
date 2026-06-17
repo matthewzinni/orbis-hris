@@ -1,4 +1,5 @@
 -- Keep supervisor supervised_employee_ids in sync with roster supervisor field when an explicit list exists.
+-- btw-instance-seed: Kyle Hodges scope update at end of file; new instances — run scripts/bootstrap_new_instance.sql after db push.
 
 -- Case-insensitive supervisor name match (mixed-case scope_name must match roster text).
 create or replace function public.orbis_supervisor_matches(

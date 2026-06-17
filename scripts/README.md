@@ -1,5 +1,11 @@
 # Orbis scripts
 
+## New dedicated instance bootstrap
+
+For a **second customer** (not BTW Global): after `npm run db:push` on a new Supabase project, run [`bootstrap_new_instance.sql`](bootstrap_new_instance.sql) in the SQL Editor. Full runbook: [`docs/INSTANCE_DEPLOY.md`](../docs/INSTANCE_DEPLOY.md).
+
+**Never run bootstrap on BTW production.**
+
 ## Weekly HR email (`weekly_orbis_report_email.py`)
 
 Sends an HTML snapshot (headcount, stay interviews due, open investigations, discipline, operations) to **matthew.zinni@btwglobal.com** by default.

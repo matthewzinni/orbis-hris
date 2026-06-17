@@ -1,4 +1,5 @@
 -- Attendance: org-wide for HR leadership only; filtered admins see direct reports (like supervisors).
+-- btw-instance-config: leadership emails in orbis_has_org_wide_attendance_access; externalize via orbis_instance_settings (future).
 
 create or replace function public.orbis_has_org_wide_attendance_access()
 returns boolean

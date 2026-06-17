@@ -1,4 +1,5 @@
 -- Allow admins with linked_employee_id to use personal portal tasks (handbook, onboarding).
+-- btw-instance-seed: Matthew Zinni / BTW2509 linkage below; new instances — run scripts/bootstrap_new_instance.sql after db push.
 -- Auto-link when login email matches roster work/personal email.
 
 create or replace function public.orbis_link_my_employee_record()

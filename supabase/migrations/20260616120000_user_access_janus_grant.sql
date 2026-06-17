@@ -1,4 +1,5 @@
 -- Janus CRM access grant on user_access (orthogonal to primary role: admin, supervisor, user).
+-- btw-instance-seed: BTW Janus grant list below; new instances — run scripts/bootstrap_new_instance.sql after db push.
 
 alter table public.user_access
   add column if not exists janus_access boolean not null default false;

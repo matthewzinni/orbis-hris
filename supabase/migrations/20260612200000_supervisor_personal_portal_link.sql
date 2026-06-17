@@ -1,4 +1,5 @@
 -- Link supervisors/users to their own employee record for personal portal (profile, tasks, PTO).
+-- btw-instance-seed: backfill user_access linked_employee_id for existing BTW rows.
 -- Backfill + self-service RPC when login email matches roster personal/work email.
 
 create or replace function public.orbis_link_my_employee_record()

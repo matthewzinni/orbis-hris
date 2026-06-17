@@ -1,4 +1,5 @@
 -- HR leadership (Matthew, Trent, Brent) org-wide; filtered admins and supervisors direct reports only.
+-- btw-instance-config: leadership emails in SQL functions; externalize via orbis_instance_settings (future).
 
 create or replace function public.orbis_has_hr_leadership_access()
 returns boolean

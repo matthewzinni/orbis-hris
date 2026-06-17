@@ -1,4 +1,5 @@
 -- Overseas / remote flag for attendance roll call and employee admin
+-- btw-instance-seed: BTW remote employee IDs; no-op on empty roster, harmless on new instances.
 
 alter table public.employees
   add column if not exists is_remote boolean not null default false;

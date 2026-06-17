@@ -2,6 +2,8 @@
 
 Use after changing env vars, migrations, or auth-related code.
 
+**Dedicated instance (second customer):** see [docs/INSTANCE_DEPLOY.md](docs/INSTANCE_DEPLOY.md).
+
 ## Vercel environment
 
 - [ ] `VITE_SUPABASE_URL` = `https://YOUR_PROJECT.supabase.co` (no `/rest/v1/`)
