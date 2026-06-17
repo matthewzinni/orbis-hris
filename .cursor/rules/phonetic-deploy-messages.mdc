@@ -1,0 +1,21 @@
+---
+description: Prefix git commit messages with NATO phonetic alphabet for Vercel deploy tracking
+alwaysApply: true
+---
+
+# Phonetic deploy commit messages
+
+When creating git commits for this project (especially those that deploy to Vercel), prefix the subject line:
+
+```
+{word} - {summary}
+```
+
+- Use the **next word** from `.deploy-phonetic-next` (single lowercase line, e.g. `alpha`).
+- After a successful commit, advance the file to the next NATO word: alpha → bravo → charlie → … → zulu → alpha.
+- Include `.deploy-phonetic-next` in the same commit when it changes.
+- Keep the summary after the dash in normal imperative style (e.g. `bravo - Fix supervisor scope sync on login`).
+
+NATO sequence: alpha, bravo, charlie, delta, echo, foxtrot, golf, hotel, india, juliett, kilo, lima, mike, november, oscar, papa, quebec, romeo, sierra, tango, uniform, victor, whiskey, x-ray, yankee, zulu.
+
+Do not skip letters or reuse a letter without advancing the tracker.
