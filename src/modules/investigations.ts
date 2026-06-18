@@ -524,9 +524,7 @@ function filterInvestigations(rows: Investigation[]): Investigation[] {
   return rows.filter((row) => {
     const rowStatus = normalizeInvestigationStatus(row.status);
 
-    if (!status) {
-      if (rowStatus === 'closed') return false;
-    } else if (rowStatus !== status) {
+    if (status && rowStatus !== status) {
       return false;
     }
 
@@ -1374,6 +1372,11 @@ async function saveInvestigationRecordInner(): Promise<void> {
 
       if (error) throw error;
       saved = (data as Investigation) || null;
+      if (!saved) {
+        throw new Error(
+          'Update did not persist. Your login may lack administrator access in user_access, or the case was not found.'
+        );
+      }
 
       if (currentInvestigationId) {
         await syncTargetedSubjects(currentInvestigationId, targetedEmployeeIds);
@@ -1426,6 +1429,11 @@ async function saveInvestigationRecordInner(): Promise<void> {
 
       if (error) throw error;
       saved = (data as Investigation) || null;
+      if (!saved) {
+        throw new Error(
+          'Create did not persist. Your login may lack administrator access in user_access.'
+        );
+      }
       currentInvestigationId = String(saved?.id || '');
 
       if (currentInvestigationId) {

@@ -16,6 +16,7 @@ scripts/output/
 # Local secrets & Supabase CLI
 .env
 .env.local
+.env.training
 .env.*.local
 mobile/.env
 supabase/.branches

@@ -13,6 +13,8 @@ export type InstanceFeatures = {
 };
 
 export type InstanceConfig = {
+  /** True when VITE_DEMO_INSTANCE is set (training / demo deploy only). */
+  isDemoInstance: boolean;
   /** Short name shown in UI (e.g. sidebar). */
   companyName: string;
   /** Legal entity for footers and PDFs. */
@@ -42,6 +44,7 @@ export const BTW_DEFAULT_LEADERSHIP_PORTAL_EXCLUDE_EMAILS = [
 ] as const;
 
 export const BTW_DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
+  isDemoInstance: false,
   companyName: 'BTW Global',
   companyLegalName: 'BTW Global, LLC',
   companyEmailDomain: 'btwglobal.com',
@@ -83,6 +86,7 @@ export function getInstanceConfig(): InstanceConfig {
   const defaults = BTW_DEFAULT_INSTANCE_CONFIG;
 
   return {
+    isDemoInstance: parseBooleanEnv('VITE_DEMO_INSTANCE', defaults.isDemoInstance),
     companyName: readEnv('VITE_COMPANY_NAME') || defaults.companyName,
     companyLegalName: readEnv('VITE_COMPANY_LEGAL_NAME') || defaults.companyLegalName,
     companyEmailDomain: readEnv('VITE_COMPANY_EMAIL_DOMAIN') || defaults.companyEmailDomain,
@@ -110,6 +114,10 @@ export function instanceConfig(): InstanceConfig {
     cachedConfig = getInstanceConfig();
   }
   return cachedConfig;
+}
+
+export function isDemoInstance(): boolean {
+  return instanceConfig().isDemoInstance;
 }
 
 /** Test helper — reset memoized config between Vitest cases. */

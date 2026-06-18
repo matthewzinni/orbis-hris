@@ -20,8 +20,10 @@ import './styles/janus.css';
 import './styles/dashboard-charts.css';
 import './styles/er-signing-modal.css';
 import './styles/er-acknowledgment-print.css';
+import './styles/demo-banner.css';
 import './ui/dashboardCharts';
 import './utils/helpers';
+import './ui/demoBanner';
 import { supabase } from './services/supabaseClient';
 import { getUserRole, isEmployeeUser, canAccessOrbisApp } from './services/access';
 import {

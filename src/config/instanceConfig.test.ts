@@ -17,6 +17,7 @@ describe('instanceConfig', () => {
 
   it('returns BTW defaults when env is unset', () => {
     const config = getInstanceConfig();
+    expect(config.isDemoInstance).toBe(false);
     expect(config.companyName).toBe('BTW Global');
     expect(config.companyLegalName).toBe('BTW Global, LLC');
     expect(config.employeeIdPrefix).toBe('BTW');
@@ -40,5 +41,14 @@ describe('instanceConfig', () => {
     expect(config.orgWideScopeEmails).toEqual(['hr@acme.com', 'ceo@acme.com']);
     expect(config.featureFlags.janus).toBe(false);
     expect(config.featureFlags.investigations).toBe(BTW_DEFAULT_INSTANCE_CONFIG.featureFlags.investigations);
+  });
+
+  it('enables demo instance banner when VITE_DEMO_INSTANCE is true', () => {
+    vi.stubEnv('VITE_DEMO_INSTANCE', 'true');
+    vi.stubEnv('VITE_COMPANY_NAME', 'Northline Manufacturing');
+
+    const config = getInstanceConfig();
+    expect(config.isDemoInstance).toBe(true);
+    expect(config.companyName).toBe('Northline Manufacturing');
   });
 });
