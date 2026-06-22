@@ -1,4 +1,5 @@
 import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
+import { canViewDisciplineReports } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { esc } from '../utils/helpers';
 
@@ -162,10 +163,14 @@ export async function loadEmployeeHistory(employeeId: string): Promise<void> {
 
   target.innerHTML = '<div class="empty">Loading history...</div>';
 
+  const includeDiscipline = canViewDisciplineReports();
+
   const [notes, meetings, discipline, incidents, reviews] = await Promise.all([
     fetchHistoryRows('employee_notes', actualEmployeeId, 'note_date'),
     fetchHistoryRows('employee_meetings', actualEmployeeId, 'meeting_date'),
-    fetchHistoryRows('discipline_reports', actualEmployeeId, 'incident_date'),
+    includeDiscipline
+      ? fetchHistoryRows('discipline_reports', actualEmployeeId, 'incident_date')
+      : Promise.resolve([]),
     fetchHistoryRows('incident_reports', actualEmployeeId, 'incident_date'),
     fetchHistoryRows('employee_reviews', actualEmployeeId, 'review_date'),
   ]);

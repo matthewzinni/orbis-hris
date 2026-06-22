@@ -22,12 +22,23 @@ export const PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS = new Set([
   'brent.wynne@btwglobal.com',
 ]);
 
-export function canEmailSupervisorsPerformanceReviews(): boolean {
-  const email = String(
+/** Matthew-only visibility for discipline reports (confidential HR). */
+export const DISCIPLINE_REPORTS_VIEWER_EMAIL = 'matthew.zinni@btwglobal.com';
+
+export function getCurrentAuthEmail(): string {
+  return String(
     getCurrentUserAccess()?.email || (window as { currentUserEmail?: string }).currentUserEmail || ''
   )
     .trim()
     .toLowerCase();
+}
+
+export function canViewDisciplineReports(): boolean {
+  return getCurrentAuthEmail() === DISCIPLINE_REPORTS_VIEWER_EMAIL;
+}
+
+export function canEmailSupervisorsPerformanceReviews(): boolean {
+  const email = getCurrentAuthEmail();
   return PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS.has(email);
 }
 

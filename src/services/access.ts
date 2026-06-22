@@ -49,6 +49,9 @@ export {
   employeeMatchesAttendanceScope,
   canAccessPerformanceReviews,
   canEditEmployeeAdmin,
+  canViewDisciplineReports,
+  DISCIPLINE_REPORTS_VIEWER_EMAIL,
+  getCurrentAuthEmail,
   resolveDirectReportIdsFromRoster,
   resolveDirectReportIdsForSupervisorName,
   resolveEmployeeRosterName,
@@ -91,6 +94,7 @@ import {
 import {
   canAccessPerformanceReviews,
   canEditEmployeeAdmin,
+  canViewDisciplineReports,
   employeeMatchesSupervisorAccess,
 } from './accessScopes';
 import {
@@ -121,6 +125,7 @@ window.getLinkedEmployeeId = getLinkedEmployeeId;
 window.applyEmployeePortalView = applyEmployeePortalView;
 window.canAccessPerformanceReviews = canAccessPerformanceReviews;
 window.canEditEmployeeAdmin = canEditEmployeeAdmin;
+window.canViewDisciplineReports = canViewDisciplineReports;
 window.employeeMatchesSupervisorAccess = employeeMatchesSupervisorAccess;
 window.applyAdminDashboardView = applyAdminDashboardView;
 window.applySupervisorDashboardView = applySupervisorDashboardView;

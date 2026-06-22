@@ -2,6 +2,7 @@ import {
   employeeMatchesSupervisorAccess,
   isAdminUser,
   isSupervisorUser,
+  canViewDisciplineReports,
 } from './access';
 import { employeeDisplayName } from './employeeUtils';
 import { supabaseClient } from './supabaseClient';
@@ -102,6 +103,7 @@ export async function fetchMobileActivityFeed(limit = 30): Promise<MobileActivit
   }
 
   const perTable = Math.max(6, Math.ceil(limit / 4));
+  const includeDiscipline = canViewDisciplineReports();
 
   const [notesRes, disciplineRes, meetingsRes, reviewsRes, leaveRes, stayRes] =
     await Promise.all([
@@ -110,11 +112,13 @@ export async function fetchMobileActivityFeed(limit = 30): Promise<MobileActivit
         .select('id, employee_id, note_type, note_text, note_date, created_at')
         .order('created_at', { ascending: false })
         .limit(perTable),
-      supabaseClient
-        .from('discipline_reports')
-        .select('id, employee_id, issue_type, description, incident_date, created_at')
-        .order('created_at', { ascending: false })
-        .limit(perTable),
+      includeDiscipline
+        ? supabaseClient
+            .from('discipline_reports')
+            .select('id, employee_id, issue_type, description, incident_date, created_at')
+            .order('created_at', { ascending: false })
+            .limit(perTable)
+        : Promise.resolve({ data: [], error: null }),
       supabaseClient
         .from('employee_meetings')
         .select('id, employee_id, meeting_type, subject, notes, meeting_date, created_at')

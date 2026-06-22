@@ -17,7 +17,7 @@ import {
   isAdminUser,
   setCurrentUserAccess,
 } from './accessRoles';
-import { canAccessPerformanceReviews, canEditEmployeeAdmin } from './accessScopes';
+import { canAccessPerformanceReviews, canEditEmployeeAdmin, canViewDisciplineReports } from './accessScopes';
 
 const EMPLOYEE_ADMIN_FIELD_IDS = [
   'empId',
@@ -162,6 +162,66 @@ function setEmployeeFlagButtonsLocked(locked: boolean, lockTitle: string): void 
   });
 }
 
+function applyDisciplineTabAccess(employee?: EmployeeLike | null): void {
+  const allowed = canViewDisciplineReports();
+  const drawer = document.getElementById('employeeDrawer');
+  const tabBtn = drawer?.querySelector<HTMLButtonElement>('[data-tab="discipline"]');
+  const panel = document.getElementById('tab-discipline');
+  const wasOnDisciplineTab =
+    tabBtn?.getAttribute('aria-selected') === 'true' || tabBtn?.classList.contains('active');
+
+  if (tabBtn) {
+    tabBtn.classList.toggle('hidden', !allowed);
+    tabBtn.setAttribute('aria-hidden', allowed ? 'false' : 'true');
+    if (!allowed) {
+      tabBtn.classList.remove('active');
+      tabBtn.setAttribute('aria-selected', 'false');
+      tabBtn.tabIndex = -1;
+    }
+  }
+
+  if (panel) {
+    if (!allowed) {
+      panel.classList.remove('active');
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  if (!allowed && wasOnDisciplineTab && typeof window.activateDrawerTab === 'function') {
+    window.activateDrawerTab('employee', 'profile', false);
+  }
+
+  void employee;
+}
+
+function applyDisciplineDashboardAccess(): void {
+  const allowed = canViewDisciplineReports();
+
+  document.getElementById('cardOpenDiscipline')?.classList.toggle('hidden', !allowed);
+
+  const reportsOpenDiscipline = document.getElementById('reportsKpiOpenDiscipline');
+  reportsOpenDiscipline?.closest('.detail-card')?.classList.toggle('hidden', !allowed);
+
+  document.getElementById('reportsErOpenDiscipline')?.closest('.detail-card')?.classList.toggle('hidden', !allowed);
+  document.getElementById('reportsErDiscipline90')?.closest('.detail-card')?.classList.toggle('hidden', !allowed);
+
+  document
+    .querySelectorAll<HTMLElement>('[data-reports-discipline-only]')
+    .forEach((element) => {
+      element.classList.toggle('hidden', !allowed);
+    });
+
+  const activitySubtitle = document.querySelector<HTMLElement>(
+    '#orbisSectionActivity .mobile-activity-toolbar .muted'
+  );
+  if (activitySubtitle) {
+    activitySubtitle.textContent = allowed
+      ? 'Recent notes, discipline, reviews, and team updates'
+      : 'Recent notes, reviews, and team updates';
+  }
+}
+
 function applyPerformanceReviewTabAccess(employee?: EmployeeLike | null): void {
   const allowed = canAccessPerformanceReviews(employee);
   const drawer = document.getElementById('employeeDrawer');
@@ -195,6 +255,8 @@ function applyPerformanceReviewTabAccess(employee?: EmployeeLike | null): void {
 
 export function applyRoleNavigation(): void {
   const role = String(getCurrentUserRole() || '').toLowerCase();
+
+  applyDisciplineDashboardAccess();
 
   document.querySelectorAll<HTMLElement>('[data-nav-view]').forEach((button) => {
     const sectionId = String(button.dataset.navView || '').trim();
@@ -689,6 +751,8 @@ export function applyRolePermissions(): void {
 
   applyRoleLocks();
   applyPerformanceReviewTabAccess(currentEmployee as EmployeeLike | null | undefined);
+  applyDisciplineTabAccess(currentEmployee as EmployeeLike | null | undefined);
+  applyDisciplineDashboardAccess();
 
   if (typeof window.applyAttendanceAccess === 'function') {
     window.applyAttendanceAccess();

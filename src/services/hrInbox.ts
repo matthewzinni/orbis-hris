@@ -9,6 +9,7 @@ import {
   hasOrgWidePerformanceReviewAccess,
   isAdminUser,
   isSupervisorUser,
+  canViewDisciplineReports,
 } from './access';
 import {
   loadPolicyCampaignInboxAssignments,
@@ -871,6 +872,8 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     ]);
   }
 
+  const includeDiscipline = canViewDisciplineReports();
+
   const [
     onboardingRes,
     offboardingRes,
@@ -888,9 +891,11 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
       .from('onboarding_tasks')
       .select('id, employee_id, task_name, status, due_date, assigned_to'),
     supabaseClient.from('offboarding_tasks').select('id, employee_id, task_name, status'),
-    supabaseClient
-      .from('discipline_reports')
-      .select('id, employee_id, issue_type, report_status'),
+    includeDiscipline
+      ? supabaseClient
+          .from('discipline_reports')
+          .select('id, employee_id, issue_type, report_status')
+      : Promise.resolve({ data: [], error: null }),
     supabaseClient
       .from('investigations')
       .select('id, case_number, title, status, target_completion_date, primary_employee_id, targeted_employee_id'),
@@ -990,7 +995,9 @@ export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSum
     });
   }
 
-  const discipline = items.filter((item) => item.kind === 'discipline').length;
+  const discipline = canViewDisciplineReports()
+    ? items.filter((item) => item.kind === 'discipline').length
+    : 0;
   if (discipline > 0) {
     alerts.push({
       id: 'open-discipline',

@@ -1,5 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
-import { isAdminUser } from '../services/access';
+import { isAdminUser, canViewDisciplineReports } from '../services/access';
 import {
   daysUntilDate,
   employeeDisplayName,
@@ -335,11 +335,14 @@ async function loadErTrendsReport(): Promise<void> {
   if (subtitle) subtitle.textContent = 'Loading trends...';
 
   try {
+    const includeDiscipline = canViewDisciplineReports();
     const [disciplineRes, incidentsRes] = await Promise.all([
-      supabaseClient
-        .from('discipline_reports')
-        .select('employee_id, incident_date, issue_type, discipline_level, report_status')
-        .order('incident_date', { ascending: false }),
+      includeDiscipline
+        ? supabaseClient
+            .from('discipline_reports')
+            .select('employee_id, incident_date, issue_type, discipline_level, report_status')
+            .order('incident_date', { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
       supabaseClient
         .from('incident_reports')
         .select('employee_id, incident_date, incident_type, status')
@@ -392,21 +395,23 @@ async function loadErTrendsReport(): Promise<void> {
     );
 
     cachedErRecentRows = [
-      ...disciplineRows.map((row) => {
-        const employeeId = String(row.employee_id || '').trim();
-        const { name, department } = resolveEmployeeFromLookup(employeeId, employeeLookup);
-        const date = String(row.incident_date || '').trim();
+      ...(includeDiscipline
+        ? disciplineRows.map((row) => {
+            const employeeId = String(row.employee_id || '').trim();
+            const { name, department } = resolveEmployeeFromLookup(employeeId, employeeLookup);
+            const date = String(row.incident_date || '').trim();
 
-        return {
-          kind: 'Discipline',
-          date: date || '—',
-          employeeName: name,
-          department,
-          category: String(row.issue_type || row.discipline_level || '—').trim() || '—',
-          status: String(row.report_status || '—').trim() || '—',
-          sortDate: date,
-        };
-      }),
+            return {
+              kind: 'Discipline',
+              date: date || '—',
+              employeeName: name,
+              department,
+              category: String(row.issue_type || row.discipline_level || '—').trim() || '—',
+              status: String(row.report_status || '—').trim() || '—',
+              sortDate: date,
+            };
+          })
+        : []),
       ...incidentRows.map((row) => {
         const employeeId = String(row.employee_id || '').trim();
         const { name, department } = resolveEmployeeFromLookup(employeeId, employeeLookup);

@@ -187,6 +187,7 @@ declare global {
     printMeeting?: () => void;
     printReview?: () => void;
     canAccessPerformanceReviews?: (employee?: EmployeeLike | null) => boolean;
+    canViewDisciplineReports?: () => boolean;
     refreshMobileTasksBadge?: () => Promise<void>;
     getFilteredRosterEmployees?: () => RosterEmployee[];
     currentFilteredEmployees?: Record<string, unknown>[];
