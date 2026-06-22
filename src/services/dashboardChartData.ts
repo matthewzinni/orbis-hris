@@ -4,6 +4,7 @@ import {
   isStayInterviewEligibleEmployee,
   isStayInterviewOverdue,
 } from './employeeUtils';
+import { getEmployeeTenureMonths } from './employeeTenure';
 
 export type ChartSegment = {
   label: string;
@@ -44,20 +45,7 @@ function isTerminatedTracked(employee: EmployeeRow): boolean {
 }
 
 function tenureMonths(employee: EmployeeRow): number {
-  const stored = Number(employee.tenureMonths || employee.tenure_months || 0);
-  if (stored > 0) return stored;
-
-  const hireDate = employee.hireDate || employee.hire_date;
-  if (!hireDate) return 0;
-
-  const hiredAt = new Date(String(hireDate));
-  if (Number.isNaN(hiredAt.getTime())) return 0;
-
-  const now = new Date();
-  return Math.max(
-    0,
-    (now.getFullYear() - hiredAt.getFullYear()) * 12 + (now.getMonth() - hiredAt.getMonth())
-  );
+  return getEmployeeTenureMonths(employee);
 }
 
 function colorAt(index: number): string {

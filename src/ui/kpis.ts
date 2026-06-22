@@ -23,6 +23,7 @@ import {
   isStayInterviewOverdue,
   parseDueDate,
 } from '../services/employeeUtils';
+import { getEmployeeTenureMonths } from '../services/employeeTenure';
 import { getEmployeeMapKeys, hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
 import {
   buildHrIntelligenceContext,
@@ -670,27 +671,6 @@ function updateTurnoverRateKpis(employees: KpiEmployeeRecord[]): void {
   if (newHireTurnoverSubtext) {
     newHireTurnoverSubtext.textContent = `${newHireTerminatedEmployees.length} terminated new hire${newHireTerminatedEmployees.length === 1 ? '' : 's'} in first 90 days`;
   }
-}
-
-function getEmployeeTenureMonths(employee: KpiEmployeeRecord): number {
-  const storedTenure = Number(employee.tenureMonths || employee.tenure_months || 0);
-
-  if (storedTenure > 0) return storedTenure;
-
-  const hireDate = employee.hireDate || employee.hire_date;
-
-  if (!hireDate) return 0;
-
-  const hiredAt = new Date(String(hireDate));
-
-  if (Number.isNaN(hiredAt.getTime())) return 0;
-
-  const now = new Date();
-
-  return Math.max(
-    0,
-    (now.getFullYear() - hiredAt.getFullYear()) * 12 + (now.getMonth() - hiredAt.getMonth())
-  );
 }
 
 function employeeHasAtRiskMeta(employee: KpiEmployeeRecord): boolean {

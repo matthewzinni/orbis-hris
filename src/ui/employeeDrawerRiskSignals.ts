@@ -4,6 +4,7 @@ import {
   employeeHasOperationsPressure,
   isTurnoverRiskContributor,
 } from '../services/hrIntelligence';
+import { getEmployeeTenureMonths } from '../services/employeeTenure';
 
 type RiskSignalItem = {
   tone: 'risk' | 'warn' | 'neutral';
@@ -17,23 +18,6 @@ function escapeHtml(value: unknown): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
-}
-
-function getTenureMonths(employee: Record<string, unknown>): number {
-  const stored = Number(employee.tenureMonths || employee.tenure_months || 0);
-  if (stored > 0) return stored;
-
-  const hireDate = employee.hire_date || employee.hireDate;
-  if (!hireDate) return 0;
-
-  const hiredAt = new Date(String(hireDate));
-  if (Number.isNaN(hiredAt.getTime())) return 0;
-
-  const now = new Date();
-  return Math.max(
-    0,
-    (now.getFullYear() - hiredAt.getFullYear()) * 12 + (now.getMonth() - hiredAt.getMonth())
-  );
 }
 
 export function buildEmployeeRiskSignalItems(
@@ -75,7 +59,7 @@ export function buildEmployeeRiskSignalItems(
     buildHrIntelligenceContext({
       employees: (window.EMPLOYEES || window.ALL_EMPLOYEES || []) as Array<Record<string, unknown>>,
     });
-  const tenureMonths = getTenureMonths(employee);
+  const tenureMonths = getEmployeeTenureMonths(employee);
   const turnoverContributor = isTurnoverRiskContributor(
     employee,
     riskMeta,

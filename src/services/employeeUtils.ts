@@ -7,6 +7,14 @@ export {
   isContractEmployee,
   type AttendanceRollCallSection,
 } from './attendanceRollCallSections';
+export {
+  formatEmployeeTenureMonths,
+  formatEmployeeTenureYears,
+  getEmployeeTenureMonths,
+  getEmployeeTenureYears,
+  resolveEmployeeTenureFields,
+  type TenureEmployee,
+} from './employeeTenure';
 
 export type EmployeeLike = {
   id?: string;

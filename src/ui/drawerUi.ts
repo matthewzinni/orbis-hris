@@ -9,6 +9,7 @@ import {
 } from './drawerIdentityHeader';
 import { ensureDrawerLayout, setEmployeeDrawerCreateMode } from './drawerLayout';
 import { formatBenefitsEligibilitySummary } from '../services/employeeUtils';
+import { formatEmployeeTenureMonths, formatEmployeeTenureYears } from '../services/employeeTenure';
 import { resetDrawerForms } from '../modules/drawerForms';
 
 type DrawerUiEmployee = Record<string, unknown> & {
@@ -720,8 +721,8 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
         ['Phone', employee.phone || '—'],
         ['Next Stay Interview', formatDrawerDateForDisplay(employee.nextReview || employee.next_review || employee.next_review_date)],
         ['Anniversary', formatDrawerDateForDisplay(getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee)))],
-        ['Tenure Months', employee.tenureMonths || employee.tenure_months],
-        ['Tenure Years', employee.tenureYears || employee.tenure_years],
+        ['Tenure Months', formatEmployeeTenureMonths(employee)],
+        ['Tenure Years', formatEmployeeTenureYears(employee)],
         ['Benefits Status', employee.benefitsStatus || employee.benefits_status],
         ['Benefits Eligibility', formatBenefitsEligibilitySummary(employee)],
         ['Tenure Bracket', employee.tenureBracket || employee.tenure_bracket]

@@ -6,6 +6,11 @@ import {
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { generateAvailableEmployeeId, insertEmployeeRecordWithRetry } from '../services/employeeIds';
 import { cleanEmployeeNameValue, employeePersonalEmail, employeePortalSignInEmail, employeeWorkEmail } from '../services/employeeUtils';
+import {
+  formatEmployeeTenureMonths,
+  formatEmployeeTenureYears,
+  resolveEmployeeTenureFields,
+} from '../services/employeeTenure';
 import { createDefaultOnboardingTasks } from './onboarding';
 import { syncStandardOnboardingTasks } from '../services/onboardingStandard';
 import {
@@ -473,8 +478,8 @@ function populateDrawerProfileDetails(employee: DrawerEmployeeRecord): void {
       ),
     ],
     ['Anniversary', getNextAnniversaryDate(employee)],
-    ['Tenure Months', employee.tenureMonths || employee.tenure_months],
-    ['Tenure Years', employee.tenureYears || employee.tenure_years],
+    ['Tenure Months', formatEmployeeTenureMonths(employee)],
+    ['Tenure Years', formatEmployeeTenureYears(employee)],
     ['Benefits Status', employee.benefitsStatus || employee.benefits_status],
     ['Tenure Bracket', employee.tenureBracket || employee.tenure_bracket],
     ['Phone', employee.phone || '—'],
@@ -938,6 +943,12 @@ async function saveEmployeeRecordInternal(): Promise<void> {
     termination_date: status === 'TERMINATED' ? terminationDate || null : null,
     is_remote: Boolean(safeGet<HTMLInputElement>('employeeIsRemoteInput')?.checked),
   };
+
+  if (payload.hire_date) {
+    const tenure = resolveEmployeeTenureFields({ hire_date: String(payload.hire_date) });
+    payload.tenure_months = tenure.tenure_months;
+    payload.tenure_years = tenure.tenure_years;
+  }
 
   payload.id = editedEmployeeId;
 
