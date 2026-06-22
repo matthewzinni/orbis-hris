@@ -58,6 +58,28 @@
   width: 100%;
 }
 
+#attendancePage .attendance-roll-call-section-row td {
+  padding: 0.85rem 0.75rem 0.45rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(15, 23, 42, 0.35);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+#attendancePage .attendance-roll-call-section-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+#attendancePage .attendance-roll-call-section-count {
+  margin-left: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
 #attendancePage .attendance-checklist-table .attendance-check-col {
   width: 4.5rem;
   text-align: center;

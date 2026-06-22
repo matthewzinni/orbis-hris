@@ -1,4 +1,12 @@
 import { isRemoteEmployee } from './attendanceRemoteEmployees';
+import { isContractEmployee } from './attendanceRollCallSections';
+
+export {
+  ATTENDANCE_ROLL_CALL_SECTIONS,
+  getAttendanceRollCallSection,
+  isContractEmployee,
+  type AttendanceRollCallSection,
+} from './attendanceRollCallSections';
 
 export type EmployeeLike = {
   id?: string;
@@ -199,13 +207,6 @@ export function formatBenefitsEligibilitySummary(
   }
 
   return `Eligible for benefits on ${dateLabel} (in ${days} day${days === 1 ? '' : 's'}).`;
-}
-
-export function isContractEmployee(employee: EmployeeLike | null | undefined): boolean {
-  return String(employee?.pay_type || employee?.payType || '')
-    .trim()
-    .toLowerCase()
-    .includes('contract');
 }
 
 /** Active roster employees who receive stay interview scheduling (excludes contract). */

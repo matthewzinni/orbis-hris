@@ -20,6 +20,7 @@ type AttendanceRollRow = {
   department: string;
   presentChecked: boolean;
   absentChecked: boolean;
+  sectionLabel?: string;
 };
 
 type AbsenceRow = {
@@ -173,6 +174,7 @@ export function renderMobileAttendanceRollCall(rows: AttendanceRollRow[]): void 
     rows
       .map(
         (row) => `
+      ${row.sectionLabel ? `<div class="orbis-mobile-attendance-section">${esc(row.sectionLabel)}</div>` : ''}
       <div class="orbis-mobile-attendance-card" data-attendance-key="${esc(row.attendanceKey)}">
         <div class="orbis-mobile-attendance-card-main">
           <strong>${esc(row.name)}</strong>

@@ -1092,6 +1092,19 @@ body[data-layout='mobile'] .orbis-desktop-module-table {
   font-size: 0.88rem;
 }
 
+.orbis-mobile-attendance-section {
+  margin: 12px 0 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.orbis-mobile-attendance-section:first-child {
+  margin-top: 0;
+}
+
 .orbis-mobile-attendance-card {
   display: flex;
   flex-direction: column;

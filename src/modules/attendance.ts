@@ -19,6 +19,11 @@ import {
 import { syncEmployeeStatusFromRollCall } from '../services/attendanceStatusSync';
 import { isRemoteEmployee } from '../services/attendanceRemoteEmployees';
 import { loadApprovedLeaveOutToday } from '../services/leaveRequests';
+import {
+  ATTENDANCE_ROLL_CALL_SECTIONS,
+  getAttendanceRollCallSection,
+  type AttendanceRollCallSection,
+} from '../services/attendanceRollCallSections';
 import { employeeDisplayName } from '../services/employeeUtils';
 import { getEmployees, normalizeEmployeeStatus } from './employees';
 
@@ -30,6 +35,8 @@ type EmployeeRow = {
   department?: string;
   dept?: string;
   status?: string;
+  pay_type?: string;
+  payType?: string;
   [key: string]: unknown;
 };
 
@@ -368,6 +375,31 @@ function applyChecklistToSnapshot(): AttendanceSummary {
   return snapshot;
 }
 
+function groupRollCallEmployeesByPaySection(
+  employees: EmployeeRow[]
+): Map<AttendanceRollCallSection, EmployeeRow[]> {
+  const grouped = new Map<AttendanceRollCallSection, EmployeeRow[]>();
+  for (const section of ATTENDANCE_ROLL_CALL_SECTIONS) {
+    grouped.set(section.id, []);
+  }
+
+  employees.forEach((employee) => {
+    const section = getAttendanceRollCallSection(employee);
+    grouped.get(section)?.push(employee);
+  });
+
+  return grouped;
+}
+
+function renderRollCallSectionHeader(label: string, count: number): string {
+  return `<tr class="attendance-roll-call-section-row">
+    <td colspan="5">
+      <span class="attendance-roll-call-section-label">${escapeHtml(label)}</span>
+      <span class="muted attendance-roll-call-section-count">${count}</span>
+    </td>
+  </tr>`;
+}
+
 function renderEmployeeChecklistRow(
   employee: EmployeeRow,
   presentKeys: Set<string>,
@@ -428,23 +460,49 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
 
   const presentKeys = presentKeySet(snapshot);
   const absentKeys = absentKeySet(snapshot);
-  body.innerHTML = employees
-    .map((employee) => renderEmployeeChecklistRow(employee, presentKeys, absentKeys))
-    .join('');
+  const grouped = groupRollCallEmployeesByPaySection(employees);
+  const sectionHtml: string[] = [];
 
-  window.renderMobileAttendanceRollCall?.(
-    employees.map((employee) => {
+  ATTENDANCE_ROLL_CALL_SECTIONS.forEach((section) => {
+    const sectionEmployees = grouped.get(section.id) || [];
+    if (!sectionEmployees.length) return;
+
+    sectionHtml.push(renderRollCallSectionHeader(section.label, sectionEmployees.length));
+    sectionHtml.push(
+      ...sectionEmployees.map((employee) =>
+        renderEmployeeChecklistRow(employee, presentKeys, absentKeys)
+      )
+    );
+  });
+
+  body.innerHTML = sectionHtml.join('');
+
+  const mobileRows: Array<{
+    attendanceKey: string;
+    name: string;
+    department: string;
+    presentChecked: boolean;
+    absentChecked: boolean;
+    sectionLabel?: string;
+  }> = [];
+
+  ATTENDANCE_ROLL_CALL_SECTIONS.forEach((section) => {
+    const sectionEmployees = grouped.get(section.id) || [];
+    sectionEmployees.forEach((employee, index) => {
       const person = personFromEmployee(employee);
       const key = personKey(person);
-      return {
+      mobileRows.push({
         attendanceKey: key,
         name: person.name,
         department: person.department || '—',
         presentChecked: presentKeys.has(key),
         absentChecked: absentKeys.has(key),
-      };
-    })
-  );
+        sectionLabel: index === 0 ? section.label : undefined,
+      });
+    });
+  });
+
+  window.renderMobileAttendanceRollCall?.(mobileRows);
 
   updateAttendanceKpis(snapshot);
 }
