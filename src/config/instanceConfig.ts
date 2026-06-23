@@ -37,6 +37,7 @@ export const BTW_DEFAULT_ORG_WIDE_SCOPE_EMAILS = [
   'matthew.zinni@btwglobal.com',
   'trent.wynne@btwglobal.com',
   'brent.wynne@btwglobal.com',
+  'david.allewalt@btwglobal.com',
 ] as const;
 
 export const BTW_DEFAULT_LEADERSHIP_PORTAL_EXCLUDE_EMAILS = [

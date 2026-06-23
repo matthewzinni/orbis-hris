@@ -13,7 +13,9 @@ update public.user_access
 set
   role = 'admin',
   approval_status = 'approved',
-  can_delete = true
+  can_delete = true,
+  linked_employee_id = null,
+  supervisor_name = ''
 where lower(trim(email)) in (
   'brent.wynne@btwglobal.com',
   'colewoolard@gmail.com',

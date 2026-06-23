@@ -25,6 +25,7 @@ describe('instanceConfig', () => {
       'matthew.zinni@btwglobal.com',
       'trent.wynne@btwglobal.com',
       'brent.wynne@btwglobal.com',
+      'david.allewalt@btwglobal.com',
     ]);
     expect(config.featureFlags.janus).toBe(true);
   });

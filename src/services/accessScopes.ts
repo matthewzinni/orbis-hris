@@ -15,14 +15,21 @@ import {
   isSupervisorUser,
 } from './accessState';
 
-/** Executives who can email supervisors about team performance reviews due. */
+/** HR leadership with org-wide performance review, attendance, and related scope. */
 export const PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS = new Set([
   'matthew.zinni@btwglobal.com',
   'trent.wynne@btwglobal.com',
   'brent.wynne@btwglobal.com',
+  'david.allewalt@btwglobal.com',
 ]);
 
-/** Matthew-only org-wide discipline dashboards and cross-team feeds. */
+/** Org-wide discipline dashboards and cross-team discipline CRUD. */
+export const ORG_WIDE_DISCIPLINE_EMAILS = new Set([
+  'matthew.zinni@btwglobal.com',
+  'david.allewalt@btwglobal.com',
+]);
+
+/** @deprecated Use ORG_WIDE_DISCIPLINE_EMAILS */
 export const DISCIPLINE_REPORTS_VIEWER_EMAIL = 'matthew.zinni@btwglobal.com';
 
 export function getCurrentAuthEmail(): string {
@@ -34,7 +41,7 @@ export function getCurrentAuthEmail(): string {
 }
 
 export function hasOrgWideDisciplineAccess(): boolean {
-  return getCurrentAuthEmail() === DISCIPLINE_REPORTS_VIEWER_EMAIL;
+  return ORG_WIDE_DISCIPLINE_EMAILS.has(getCurrentAuthEmail());
 }
 
 /** @deprecated Use hasOrgWideDisciplineAccess for org-wide feeds. */

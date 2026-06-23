@@ -55,6 +55,7 @@ export {
   canQueryDisciplineReports,
   employeeMatchesDisciplineScope,
   DISCIPLINE_REPORTS_VIEWER_EMAIL,
+  ORG_WIDE_DISCIPLINE_EMAILS,
   getCurrentAuthEmail,
   resolveDirectReportIdsFromRoster,
   resolveDirectReportIdsForSupervisorName,
