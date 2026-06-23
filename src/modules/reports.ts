@@ -1,5 +1,5 @@
 import { supabaseClient } from '../services/supabaseClient';
-import { isAdminUser, canViewDisciplineReports } from '../services/access';
+import { isAdminUser, hasOrgWideDisciplineAccess } from '../services/access';
 import {
   daysUntilDate,
   employeeDisplayName,
@@ -335,7 +335,7 @@ async function loadErTrendsReport(): Promise<void> {
   if (subtitle) subtitle.textContent = 'Loading trends...';
 
   try {
-    const includeDiscipline = canViewDisciplineReports();
+    const includeDiscipline = hasOrgWideDisciplineAccess();
     const [disciplineRes, incidentsRes] = await Promise.all([
       includeDiscipline
         ? supabaseClient

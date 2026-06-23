@@ -1,5 +1,5 @@
 import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
-import { canViewDisciplineReports } from '../services/access';
+import { canAccessDisciplineForEmployee } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { esc } from '../utils/helpers';
 
@@ -163,7 +163,7 @@ export async function loadEmployeeHistory(employeeId: string): Promise<void> {
 
   target.innerHTML = '<div class="empty">Loading history...</div>';
 
-  const includeDiscipline = canViewDisciplineReports();
+  const includeDiscipline = canAccessDisciplineForEmployee({ id: actualEmployeeId });
 
   const [notes, meetings, discipline, incidents, reviews] = await Promise.all([
     fetchHistoryRows('employee_notes', actualEmployeeId, 'note_date'),

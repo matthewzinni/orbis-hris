@@ -17,7 +17,12 @@ import {
   isAdminUser,
   setCurrentUserAccess,
 } from './accessRoles';
-import { canAccessPerformanceReviews, canEditEmployeeAdmin, canViewDisciplineReports } from './accessScopes';
+import {
+  canAccessPerformanceReviews,
+  canAccessDisciplineForEmployee,
+  canEditEmployeeAdmin,
+  hasOrgWideDisciplineAccess,
+} from './accessScopes';
 
 const EMPLOYEE_ADMIN_FIELD_IDS = [
   'empId',
@@ -163,7 +168,7 @@ function setEmployeeFlagButtonsLocked(locked: boolean, lockTitle: string): void 
 }
 
 function applyDisciplineTabAccess(employee?: EmployeeLike | null): void {
-  const allowed = canViewDisciplineReports();
+  const allowed = canAccessDisciplineForEmployee(employee);
   const drawer = document.getElementById('employeeDrawer');
   const tabBtn = drawer?.querySelector<HTMLButtonElement>('[data-tab="discipline"]');
   const panel = document.getElementById('tab-discipline');
@@ -191,34 +196,32 @@ function applyDisciplineTabAccess(employee?: EmployeeLike | null): void {
   if (!allowed && wasOnDisciplineTab && typeof window.activateDrawerTab === 'function') {
     window.activateDrawerTab('employee', 'profile', false);
   }
-
-  void employee;
 }
 
 function applyDisciplineDashboardAccess(): void {
-  const allowed = canViewDisciplineReports();
+  const orgWide = hasOrgWideDisciplineAccess();
 
-  document.getElementById('cardOpenDiscipline')?.classList.toggle('hidden', !allowed);
+  document.getElementById('cardOpenDiscipline')?.classList.toggle('hidden', !orgWide);
 
   const reportsOpenDiscipline = document.getElementById('reportsKpiOpenDiscipline');
-  reportsOpenDiscipline?.closest('.detail-card')?.classList.toggle('hidden', !allowed);
+  reportsOpenDiscipline?.closest('.detail-card')?.classList.toggle('hidden', !orgWide);
 
-  document.getElementById('reportsErOpenDiscipline')?.closest('.detail-card')?.classList.toggle('hidden', !allowed);
-  document.getElementById('reportsErDiscipline90')?.closest('.detail-card')?.classList.toggle('hidden', !allowed);
+  document.getElementById('reportsErOpenDiscipline')?.closest('.detail-card')?.classList.toggle('hidden', !orgWide);
+  document.getElementById('reportsErDiscipline90')?.closest('.detail-card')?.classList.toggle('hidden', !orgWide);
 
   document
     .querySelectorAll<HTMLElement>('[data-reports-discipline-only]')
     .forEach((element) => {
-      element.classList.toggle('hidden', !allowed);
+      element.classList.toggle('hidden', !orgWide);
     });
 
   const activitySubtitle = document.querySelector<HTMLElement>(
     '#orbisSectionActivity .mobile-activity-toolbar .muted'
   );
   if (activitySubtitle) {
-    activitySubtitle.textContent = allowed
+    activitySubtitle.textContent = orgWide
       ? 'Recent notes, discipline, reviews, and team updates'
-      : 'Recent notes, reviews, and team updates';
+      : 'Recent notes, discipline for your team, reviews, and team updates';
   }
 }
 

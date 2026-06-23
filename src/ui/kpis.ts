@@ -1,7 +1,7 @@
 import { getEmployeeById, loadEmployees } from '../modules/employees';
 import { debounce } from '../utils/helpers';
 import { getReviewAverageScore } from '../utils/reviewScores';
-import { isAdminUser, isSupervisorUser, canViewDisciplineReports } from '../services/access';
+import { isAdminUser, isSupervisorUser, hasOrgWideDisciplineAccess } from '../services/access';
 import {
   buildPerformanceReviewDueCandidates,
   type PerformanceReviewDueCandidate,
@@ -592,7 +592,7 @@ async function loadDisciplineRowsForKpis(): Promise<{
   }>;
   error: string | null;
 }> {
-  if (!canViewDisciplineReports()) {
+  if (!hasOrgWideDisciplineAccess()) {
     return { rows: [], error: null };
   }
 

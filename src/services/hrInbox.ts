@@ -9,7 +9,7 @@ import {
   hasOrgWidePerformanceReviewAccess,
   isAdminUser,
   isSupervisorUser,
-  canViewDisciplineReports,
+  canQueryDisciplineReports,
 } from './access';
 import {
   loadPolicyCampaignInboxAssignments,
@@ -872,7 +872,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     ]);
   }
 
-  const includeDiscipline = canViewDisciplineReports();
+  const includeDiscipline = canQueryDisciplineReports();
 
   const [
     onboardingRes,
@@ -995,7 +995,7 @@ export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSum
     });
   }
 
-  const discipline = canViewDisciplineReports()
+  const discipline = canQueryDisciplineReports()
     ? items.filter((item) => item.kind === 'discipline').length
     : 0;
   if (discipline > 0) {

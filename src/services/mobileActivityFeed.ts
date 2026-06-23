@@ -2,7 +2,7 @@ import {
   employeeMatchesSupervisorAccess,
   isAdminUser,
   isSupervisorUser,
-  canViewDisciplineReports,
+  canQueryDisciplineReports,
 } from './access';
 import { employeeDisplayName } from './employeeUtils';
 import { supabaseClient } from './supabaseClient';
@@ -103,7 +103,7 @@ export async function fetchMobileActivityFeed(limit = 30): Promise<MobileActivit
   }
 
   const perTable = Math.max(6, Math.ceil(limit / 4));
-  const includeDiscipline = canViewDisciplineReports();
+  const includeDiscipline = canQueryDisciplineReports();
 
   const [notesRes, disciplineRes, meetingsRes, reviewsRes, leaveRes, stayRes] =
     await Promise.all([

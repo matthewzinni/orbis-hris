@@ -50,6 +50,10 @@ export {
   canAccessPerformanceReviews,
   canEditEmployeeAdmin,
   canViewDisciplineReports,
+  hasOrgWideDisciplineAccess,
+  canAccessDisciplineForEmployee,
+  canQueryDisciplineReports,
+  employeeMatchesDisciplineScope,
   DISCIPLINE_REPORTS_VIEWER_EMAIL,
   getCurrentAuthEmail,
   resolveDirectReportIdsFromRoster,
@@ -95,6 +99,10 @@ import {
   canAccessPerformanceReviews,
   canEditEmployeeAdmin,
   canViewDisciplineReports,
+  hasOrgWideDisciplineAccess,
+  canAccessDisciplineForEmployee,
+  canQueryDisciplineReports,
+  employeeMatchesDisciplineScope,
   employeeMatchesSupervisorAccess,
 } from './accessScopes';
 import {
@@ -126,6 +134,8 @@ window.applyEmployeePortalView = applyEmployeePortalView;
 window.canAccessPerformanceReviews = canAccessPerformanceReviews;
 window.canEditEmployeeAdmin = canEditEmployeeAdmin;
 window.canViewDisciplineReports = canViewDisciplineReports;
+window.hasOrgWideDisciplineAccess = hasOrgWideDisciplineAccess;
+window.canAccessDisciplineForEmployee = canAccessDisciplineForEmployee;
 window.employeeMatchesSupervisorAccess = employeeMatchesSupervisorAccess;
 window.applyAdminDashboardView = applyAdminDashboardView;
 window.applySupervisorDashboardView = applySupervisorDashboardView;

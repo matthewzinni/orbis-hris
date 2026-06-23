@@ -22,7 +22,7 @@ export const PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS = new Set([
   'brent.wynne@btwglobal.com',
 ]);
 
-/** Matthew-only visibility for discipline reports (confidential HR). */
+/** Matthew-only org-wide discipline dashboards and cross-team feeds. */
 export const DISCIPLINE_REPORTS_VIEWER_EMAIL = 'matthew.zinni@btwglobal.com';
 
 export function getCurrentAuthEmail(): string {
@@ -33,8 +33,54 @@ export function getCurrentAuthEmail(): string {
     .toLowerCase();
 }
 
-export function canViewDisciplineReports(): boolean {
+export function hasOrgWideDisciplineAccess(): boolean {
   return getCurrentAuthEmail() === DISCIPLINE_REPORTS_VIEWER_EMAIL;
+}
+
+/** @deprecated Use hasOrgWideDisciplineAccess for org-wide feeds. */
+export function canViewDisciplineReports(): boolean {
+  return hasOrgWideDisciplineAccess();
+}
+
+/** Direct reports for discipline (supervisors + scoped admins). Matthew sees everyone. */
+export function employeeMatchesDisciplineScope(
+  employee: EmployeeLike | null | undefined
+): boolean {
+  if (!isAdminUser() && !isSupervisorUser()) return false;
+  if (hasOrgWideDisciplineAccess()) return true;
+
+  const access = getCurrentUserAccess();
+  if (hasExplicitSupervisorScope(access)) {
+    const scopedIds = parseSupervisedEmployeeIds(access);
+    const empId = String(employee?.id || employee?.dbId || '')
+      .trim()
+      .toLowerCase();
+    return Boolean(empId) && scopedIds.includes(empId);
+  }
+
+  const supervisorNames = [
+    String(access?.supervisor_name || '').trim(),
+    String(access?.display_name || '').trim(),
+  ].filter(Boolean);
+
+  const employeeSupervisor = String(employee?.supervisor || employee?.displaySupervisor || '');
+  if (!employeeSupervisor || !supervisorNames.length) return false;
+
+  return supervisorNames.some((name) => supervisorNameMatches(employeeSupervisor, name));
+}
+
+export function canAccessDisciplineForEmployee(employee?: EmployeeLike | null): boolean {
+  if (Boolean(window.isCreatingEmployee)) return false;
+
+  if (!isAdminUser() && !isSupervisorUser()) return false;
+
+  const target =
+    employee ?? (window.currentEmployee as EmployeeLike | null | undefined) ?? null;
+  return employeeMatchesDisciplineScope(target);
+}
+
+export function canQueryDisciplineReports(): boolean {
+  return hasOrgWideDisciplineAccess() || isAdminUser() || isSupervisorUser();
 }
 
 export function canEmailSupervisorsPerformanceReviews(): boolean {
