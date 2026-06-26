@@ -92,6 +92,17 @@ async function openMobileInboxItem(item: HrInboxItem): Promise<void> {
     return;
   }
 
+  if (route.type === 'internal_job') {
+    if (typeof window.openInternalJobBoardView === 'function') {
+      window.openInternalJobBoardView(route.postingId, 'pipeline');
+    } else if (typeof window.switchMainView === 'function') {
+      window.switchMainView('internalJobBoardView');
+    }
+    return;
+  }
+
+  if (route.type !== 'employee') return;
+
   if (typeof window.switchMainView === 'function') {
     window.switchMainView('employeesView');
   }

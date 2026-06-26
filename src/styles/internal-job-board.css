@@ -1,0 +1,140 @@
+.internal-job-board-page .page-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.internal-job-board-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.internal-job-openings-list {
+  display: grid;
+  gap: 14px;
+}
+
+.internal-job-opening-card {
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.25));
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--card, rgba(15, 23, 42, 0.35));
+}
+
+.internal-job-opening-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.internal-job-opening-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.internal-job-opening-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.internal-job-opening-description {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.internal-job-opening-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.internal-job-interest-form {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, rgba(148, 163, 184, 0.2));
+}
+
+.internal-job-interest-form textarea {
+  min-height: 72px;
+}
+
+.internal-job-status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.internal-job-status-badge.open {
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+}
+
+.internal-job-status-badge.draft {
+  background: rgba(148, 163, 184, 0.15);
+  color: #cbd5e1;
+}
+
+.internal-job-status-badge.closed,
+.internal-job-status-badge.filled {
+  background: rgba(100, 116, 139, 0.2);
+  color: #94a3b8;
+}
+
+.internal-job-status-badge.new {
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+}
+
+.internal-job-status-badge.reviewed,
+.internal-job-status-badge.interviewing {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+}
+
+.internal-job-status-badge.selected {
+  background: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+}
+
+.internal-job-status-badge.not_selected {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+.internal-job-drawer-section {
+  margin-top: 16px;
+}
+
+.internal-job-drawer-list {
+  display: grid;
+  gap: 10px;
+}
+
+.internal-job-drawer-item {
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.2));
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+@media (max-width: 768px) {
+  .internal-job-board-page .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .internal-job-opening-top {
+    flex-direction: column;
+  }
+}

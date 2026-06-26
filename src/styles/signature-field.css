@@ -33,7 +33,8 @@
   align-items: center;
 }
 
-.signature-typed-row input {
+.signature-typed-row input,
+.signature-typed-name {
   flex: 1;
   min-width: 0;
   border: 1px solid var(--line, #d9e2ec);
@@ -41,6 +42,9 @@
   padding: 8px 10px;
   font-size: 14px;
   background-color: #fff !important;
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827;
+  caret-color: #111827;
 }
 
 @keyframes onAutoFillStart {
@@ -86,4 +90,7 @@ canvas[id$='Signature'] {
   padding: 6px 8px;
   font-size: 12px;
   background: #f8fafc;
+  color: #111827;
+  -webkit-text-fill-color: #111827;
+  caret-color: #111827;
 }

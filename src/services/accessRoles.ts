@@ -55,6 +55,7 @@ export const EMPLOYEE_PORTAL_SECTIONS = new Set([
   'myTasksView',
   'myDirectoryView',
   'myTimeOffView',
+  'internalJobBoardView',
 ]);
 
 /** Employee-portal sections admins may use alongside full HRIS access. */
@@ -77,6 +78,7 @@ const SUPERVISOR_SECTIONS = new Set([
   'operationsView',
   'careEngagementView',
   'activityView',
+  'internalJobBoardView',
 ]);
 
 export function setCurrentUserAccess(access: UserAccessRow | null, role?: string): void {
@@ -357,6 +359,10 @@ export function canAccessAppSection(sectionId: string): boolean {
 
   if (section === 'janusView') {
     return canAccessJanus();
+  }
+
+  if (section === 'internalJobBoardView') {
+    return canAccessOrbisApp();
   }
 
   if (isPortalUser()) {

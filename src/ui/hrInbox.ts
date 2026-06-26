@@ -71,6 +71,15 @@ async function openInboxRoute(route: HrInboxRoute): Promise<void> {
     return;
   }
 
+  if (route.type === 'internal_job') {
+    if (typeof window.openInternalJobBoardView === 'function') {
+      window.openInternalJobBoardView(route.postingId, 'pipeline');
+    } else {
+      switchMainView('internalJobBoardView');
+    }
+    return;
+  }
+
   if (typeof window.openEmployeeDrawer === 'function') {
     await window.openEmployeeDrawer(route.employeeId);
   }

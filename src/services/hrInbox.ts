@@ -6,6 +6,7 @@ import { supabaseClient } from './supabaseClient';
 import {
   employeeMatchesPerformanceReviewScope,
   employeeMatchesSupervisorAccess,
+  getSupervisorDepartmentScope,
   hasOrgWidePerformanceReviewAccess,
   isAdminUser,
   isSupervisorUser,
@@ -57,6 +58,9 @@ import {
   buildPerformanceReviewDueCandidates,
   formatPerformanceReviewDueDetail,
 } from './performanceReviewDue';
+import {
+  hiringManagerMatchesScope,
+} from './internalJobBoardAccess';
 
 export type HrInboxSeverity = 'overdue' | 'due_soon' | 'info';
 
@@ -73,14 +77,16 @@ export type HrInboxKind =
   | 'leave_request'
   | 'policy_campaign'
   | 'benefits_eligibility'
-  | 'performance_review';
+  | 'performance_review'
+  | 'internal_job_interest';
 
 export type HrInboxRoute =
   | { type: 'employee'; employeeId: string; drawerTab?: string }
   | { type: 'investigation'; investigationId: string }
   | { type: 'operations'; issueId: string }
   | { type: 'view'; viewId: string }
-  | { type: 'payroll_handoff'; handoffId: string; employeeId: string };
+  | { type: 'payroll_handoff'; handoffId: string; employeeId: string }
+  | { type: 'internal_job'; postingId: string; interestId: string };
 
 export type HrInboxItem = {
   id: string;
@@ -118,6 +124,7 @@ const KIND_LABELS: Record<HrInboxKind, string> = {
   policy_campaign: 'Policy acknowledgment',
   benefits_eligibility: 'Benefits eligibility',
   performance_review: 'Performance review',
+  internal_job_interest: 'Internal job interest',
 };
 
 type EmployeeLike = Record<string, unknown>;
@@ -655,6 +662,80 @@ function collectOperationsItems(
   return items;
 }
 
+function collectInternalJobInterestItems(
+  interests: Array<{
+    id?: string;
+    posting_id?: string;
+    employee_id?: string;
+    employee_name?: string;
+    status?: string;
+    submitted_at?: string;
+    internal_job_postings?:
+      | {
+          id?: string;
+          title?: string;
+          hiring_manager_name?: string;
+          department?: string;
+        }
+      | Array<{
+          id?: string;
+          title?: string;
+          hiring_manager_name?: string;
+          department?: string;
+        }>
+      | null;
+  }>,
+  supervisorOnly = false
+): HrInboxItem[] {
+  const items: HrInboxItem[] = [];
+
+  interests.forEach((row) => {
+    if (String(row.status || '').toLowerCase() !== 'new') return;
+
+    const interestId = String(row.id || '').trim();
+    const employeeId = String(row.employee_id || '').trim();
+    const postingRaw = row.internal_job_postings;
+    const posting = Array.isArray(postingRaw) ? postingRaw[0] : postingRaw;
+    const postingId = String(posting?.id || row.posting_id || '').trim();
+    if (!interestId || !postingId) return;
+
+    const employee = employeeId ? getEmployeeById(employeeId) : undefined;
+    const employeeName =
+      String(row.employee_name || '').trim() ||
+      (employee ? employeeDisplayName(employee) : 'Employee');
+
+    if (supervisorOnly) {
+      const department = String(posting?.department || '')
+        .trim()
+        .toLowerCase();
+      const matchesDepartment =
+        department &&
+        getSupervisorDepartmentScope().includes(department);
+      const matchesManager = hiringManagerMatchesScope(
+        String(posting?.hiring_manager_name || '')
+      );
+      const matchesTeam = employee ? employeeMatchesSupervisorAccess(employee) : false;
+
+      if (!matchesDepartment && !matchesManager && !matchesTeam) return;
+    }
+
+    const title = String(posting?.title || 'Internal opening').trim();
+
+    items.push({
+      id: `internal_job_interest:${interestId}`,
+      kind: 'internal_job_interest',
+      severity: 'info',
+      employeeName,
+      dueDate: isoDateFromValue(String(row.submitted_at || '')),
+      title: `Internal interest — ${title}`,
+      detail: `${employeeName} expressed interest in an internal role`,
+      route: { type: 'internal_job', postingId, interestId },
+    });
+  });
+
+  return items;
+}
+
 function daysSinceTermination(employee: EmployeeLike): number | null {
   const termRaw = employee.termination_date || employee.terminationDate;
   const daysUntil = daysUntilDate(termRaw);
@@ -856,19 +937,28 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
   const pendingLeavePromise = loadPendingLeaveRequests();
 
   if (isSupervisorUser() && !isAdminUser()) {
-    const [pendingLeave, policyAssignments, reviewItems] = await Promise.all([
+    const [pendingLeave, policyAssignments, reviewItems, internalJobInterestRes] =
+      await Promise.all([
       pendingLeavePromise,
       loadPolicyCampaignInboxAssignments().catch((err) => {
         console.warn('[HrInbox] Could not load policy campaigns:', err);
         return [];
       }),
       collectPerformanceReviewDueItems(),
+      supabaseClient
+        .from('internal_job_interest')
+        .select(
+          'id, posting_id, employee_id, employee_name, status, submitted_at, internal_job_postings(id, title, hiring_manager_name, department)'
+        )
+        .eq('status', 'new')
+        .order('submitted_at', { ascending: false }),
     ]);
 
     return sortHrInboxItems([
       ...reviewItems,
       ...collectLeaveRequestItems(pendingLeave),
       ...collectPolicyCampaignItems(policyAssignments, true),
+      ...collectInternalJobInterestItems(internalJobInterestRes.data || [], true),
     ]);
   }
 
@@ -882,6 +972,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     careItemsRes,
     careFollowUpsRes,
     operationsRes,
+    internalJobInterestRes,
     payrollHandoffs,
     pendingLeave,
     policyAssignments,
@@ -906,6 +997,13 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     supabaseClient
       .from('operations_issues')
       .select('id, title, status, due_date, department'),
+    supabaseClient
+      .from('internal_job_interest')
+      .select(
+        'id, posting_id, employee_id, employee_name, status, submitted_at, internal_job_postings(id, title, hiring_manager_name, department)'
+      )
+      .eq('status', 'new')
+      .order('submitted_at', { ascending: false }),
     payrollHandoffsPromise,
     pendingLeavePromise,
     loadPolicyCampaignInboxAssignments().catch((err) => {
@@ -923,6 +1021,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     careItemsRes.error,
     careFollowUpsRes.error,
     operationsRes.error,
+    internalJobInterestRes.error,
   ].filter(Boolean);
 
   if (queryErrors.length) {
@@ -939,6 +1038,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     ...collectInvestigationItems((investigationsRes.data || []) as Investigation[]),
     ...collectCareFollowUpItems(careItemsRes.data || [], careFollowUpsRes.data || []),
     ...collectOperationsItems(operationsRes.data || []),
+    ...collectInternalJobInterestItems(internalJobInterestRes.data || []),
     ...collectPayrollHandoffItems(payrollHandoffs),
     ...collectLeaveRequestItems(pendingLeave),
     ...collectPolicyCampaignItems(policyAssignments),
@@ -1079,6 +1179,17 @@ export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSum
       detail: `${operations} issue${operations === 1 ? '' : 's'} need attention`,
       count: operations,
       viewId: 'operationsView',
+    });
+  }
+
+  const internalJobs = items.filter((item) => item.kind === 'internal_job_interest').length;
+  if (internalJobs > 0) {
+    alerts.push({
+      id: 'internal-job-interest',
+      label: 'Internal job interest',
+      detail: `${internalJobs} new internal candidate${internalJobs === 1 ? '' : 's'} to review`,
+      count: internalJobs,
+      viewId: 'internalJobBoardView',
     });
   }
 

@@ -39,6 +39,9 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
   loadedTabs.add(tabName);
 
   switch (tabName) {
+    case 'profile':
+      window.loadEmployeeInternalJobInterests?.(id);
+      break;
     case 'notes':
       window.loadEmployeeNotes?.(id);
       break;

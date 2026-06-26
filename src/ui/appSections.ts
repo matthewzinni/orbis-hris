@@ -60,6 +60,7 @@ const SECTION_LABELS: Record<string, string> = {
   myTasksView: 'Tasks & Acknowledgments',
   myDirectoryView: 'Directory',
   myTimeOffView: 'My Time Off',
+  internalJobBoardView: 'Internal Job Board',
   activityView: 'Activity',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
@@ -205,6 +206,19 @@ const APP_SECTIONS: AppSection[] = [
     onEnter: () => {
       if (typeof window.loadMyTimeOffPortal === 'function') {
         void window.loadMyTimeOffPortal();
+      }
+    },
+  },
+  {
+    id: 'internalJobBoardView',
+    rootId: 'orbisSectionInternalJobBoard',
+    targetId: 'internalJobBoardTop',
+    aliases: ['internal-job-board', 'job-board', 'internal-jobs', 'careers'],
+    onEnter: () => {
+      if (typeof window.ensureInternalJobBoardLoaded === 'function') {
+        window.ensureInternalJobBoardLoaded(true);
+      } else if (typeof window.loadInternalJobBoard === 'function') {
+        void window.loadInternalJobBoard(true);
       }
     },
   },

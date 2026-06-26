@@ -1,0 +1,164 @@
+          id="orbisSectionInternalJobBoard"
+          class="orbis-app-section hidden"
+          data-section="internalJobBoardView"
+          aria-hidden="true"
+        >
+          <section id="internalJobBoardTop" class="page internal-job-board-page">
+            <div class="page-header">
+              <div>
+                <h1>Internal Job Board</h1>
+                <p id="internalJobBoardSubtitle">
+                  Explore open roles at BTW Global and express your interest in growing with us.
+                </p>
+              </div>
+              <div class="page-header-actions">
+                <button class="button soft" id="refreshInternalJobBoardBtn" type="button">
+                  Refresh
+                </button>
+                <button
+                  class="button primary hidden"
+                  id="newInternalJobPostingBtn"
+                  type="button"
+                  data-internal-job-manage
+                >
+                  ＋ New Posting
+                </button>
+              </div>
+            </div>
+
+            <div class="kpi-grid compact-grid hidden" id="internalJobBoardKpiGrid" data-internal-job-manage>
+              <div class="kpi-card good" id="cardInternalJobsOpen">
+                <div class="kpi-label">Open Postings</div>
+                <div class="kpi-value" id="kInternalJobsOpen">—</div>
+                <div class="kpi-sub">Available to employees</div>
+              </div>
+              <div class="kpi-card alert" id="cardInternalJobsNewInterest">
+                <div class="kpi-label">New Interest</div>
+                <div class="kpi-value" id="kInternalJobsNewInterest">—</div>
+                <div class="kpi-sub">Submissions awaiting review</div>
+              </div>
+              <div class="kpi-card warn" id="cardInternalJobsInReview">
+                <div class="kpi-label">In Review</div>
+                <div class="kpi-value" id="kInternalJobsInReview">—</div>
+                <div class="kpi-sub">Candidates under consideration</div>
+              </div>
+            </div>
+
+            <div class="internal-job-board-tabs hidden" id="internalJobBoardTabs" data-internal-job-manage>
+              <button
+                class="tab-btn active"
+                type="button"
+                data-internal-job-tab="openings"
+                id="internalJobTabOpenings"
+              >
+                Open Positions
+              </button>
+              <button class="tab-btn" type="button" data-internal-job-tab="manage" id="internalJobTabManage">
+                Manage Postings
+              </button>
+              <button
+                class="tab-btn"
+                type="button"
+                data-internal-job-tab="pipeline"
+                id="internalJobTabPipeline"
+              >
+                Interest Pipeline
+              </button>
+            </div>
+
+            <div class="card" id="internalJobOpeningsCard">
+              <div class="card-header">
+                <span id="internalJobOpeningsTitle">Open Positions</span>
+                <span class="muted" id="internalJobOpeningsCount">Loading…</span>
+              </div>
+              <div class="card-body">
+                <div id="internalJobOpeningsList" class="internal-job-openings-list">
+                  <div class="muted">Loading openings…</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card hidden" id="internalJobManageCard" data-internal-job-manage>
+              <div class="card-header">
+                <span>Manage Postings</span>
+                <span class="muted" id="internalJobManageCount">—</span>
+              </div>
+              <div class="card-body">
+                <div class="toolbar" style="margin-bottom: 12px">
+                  <div class="toolbar-left">
+                    <input
+                      class="input"
+                      id="internalJobManageSearch"
+                      type="search"
+                      placeholder="Search postings…"
+                    />
+                    <select class="select" id="internalJobManageStatusFilter">
+                      <option value="">All statuses</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="mobileInternalJobManageList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                <div class="table-wrap orbis-desktop-module-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Title</th>
+                        <th>Department</th>
+                        <th>Hiring Manager</th>
+                        <th>Status</th>
+                        <th>Posted</th>
+                        <th>Closes</th>
+                        <th>Interest</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="internalJobManageBody">
+                      <tr>
+                        <td colspan="8" class="empty">Loading postings…</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="card hidden" id="internalJobPipelineCard" data-internal-job-manage>
+              <div class="card-header">
+                <span>Interest Pipeline</span>
+                <span class="muted" id="internalJobPipelineCount">—</span>
+              </div>
+              <div class="card-body">
+                <div class="toolbar" style="margin-bottom: 12px">
+                  <div class="toolbar-left">
+                    <select class="select" id="internalJobPipelineStatusFilter">
+                      <option value="">All candidate statuses</option>
+                    </select>
+                  </div>
+                </div>
+                <div id="mobileInternalJobPipelineList" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                <div class="table-wrap orbis-desktop-module-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Opening</th>
+                        <th>Department</th>
+                        <th>Supervisor</th>
+                        <th>Submitted</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="internalJobPipelineBody">
+                      <tr>
+                        <td colspan="7" class="empty">Loading interest submissions…</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section

@@ -146,6 +146,10 @@ declare global {
     loadMyHandbookPortal?: () => Promise<void>;
     loadMyDirectoryPortal?: () => Promise<void>;
     loadMyTimeOffPortal?: () => Promise<void>;
+    loadInternalJobBoard?: (force?: boolean) => Promise<void>;
+    ensureInternalJobBoardLoaded?: (force?: boolean) => void;
+    openInternalJobBoardView?: (postingId?: string, tab?: 'openings' | 'manage' | 'pipeline') => void;
+    loadEmployeeInternalJobInterests?: (employeeId: string) => Promise<void>;
     loadMobileActivityFeed?: (force?: boolean) => Promise<void>;
     loadJanus?: (force?: boolean) => Promise<void>;
     renderDashboardCharts?: (employees?: Record<string, unknown>[]) => void;
