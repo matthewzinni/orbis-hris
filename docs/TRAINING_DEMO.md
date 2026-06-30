@@ -109,6 +109,13 @@ Your normal `npm run dev` + `.env` should stay pointed at BTW production.
 
 ## 5. Vercel training deploy
 
+**Project:** `orbis-demo` (separate from BTW `orbis-hris`)
+
+| URL | Status |
+|-----|--------|
+| [https://orbis-demo-phi.vercel.app](https://orbis-demo-phi.vercel.app) | Live (use now) |
+| [https://training.orbis-btw.com](https://training.orbis-btw.com) | Pending DNS (see below) |
+
 Create a new Vercel project (or preview env) pointing at the same repo. Set **Production** variables:
 
 | Variable | Value |
@@ -128,6 +135,33 @@ Create a new Vercel project (or preview env) pointing at the same repo. Set **Pr
 Redeploy after changing `VITE_*` values.
 
 The orange **Training demo** banner appears only when `VITE_DEMO_INSTANCE=true`.
+
+### Supabase Auth redirect URLs (training project)
+
+In **Orbis Training** (`ydddbiqbwnuuozfcbgdo`) → **Authentication** → **URL configuration**, or run:
+
+```bash
+./scripts/push_training_auth_redirects.sh
+```
+
+**Site URL:** `https://orbis-demo-phi.vercel.app` (switch to `https://training.orbis-btw.com` after DNS)
+
+**Redirect URLs:**
+
+- `https://orbis-demo-phi.vercel.app/`
+- `https://training.orbis-btw.com/`
+- `http://localhost:5173/` (local `npm run dev:training`)
+
+### Custom domain DNS (Porkbun)
+
+`training.orbis-btw.com` is on Vercel (`orbis-demo`) but DNS still points at Porkbun parking. In Porkbun → **orbis-btw.com** → DNS:
+
+1. **Delete** the `training` CNAME → `uixie.porkbun.com` (if present).
+2. **Add** `A` record: host `training` → `76.76.21.21` (TTL 600).
+
+Or with API keys: `./scripts/setup_training_dns_porkbun.sh`
+
+After DNS propagates, update **Site URL** in Supabase Auth to `https://training.orbis-btw.com` and redeploy if needed.
 
 ---
 
