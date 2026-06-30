@@ -22,6 +22,26 @@ export function readDisciplinePrintDataFromForm(): DisciplinePrintData {
   };
 }
 
+export function disciplinePrintDataFromRecord(record: {
+  incident_date?: string;
+  issue_type?: string;
+  discipline_level?: string;
+  report_status?: string;
+  description?: string;
+  action_taken?: string;
+  refused_to_sign?: boolean;
+}): DisciplinePrintData {
+  return {
+    incidentDate: String(record.incident_date || '').trim(),
+    issueType: String(record.issue_type || '').trim(),
+    level: String(record.discipline_level || '').trim(),
+    status: String(record.report_status || '').trim(),
+    description: String(record.description || '').trim(),
+    actionTaken: String(record.action_taken || '').trim(),
+    refusedToSign: Boolean(record.refused_to_sign),
+  };
+}
+
 function printFieldCell(label: string, value: string): string {
   return `
     <div class="print-discipline-field">
@@ -85,13 +105,13 @@ export function buildDisciplineReportPrintHtml(data: DisciplinePrintData): strin
           <div class="print-discipline-sig-cell">
             <div class="print-discipline-sig-line"></div>
             <div class="print-discipline-sig-label">Employee Signature</div>
-            <div class="print-discipline-sig-line" style="margin-top: 14px"></div>
+            <div class="print-discipline-sig-line print-discipline-sig-line--date"></div>
             <div class="print-discipline-sig-label">Date</div>
           </div>
           <div class="print-discipline-sig-cell">
             <div class="print-discipline-sig-line"></div>
             <div class="print-discipline-sig-label">Manager Signature</div>
-            <div class="print-discipline-sig-line" style="margin-top: 14px"></div>
+            <div class="print-discipline-sig-line print-discipline-sig-line--date"></div>
             <div class="print-discipline-sig-label">Date</div>
           </div>
         </div>

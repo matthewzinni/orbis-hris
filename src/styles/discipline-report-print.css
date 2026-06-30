@@ -1,10 +1,46 @@
-/* Discipline Report — screen-hidden print document (rendered in #printArea) */
+/* Discipline Report — dedicated print document (.print-discipline-report) */
+
+#printArea {
+  position: absolute !important;
+  left: -10000px !important;
+  top: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  padding: 0 !important;
+  margin: -1px !important;
+}
+
+body.printing-discipline #appView,
+body.printing-discipline #orbisConfirmBackdrop,
+body.printing-discipline .toast-wrap,
+body.printing-discipline .drawer,
+body.printing-discipline .drawer-backdrop,
+body.printing-discipline .orbis-mobile-tabbar,
+body.printing-discipline .orbis-modal-backdrop {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+body.printing-discipline #printArea {
+  position: static !important;
+  left: auto !important;
+  width: auto !important;
+  height: auto !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+  margin: 0 !important;
+}
 
 .print-discipline-report {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
   color: #111827;
   font-size: 10.5pt;
-  line-height: 1.45;
+  line-height: 1.42;
   max-width: 7.5in;
   margin: 0 auto;
   padding: 0;
@@ -19,9 +55,9 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 16px;
-  padding-bottom: 10px;
-  margin-bottom: 12px;
+  gap: 12px;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
   border-bottom: 1.5px solid #cbd5e1;
   page-break-inside: avoid;
   break-inside: avoid;
@@ -36,13 +72,13 @@
 
 .print-discipline-letterhead-brand img {
   display: block;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
 }
 
 .print-discipline-letterhead-title {
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.28em;
   color: #0f172a;
@@ -50,8 +86,8 @@
 }
 
 .print-discipline-letterhead-tagline {
-  margin-top: 3px;
-  font-size: 7.5pt;
+  margin-top: 2px;
+  font-size: 7pt;
   font-weight: 600;
   letter-spacing: 0.22em;
   color: #64748b;
@@ -59,20 +95,20 @@
 }
 
 .print-discipline-letterhead-subtitle {
-  margin-top: 4px;
-  font-size: 9pt;
-  color: #64748b;
-}
-
-.print-discipline-letterhead-company {
-  margin-top: 2px;
+  margin-top: 3px;
   font-size: 8.5pt;
   color: #64748b;
 }
 
+.print-discipline-letterhead-company {
+  margin-top: 1px;
+  font-size: 8pt;
+  color: #64748b;
+}
+
 .print-discipline-letterhead-doc-title {
-  margin-top: 6px;
-  font-size: 11pt;
+  margin-top: 5px;
+  font-size: 10.5pt;
   font-weight: 700;
   color: #0f172a;
 }
@@ -80,19 +116,19 @@
 .print-discipline-letterhead-meta {
   text-align: right;
   flex-shrink: 0;
-  font-size: 9pt;
+  font-size: 8.5pt;
   color: #64748b;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .print-discipline-meta-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px 14px;
-  margin-bottom: 12px;
-  padding: 10px 12px;
+  gap: 6px 12px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 4px;
   background: #f8fafc;
   page-break-inside: avoid;
   break-inside: avoid;
@@ -104,30 +140,30 @@
 
 .print-discipline-field-label {
   display: block;
-  font-size: 7.5pt;
+  font-size: 7pt;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #64748b;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .print-discipline-field-value {
-  font-size: 10pt;
+  font-size: 9.5pt;
   font-weight: 600;
   color: #111827;
   word-break: break-word;
 }
 
 .print-discipline-block {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   page-break-inside: avoid;
   break-inside: avoid;
 }
 
 .print-discipline-block-title {
-  margin: 0 0 4px;
-  font-size: 8pt;
+  margin: 0 0 3px;
+  font-size: 7.5pt;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -136,20 +172,20 @@
 
 .print-discipline-block-body {
   margin: 0;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  border-radius: 4px;
   background: #fff;
-  font-size: 10pt;
-  line-height: 1.5;
+  font-size: 9.5pt;
+  line-height: 1.45;
   color: #111827;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .print-discipline-signatures {
-  margin-top: 14px;
-  padding-top: 10px;
+  margin-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid #e2e8f0;
   page-break-inside: avoid;
   break-inside: avoid;
@@ -158,8 +194,8 @@
 .print-discipline-sig-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 12px;
+  gap: 16px;
+  margin-bottom: 8px;
 }
 
 .print-discipline-sig-cell {
@@ -168,33 +204,37 @@
 
 .print-discipline-sig-line {
   border-bottom: 1px solid #111827;
-  height: 28px;
-  margin-bottom: 3px;
+  height: 22px;
+  margin-bottom: 2px;
+}
+
+.print-discipline-sig-line--date {
+  margin-top: 10px;
 }
 
 .print-discipline-sig-label {
-  font-size: 8.5pt;
+  font-size: 8pt;
   color: #374151;
 }
 
 .print-discipline-refused {
-  margin: 8px 0 10px;
-  font-size: 9pt;
+  margin: 6px 0 8px;
+  font-size: 8.5pt;
   color: #374151;
 }
 
 .print-discipline-disclaimer {
-  margin-top: 8px;
-  font-size: 8.5pt;
+  margin-top: 6px;
+  font-size: 8pt;
   color: #64748b;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .print-discipline-footer {
-  margin-top: 12px;
-  padding-top: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid #e2e8f0;
-  font-size: 8pt;
+  font-size: 7.5pt;
   color: #94a3b8;
   text-align: center;
 }
@@ -207,6 +247,7 @@
     background: #fff !important;
     color: #111827 !important;
     height: auto !important;
+    min-height: 0 !important;
     overflow: visible !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -236,6 +277,7 @@
     transform: none !important;
     background: #fff !important;
     box-shadow: none !important;
+    clip: auto !important;
   }
 
   body.printing-discipline #printContent,
@@ -245,6 +287,17 @@
     height: auto !important;
     overflow: visible !important;
     transform: none !important;
+  }
+
+  body.printing-discipline .drawer,
+  body.printing-discipline .drawer-backdrop,
+  body.printing-discipline .orbis-sidebar,
+  body.printing-discipline .orbis-topbar,
+  body.printing-discipline .orbis-mobile-tabbar,
+  body.printing-discipline .toast-wrap,
+  body.printing-discipline #orbisConfirmBackdrop {
+    display: none !important;
+    visibility: hidden !important;
   }
 
   body.printing-discipline .print-discipline-report {

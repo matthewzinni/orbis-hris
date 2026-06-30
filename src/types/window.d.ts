@@ -186,6 +186,15 @@ declare global {
     printRecord?: (title: string, contentHTML: string) => void;
     printNote?: () => void;
     printDiscipline?: () => void;
+    printDisciplineRecord?: (record: {
+      incident_date?: string;
+      issue_type?: string;
+      discipline_level?: string;
+      report_status?: string;
+      description?: string;
+      action_taken?: string;
+      refused_to_sign?: boolean;
+    }) => void;
     printIncident?: () => void;
     printStayInterview?: () => void;
     printMeeting?: () => void;

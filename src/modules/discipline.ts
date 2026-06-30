@@ -130,6 +130,7 @@ function renderDisciplineRows(rows: DisciplineRecord[]): string {
           </div>
           <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
             <button class="button soft sm" type="button" data-edit-discipline-id="${esc(row.id || '')}">Edit</button>
+            <button class="button soft sm" type="button" data-print-discipline-id="${esc(row.id || '')}">Print / PDF</button>
             ${
               row.employee_signature
                 ? `<button class="button soft sm" type="button" data-pdf-discipline-id="${esc(row.id || '')}">Generate PDF</button>`
@@ -195,6 +196,24 @@ function bindDisciplineExtraActions(
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Could not create signing link.';
         showToast(message, 'error');
+      }
+    });
+  });
+
+  container.querySelectorAll<HTMLButtonElement>('[data-print-discipline-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const recordId = button.getAttribute('data-print-discipline-id');
+      const record = rows.find((row) => String(row.id) === String(recordId));
+      if (!record) return;
+
+      if (typeof window.printDisciplineRecord === 'function') {
+        window.printDisciplineRecord(record);
+        return;
+      }
+
+      if (typeof window.printDiscipline === 'function') {
+        void editDisciplineRecord(record);
+        window.setTimeout(() => window.printDiscipline?.(), 0);
       }
     });
   });

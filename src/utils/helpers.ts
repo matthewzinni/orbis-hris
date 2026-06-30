@@ -3,6 +3,7 @@
 import { orbisLetterheadHtml, orbisPrintFooterHtml } from '../brand/letterhead';
 import {
   buildDisciplineReportPrintHtml,
+  disciplinePrintDataFromRecord,
   readDisciplinePrintDataFromForm,
 } from './disciplinePrint';
 import { printDocument } from './printDocument';
@@ -304,6 +305,19 @@ export function printDiscipline(): void {
   printDocument(html, 'printing-discipline');
 }
 
+export function printDisciplineRecord(record: {
+  incident_date?: string;
+  issue_type?: string;
+  discipline_level?: string;
+  report_status?: string;
+  description?: string;
+  action_taken?: string;
+  refused_to_sign?: boolean;
+}): void {
+  const html = buildDisciplineReportPrintHtml(disciplinePrintDataFromRecord(record));
+  printDocument(html, 'printing-discipline');
+}
+
 export function printNote(): void {
   const date = (safeGet('noteDate') as HTMLInputElement | null)?.value || '';
   const type = (safeGet('noteType') as HTMLInputElement | null)?.value || '';
@@ -483,6 +497,7 @@ window.printSection = printSection;
 window.printRecord = printRecord;
 window.printNote = printNote;
 window.printDiscipline = printDiscipline;
+window.printDisciplineRecord = printDisciplineRecord;
 window.printIncident = printIncident;
 window.printStayInterview = printStayInterview;
 window.printMeeting = printMeeting;
