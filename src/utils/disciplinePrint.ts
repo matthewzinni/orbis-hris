@@ -1,4 +1,6 @@
+import { orbisLetterheadHtml } from '../brand/letterhead';
 import { esc, getCurrentEmployeeDisplayId, getCurrentEmployeeDisplayName, nl2br, safeGet } from './helpers';
+import { DISCIPLINE_PRINT_CSS } from './disciplinePrintStyles';
 
 export type DisciplinePrintData = {
   incidentDate: string;
@@ -42,22 +44,38 @@ export function disciplinePrintDataFromRecord(record: {
   };
 }
 
-function printFieldCell(label: string, value: string): string {
+function printInfoRow(labelA: string, valueA: string, labelB: string, valueB: string): string {
   return `
-    <div class="print-discipline-field">
-      <span class="print-discipline-field-label">${esc(label)}</span>
-      <span class="print-discipline-field-value">${value ? esc(value) : '—'}</span>
-    </div>
+    <tr>
+      <th scope="row">${esc(labelA)}</th>
+      <td>${valueA ? esc(valueA) : '—'}</td>
+      <th scope="row">${esc(labelB)}</th>
+      <td>${valueB ? esc(valueB) : '—'}</td>
+    </tr>
   `;
 }
 
-function printTextBlock(title: string, value: string): string {
+function printSection(title: string, value: string): string {
   const body = value ? nl2br(value) : '—';
   return `
-    <section class="print-discipline-block">
-      <h2 class="print-discipline-block-title">${esc(title)}</h2>
-      <div class="print-discipline-block-body">${body}</div>
+    <section class="print-discipline-section">
+      <h2 class="print-discipline-section-head">${esc(title)}</h2>
+      <div class="print-discipline-section-body">${body}</div>
     </section>
+  `;
+}
+
+function printSignatureBox(label: string, includeDate = false): string {
+  const dateLine = includeDate
+    ? `<div class="print-discipline-sig-line print-discipline-sig-line--short"></div><div class="print-discipline-sig-label">Date</div>`
+    : '';
+
+  return `
+    <div class="print-discipline-sig-box">
+      <div class="print-discipline-sig-line"></div>
+      <div class="print-discipline-sig-label">${esc(label)}</div>
+      ${dateLine}
+    </div>
   `;
 }
 
@@ -69,71 +87,60 @@ export function buildDisciplineReportPrintHtml(data: DisciplinePrintData): strin
   });
 
   const refusedMark = data.refusedToSign ? '☑' : '☐';
+  const employeeName = getCurrentEmployeeDisplayName();
+  const employeeId = getCurrentEmployeeDisplayId();
 
   return `
+    <style>${DISCIPLINE_PRINT_CSS}</style>
     <article class="print-discipline-report">
-      <header class="print-discipline-letterhead">
-        <div class="print-discipline-letterhead-brand">
-          <img src="/orbis-logo.svg" alt="" width="40" height="40" />
-          <div>
-            <div class="print-discipline-letterhead-title">ORBIS</div>
-            <div class="print-discipline-letterhead-tagline">Build • Solve • Elevate</div>
-            <div class="print-discipline-letterhead-subtitle">HR Intelligence &amp; Operations</div>
-            <div class="print-discipline-letterhead-company">BTW Global, LLC</div>
-            <div class="print-discipline-letterhead-doc-title">Discipline Report</div>
-          </div>
+      <h1 class="print-discipline-title-bar">Employee Discipline Report</h1>
+      <div class="print-discipline-inner">
+        <div class="print-discipline-letterhead-wrap">
+          ${orbisLetterheadHtml({
+            subtitle: 'HR Intelligence & Operations',
+            metaLines: [`<strong>Generated:</strong> ${esc(generated)}`],
+          })}
         </div>
-        <div class="print-discipline-letterhead-meta">
-          <div><strong>Generated:</strong> ${esc(generated)}</div>
-        </div>
-      </header>
 
-      <section class="print-discipline-meta-grid" aria-label="Employee and incident details">
-        ${printFieldCell('Employee', getCurrentEmployeeDisplayName())}
-        ${printFieldCell('Employee ID', getCurrentEmployeeDisplayId())}
-        ${printFieldCell('Incident Date', data.incidentDate)}
-        ${printFieldCell('Issue Type', data.issueType)}
-        ${printFieldCell('Discipline Level', data.level)}
-        ${printFieldCell('Status', data.status)}
-      </section>
+        <table class="print-discipline-info-table" aria-label="Employee and incident details">
+          <tbody>
+            ${printInfoRow('Employee', employeeName, 'Employee ID', employeeId)}
+            ${printInfoRow('Incident Date', data.incidentDate, 'Issue Type', data.issueType)}
+            <tr>
+              <th scope="row">Discipline Level</th>
+              <td colspan="3">${data.level ? esc(data.level) : '—'}</td>
+            </tr>
+            <tr>
+              <th scope="row">Status</th>
+              <td colspan="3">${data.status ? esc(data.status) : '—'}</td>
+            </tr>
+          </tbody>
+        </table>
 
-      ${printTextBlock('Description', data.description)}
-      ${printTextBlock('Action Taken', data.actionTaken)}
+        ${printSection('Description of Incident', data.description)}
+        ${printSection('Corrective Action Taken', data.actionTaken)}
 
-      <section class="print-discipline-signatures" aria-label="Signatures">
-        <div class="print-discipline-sig-row">
-          <div class="print-discipline-sig-cell">
-            <div class="print-discipline-sig-line"></div>
-            <div class="print-discipline-sig-label">Employee Signature</div>
-            <div class="print-discipline-sig-line print-discipline-sig-line--date"></div>
-            <div class="print-discipline-sig-label">Date</div>
+        <section class="print-discipline-signatures" aria-label="Signatures">
+          <h2 class="print-discipline-signatures-title">Signature Acknowledgement</h2>
+          <div class="print-discipline-sig-grid">
+            ${printSignatureBox('Employee Signature', true)}
+            ${printSignatureBox('Manager / Supervisor Signature', true)}
+            ${printSignatureBox('Witness Signature (if applicable)')}
+            <div class="print-discipline-sig-box">
+              <div class="print-discipline-sig-line print-discipline-sig-line--short"></div>
+              <div class="print-discipline-sig-label">Witness Date</div>
+            </div>
           </div>
-          <div class="print-discipline-sig-cell">
-            <div class="print-discipline-sig-line"></div>
-            <div class="print-discipline-sig-label">Manager Signature</div>
-            <div class="print-discipline-sig-line print-discipline-sig-line--date"></div>
-            <div class="print-discipline-sig-label">Date</div>
-          </div>
-        </div>
-        <div class="print-discipline-refused">${refusedMark} Employee refused to sign</div>
-        <div class="print-discipline-sig-row">
-          <div class="print-discipline-sig-cell">
-            <div class="print-discipline-sig-line"></div>
-            <div class="print-discipline-sig-label">Witness Signature</div>
-          </div>
-          <div class="print-discipline-sig-cell">
-            <div class="print-discipline-sig-line"></div>
-            <div class="print-discipline-sig-label">Witness Date</div>
-          </div>
-        </div>
-        <p class="print-discipline-disclaimer">
-          Employee signature confirms receipt of this disciplinary action. It does not imply agreement.
-        </p>
-      </section>
+          <div class="print-discipline-refused">${refusedMark} Employee refused to sign</div>
+          <p class="print-discipline-disclaimer">
+            Employee signature confirms receipt of this disciplinary action. It does not imply agreement with the action taken.
+          </p>
+        </section>
 
-      <footer class="print-discipline-footer">
-        Copyright © 2026 | BTW Global, LLC · Powered by Orbis
-      </footer>
+        <footer class="print-discipline-footer">
+          Copyright © 2026 | BTW Global, LLC · Powered by Orbis
+        </footer>
+      </div>
     </article>
   `.trim();
 }

@@ -302,7 +302,7 @@ export function printRecord(title: string, contentHTML: string): void {
 export function printDiscipline(): void {
   const data = readDisciplinePrintDataFromForm();
   const html = buildDisciplineReportPrintHtml(data);
-  printDocument(html, 'printing-discipline');
+  printDocument(html, 'printing-discipline', { standalone: true });
 }
 
 export function printDisciplineRecord(record: {
@@ -315,7 +315,7 @@ export function printDisciplineRecord(record: {
   refused_to_sign?: boolean;
 }): void {
   const html = buildDisciplineReportPrintHtml(disciplinePrintDataFromRecord(record));
-  printDocument(html, 'printing-discipline');
+  printDocument(html, 'printing-discipline', { standalone: true });
 }
 
 export function printNote(): void {

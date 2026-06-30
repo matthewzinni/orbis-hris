@@ -2,6 +2,11 @@ import { safeGet } from './helpers';
 
 const PRINT_FRAME_ID = 'orbisPrintFrame';
 
+export type PrintDocumentOptions = {
+  /** When true, HTML carries its own &lt;style&gt; block — skip cloning app stylesheets. */
+  standalone?: boolean;
+};
+
 function cloneDocumentStyles(target: Document): void {
   document.querySelectorAll('link[rel="stylesheet"], style').forEach((node) => {
     target.head.appendChild(node.cloneNode(true));
@@ -12,7 +17,40 @@ function removePrintFrame(): void {
   document.getElementById(PRINT_FRAME_ID)?.remove();
 }
 
-function printViaHiddenFrame(html: string, bodyClass: string): boolean {
+function waitForFrameStyles(doc: Document): Promise<void> {
+  const links = Array.from(doc.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'));
+  if (!links.length) {
+    return Promise.resolve();
+  }
+
+  return Promise.all(
+    links.map(
+      (link) =>
+        new Promise<void>((resolve) => {
+          if (link.sheet) {
+            resolve();
+            return;
+          }
+          link.addEventListener('load', () => resolve(), { once: true });
+          link.addEventListener('error', () => resolve(), { once: true });
+        })
+    )
+  ).then(() => undefined);
+}
+
+function triggerPrint(frameWindow: Window, cleanup: () => void): void {
+  frameWindow.addEventListener('afterprint', cleanup, { once: true });
+  window.setTimeout(cleanup, 5000);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      frameWindow.focus();
+      frameWindow.print();
+    });
+  });
+}
+
+function printViaHiddenFrame(html: string, bodyClass: string, standalone: boolean): boolean {
   removePrintFrame();
 
   const frame = document.createElement('iframe');
@@ -30,23 +68,6 @@ function printViaHiddenFrame(html: string, bodyClass: string): boolean {
     removePrintFrame();
   };
 
-  frame.onload = () => {
-    const frameWindow = frame.contentWindow;
-    const frameDocument = frame.contentDocument;
-    if (!frameWindow || !frameDocument) {
-      cleanup();
-      return;
-    }
-
-    frameWindow.addEventListener('afterprint', cleanup, { once: true });
-    window.setTimeout(cleanup, 5000);
-
-    requestAnimationFrame(() => {
-      frameWindow.focus();
-      frameWindow.print();
-    });
-  };
-
   document.body.appendChild(frame);
 
   const doc = frame.contentDocument;
@@ -59,7 +80,9 @@ function printViaHiddenFrame(html: string, bodyClass: string): boolean {
   doc.write('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8" /></head><body></body></html>');
   doc.close();
 
-  cloneDocumentStyles(doc);
+  if (!standalone) {
+    cloneDocumentStyles(doc);
+  }
 
   const inline = doc.createElement('style');
   inline.textContent = `
@@ -79,6 +102,16 @@ function printViaHiddenFrame(html: string, bodyClass: string): boolean {
 
   doc.body.className = bodyClass;
   doc.body.innerHTML = `<div id="printArea"><div id="printContent">${html}</div></div>`;
+
+  const frameWindow = frame.contentWindow;
+  if (!frameWindow) {
+    cleanup();
+    return false;
+  }
+
+  void waitForFrameStyles(doc).then(() => {
+    triggerPrint(frameWindow, cleanup);
+  });
 
   return true;
 }
@@ -119,11 +152,11 @@ function printViaPrintArea(html: string, bodyClass: string): void {
  * Print isolated HTML without capturing the Orbis app shell.
  * Uses a hidden iframe so drawers, tabs, and scroll containers never reach the PDF.
  */
-export function printDocument(html: string, bodyClass: string): void {
+export function printDocument(html: string, bodyClass: string, options: PrintDocumentOptions = {}): void {
   const trimmed = String(html || '').trim();
   if (!trimmed) return;
 
-  const usedFrame = printViaHiddenFrame(trimmed, bodyClass);
+  const usedFrame = printViaHiddenFrame(trimmed, bodyClass, Boolean(options.standalone));
   if (!usedFrame) {
     printViaPrintArea(trimmed, bodyClass);
   }
