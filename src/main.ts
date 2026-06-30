@@ -21,6 +21,7 @@ import './styles/janus.css';
 import './styles/dashboard-charts.css';
 import './styles/er-signing-modal.css';
 import './styles/er-acknowledgment-print.css';
+import './styles/discipline-report-print.css';
 import './styles/demo-banner.css';
 import './ui/dashboardCharts';
 import './utils/helpers';

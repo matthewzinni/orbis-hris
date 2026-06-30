@@ -138,3 +138,88 @@
     flex-direction: column;
   }
 }
+
+/* Posting form modal (appended to body, outside #appView) */
+.orbis-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100010;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(4, 8, 18, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+.orbis-modal-backdrop.hidden {
+  display: none;
+}
+
+.orbis-modal {
+  width: min(760px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #162238 0%, #121c32 100%);
+  color: var(--text, #e8eef7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.orbis-modal-header,
+.orbis-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.orbis-modal-footer {
+  border-bottom: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  justify-content: flex-end;
+}
+
+.orbis-modal-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--space-text-bright, #f4f7fc);
+}
+
+.orbis-modal-body {
+  padding: 18px 22px 22px;
+}
+
+.orbis-modal-body .field label {
+  color: var(--muted, #9aa8bc);
+}
+
+#internalJobPostingModal .input,
+#internalJobPostingModal .select,
+#internalJobPostingModal textarea.input {
+  min-width: 0;
+  width: 100%;
+  background: var(--space-input-bg, rgba(10, 18, 34, 0.92));
+  color: var(--text, #e8eef7);
+  border-color: var(--line-strong, rgba(255, 255, 255, 0.14));
+  -webkit-text-fill-color: var(--text, #e8eef7);
+  caret-color: var(--text, #e8eef7);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+#internalJobPostingModal .input::placeholder,
+#internalJobPostingModal textarea.input::placeholder {
+  color: var(--muted-soft, #8494ab);
+  -webkit-text-fill-color: var(--muted-soft, #8494ab);
+  opacity: 1;
+}
+
+#internalJobPostingModal select.input option {
+  background: #121c32;
+  color: #e8eef7;
+}
+

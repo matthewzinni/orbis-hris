@@ -1,6 +1,11 @@
 // Shared DOM helpers, toast, and print utilities (ported from js/utils/helpers.js)
 
 import { orbisLetterheadHtml, orbisPrintFooterHtml } from '../brand/letterhead';
+import {
+  buildDisciplineReportPrintHtml,
+  readDisciplinePrintDataFromForm,
+} from './disciplinePrint';
+import { printDocument } from './printDocument';
 
 type EmployeeLike = {
   id?: string;
@@ -272,53 +277,9 @@ function buildSignatureBlock(): string {
   `;
 }
 
-function buildDisciplineSignatureBlock(): string {
-  return `
-    <div style="margin-top:40px;">
-      <div style="display:flex; gap:40px; flex-wrap:wrap;">
-        <div style="flex:1; min-width:220px;">
-          <div style="border-bottom:1px solid #000; height:40px;"></div>
-          <div style="font-size:12px; margin-top:4px;">Employee Signature</div>
-          <div style="border-bottom:1px solid #000; height:40px; margin-top:20px;"></div>
-          <div style="font-size:12px;">Date</div>
-        </div>
-        <div style="flex:1; min-width:220px;">
-          <div style="border-bottom:1px solid #000; height:40px;"></div>
-          <div style="font-size:12px; margin-top:4px;">Manager Signature</div>
-          <div style="border-bottom:1px solid #000; height:40px; margin-top:20px;"></div>
-          <div style="font-size:12px;">Date</div>
-        </div>
-      </div>
-      <div style="margin-top:18px; font-size:12px; color:#333;">
-        ☐ Employee refused to sign
-      </div>
-      <div style="margin-top:24px; display:flex; gap:40px; flex-wrap:wrap;">
-        <div style="flex:1; min-width:220px;">
-          <div style="border-bottom:1px solid #000; height:40px;"></div>
-          <div style="font-size:12px; margin-top:4px;">Witness Signature</div>
-        </div>
-        <div style="flex:1; min-width:220px;">
-          <div style="border-bottom:1px solid #000; height:40px;"></div>
-          <div style="font-size:12px; margin-top:4px;">Witness Date</div>
-        </div>
-      </div>
-      <div style="margin-top:20px; font-size:12px; color:#555;">
-        Employee signature confirms receipt of this disciplinary action. It does not imply agreement.
-      </div>
-    </div>
-  `;
-}
-
 export function printRecord(title: string, contentHTML: string): void {
-  const container = safeGet('printContent');
-  const printArea = safeGet('printArea');
-
-  if (!container || !printArea) {
-    return;
-  }
-
-  container.innerHTML = `
-    <div style="font-family: Arial, sans-serif; color:#111; padding:24px; max-width:800px; margin:0 auto; background:#fff;">
+  const html = `
+    <div class="print-hr-record" style="font-family: Arial, sans-serif; color:#111; padding:0; max-width:7.5in; margin:0 auto; background:#fff;">
       ${orbisLetterheadHtml({
         documentTitle: title,
         subtitle: 'HR Intelligence & Operations',
@@ -334,13 +295,13 @@ export function printRecord(title: string, contentHTML: string): void {
     </div>
   `;
 
-  printArea.classList.remove('hidden');
+  printDocument(html, 'printing-hr-record');
+}
 
-  setTimeout(() => {
-    window.print();
-    printArea.classList.add('hidden');
-    container.innerHTML = '';
-  }, 150);
+export function printDiscipline(): void {
+  const data = readDisciplinePrintDataFromForm();
+  const html = buildDisciplineReportPrintHtml(data);
+  printDocument(html, 'printing-discipline');
 }
 
 export function printNote(): void {
@@ -358,33 +319,6 @@ export function printNote(): void {
   );
 
   printRecord('HR Note', content);
-}
-
-export function printDiscipline(): void {
-  const date = (safeGet('disciplineDate') as HTMLInputElement | null)?.value || '';
-  const type = (safeGet('disciplineType') as HTMLInputElement | null)?.value || '';
-  const level = (safeGet('disciplineLevel') as HTMLInputElement | null)?.value || '';
-  const description = (safeGet('disciplineDescription') as HTMLTextAreaElement | null)?.value || '';
-  const action = (safeGet('disciplineAction') as HTMLTextAreaElement | null)?.value || '';
-  const status = (safeGet('disciplineStatus') as HTMLInputElement | null)?.value || '';
-
-  const content = `
-    ${printEmployeeInfo()}
-    ${printSection(
-      'Discipline Details',
-      `
-      ${printField('Incident Date', esc(date))}
-      ${printField('Issue Type', esc(type))}
-      ${printField('Level', esc(level))}
-      ${printField('Status', esc(status))}
-      ${printField('Description', nl2br(description))}
-      ${printField('Action Taken', nl2br(action))}
-    `
-    )}
-    ${buildDisciplineSignatureBlock()}
-  `;
-
-  printRecord('Discipline Report', content);
 }
 
 export function printIncident(): void {
