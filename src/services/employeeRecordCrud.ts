@@ -268,6 +268,7 @@ export async function loadEmployeeRecordHistory<T extends EmployeeRecordRow>(opt
     if (error) {
       console.error(`[${options.logPrefix}] Could not load records:`, error);
       target.innerHTML = `<div class="empty">${options.errorMessage || 'Could not load records.'}</div>`;
+      showToast(options.errorMessage || 'Could not load records.', 'error');
       return null;
     }
 
@@ -287,6 +288,7 @@ export async function loadEmployeeRecordHistory<T extends EmployeeRecordRow>(opt
   } catch (err) {
     console.error(`[${options.logPrefix}] Unexpected history failure:`, err);
     target.innerHTML = `<div class="empty">${options.errorMessage || 'Could not load records.'}</div>`;
+    showToast(options.errorMessage || 'Could not load records.', 'error');
     return null;
   }
 }

@@ -44,6 +44,10 @@ export async function loadOffboardingTasks(employeeId: string): Promise<void> {
   const summary = document.getElementById('offboardingSummary');
   const bar = document.getElementById('offboardingProgressBar');
 
+  if (container) {
+    container.innerHTML = '<div class="empty">Loading offboarding checklist…</div>';
+  }
+
   try {
     await syncStandardOffboardingTasks(employeeId);
   } catch (err) {

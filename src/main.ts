@@ -70,8 +70,6 @@ import './modules/employees';
 import './modules/orgChart';
 import './modules/attendance';
 import './modules/lazyJanus';
-import './modules/lazyInvestigations';
-import './modules/lazyCareEngagement';
 import './modules/dashboardBoot';
 import './modules/dashboard';
 import './modules/managerHome';

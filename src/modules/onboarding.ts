@@ -175,7 +175,20 @@ export async function createDefaultOnboardingTasks(employeeId: string): Promise<
 export async function loadOnboardingTasks(employeeId: string): Promise<void> {
   if (!employeeId) return;
 
-  await syncStandardOnboardingTasks(employeeId);
+  const container = document.getElementById('onboardingChecklist');
+  const summary = document.getElementById('onboardingSummary');
+  const bar = document.getElementById('onboardingProgressBar');
+
+  if (container) {
+    container.innerHTML = '<div class="empty">Loading onboarding checklist…</div>';
+  }
+
+  try {
+    await syncStandardOnboardingTasks(employeeId);
+  } catch (err) {
+    console.error('Could not sync onboarding checklist:', err);
+    showToast('Could not sync onboarding checklist.', 'error');
+  }
 
   const { data, error } = await supabaseClient
     .from('onboarding_tasks')
@@ -184,13 +197,17 @@ export async function loadOnboardingTasks(employeeId: string): Promise<void> {
 
   if (error) {
     console.error('Could not load onboarding tasks:', error);
+    showToast('Could not load onboarding tasks.', 'error');
+    if (container) {
+      container.innerHTML =
+        '<div class="empty">Could not load onboarding checklist. Try again or contact HR.</div>';
+    }
+    if (summary) summary.textContent = 'Load failed';
+    if (bar) bar.style.width = '0%';
     return;
   }
 
   const tasks = sortOnboardingTasksByStandard((data || []) as OnboardingTaskRecord[]);
-  const container = document.getElementById('onboardingChecklist');
-  const summary = document.getElementById('onboardingSummary');
-  const bar = document.getElementById('onboardingProgressBar');
   const i9Banner = safeGet('onboardingI9Banner');
 
   if (!container) return;

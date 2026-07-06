@@ -229,6 +229,7 @@ export async function loadEmployeeLeaveRequests(employeeId: string): Promise<voi
   } catch (err) {
     list.innerHTML = '<div class="muted">Could not load leave requests.</div>';
     console.error('[LeaveRequests]', err);
+    showToast('Could not load leave requests.', 'error');
   }
 }
 

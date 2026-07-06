@@ -36,7 +36,9 @@ function runDrawerTabLoad(
       console.error(`[DrawerTab] ${tabName} load failed:`, err);
     })
     .finally(() => {
-      loadingTabs.delete(tabName);
+      if (generation === drawerLoadGeneration && loadedEmployeeId === employeeId) {
+        loadingTabs.delete(tabName);
+      }
     });
 }
 

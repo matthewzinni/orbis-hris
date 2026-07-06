@@ -177,6 +177,7 @@ export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
     if (error) {
       console.error('[EmployeeDocuments] Load failed:', error);
       target.innerHTML = '<div class="empty">Could not load documents.</div>';
+      showToast('Could not load documents.', 'error');
       return;
     }
 

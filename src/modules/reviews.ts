@@ -336,6 +336,8 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
   const target = safeGet('reviewsHistory');
   if (!target) return;
 
+  target.innerHTML = '<div class="muted">Loading reviews…</div>';
+
   try {
     if (!assertPerformanceReviewAccess()) {
       target.innerHTML =
@@ -355,6 +357,7 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
     if (error) {
       console.error('Could not load reviews:', error);
       target.innerHTML = '<div class="empty">Could not load reviews.</div>';
+      showToast('Could not load reviews.', 'error');
       return;
     }
 
