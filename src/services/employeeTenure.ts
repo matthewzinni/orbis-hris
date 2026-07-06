@@ -1,6 +1,6 @@
 export type TenureEmployee = {
-  hire_date?: string;
-  hireDate?: string;
+  hire_date?: string | Date;
+  hireDate?: string | Date;
   tenure_months?: number | string | null;
   tenureMonths?: number | string | null;
   tenure_years?: number | string | null;
@@ -8,10 +8,15 @@ export type TenureEmployee = {
 };
 
 function parseHireDate(employee: TenureEmployee | null | undefined): Date | null {
-  const raw = String(employee?.hire_date || employee?.hireDate || '').trim();
-  if (!raw) return null;
+  const raw = employee?.hire_date ?? employee?.hireDate;
+  if (raw instanceof Date) {
+    return Number.isNaN(raw.getTime()) ? null : raw;
+  }
 
-  const date = new Date(`${raw.slice(0, 10)}T00:00:00`);
+  const rawStr = String(raw || '').trim();
+  if (!rawStr) return null;
+
+  const date = new Date(`${rawStr.slice(0, 10)}T00:00:00`);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 

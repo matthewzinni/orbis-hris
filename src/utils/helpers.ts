@@ -156,8 +156,7 @@ export function getCurrentEmployeeDisplayName(): string {
 
   return (
     `${employee.first || employee.first_name || ''} ${employee.last || employee.last_name || ''}`.trim() ||
-    employee.name ||
-    ''
+    String(employee.name || '')
   );
 }
 

@@ -199,9 +199,9 @@ function setDrawerAdminField(possibleIds: string[], value: unknown): void {
         if (!field) return;
 
         if ('value' in field) {
-            field.value = value || '';
+            field.value = String(value ?? '');
         } else {
-            field.textContent = value || '';
+            (field as HTMLElement).textContent = String(value ?? '');
         }
     });
 }
@@ -233,11 +233,15 @@ function setDrawerAdminFieldByLabel(labelText, value) {
 
     if (!wrapper) return;
 
-    const field = wrapper.querySelector('input, select, textarea');
+    const field = wrapper.querySelector('input, select, textarea') as
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+      | null;
 
     if (!field) return;
 
-    field.value = value || '';
+    field.value = String(value ?? '');
     field.dispatchEvent(new Event('input', { bubbles: true }));
     field.dispatchEvent(new Event('change', { bubbles: true }));
 }
@@ -309,8 +313,9 @@ function getVisibleEmployeeAdminPanel() {
     const panels = Array.from(drawer.querySelectorAll('.tab-panel, .panel, .card, section, form, div'));
 
     return panels.find(panel => {
-        const text = String(panel.textContent || '').toLowerCase();
-        const isVisible = panel.offsetParent !== null;
+        const element = panel as HTMLElement;
+        const text = String(element.textContent || '').toLowerCase();
+        const isVisible = element.offsetParent !== null;
         return isVisible && text.includes('employee record management');
     }) || null;
 }
@@ -589,8 +594,8 @@ export function renderEmployeeDrawerIdentityHeader(
 
 export function getResolvedDrawerEmployeeId(employee: DrawerUiEmployee | null = null): string | null {
     return getTrustedEmployeeDisplayId(employee) ||
-        employee?.dbId ||
-        window.currentEmployee?.dbId ||
+        String(employee?.dbId || '') ||
+        String(window.currentEmployee?.dbId || '') ||
         getTrustedEmployeeDisplayId(window.currentEmployee) ||
         null;
 }
@@ -689,7 +694,7 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
         const saveBtn = domGet('saveEmployeeBtn');
         const newBtn = domGet('newEmployeeBtn');
         const actionsRow = (newBtn && newBtn.parentElement) || (saveBtn && saveBtn.parentElement);
-        let terminateBtn = domGet('terminateEmployeeBtn');
+        let terminateBtn: HTMLButtonElement | null = domGet<HTMLButtonElement>('terminateEmployeeBtn');
 
         if (actionsRow && !terminateBtn) {
             terminateBtn = document.createElement('button');
@@ -860,7 +865,8 @@ export function switchDrawerTab(tabName: string): void {
     }
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
+        const tabBtn = btn as HTMLElement;
+        tabBtn.classList.toggle('active', tabBtn.dataset.tab === tabName);
     });
 
     document.querySelectorAll('.tab-panel').forEach(panel => {

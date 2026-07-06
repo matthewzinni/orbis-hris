@@ -36,6 +36,5 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Typecheck (informational)
+      - name: Typecheck
         run: npm run typecheck
-        continue-on-error: true

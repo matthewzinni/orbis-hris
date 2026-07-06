@@ -128,7 +128,9 @@ function setEmployeeAdminFieldsLocked(locked: boolean, lockTitle: string): void 
     )
     .forEach((field) => {
       field.disabled = locked;
-      field.readOnly = locked;
+      if (field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) {
+        field.readOnly = locked;
+      }
       if (locked) {
         field.title = lockMessage;
       } else {

@@ -551,7 +551,7 @@ export async function refreshPerformanceReviewsDueKpi(): Promise<void> {
 function applyReviewImpactPlayers(
   latestReviewByEmployee: Record<string, LatestReviewEntry>
 ): void {
-  const impactMap = window.currentImpactPlayerRosterMap || {};
+  const impactMap = (window.currentImpactPlayerRosterMap || {}) as Record<string, ImpactPlayerMeta>;
 
   Object.entries(latestReviewByEmployee).forEach(([employeeId, item]) => {
     if (item.avgScore === null || item.avgScore < 4) return;
@@ -1072,8 +1072,8 @@ export function renderKpiEmployeeMetrics(): void {
     inHouseFteInfo.title = `Active in-house full-time employees (not contract, part-time, overseas/remote, or Brent/Trent). ${inHouseFteInsuranceHeadline(inHouseFteCount)}`;
   }
 
-  if (typeof window.updateReviewsDueKpi === 'function') {
-    (window as { updateReviewsDueKpi?: (count: number) => void }).updateReviewsDueKpi?.(
+  if (typeof (window as Window & { updateReviewsDueKpi?: (count: number) => void }).updateReviewsDueKpi === 'function') {
+    (window as Window & { updateReviewsDueKpi?: (count: number) => void }).updateReviewsDueKpi?.(
       reviewsDue
     );
   } else {
@@ -1117,8 +1117,8 @@ async function ensureKpiEmployeeRoster(): Promise<void> {
 }
 
 export async function loadSummaryMetrics(): Promise<void> {
-  const atRiskMap = window.currentAtRiskRosterMap || {};
-  const impactMap = window.currentImpactPlayerRosterMap || {};
+  const atRiskMap = (window.currentAtRiskRosterMap || {}) as Record<string, AtRiskMeta>;
+  const impactMap = (window.currentImpactPlayerRosterMap || {}) as Record<string, ImpactPlayerMeta>;
   const failedMetrics: string[] = [];
 
   hideKpiRetryBanner();

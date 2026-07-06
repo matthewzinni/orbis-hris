@@ -56,8 +56,8 @@ export async function loadInvestigations(): Promise<void> {
 
 export function ensureInvestigationsLoaded(force = false): void {
   void ensureInvestigationsModule()
-    .then(wireInvestigationsGlobals)
-    .then((mod) => {
+    .then(async (mod) => {
+      await wireInvestigationsGlobals(mod);
       mod.ensureInvestigationsLoaded(force);
     })
     .catch((err) => {
@@ -73,35 +73,44 @@ export async function ensureInvestigationsReady(): Promise<void> {
 
 export function exportInvestigationsCsv(): void {
   void ensureInvestigationsModule()
-    .then(wireInvestigationsGlobals)
-    .then((mod) => mod.exportInvestigationsCsv())
+    .then(async (mod) => {
+      await wireInvestigationsGlobals(mod);
+      mod.exportInvestigationsCsv();
+    })
     .catch((err) => console.error('[Investigations] Export failed:', err));
 }
 
 export function openInvestigationsView(): void {
   void ensureInvestigationsModule()
-    .then(wireInvestigationsGlobals)
-    .then((mod) => mod.openInvestigationsView())
+    .then(async (mod) => {
+      await wireInvestigationsGlobals(mod);
+      mod.openInvestigationsView();
+    })
     .catch((err) => console.error('[Investigations] Navigation failed:', err));
 }
 
 export function openNewInvestigationForm(): void {
   void ensureInvestigationsModule()
-    .then(wireInvestigationsGlobals)
-    .then((mod) => mod.openNewInvestigationForm())
+    .then(async (mod) => {
+      await wireInvestigationsGlobals(mod);
+      mod.openNewInvestigationForm();
+    })
     .catch((err) => console.error('[Investigations] Open form failed:', err));
 }
 
 export function openInvestigationDrawer(investigationId: string): Promise<void> {
-  return ensureInvestigationsModule()
-    .then(wireInvestigationsGlobals)
-    .then((mod) => mod.openInvestigationDrawer(investigationId));
+  return ensureInvestigationsModule().then(async (mod) => {
+    await wireInvestigationsGlobals(mod);
+    return mod.openInvestigationDrawer(investigationId);
+  });
 }
 
 export function closeInvestigationDrawer(): void {
   void ensureInvestigationsModule()
-    .then(wireInvestigationsGlobals)
-    .then((mod) => mod.closeInvestigationDrawer())
+    .then(async (mod) => {
+      await wireInvestigationsGlobals(mod);
+      mod.closeInvestigationDrawer();
+    })
     .catch((err) => console.error('[Investigations] Close drawer failed:', err));
 }
 
@@ -125,8 +134,10 @@ export async function deleteInvestigationById(investigationId: string): Promise<
 
 export function cancelInvestigationEdit(): void {
   void ensureInvestigationsModule()
-    .then(wireInvestigationsGlobals)
-    .then((mod) => mod.cancelInvestigationEdit())
+    .then(async (mod) => {
+      await wireInvestigationsGlobals(mod);
+      mod.cancelInvestigationEdit();
+    })
     .catch((err) => console.error('[Investigations] Cancel edit failed:', err));
 }
 

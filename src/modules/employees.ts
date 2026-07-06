@@ -23,6 +23,7 @@ export type NormalizedEmployeeStatus =
   | 'active'
   | 'inactive'
   | 'leave'
+  | 'absent'
   | 'terminated'
   | 'unknown';
 

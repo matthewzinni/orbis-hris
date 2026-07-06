@@ -40,7 +40,9 @@ export function isStandardOnboardingTaskName(name: unknown): boolean {
 export function sortOnboardingTasksByStandard<T extends { task_name?: string }>(
   tasks: T[]
 ): T[] {
-  const order = new Map(STANDARD_ONBOARDING_TASKS.map((name, index) => [name, index]));
+  const order = new Map<string, number>(
+    STANDARD_ONBOARDING_TASKS.map((name, index) => [name, index])
+  );
 
   return [...tasks].sort((left, right) => {
     const leftKey = order.get(String(left.task_name || '').trim()) ?? 99;

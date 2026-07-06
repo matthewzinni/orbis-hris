@@ -1,4 +1,4 @@
-type ConfirmOptions = {
+export type ConfirmOptions = {
   title?: string;
   confirmLabel?: string;
   cancelLabel?: string;

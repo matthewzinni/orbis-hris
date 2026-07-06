@@ -413,7 +413,7 @@ function collectCandidateRowsFromDom(): CandidateSearchRow[] {
         position: row.querySelector('td:nth-child(2)')?.textContent?.trim() || '',
       } satisfies CandidateSearchRow;
     })
-    .filter((row): row is CandidateSearchRow => Boolean(row?.id));
+    .filter((row) => row !== null) as CandidateSearchRow[];
 }
 
 async function refreshCandidateIndex(): Promise<void> {

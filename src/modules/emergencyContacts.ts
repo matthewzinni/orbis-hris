@@ -6,21 +6,18 @@ import {
   reorderEmergencyContactPriority,
   renderEmergencyContactPriorityButtons,
   sortEmergencyContacts,
+  type EmergencyContactPriorityRow,
 } from '../services/emergencyContactPriority';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
-interface EmergencyContactRecord {
-  id?: string;
+interface EmergencyContactRecord extends EmergencyContactPriorityRow {
   employee_id?: string;
   contact_name?: string;
   relationship?: string;
   phone?: string;
   alternate_phone?: string;
   notes?: string;
-  created_at?: string;
-  priority_order?: number | null;
-  [key: string]: unknown;
 }
 
 interface EmergencyContactEmployee {
@@ -112,7 +109,7 @@ function bindAddEmergencyContactButton(): void {
 }
 
 function populateEmergencyContactForm(record: EmergencyContactRecord): void {
-  window.currentEmergencyContactId = record.id || null;
+  window.currentEmergencyContactId = record.id != null ? String(record.id) : null;
 
   const name = safeGet<HTMLInputElement>('ecName');
   const relationship = safeGet<HTMLInputElement>('ecRelationship');

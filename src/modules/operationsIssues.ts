@@ -1109,6 +1109,7 @@ export function openOperationsView(): void {
 function registerOperationsWindowGlobals(): void {
   const globalRef = globalThis as typeof globalThis & {
     loadOperationsIssues?: typeof loadOperationsIssues;
+    exportOperationsIssuesCsv?: typeof exportOperationsIssuesCsv;
     openOperationsView?: typeof openOperationsView;
     openNewOperationsIssueForm?: typeof openNewOperationsIssueForm;
     openOperationsIssueDrawer?: typeof openOperationsIssueDrawer;

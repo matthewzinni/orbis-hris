@@ -28,10 +28,8 @@ function showToast(message: string, type = 'success'): void {
 }
 
 function readMonthsBack(): number {
-  const raw = Number.parseInt(
-    String(document.getElementById('stayOrgThemesMonths')?.value || '12'),
-    10
-  );
+  const input = document.getElementById('stayOrgThemesMonths') as HTMLInputElement | null;
+  const raw = Number.parseInt(String(input?.value || '12'), 10);
   if (!Number.isFinite(raw) || raw < 1) return 12;
   return Math.min(36, raw);
 }

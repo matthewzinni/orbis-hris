@@ -246,6 +246,8 @@ declare global {
     runDeleteEmployee?: () => void | Promise<void>;
     openNewEmployeeForm?: () => void;
     openNewEmployeeDrawer?: () => void;
+    ensureEmployeeDrawerVisible?: () => void;
+    updateReviewsDueKpi?: (count: number) => void;
     clearEmployeeAdminForm?: () => void;
     createEmployee?: () => void;
     sanitizeVisibleEmployeeNameFields?: () => void;

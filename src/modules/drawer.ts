@@ -295,7 +295,7 @@ async function fetchEmployeeRecord(employeeId: string): Promise<DrawerEmployeeRe
       supabaseClient?: unknown;
     };
 
-    const client = (bridge.supabaseClient || bridge.supabase) as {
+    const client = (bridge.supabaseClient || bridge.supabase) as unknown as {
       from?: (table: string) => {
         select: (query: string) => {
           eq: (
@@ -689,7 +689,7 @@ function getSupabaseBridgeClient() {
     supabaseClient?: unknown;
   };
 
-  return (bridge.supabaseClient || bridge.supabase) as {
+  return (bridge.supabaseClient || bridge.supabase) as unknown as {
     from?: (table: string) => {
       update: (payload: Record<string, unknown>) => {
         eq: (column: string, value: string) => Promise<{ data: unknown; error: { message?: string } | null }>;

@@ -67,7 +67,7 @@ export async function loadCareEngagement(force = false): Promise<void> {
   try {
     const mod = await ensureCareEngagementModule();
     await wireCareEngagementGlobals(mod);
-    await mod.loadCareEngagement(force);
+    await mod.loadCareEngagement();
   } catch (err) {
     console.error('[CareEngagement] Module load failed:', err);
     window.showToast?.('Could not load Care & Engagement module.', 'error');
@@ -76,8 +76,8 @@ export async function loadCareEngagement(force = false): Promise<void> {
 
 export function ensureCareEngagementLoaded(force = false): void {
   void ensureCareEngagementModule()
-    .then(wireCareEngagementGlobals)
-    .then((mod) => {
+    .then(async (mod) => {
+      await wireCareEngagementGlobals(mod);
       mod.ensureCareEngagementLoaded(force);
     })
     .catch((err) => {
@@ -87,8 +87,10 @@ export function ensureCareEngagementLoaded(force = false): void {
 
 export function openCareEngagementView(): void {
   void ensureCareEngagementModule()
-    .then(wireCareEngagementGlobals)
-    .then((mod) => mod.openCareEngagementView())
+    .then(async (mod) => {
+      await wireCareEngagementGlobals(mod);
+      mod.openCareEngagementView();
+    })
     .catch((err) => console.error('[CareEngagement] Navigation failed:', err));
 }
 

@@ -475,7 +475,7 @@ export async function emailCandidateSummaryToLeadership(): Promise<void> {
         '',
       department:
         getInputValue('candidateDepartmentInput', 'candidateDepartment') ||
-        drawerValues.department ||
+        String(drawerValues.department || '') ||
         '',
       stage: getInputValue('candidateStageInput', 'candidateStage') || drawerValues.stage || '',
       source: getInputValue('candidateSourceInput', 'candidateSource') || drawerValues.source || '',
