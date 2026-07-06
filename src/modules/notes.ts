@@ -200,6 +200,8 @@ export async function loadEmployeeNotes(employeeId: string): Promise<void> {
     return;
   }
 
+  target.innerHTML = '<div class="muted">Loading notes…</div>';
+
   const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
   const lookupIds = getEmployeeLookupIds(employee, actualEmployeeId);
 
@@ -211,7 +213,8 @@ export async function loadEmployeeNotes(employeeId: string): Promise<void> {
 
   if (error) {
     console.error('[Notes] Load failed:', error);
-    target.innerHTML = '<div class="empty">Could not load notes</div>';
+    target.innerHTML = '<div class="empty">Could not load notes.</div>';
+    showToast('Could not load notes.', 'error');
     return;
   }
 

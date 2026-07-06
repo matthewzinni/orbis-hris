@@ -70,6 +70,8 @@ import './modules/employees';
 import './modules/orgChart';
 import './modules/attendance';
 import './modules/lazyJanus';
+import './modules/lazyInvestigations';
+import './modules/lazyCareEngagement';
 import './modules/dashboardBoot';
 import './modules/dashboard';
 import './modules/managerHome';
@@ -147,30 +149,13 @@ import {
   openOperationsView,
   saveOperationsIssueRecord,
 } from './modules/operationsIssues';
-import {
-  applyCareEngagementCenterAccess,
-  ensureCareEngagementLoaded,
-  loadCareEngagement,
-  openCareEngagementView,
-} from './modules/careEngagement';
-import './modules/careEngagementEditor';
 import './modules/employeeCareSupport';
 import {
+  applyCareEngagementCenterAccess,
+} from './modules/lazyCareEngagement';
+import {
   applyInvestigationsCenterAccess,
-  cancelInvestigationEdit,
-  closeInvestigationDrawer,
-  deleteInvestigationById,
-  deleteInvestigationRecord,
-  ensureInvestigationsLoaded,
-  ensureInvestigationsReady,
-  exportInvestigationsCsv,
-  isInvestigationDrawerOpen,
-  loadInvestigations,
-  openInvestigationDrawer,
-  openInvestigationsView,
-  openNewInvestigationForm,
-  saveInvestigationRecord,
-} from './modules/investigations';
+} from './modules/lazyInvestigations';
 import './ui/loadingUi';
 import './ui/dashboardRetry';
 import './ui/confirmModal';
@@ -272,25 +257,6 @@ function registerLegacyBridges(): void {
   bridge.cancelOperationsIssueEdit = cancelOperationsIssueEdit;
   bridge.applyOperationsCenterAccess = applyOperationsCenterAccess;
 
-  bridge.loadInvestigations = loadInvestigations;
-  bridge.ensureInvestigationsLoaded = ensureInvestigationsLoaded;
-  bridge.ensureInvestigationsReady = ensureInvestigationsReady;
-  bridge.exportInvestigationsCsv = exportInvestigationsCsv;
-  bridge.openInvestigationsView = openInvestigationsView;
-  bridge.openNewInvestigationForm = openNewInvestigationForm;
-  bridge.openInvestigationDrawer = openInvestigationDrawer;
-  bridge.closeInvestigationDrawer = closeInvestigationDrawer;
-  bridge.saveInvestigationRecord = saveInvestigationRecord;
-  bridge.deleteInvestigationRecord = deleteInvestigationRecord;
-  bridge.deleteInvestigationById = deleteInvestigationById;
-  bridge.cancelInvestigationEdit = cancelInvestigationEdit;
-  bridge.applyInvestigationsCenterAccess = applyInvestigationsCenterAccess;
-
-  bridge.loadCareEngagement = loadCareEngagement;
-  bridge.ensureCareEngagementLoaded = ensureCareEngagementLoaded;
-  bridge.openCareEngagementView = openCareEngagementView;
-  bridge.applyCareEngagementCenterAccess = applyCareEngagementCenterAccess;
-
   globalThis.loadOperationsIssues = loadOperationsIssues;
   globalThis.ensureOperationsIssuesLoaded = ensureOperationsIssuesLoaded;
   globalThis.exportOperationsIssuesCsv = exportOperationsIssuesCsv;
@@ -304,26 +270,6 @@ function registerLegacyBridges(): void {
   globalThis.cancelOperationsIssueEdit = cancelOperationsIssueEdit;
   globalThis.isOperationsIssueDrawerOpen = isOperationsIssueDrawerOpen;
   globalThis.applyOperationsCenterAccess = applyOperationsCenterAccess;
-
-  globalThis.loadInvestigations = loadInvestigations;
-  globalThis.ensureInvestigationsLoaded = ensureInvestigationsLoaded;
-  globalThis.ensureInvestigationsReady = ensureInvestigationsReady;
-  globalThis.exportInvestigationsCsv = exportInvestigationsCsv;
-  globalThis.openInvestigationsView = openInvestigationsView;
-  globalThis.openNewInvestigationForm = openNewInvestigationForm;
-  globalThis.openInvestigationDrawer = openInvestigationDrawer;
-  globalThis.closeInvestigationDrawer = closeInvestigationDrawer;
-  globalThis.saveInvestigationRecord = saveInvestigationRecord;
-  globalThis.deleteInvestigationRecord = deleteInvestigationRecord;
-  globalThis.deleteInvestigationById = deleteInvestigationById;
-  globalThis.cancelInvestigationEdit = cancelInvestigationEdit;
-  globalThis.isInvestigationDrawerOpen = isInvestigationDrawerOpen;
-  globalThis.applyInvestigationsCenterAccess = applyInvestigationsCenterAccess;
-
-  globalThis.loadCareEngagement = loadCareEngagement;
-  globalThis.ensureCareEngagementLoaded = ensureCareEngagementLoaded;
-  globalThis.openCareEngagementView = openCareEngagementView;
-  globalThis.applyCareEngagementCenterAccess = applyCareEngagementCenterAccess;
 }
 
 async function initializeProtectedModules(): Promise<boolean> {

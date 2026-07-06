@@ -27,6 +27,10 @@ describe('instanceConfig', () => {
       'brent.wynne@btwglobal.com',
       'david.allewalt@btwglobal.com',
     ]);
+    expect(config.orgWideDisciplineEmails).toEqual([
+      'matthew.zinni@btwglobal.com',
+      'david.allewalt@btwglobal.com',
+    ]);
     expect(config.featureFlags.janus).toBe(true);
   });
 
@@ -34,12 +38,14 @@ describe('instanceConfig', () => {
     vi.stubEnv('VITE_COMPANY_NAME', 'Acme Manufacturing');
     vi.stubEnv('VITE_EMPLOYEE_ID_PREFIX', 'ACME');
     vi.stubEnv('VITE_ORG_WIDE_SCOPE_EMAILS', 'hr@acme.com, ceo@acme.com');
+    vi.stubEnv('VITE_ORG_WIDE_DISCIPLINE_EMAILS', 'hr@acme.com');
     vi.stubEnv('VITE_FEATURE_JANUS', 'false');
 
     const config = getInstanceConfig();
     expect(config.companyName).toBe('Acme Manufacturing');
     expect(config.employeeIdPrefix).toBe('ACME');
     expect(config.orgWideScopeEmails).toEqual(['hr@acme.com', 'ceo@acme.com']);
+    expect(config.orgWideDisciplineEmails).toEqual(['hr@acme.com']);
     expect(config.featureFlags.janus).toBe(false);
     expect(config.featureFlags.investigations).toBe(BTW_DEFAULT_INSTANCE_CONFIG.featureFlags.investigations);
   });

@@ -1,4 +1,5 @@
 // Supervisor scoping, roster indexes, and per-employee permission checks.
+import { instanceConfig, BTW_DEFAULT_ORG_WIDE_DISCIPLINE_EMAILS, BTW_DEFAULT_ORG_WIDE_SCOPE_EMAILS } from '../config/instanceConfig';
 import { supabaseClient } from './supabaseClient';
 import {
   type EmployeeLike,
@@ -15,22 +16,33 @@ import {
   isSupervisorUser,
 } from './accessState';
 
+function emailSet(emails: readonly string[]): Set<string> {
+  return new Set(emails.map((email) => String(email || '').trim().toLowerCase()).filter(Boolean));
+}
+
 /** HR leadership with org-wide performance review, attendance, and related scope. */
-export const PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS = new Set([
-  'matthew.zinni@btwglobal.com',
-  'trent.wynne@btwglobal.com',
-  'brent.wynne@btwglobal.com',
-  'david.allewalt@btwglobal.com',
-]);
+export function getOrgWideScopeEmails(): Set<string> {
+  return emailSet(instanceConfig().orgWideScopeEmails);
+}
 
 /** Org-wide discipline dashboards and cross-team discipline CRUD. */
-export const ORG_WIDE_DISCIPLINE_EMAILS = new Set([
-  'matthew.zinni@btwglobal.com',
-  'david.allewalt@btwglobal.com',
-]);
+export function getOrgWideDisciplineEmails(): Set<string> {
+  return emailSet(instanceConfig().orgWideDisciplineEmails);
+}
 
-/** @deprecated Use ORG_WIDE_DISCIPLINE_EMAILS */
+/** @deprecated Use getOrgWideScopeEmails() — env-driven via VITE_ORG_WIDE_SCOPE_EMAILS. */
+export const PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS = emailSet(
+  BTW_DEFAULT_ORG_WIDE_SCOPE_EMAILS
+);
+
+/** @deprecated Use getOrgWideDisciplineEmails() — env-driven via VITE_ORG_WIDE_DISCIPLINE_EMAILS. */
+export const ORG_WIDE_DISCIPLINE_EMAILS = emailSet(BTW_DEFAULT_ORG_WIDE_DISCIPLINE_EMAILS);
+
+/** @deprecated Use getOrgWideDisciplineEmails() */
 export const DISCIPLINE_REPORTS_VIEWER_EMAIL = 'matthew.zinni@btwglobal.com';
+
+/** @deprecated Use getOrgWideScopeEmails() */
+export const ATTENDANCE_ORG_WIDE_EMAILS = PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS;
 
 export function getCurrentAuthEmail(): string {
   return String(
@@ -41,7 +53,7 @@ export function getCurrentAuthEmail(): string {
 }
 
 export function hasOrgWideDisciplineAccess(): boolean {
-  return ORG_WIDE_DISCIPLINE_EMAILS.has(getCurrentAuthEmail());
+  return getOrgWideDisciplineEmails().has(getCurrentAuthEmail());
 }
 
 /** @deprecated Use hasOrgWideDisciplineAccess for org-wide feeds. */
@@ -91,8 +103,7 @@ export function canQueryDisciplineReports(): boolean {
 }
 
 export function canEmailSupervisorsPerformanceReviews(): boolean {
-  const email = getCurrentAuthEmail();
-  return PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS.has(email);
+  return getOrgWideScopeEmails().has(getCurrentAuthEmail());
 }
 
 export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | undefined): boolean {
@@ -178,9 +189,6 @@ export function employeeMatchesPerformanceReviewScope(
 
   return supervisorNames.some((name) => supervisorNameMatches(employeeSupervisor, name));
 }
-
-/** Same HR leadership set as performance-review org-wide access. */
-export const ATTENDANCE_ORG_WIDE_EMAILS = PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS;
 
 /** Org-wide attendance roll call (Matthew, Trent, Brent only). */
 export function hasOrgWideAttendanceAccess(): boolean {

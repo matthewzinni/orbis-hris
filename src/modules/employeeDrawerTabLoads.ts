@@ -4,7 +4,9 @@
  */
 
 let loadedEmployeeId: string | null = null;
+let drawerLoadGeneration = 0;
 const loadedTabs = new Set<string>();
+const loadingTabs = new Set<string>();
 
 function getDrawerEmployeeId(employeeId?: string): string {
   if (employeeId) return String(employeeId).trim();
@@ -16,14 +18,39 @@ function getDrawerEmployeeId(employeeId?: string): string {
   ).trim();
 }
 
+function runDrawerTabLoad(
+  tabName: string,
+  employeeId: string,
+  generation: number,
+  loader: () => void | Promise<void>
+): void {
+  loadingTabs.add(tabName);
+
+  void Promise.resolve()
+    .then(() => loader())
+    .then(() => {
+      if (generation !== drawerLoadGeneration || loadedEmployeeId !== employeeId) return;
+      loadedTabs.add(tabName);
+    })
+    .catch((err) => {
+      console.error(`[DrawerTab] ${tabName} load failed:`, err);
+    })
+    .finally(() => {
+      loadingTabs.delete(tabName);
+    });
+}
+
 export function resetEmployeeDrawerTabLoadState(): void {
   loadedEmployeeId = null;
   loadedTabs.clear();
+  loadingTabs.clear();
+  drawerLoadGeneration += 1;
 }
 
 /** Force the next visit to a tab to reload (e.g. after save). */
 export function invalidateEmployeeDrawerTab(tabName: string): void {
   loadedTabs.delete(tabName);
+  loadingTabs.delete(tabName);
 }
 
 export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): void {
@@ -32,30 +59,33 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
 
   if (loadedEmployeeId !== id) {
     loadedTabs.clear();
+    loadingTabs.clear();
+    drawerLoadGeneration += 1;
     loadedEmployeeId = id;
   }
 
-  if (loadedTabs.has(tabName)) return;
-  loadedTabs.add(tabName);
+  if (loadedTabs.has(tabName) || loadingTabs.has(tabName)) return;
+
+  const generation = drawerLoadGeneration;
 
   switch (tabName) {
     case 'profile':
-      window.loadEmployeeInternalJobInterests?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeInternalJobInterests?.(id));
       break;
     case 'notes':
-      window.loadEmployeeNotes?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeNotes?.(id));
       break;
     case 'discipline':
-      window.loadEmployeeDiscipline?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeDiscipline?.(id));
       break;
     case 'incidents':
-      window.loadEmployeeIncidents?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeIncidents?.(id));
       break;
     case 'meetings':
-      window.loadEmployeeMeetings?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeMeetings?.(id));
       break;
     case 'stay-interviews':
-      window.loadStayInterviews?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadStayInterviews?.(id));
       break;
     case 'reviews': {
       const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
@@ -63,40 +93,40 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
         typeof window.canAccessPerformanceReviews === 'function' &&
         !window.canAccessPerformanceReviews(employee)
       ) {
-        loadedTabs.delete(tabName);
         return;
       }
-      void window.loadEmployeeReviews?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeReviews?.(id));
       break;
     }
     case 'emergency':
-      window.loadEmergencyContacts?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmergencyContacts?.(id));
       break;
     case 'onboarding':
-      void window.loadOnboardingTasks?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadOnboardingTasks?.(id));
       break;
     case 'offboarding':
-      void window.loadOffboardingTasks?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadOffboardingTasks?.(id));
       break;
     case 'time-off':
-      void window.loadEmployeeLeaveRequests?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeLeaveRequests?.(id));
       break;
     case 'documents':
-      void window.loadEmployeeDocuments?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeDocuments?.(id));
       break;
     case 'history':
-      window.loadEmployeeHistory?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeHistory?.(id));
       break;
     case 'care-support':
-      void window.loadEmployeeCareSupport?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeCareSupport?.(id));
       break;
     case 'employee':
-      window.loadEmployeeManualAtRisk?.(id);
-      window.loadEmployeeManualImpactPlayer?.(id);
-      void window.loadEmployeePayrollHandoffs?.(id);
+      runDrawerTabLoad(tabName, id, generation, () => {
+        window.loadEmployeeManualAtRisk?.(id);
+        window.loadEmployeeManualImpactPlayer?.(id);
+        return window.loadEmployeePayrollHandoffs?.(id);
+      });
       break;
     default:
-      loadedTabs.delete(tabName);
       break;
   }
 }

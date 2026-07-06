@@ -598,7 +598,8 @@ body[data-layout='mobile'] #employeeDrawer .orbis-mobile-segmented::-webkit-scro
 body[data-layout='mobile'] #employeeDrawer .orbis-mobile-segmented .tab-btn {
   flex: 0 0 auto;
   min-height: var(--mobile-tap-min);
-  padding: 8px 14px;
+  min-width: var(--mobile-tap-min);
+  padding: 10px 14px;
   white-space: nowrap;
 }
 

@@ -27,6 +27,8 @@ export type InstanceConfig = {
   employeeIdPrefix: string;
   /** HR leadership with org-wide attendance / performance-review scope. */
   orgWideScopeEmails: readonly string[];
+  /** HR leadership with org-wide discipline dashboards and cross-team discipline CRUD. */
+  orgWideDisciplineEmails: readonly string[];
   /** Emails that must never auto-provision as employee portal users. */
   leadershipPortalExcludeEmails: readonly string[];
   featureFlags: InstanceFeatures;
@@ -37,6 +39,11 @@ export const BTW_DEFAULT_ORG_WIDE_SCOPE_EMAILS = [
   'matthew.zinni@btwglobal.com',
   'trent.wynne@btwglobal.com',
   'brent.wynne@btwglobal.com',
+  'david.allewalt@btwglobal.com',
+] as const;
+
+export const BTW_DEFAULT_ORG_WIDE_DISCIPLINE_EMAILS = [
+  'matthew.zinni@btwglobal.com',
   'david.allewalt@btwglobal.com',
 ] as const;
 
@@ -52,6 +59,7 @@ export const BTW_DEFAULT_INSTANCE_CONFIG: InstanceConfig = {
   appProductName: 'Orbis',
   employeeIdPrefix: 'BTW',
   orgWideScopeEmails: BTW_DEFAULT_ORG_WIDE_SCOPE_EMAILS,
+  orgWideDisciplineEmails: BTW_DEFAULT_ORG_WIDE_DISCIPLINE_EMAILS,
   leadershipPortalExcludeEmails: BTW_DEFAULT_LEADERSHIP_PORTAL_EXCLUDE_EMAILS,
   featureFlags: {
     janus: true,
@@ -94,6 +102,10 @@ export function getInstanceConfig(): InstanceConfig {
     appProductName: readEnv('VITE_APP_PRODUCT_NAME') || defaults.appProductName,
     employeeIdPrefix: readEnv('VITE_EMPLOYEE_ID_PREFIX') || defaults.employeeIdPrefix,
     orgWideScopeEmails: parseEmailList(readEnv('VITE_ORG_WIDE_SCOPE_EMAILS'), defaults.orgWideScopeEmails),
+    orgWideDisciplineEmails: parseEmailList(
+      readEnv('VITE_ORG_WIDE_DISCIPLINE_EMAILS'),
+      defaults.orgWideDisciplineEmails
+    ),
     leadershipPortalExcludeEmails: parseEmailList(
       readEnv('VITE_LEADERSHIP_PORTAL_EXCLUDE_EMAILS'),
       defaults.leadershipPortalExcludeEmails
