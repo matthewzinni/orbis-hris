@@ -60,7 +60,6 @@ export function resetDrawerEntryForms(): void {
   setFieldValue('reviewType', '');
   setFieldValue('reviewAttendance', '');
   setFieldValue('reviewQuality', '');
-  setFieldValue('reviewAttendance', '');
   setFieldValue('reviewReliability', '');
   setFieldValue('reviewCommunication', '');
   setFieldValue('reviewJudgement', '');

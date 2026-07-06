@@ -57,17 +57,18 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
     case 'stay-interviews':
       window.loadStayInterviews?.(id);
       break;
-    case 'reviews':
-    const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
-    if (
-      typeof window.canAccessPerformanceReviews === 'function' &&
-      !window.canAccessPerformanceReviews(employee)
-    ) {
-      loadedTabs.delete(tabName);
-      return;
-    }
-    void window.loadEmployeeReviews?.(id);
+    case 'reviews': {
+      const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
+      if (
+        typeof window.canAccessPerformanceReviews === 'function' &&
+        !window.canAccessPerformanceReviews(employee)
+      ) {
+        loadedTabs.delete(tabName);
+        return;
+      }
+      void window.loadEmployeeReviews?.(id);
       break;
+    }
     case 'emergency':
       window.loadEmergencyContacts?.(id);
       break;

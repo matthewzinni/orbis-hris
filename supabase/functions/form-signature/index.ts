@@ -111,9 +111,8 @@ async function loadEmployeeDisplayName(
 
   const { data, error } = await client
     .from('employees')
-    .select('first_name, last_name, id, employee_id')
-    .or(`id.eq.${trimmed},employee_id.eq.${trimmed}`)
-    .limit(1)
+    .select('first_name, last_name, id')
+    .eq('id', trimmed)
     .maybeSingle();
 
   if (error || !data) return '';

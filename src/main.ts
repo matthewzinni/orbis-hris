@@ -71,6 +71,7 @@ import './modules/orgChart';
 import './modules/attendance';
 import './modules/lazyJanus';
 import './modules/dashboardBoot';
+import './modules/dashboard';
 import './modules/managerHome';
 import './modules/internalJobBoard';
 import './ui/executiveInsight';
@@ -348,7 +349,7 @@ async function initializeProtectedModules(): Promise<boolean> {
 
   if (role === 'rejected') {
     const loginError = document.getElementById('loginError');
-    const message = 'This account request was rejected. Contact HR if you need access.';
+    const message = 'Orbis access is not available for this account. Contact HR if you need assistance.';
     if (loginError) {
       loginError.textContent = message;
       loginError.classList.remove('hidden');

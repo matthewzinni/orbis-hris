@@ -90,6 +90,7 @@ const EDIT_UI = {
 };
 
 let currentReviewId: string | null = null;
+let isReviewSaveInProgress = false;
 
 function employeeDisplayName(employee: ReviewEmployee | null | undefined): string {
   if (typeof window.employeeDisplayName === 'function') {
@@ -500,18 +501,26 @@ export async function deleteReviewRecord(reviewId: string, employeeId: string): 
 }
 
 export async function saveReviewRecord(): Promise<void> {
-  stopAllDictation();
-  const activeEmployee = getDrawerEmployee() as ReviewEmployee | null;
-  const employeeId = getEmployeeId(activeEmployee);
-
-  if (!employeeId) {
-    showToast('Open an employee before saving a review.', 'error');
+  if (isReviewSaveInProgress) {
+    showToast('Review save already in progress. Please wait.', 'error');
     return;
   }
 
-  if (!assertPerformanceReviewAccess(activeEmployee)) return;
+  isReviewSaveInProgress = true;
 
-  const reviewPayload: ReviewRecord = {
+  try {
+    stopAllDictation();
+    const activeEmployee = getDrawerEmployee() as ReviewEmployee | null;
+    const employeeId = getEmployeeId(activeEmployee);
+
+    if (!employeeId) {
+      showToast('Open an employee before saving a review.', 'error');
+      return;
+    }
+
+    if (!assertPerformanceReviewAccess(activeEmployee)) return;
+
+    const reviewPayload: ReviewRecord = {
     employee_id: employeeId,
     review_date: safeGet<HTMLInputElement>('reviewDate')?.value || todayInputValue(),
     review_type: safeGet<HTMLInputElement>('reviewType')?.value || 'Review',
@@ -594,6 +603,9 @@ export async function saveReviewRecord(): Promise<void> {
   }
   if (typeof window.loadPerformanceReviewSupervisorNotify === 'function') {
     void window.loadPerformanceReviewSupervisorNotify();
+  }
+  } finally {
+    isReviewSaveInProgress = false;
   }
 }
 

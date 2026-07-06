@@ -289,7 +289,7 @@ export async function runTerminateEmployee(): Promise<void> {
   );
 
   try {
-    await runEmployeeTerminationSideEffects({
+    const { warnings, payrollHandoffs } = await runEmployeeTerminationSideEffects({
       employeeId: targetId,
       employee: currentEmployee as Record<string, unknown>,
       payrollBefore,
@@ -298,11 +298,20 @@ export async function runTerminateEmployee(): Promise<void> {
         terminationFields
       ),
     });
+    if (warnings.length) {
+      showToast(`Employee terminated, but: ${warnings.join(' ')}`, 'error');
+    } else if (payrollHandoffs > 0) {
+      showToast(
+        `Logged ${payrollHandoffs} payroll handoff${payrollHandoffs === 1 ? '' : 's'} for external payroll.`,
+        'success'
+      );
+    } else {
+      showToast('Employee terminated. File retained for turnover reporting.', 'success');
+    }
   } catch (err) {
     console.warn('[EmployeeAdmin] Termination side effects failed:', err);
+    showToast('Employee terminated, but follow-up tasks may be incomplete.', 'error');
   }
-
-  showToast('Employee terminated. File retained for turnover reporting.', 'success');
   await refreshDashboardAfterEmployeeChange();
 
   if (typeof window.closeDrawer === 'function') {

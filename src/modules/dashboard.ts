@@ -60,7 +60,18 @@ export async function loadImpactPlayers(): Promise<void> {
 }
 
 export async function loadRecentActivity(): Promise<void> {
-  if (typeof (window as any).loadRecentActivity === 'function') {
-    await (window as any).loadRecentActivity();
+  if (typeof window.loadManagerHome === 'function') {
+    await window.loadManagerHome(true);
+  }
+
+  if (typeof window.loadDashboardOverview === 'function') {
+    await window.loadDashboardOverview();
+    return;
+  }
+
+  if (typeof window.loadAllDashboardData === 'function') {
+    await window.loadAllDashboardData();
   }
 }
+
+window.loadRecentActivity = loadRecentActivity;

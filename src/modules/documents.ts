@@ -405,6 +405,10 @@ export async function uploadDocument(payload: UploadDocumentPayload): Promise<vo
     await loadDocuments();
   } catch (err) {
     console.error('Unexpected upload error:', err);
+    showOrbisToast(
+      err instanceof Error ? err.message : 'Unexpected error uploading document.',
+      'error'
+    );
   }
 }
 

@@ -340,7 +340,8 @@ export async function signIn(email?: string, password?: string) {
 
     if (role === 'rejected') {
       await supabase.auth.signOut();
-      const message = 'This account request was rejected. Contact HR if you believe this is an error.';
+      const message =
+        'Orbis access is not available for this account. Contact HR if you need assistance.';
       setLoginError(message);
       showToast(message, 'error');
       restoreAuthFields({ ...snapshot, email: resolvedEmail, password: resolvedPassword });

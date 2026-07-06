@@ -1060,13 +1060,15 @@ async function saveEmployeeRecordInternal(): Promise<void> {
 
   if (isNewTermination) {
     try {
-      const { payrollHandoffs } = await runEmployeeTerminationSideEffects({
+      const { payrollHandoffs, warnings } = await runEmployeeTerminationSideEffects({
         employeeId: editedEmployeeId,
         employee: window.currentEmployee as Record<string, unknown> | null | undefined,
         payrollBefore: payrollBeforeSnapshot,
         payrollAfter: employeeToPayrollSnapshot(payload),
       });
-      if (payrollHandoffs > 0) {
+      if (warnings.length) {
+        showToast(`Employee saved, but: ${warnings.join(' ')}`, 'error');
+      } else if (payrollHandoffs > 0) {
         showToast(
           `Logged ${payrollHandoffs} payroll handoff${payrollHandoffs === 1 ? '' : 's'} for external payroll.`
         );
@@ -1074,6 +1076,7 @@ async function saveEmployeeRecordInternal(): Promise<void> {
       window.invalidateEmployeeDrawerTab?.('employee');
     } catch (err) {
       console.warn('[Drawer] Termination side effects failed:', err);
+      showToast('Employee saved, but termination follow-up tasks may be incomplete.', 'error');
     }
   } else {
     try {
