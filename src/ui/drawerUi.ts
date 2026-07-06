@@ -670,7 +670,12 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
     scheduleEmployeeAdminPopulate(50);
     scheduleEmployeeAdminPopulate(250);
     scheduleEmployeeAdminPopulate(750);
+    const openedForEmployeeId = employeeId;
     window.setTimeout(() => {
+        const currentId = getResolvedDrawerEmployeeId(
+          window.currentEmployee as DrawerUiEmployee | null | undefined
+        );
+        if (currentId !== openedForEmployeeId) return;
         if (typeof window.resetDrawerEntryForms === 'function') {
             window.resetDrawerEntryForms();
         }

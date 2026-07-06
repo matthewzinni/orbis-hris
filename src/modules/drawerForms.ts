@@ -59,11 +59,15 @@ export function resetDrawerEntryForms(): void {
   setFieldValue('reviewDate', todayInputValue());
   setFieldValue('reviewType', '');
   setFieldValue('reviewAttendance', '');
-  setFieldValue('reviewPerformance', '');
-  setFieldValue('reviewTeamwork', '');
-  setFieldValue('reviewAttitude', '');
+  setFieldValue('reviewQuality', '');
+  setFieldValue('reviewAttendance', '');
   setFieldValue('reviewReliability', '');
-  setFieldValue('reviewOverallResult', '');
+  setFieldValue('reviewCommunication', '');
+  setFieldValue('reviewJudgement', '');
+  setFieldValue('reviewInitiative', '');
+  setFieldValue('reviewTeamwork', '');
+  setFieldValue('reviewKnowledge', '');
+  setFieldValue('reviewTraining', '');
   setFieldValue('reviewStrengths', '');
   setFieldValue('reviewImprovements', '');
   setFieldValue('reviewEmployeeComments', '');
@@ -79,7 +83,9 @@ export function resetDrawerEntryForms(): void {
   setFieldValue('stayQ7', '');
   setFieldValue('stayManagerSummary', '');
 
+  window.currentDisciplineId = null;
   window.currentDisciplineReportId = null;
+  window.currentIncidentId = null;
   window.currentIncidentReportId = null;
   window.currentStayInterviewId = null;
   window.currentNoteId = null;

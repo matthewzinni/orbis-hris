@@ -54,6 +54,7 @@ let currentCandidateId: string | null = null;
 let currentLinkedEmployeeId: string | null = null;
 let resumeEmployeeDrawerOnCandidateClose = false;
 let isCandidateSaveInProgress = false;
+let isConvertInProgress = false;
 let pendingCandidateResumeFile: File | null = null;
 let candidateResumeUiBound = false;
 
@@ -1213,6 +1214,21 @@ export async function moveCandidateToStage(candidateId: string, newStage: string
 }
 
 export async function convertCandidateToEmployee(candidateId: string): Promise<boolean> {
+  if (isConvertInProgress) {
+    showToast('Hire already in progress. Please wait.', 'error');
+    return false;
+  }
+
+  isConvertInProgress = true;
+
+  try {
+    return await convertCandidateToEmployeeInternal(candidateId);
+  } finally {
+    isConvertInProgress = false;
+  }
+}
+
+async function convertCandidateToEmployeeInternal(candidateId: string): Promise<boolean> {
   const { data, error } = await supabaseClient
     .from('candidates')
     .select('*')
@@ -1302,7 +1318,7 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
 
   const existingEmployee = await supabaseClient
     .from('employees')
-    .select('id, first_name, last_name, phone, position')
+    .select('id, first_name, last_name, phone, position, work_email, personal_email')
     .eq('first_name', data.first_name || '')
     .eq('last_name', data.last_name || '')
     .limit(1);
@@ -1314,10 +1330,34 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
     );
   }
 
-  if (existingEmployee.data && existingEmployee.data.length > 0) {
-    await supabaseClient.from('candidates').update({ stage: 'Hired' }).eq('id', candidateId);
+  const candidateEmail = String(data.email || '').trim().toLowerCase();
+  let emailMatch: { id: string } | null = null;
 
-    showToast('Candidate already exists as an employee. Marked as hired.');
+  if (candidateEmail) {
+    const { data: emailRows, error: emailError } = await supabaseClient
+      .from('employees')
+      .select('id')
+      .or(`work_email.eq.${candidateEmail},personal_email.eq.${candidateEmail}`)
+      .limit(1);
+
+    if (emailError) {
+      devWarn('Could not check for existing employee email before conversion:', emailError);
+    } else if (emailRows?.[0]?.id) {
+      emailMatch = { id: String(emailRows[0].id) };
+    }
+  }
+
+  const matchedEmployeeId =
+    emailMatch?.id ||
+    (existingEmployee.data?.[0]?.id ? String(existingEmployee.data[0].id) : '');
+
+  if (matchedEmployeeId) {
+    await supabaseClient
+      .from('candidates')
+      .update({ stage: 'Hired', linked_employee_id: matchedEmployeeId })
+      .eq('id', candidateId);
+
+    showToast('Candidate already exists as an employee. Marked as hired and linked.');
 
     await refreshCandidatesUi();
 
@@ -1330,7 +1370,6 @@ export async function convertCandidateToEmployee(candidateId: string): Promise<b
     return true;
   }
 
-  const candidateEmail = String(data.email || '').trim().toLowerCase();
   const candidatePhone = String(data.phone || '').trim();
 
   const employeePayload: Record<string, unknown> = {

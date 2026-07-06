@@ -49,8 +49,18 @@ function findPanel(drawer: HTMLElement, kind: DrawerTabKind, tabName: string): H
 function shouldResetEntryTabForm(
   tabName: string
 ): boolean {
-  if (tabName === 'incidents' && window.currentIncidentReportId) return false;
-  if (tabName === 'discipline' && window.currentDisciplineReportId) return false;
+  if (
+    tabName === 'incidents' &&
+    (window.currentIncidentId || window.currentIncidentReportId)
+  ) {
+    return false;
+  }
+  if (
+    tabName === 'discipline' &&
+    (window.currentDisciplineId || window.currentDisciplineReportId)
+  ) {
+    return false;
+  }
   if (tabName === 'notes' && window.currentNoteId) return false;
   if (tabName === 'meetings' && window.currentMeetingId) return false;
   if (tabName === 'reviews' && window.currentReviewId) return false;

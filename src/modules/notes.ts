@@ -1,4 +1,5 @@
 import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
+import { getEmployeeLookupIds } from '../services/employeeRecordCrud';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { stopAllDictation } from './dictation';
@@ -199,10 +200,13 @@ export async function loadEmployeeNotes(employeeId: string): Promise<void> {
     return;
   }
 
+  const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
+  const lookupIds = getEmployeeLookupIds(employee, actualEmployeeId);
+
   const { data, error } = await supabaseClient
     .from('employee_notes')
     .select('*')
-    .eq('employee_id', actualEmployeeId)
+    .in('employee_id', lookupIds)
     .order('note_date', { ascending: false });
 
   if (error) {

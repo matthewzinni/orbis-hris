@@ -1,4 +1,5 @@
 import { orbisLetterheadHtml } from '../brand/letterhead';
+import { getCanvasSignature } from '../ui/signaturePads';
 import { esc, getCurrentEmployeeDisplayId, getCurrentEmployeeDisplayName, nl2br, safeGet } from './helpers';
 import { DISCIPLINE_PRINT_CSS } from './disciplinePrintStyles';
 
@@ -10,6 +11,9 @@ export type DisciplinePrintData = {
   description: string;
   actionTaken: string;
   refusedToSign: boolean;
+  employeeSignature: string;
+  managerSignature: string;
+  witnessSignature: string;
 };
 
 export function readDisciplinePrintDataFromForm(): DisciplinePrintData {
@@ -21,6 +25,9 @@ export function readDisciplinePrintDataFromForm(): DisciplinePrintData {
     description: String((safeGet('disciplineDescription') as HTMLTextAreaElement | null)?.value || '').trim(),
     actionTaken: String((safeGet('disciplineAction') as HTMLTextAreaElement | null)?.value || '').trim(),
     refusedToSign: Boolean((safeGet('disciplineRefusedToSign') as HTMLInputElement | null)?.checked),
+    employeeSignature: getCanvasSignature('disciplineEmployeeSignature'),
+    managerSignature: getCanvasSignature('disciplineManagerSignature'),
+    witnessSignature: getCanvasSignature('disciplineWitnessSignature'),
   };
 }
 
@@ -32,6 +39,9 @@ export function disciplinePrintDataFromRecord(record: {
   description?: string;
   action_taken?: string;
   refused_to_sign?: boolean;
+  employee_signature?: string;
+  manager_signature?: string;
+  witness_signature?: string;
 }): DisciplinePrintData {
   return {
     incidentDate: String(record.incident_date || '').trim(),
@@ -41,6 +51,9 @@ export function disciplinePrintDataFromRecord(record: {
     description: String(record.description || '').trim(),
     actionTaken: String(record.action_taken || '').trim(),
     refusedToSign: Boolean(record.refused_to_sign),
+    employeeSignature: String(record.employee_signature || '').trim(),
+    managerSignature: String(record.manager_signature || '').trim(),
+    witnessSignature: String(record.witness_signature || '').trim(),
   };
 }
 
@@ -65,14 +78,24 @@ function printSection(title: string, value: string): string {
   `;
 }
 
-function printSignatureBox(label: string, includeDate = false): string {
+function printSignatureMarkup(signature: string): string {
+  const src = String(signature || '').trim();
+  if (!src.startsWith('data:image/')) {
+    return '<div class="print-discipline-sig-line"></div>';
+  }
+
+  const safeSrc = src.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  return `<div class="print-discipline-sig-image-wrap"><img class="print-discipline-sig-image" src="${safeSrc}" alt="" /></div>`;
+}
+
+function printSignatureBox(label: string, signature: string, includeDate = false): string {
   const dateLine = includeDate
     ? `<div class="print-discipline-sig-line print-discipline-sig-line--short"></div><div class="print-discipline-sig-label">Date</div>`
     : '';
 
   return `
     <div class="print-discipline-sig-box">
-      <div class="print-discipline-sig-line"></div>
+      ${printSignatureMarkup(signature)}
       <div class="print-discipline-sig-label">${esc(label)}</div>
       ${dateLine}
     </div>
@@ -123,9 +146,9 @@ export function buildDisciplineReportPrintHtml(data: DisciplinePrintData): strin
         <section class="print-discipline-signatures" aria-label="Signatures">
           <h2 class="print-discipline-signatures-title">Signature Acknowledgement</h2>
           <div class="print-discipline-sig-grid">
-            ${printSignatureBox('Employee Signature', true)}
-            ${printSignatureBox('Manager / Supervisor Signature', true)}
-            ${printSignatureBox('Witness Signature (if applicable)')}
+            ${printSignatureBox('Employee Signature', data.employeeSignature, true)}
+            ${printSignatureBox('Manager / Supervisor Signature', data.managerSignature, true)}
+            ${printSignatureBox('Witness Signature (if applicable)', data.witnessSignature)}
             <div class="print-discipline-sig-box">
               <div class="print-discipline-sig-line print-discipline-sig-line--short"></div>
               <div class="print-discipline-sig-label">Witness Date</div>

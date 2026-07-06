@@ -37,6 +37,22 @@ const DOCUMENT_TABLE = 'document_library';
 const DOCUMENT_BUCKETS = ['documents', 'document-library'];
 const DOCUMENT_UPLOAD_BUCKET = 'documents';
 
+function formatDocumentStorageRef(bucket: string, path: string): string {
+  return `${bucket}/${path}`;
+}
+
+function parseDocumentStorageRef(value: string): { bucket: string; path: string } | null {
+  const raw = String(value || '').trim();
+  if (!raw || raw.startsWith('http')) return null;
+
+  const [bucket, ...pathParts] = raw.split('/');
+  if (!bucket || !pathParts.length || !DOCUMENT_BUCKETS.includes(bucket)) {
+    return null;
+  }
+
+  return { bucket, path: pathParts.join('/') };
+}
+
 function showOrbisToast(message: string, type: 'success' | 'error' = 'success'): void {
   if (typeof window.showToast === 'function') {
     window.showToast(message, type);
@@ -286,14 +302,14 @@ async function listStorageFilesRecursive(
       continue;
     }
 
-    const { data: publicUrlData } = db.storage.from(bucketName).getPublicUrl(fullPath);
+    const storageRef = formatDocumentStorageRef(bucketName, fullPath);
 
     results.push({
-      id: `${bucketName}/${fullPath}`,
+      id: storageRef,
       title: cleanDocumentTitle(item.name),
       category: categoryFromPath(fullPath),
       description: `Uploaded document from ${bucketName} storage.`,
-      file_url: publicUrlData.publicUrl,
+      file_url: storageRef,
       file_name: item.name,
       version: '1.0',
       language: 'English',
@@ -356,9 +372,7 @@ export async function uploadDocument(payload: UploadDocumentPayload): Promise<vo
       return;
     }
 
-    const { data: publicUrlData } = db.storage.from(uploadBucket).getPublicUrl(filePath);
-
-    const fileUrl = publicUrlData.publicUrl;
+    const fileUrl = formatDocumentStorageRef(uploadBucket, filePath);
 
     const { error: insertError } = await db.from(DOCUMENT_TABLE).insert([
       {
@@ -578,6 +592,9 @@ async function getUsableDocumentUrl(doc: DocumentRecord, download: boolean): Pro
 }
 
 function getDocumentStorageTarget(doc: DocumentRecord): { bucket: string; path: string } {
+  const fromUrl = parseDocumentStorageRef(doc.file_url || '');
+  if (fromUrl) return fromUrl;
+
   if (doc.id && doc.id.includes('/')) {
     const [bucket, ...pathParts] = doc.id.split('/');
     return {

@@ -655,19 +655,14 @@ export function switchDrawerTab(tabName: string): void {
     (panel as HTMLElement).style.display = '';
   });
 
-  switchDrawerTabUi(getSwitchTabName(normalizedTab));
-
   const employeeId = window.selectedEmployeeId || String(selectedEmployee?.id || '');
 
-  if (!employeeId) return;
-
-  if (normalizedTab === 'meetings') {
-    void window.loadEmployeeMeetings?.(employeeId);
-  }
-
-  if (normalizedTab === 'reviews') {
+  if (normalizedTab === 'reviews' && employeeId) {
     const employee = selectedEmployee || (window.currentEmployee as Record<string, unknown> | null);
-    if (typeof window.canAccessPerformanceReviews === 'function' && !window.canAccessPerformanceReviews(employee)) {
+    if (
+      typeof window.canAccessPerformanceReviews === 'function' &&
+      !window.canAccessPerformanceReviews(employee)
+    ) {
       window.showToast?.(
         'Performance reviews are only available for employees you supervise.',
         'error'
@@ -675,44 +670,9 @@ export function switchDrawerTab(tabName: string): void {
       switchDrawerTabUi('profile');
       return;
     }
-    void window.loadEmployeeReviews?.(employeeId);
   }
 
-  if (normalizedTab === 'discipline') {
-    void window.loadEmployeeDiscipline?.(employeeId);
-  }
-
-  if (normalizedTab === 'incidentreports') {
-    void window.loadEmployeeIncidents?.(employeeId);
-  }
-
-  if (normalizedTab === 'stayinterviews') {
-    void window.loadStayInterviews?.(employeeId);
-  }
-
-  if (normalizedTab === 'emergency') {
-    void window.loadEmergencyContacts?.(employeeId);
-  }
-
-  if (normalizedTab === 'documents') {
-    void window.loadEmployeeDocuments?.(employeeId);
-  }
-
-  if (normalizedTab === 'onboarding') {
-    void window.loadOnboardingTasks?.(employeeId);
-  }
-
-  if (normalizedTab === 'offboarding') {
-    void window.loadOffboardingTasks?.(employeeId);
-  }
-
-  if (normalizedTab === 'timeoff') {
-    void window.loadEmployeeLeaveRequests?.(employeeId);
-  }
-
-  if (normalizedTab === 'caresupport') {
-    void window.loadEmployeeCareSupport?.(employeeId);
-  }
+  switchDrawerTabUi(getSwitchTabName(normalizedTab));
 }
 
 export async function refreshEmployeeDrawer(): Promise<void> {

@@ -342,10 +342,13 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
       return;
     }
 
+    const employee = getDrawerEmployee();
+    const lookupIds = getEmployeeLookupIds(employee, employeeId);
+
     const { data, error } = await supabaseClient
       .from('employee_reviews')
       .select('*')
-      .eq('employee_id', employeeId)
+      .in('employee_id', lookupIds)
       .order('review_date', { ascending: false });
 
     if (error) {

@@ -58,12 +58,15 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
       window.loadStayInterviews?.(id);
       break;
     case 'reviews':
-      if (
-        typeof window.canAccessPerformanceReviews !== 'function' ||
-        window.canAccessPerformanceReviews()
-      ) {
-        void window.loadEmployeeReviews?.(id);
-      }
+    const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
+    if (
+      typeof window.canAccessPerformanceReviews === 'function' &&
+      !window.canAccessPerformanceReviews(employee)
+    ) {
+      loadedTabs.delete(tabName);
+      return;
+    }
+    void window.loadEmployeeReviews?.(id);
       break;
     case 'emergency':
       window.loadEmergencyContacts?.(id);

@@ -265,6 +265,7 @@ export function editDisciplineRecord(record: DisciplineRecord): void {
 
   currentDisciplineId = record.id || null;
   window.currentDisciplineId = currentDisciplineId;
+  window.currentDisciplineReportId = currentDisciplineId;
 
   const employee = getDrawerEmployee();
   const employeeId = String(record.employee_id || getEmployeeId(employee) || '').trim();
@@ -314,6 +315,7 @@ export function cancelDisciplineEdit(): void {
   stopAllDictation();
   currentDisciplineId = null;
   window.currentDisciplineId = null;
+  window.currentDisciplineReportId = null;
 
   resetDisciplineForm();
   clearRecordEditModeUi(EDIT_UI);
@@ -386,6 +388,7 @@ export async function saveDisciplineRecord(): Promise<void> {
 
   currentDisciplineId = null;
   window.currentDisciplineId = null;
+  window.currentDisciplineReportId = null;
   clearRecordEditModeUi(EDIT_UI);
   resetDisciplineForm();
 

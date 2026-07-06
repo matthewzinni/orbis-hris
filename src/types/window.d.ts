@@ -194,6 +194,9 @@ declare global {
       description?: string;
       action_taken?: string;
       refused_to_sign?: boolean;
+      employee_signature?: string;
+      manager_signature?: string;
+      witness_signature?: string;
     }) => void;
     printIncident?: () => void;
     printStayInterview?: () => void;

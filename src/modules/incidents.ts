@@ -158,6 +158,7 @@ export function editIncidentRecord(record: IncidentRecord): void {
 
   currentIncidentId = record.id || null;
   window.currentIncidentId = currentIncidentId;
+  window.currentIncidentReportId = currentIncidentId;
 
   setDrawerInputValue('incidentDate', record.incident_date || todayInputValue());
   setDrawerInputValue('incidentType', record.incident_type || '');
@@ -204,6 +205,7 @@ export async function deleteIncidentRecord(incidentId: string, employeeId: strin
   if (String(currentIncidentId || '') === String(incidentId)) {
     currentIncidentId = null;
     window.currentIncidentId = null;
+    window.currentIncidentReportId = null;
     clearRecordEditModeUi(EDIT_UI);
   }
 
@@ -251,6 +253,7 @@ export async function saveIncidentRecord(): Promise<void> {
 
   currentIncidentId = null;
   window.currentIncidentId = null;
+  window.currentIncidentReportId = null;
   clearRecordEditModeUi(EDIT_UI);
   resetIncidentForm();
 

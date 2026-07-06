@@ -169,6 +169,22 @@ export const DISCIPLINE_PRINT_CSS = `
     margin-bottom: 4px;
   }
 
+  .print-discipline-sig-image-wrap {
+    height: 28px;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+  }
+
+  .print-discipline-sig-image {
+    display: block;
+    max-height: 28px;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: left bottom;
+  }
+
   .print-discipline-sig-line--short {
     width: 55%;
     margin-top: 8px;

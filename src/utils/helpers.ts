@@ -313,6 +313,9 @@ export function printDisciplineRecord(record: {
   description?: string;
   action_taken?: string;
   refused_to_sign?: boolean;
+  employee_signature?: string;
+  manager_signature?: string;
+  witness_signature?: string;
 }): void {
   const html = buildDisciplineReportPrintHtml(disciplinePrintDataFromRecord(record));
   printDocument(html, 'printing-discipline', { standalone: true });
