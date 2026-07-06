@@ -40,7 +40,16 @@ export async function createDefaultOffboardingTasks(employeeId: string): Promise
 export async function loadOffboardingTasks(employeeId: string): Promise<void> {
   if (!employeeId) return;
 
-  await syncStandardOffboardingTasks(employeeId);
+  const container = document.getElementById('offboardingChecklist');
+  const summary = document.getElementById('offboardingSummary');
+  const bar = document.getElementById('offboardingProgressBar');
+
+  try {
+    await syncStandardOffboardingTasks(employeeId);
+  } catch (err) {
+    console.error('Could not sync offboarding checklist:', err);
+    showToast('Could not sync offboarding checklist.', 'error');
+  }
 
   const { data, error } = await supabaseClient
     .from('offboarding_tasks')
@@ -49,13 +58,17 @@ export async function loadOffboardingTasks(employeeId: string): Promise<void> {
 
   if (error) {
     console.error('Could not load offboarding tasks:', error);
+    showToast('Could not load offboarding tasks.', 'error');
+    if (container) {
+      container.innerHTML =
+        '<div class="empty">Could not load offboarding checklist. Try again or contact HR.</div>';
+    }
+    if (summary) summary.textContent = 'Load failed';
+    if (bar) bar.style.width = '0%';
     return;
   }
 
   const tasks = sortOffboardingTasksByStandard(data || []);
-  const container = document.getElementById('offboardingChecklist');
-  const summary = document.getElementById('offboardingSummary');
-  const bar = document.getElementById('offboardingProgressBar');
 
   if (!container) return;
 

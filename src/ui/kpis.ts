@@ -215,6 +215,30 @@ function getAnniversariesNext30Days(employees: KpiEmployeeRecord[]): KpiEmployee
   });
 }
 
+function formatAnniversaryHoverLine(employee: KpiEmployeeRecord): string {
+  const name = employeeDisplayName(employee);
+  const hireRaw = String(employee.hire_date || '').trim();
+  if (!hireRaw) return name;
+
+  const hireDate = new Date(hireRaw);
+  if (Number.isNaN(hireDate.getTime())) return name;
+
+  const today = new Date();
+  let years = today.getFullYear() - hireDate.getFullYear();
+  const anniversaryThisYear = new Date(today.getFullYear(), hireDate.getMonth(), hireDate.getDate());
+  if (anniversaryThisYear <= today) {
+    years += 1;
+  }
+
+  const formatted = anniversaryThisYear.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+
+  const yearLabel = years > 0 ? `${years}-year` : '1st';
+  return `${name} • ${yearLabel} on ${formatted}`;
+}
+
 function getTurnoverYtd(employees: KpiEmployeeRecord[]): string {
   const currentYear = new Date().getFullYear();
   const activeCount = employees.filter(isActiveDashboardEmployee).length;
@@ -821,6 +845,13 @@ export function buildKpiHoverDetails(): void {
     });
 
   setKpiCardTooltip('cardDepartments', departmentCounts, 'No departments available');
+
+  const anniversaryEmployees = getAnniversariesNext30Days(activeEmployees);
+  setKpiCardTooltip(
+    'cardAnniversaries',
+    anniversaryEmployees.map(formatAnniversaryHoverLine).filter(Boolean).sort(compareKpiText),
+    'No anniversaries in the next 30 days'
+  );
 
   const intelligenceForTooltip =
     window.hrIntelligenceContext || buildHrIntelligenceContext({ employees: reviewEligibleActive });

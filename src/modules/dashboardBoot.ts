@@ -20,8 +20,78 @@ import {
 } from '../ui/dashboardRetry';
 
 type EmployeeRow = Record<string, unknown>;
+type DashboardRefreshMode = 'overview' | 'full';
 
 let isLoadingDashboard = false;
+let queuedDashboardRefresh: DashboardRefreshMode | null = null;
+let dashboardRefreshPipeline: Promise<void> | null = null;
+
+function mergeDashboardRefreshMode(
+  current: DashboardRefreshMode | null,
+  next: DashboardRefreshMode
+): DashboardRefreshMode {
+  if (current === 'full' || next === 'full') return 'full';
+  return current || next;
+}
+
+function queueDashboardRefresh(mode: DashboardRefreshMode): Promise<void> {
+  queuedDashboardRefresh = mergeDashboardRefreshMode(queuedDashboardRefresh, mode);
+
+  if (!dashboardRefreshPipeline) {
+    dashboardRefreshPipeline = runDashboardRefreshQueue().finally(() => {
+      dashboardRefreshPipeline = null;
+    });
+  }
+
+  return dashboardRefreshPipeline;
+}
+
+async function runDashboardRefreshQueue(): Promise<void> {
+  while (queuedDashboardRefresh) {
+    const mode = queuedDashboardRefresh;
+    queuedDashboardRefresh = null;
+    await executeDashboardRefresh(mode);
+  }
+}
+
+async function executeDashboardRefresh(mode: DashboardRefreshMode): Promise<void> {
+  isLoadingDashboard = true;
+  const syncedAt = new Date();
+
+  if (typeof window.showDashboardLoadingSkeletons === 'function') {
+    window.showDashboardLoadingSkeletons();
+  }
+
+  try {
+    let syncStatus = await runDashboardOverviewLoads();
+
+    if (mode === 'full') {
+      try {
+        await loadCandidates();
+      } catch (err) {
+        console.error('[Dashboard] Candidate load failed:', err);
+        syncStatus = syncStatus === 'error' ? 'error' : 'partial';
+      }
+    }
+
+    finalizeDashboardLoad(syncStatus, syncedAt);
+  } catch (err) {
+    console.error(err);
+    updateDashboardSyncStatus('error', syncedAt);
+    showToast('Could not refresh dashboard data.', 'error');
+  } finally {
+    if (typeof window.renderBasicDashboardKpis === 'function') {
+      window.renderBasicDashboardKpis();
+      window.flushRenderBasicDashboardKpis?.();
+    }
+    refreshStayInterviewDashboardSummaryFromCache();
+    isLoadingDashboard = false;
+
+    if (typeof window.hideDashboardLoadingSkeletons === 'function') {
+      window.hideDashboardLoadingSkeletons();
+    }
+  }
+}
 
 let lastStayInterviewSummaryCounts: {
   overdue: number;
@@ -868,74 +938,12 @@ function finalizeDashboardLoad(syncStatus: DashboardSyncStatus, syncedAt: Date):
 
 /** Dashboard KPIs + overview panels only (no candidate pipeline). Used on initial boot. */
 export async function loadDashboardOverview(): Promise<void> {
-  if (isLoadingDashboard) return;
-  isLoadingDashboard = true;
-
-  const syncedAt = new Date();
-
-  if (typeof window.showDashboardLoadingSkeletons === 'function') {
-    window.showDashboardLoadingSkeletons();
-  }
-
-  try {
-    const syncStatus = await runDashboardOverviewLoads();
-    finalizeDashboardLoad(syncStatus, syncedAt);
-  } catch (err) {
-    console.error(err);
-    updateDashboardSyncStatus('error', syncedAt);
-    showToast('Could not refresh dashboard data.', 'error');
-  } finally {
-    if (typeof window.renderBasicDashboardKpis === 'function') {
-      window.renderBasicDashboardKpis();
-      window.flushRenderBasicDashboardKpis?.();
-    }
-    refreshStayInterviewDashboardSummaryFromCache();
-    isLoadingDashboard = false;
-  }
-
-  if (typeof window.hideDashboardLoadingSkeletons === 'function') {
-    window.hideDashboardLoadingSkeletons();
-  }
+  return queueDashboardRefresh('overview');
 }
 
 /** Full workspace refresh: dashboard overview + candidate pipeline. */
 export async function loadAllDashboardData(): Promise<void> {
-  if (isLoadingDashboard) return;
-  isLoadingDashboard = true;
-
-  const syncedAt = new Date();
-
-  if (typeof window.showDashboardLoadingSkeletons === 'function') {
-    window.showDashboardLoadingSkeletons();
-  }
-
-  try {
-    let syncStatus = await runDashboardOverviewLoads();
-
-    try {
-      await loadCandidates();
-    } catch (err) {
-      console.error('[Dashboard] Candidate load failed:', err);
-      syncStatus = syncStatus === 'error' ? 'error' : 'partial';
-    }
-
-    finalizeDashboardLoad(syncStatus, syncedAt);
-  } catch (err) {
-    console.error(err);
-    updateDashboardSyncStatus('error', syncedAt);
-    showToast('Could not refresh dashboard data.', 'error');
-  } finally {
-    if (typeof window.renderBasicDashboardKpis === 'function') {
-      window.renderBasicDashboardKpis();
-      window.flushRenderBasicDashboardKpis?.();
-    }
-    refreshStayInterviewDashboardSummaryFromCache();
-    isLoadingDashboard = false;
-  }
-
-  if (typeof window.hideDashboardLoadingSkeletons === 'function') {
-    window.hideDashboardLoadingSkeletons();
-  }
+  return queueDashboardRefresh('full');
 }
 
 export async function refreshOrbisWorkspace(): Promise<void> {
