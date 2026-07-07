@@ -26,3 +26,9 @@ supabase/.temp
 # Vite build output (Vercel builds on deploy)
 dist/
 .vercel
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/

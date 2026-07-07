@@ -13,6 +13,8 @@ const MIME_BY_EXTENSION: Record<string, string> = {
   txt: 'text/plain',
 };
 
+type ResumeReference = { bucket: string; path: string };
+
 function resolveContentType(file: File): string {
   const fromFile = String(file.type || '').trim();
   if (fromFile && fromFile !== 'application/octet-stream') {
@@ -27,8 +29,15 @@ function resolveContentType(file: File): string {
   return (ext && MIME_BY_EXTENSION[ext]) || 'application/octet-stream';
 }
 
-/** Stored as `bucket:relative/path` or legacy `uuid/file.ext` or invalid bare filename. */
-export function parseResumeReference(value: unknown): { bucket: string; path: string } | null {
+function joinStoragePath(...segments: string[]): string {
+  return segments
+    .map((segment) => String(segment || '').replace(/^\/+|\/+$/g, ''))
+    .filter(Boolean)
+    .join('/');
+}
+
+/** Stored as `bucket:relative/path`, `uuid/file.ext`, or legacy bare filename. */
+export function parseResumeReference(value: unknown): ResumeReference | null {
   const raw = String(value ?? '').trim();
   if (!raw) return null;
 
@@ -64,14 +73,57 @@ export function parseResumeReference(value: unknown): { bucket: string; path: st
   }
 
   if (raw.includes('/')) {
+    if (raw.startsWith(`${FALLBACK_RESUME_BUCKET}/`) || raw.startsWith('candidate-resumes/')) {
+      return { bucket: FALLBACK_RESUME_BUCKET, path: raw.replace(/^\/+/, '') };
+    }
     return { bucket: CANDIDATE_RESUME_BUCKET, path: raw.replace(/^\/+/, '') };
   }
 
   return null;
 }
 
-export function isResumeReferenceValid(value: unknown): boolean {
-  return Boolean(parseResumeReference(value));
+export function buildResumeReferenceCandidates(
+  resumeUrlOrPath: string | null | undefined,
+  candidateId?: string | null
+): ResumeReference[] {
+  const refs: ResumeReference[] = [];
+  const seen = new Set<string>();
+  const push = (ref: ResumeReference | null | undefined): void => {
+    if (!ref?.bucket || !ref.path) return;
+    const key = `${ref.bucket}:${ref.path}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    refs.push(ref);
+  };
+
+  push(parseResumeReference(resumeUrlOrPath));
+
+  const raw = String(resumeUrlOrPath ?? '').trim();
+  const id = String(candidateId ?? '').trim();
+  if (!id) return refs;
+
+  if (!parseResumeReference(resumeUrlOrPath) && raw) {
+    if (raw.includes('/')) {
+      push({ bucket: CANDIDATE_RESUME_BUCKET, path: raw.replace(/^\/+/, '') });
+      push({ bucket: FALLBACK_RESUME_BUCKET, path: joinStoragePath('candidate-resumes', raw) });
+    } else {
+      push({ bucket: CANDIDATE_RESUME_BUCKET, path: joinStoragePath(id, raw) });
+      push({
+        bucket: FALLBACK_RESUME_BUCKET,
+        path: joinStoragePath('candidate-resumes', id, raw),
+      });
+    }
+  }
+
+  return refs;
+}
+
+export function isResumeReferenceValid(
+  value: unknown,
+  candidateId?: string | null
+): boolean {
+  if (parseResumeReference(value)) return true;
+  return Boolean(String(value ?? '').trim() && String(candidateId ?? '').trim());
 }
 
 export function resumeFileLabel(value: unknown): string {
@@ -111,10 +163,7 @@ async function removeFromBucket(bucket: string, path: string): Promise<void> {
   }
 }
 
-async function updateCandidateResumeRow(
-  candidateId: string,
-  reference: string
-): Promise<void> {
+async function updateCandidateResumeRow(candidateId: string, reference: string): Promise<void> {
   const patchWithStatus: Record<string, unknown> = {
     resume_url: reference,
     resume_status: 'Attached',
@@ -165,7 +214,7 @@ export async function uploadCandidateResume(
 
     if (tryFallback) {
       bucket = FALLBACK_RESUME_BUCKET;
-      const fallbackPath = `candidate-resumes/${filePath}`;
+      const fallbackPath = joinStoragePath('candidate-resumes', filePath);
       uploadResult = await uploadToBucket(bucket, fallbackPath, file);
       if (!uploadResult.error) {
         const reference = formatResumeReference(bucket, fallbackPath);
@@ -217,10 +266,76 @@ export async function clearCandidateResume(
   }
 }
 
+async function listLatestResumeFile(
+  bucket: string,
+  folderPath: string
+): Promise<ResumeReference | null> {
+  const prefix = String(folderPath || '').replace(/^\/+|\/+$/g, '');
+  if (!prefix) return null;
+
+  const { data, error } = await supabaseClient.storage.from(bucket).list(prefix, {
+    limit: 100,
+    sortBy: { column: 'created_at', order: 'desc' },
+  });
+
+  if (error || !data?.length) return null;
+
+  const latestFile = data
+    .filter((item) => item.name && item.metadata)
+    .sort((left, right) =>
+      String(right.created_at || right.name || '').localeCompare(
+        String(left.created_at || left.name || '')
+      )
+    )[0];
+
+  if (!latestFile?.name) return null;
+
+  return {
+    bucket,
+    path: joinStoragePath(prefix, latestFile.name),
+  };
+}
+
+async function resolveCandidateResumeReference(
+  resumeUrlOrPath: string | null | undefined,
+  candidateId?: string | null
+): Promise<ResumeReference | null> {
+  for (const ref of buildResumeReferenceCandidates(resumeUrlOrPath, candidateId)) {
+    const { data, error } = await supabaseClient.storage.from(ref.bucket).createSignedUrl(ref.path, 60);
+    if (!error && data?.signedUrl) {
+      return ref;
+    }
+  }
+
+  const id = String(candidateId ?? '').trim();
+  if (!id) return null;
+
+  for (const ref of [
+    await listLatestResumeFile(CANDIDATE_RESUME_BUCKET, id),
+    await listLatestResumeFile(FALLBACK_RESUME_BUCKET, joinStoragePath('candidate-resumes', id)),
+  ]) {
+    if (!ref) continue;
+    const { data, error } = await supabaseClient.storage.from(ref.bucket).createSignedUrl(ref.path, 60);
+    if (!error && data?.signedUrl) {
+      return ref;
+    }
+  }
+
+  return null;
+}
+
+export async function candidateResumeIsAvailable(
+  resumeUrlOrPath: string | null | undefined,
+  candidateId?: string | null
+): Promise<boolean> {
+  return Boolean(await resolveCandidateResumeReference(resumeUrlOrPath, candidateId));
+}
+
 export async function getCandidateResumeSignedUrl(
-  resumeUrlOrPath: string | null | undefined
+  resumeUrlOrPath: string | null | undefined,
+  candidateId?: string | null
 ): Promise<string | null> {
-  const ref = parseResumeReference(resumeUrlOrPath);
+  const ref = await resolveCandidateResumeReference(resumeUrlOrPath, candidateId);
   if (!ref) return null;
 
   const { data, error } = await supabaseClient.storage
@@ -235,16 +350,38 @@ export async function getCandidateResumeSignedUrl(
   return data?.signedUrl || null;
 }
 
-export async function openCandidateResume(resumeUrlOrPath: string | null | undefined): Promise<void> {
-  if (!isResumeReferenceValid(resumeUrlOrPath)) {
+async function openResumeBlob(blob: Blob): Promise<void> {
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export async function openCandidateResume(
+  resumeUrlOrPath: string | null | undefined,
+  candidateId?: string | null
+): Promise<void> {
+  const id = String(candidateId ?? '').trim();
+  if (!isResumeReferenceValid(resumeUrlOrPath, id)) {
     throw new Error('Resume file is missing or was saved in an old format. Attach the file again.');
   }
 
-  const url = await getCandidateResumeSignedUrl(resumeUrlOrPath);
-  if (!url) {
+  const ref = await resolveCandidateResumeReference(resumeUrlOrPath, id);
+  if (!ref) {
     throw new Error('Resume file is not available. Try attaching it again.');
   }
-  window.open(url, '_blank', 'noopener,noreferrer');
+
+  const { data, error } = await supabaseClient.storage.from(ref.bucket).createSignedUrl(ref.path, 3600);
+  if (!error && data?.signedUrl) {
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  const download = await supabaseClient.storage.from(ref.bucket).download(ref.path);
+  if (download.error || !download.data) {
+    throw new Error('Resume file is not available. Try attaching it again.');
+  }
+
+  await openResumeBlob(download.data);
 }
 
 export function getCandidateResumeAcceptAttribute(): string {

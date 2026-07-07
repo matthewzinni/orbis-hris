@@ -19,9 +19,11 @@ import {
   restoreDrawerTabPlacement,
 } from '../ui/drawerIdentityHeader';
 import {
+  candidateResumeIsAvailable,
   clearCandidateResume,
   isResumeReferenceValid,
   openCandidateResume,
+  parseResumeReference,
   resumeFileLabel,
   uploadCandidateResume,
 } from '../services/candidateResume';
@@ -57,6 +59,7 @@ let isCandidateSaveInProgress = false;
 let isConvertInProgress = false;
 let pendingCandidateResumeFile: File | null = null;
 let candidateResumeUiBound = false;
+let candidateResumeViewAvailable = false;
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -1623,6 +1626,7 @@ export function isCandidateDrawerOpen(): boolean {
 }
 
 export function closeCandidateDrawer(): void {
+  candidateResumeViewAvailable = false;
   const backdrop = safeGet('drawerBackdrop');
   const drawer = safeGet('candidateDrawer');
   const employeeDrawer = safeGet('employeeDrawer');
@@ -1709,6 +1713,12 @@ async function fetchCandidateById(candidateId: string): Promise<CandidateRecord 
   return (data as CandidateRecord) || null;
 }
 
+function canViewCandidateResume(candidate: CandidateRecord | null | undefined): boolean {
+  if (!candidate) return isAdminUser();
+  if (isAdminUser()) return true;
+  return isSupervisorUser() && canAccessCandidate(candidate);
+}
+
 function renderCandidateResumeUi(candidate: CandidateRecord | null): void {
   const statusEl = safeGet('candidateResumeStatus');
   const viewBtn = safeGet<HTMLButtonElement>('candidateResumeViewBtn');
@@ -1716,17 +1726,22 @@ function renderCandidateResumeUi(candidate: CandidateRecord | null): void {
   const attachBtn = safeGet<HTMLButtonElement>('candidateResumeAttachBtn');
   const fileInput = safeGet<HTMLInputElement>('candidateResumeInput');
 
+  const candidateId = String(candidate?.id || currentCandidateId || '').trim();
   const resumePath = String(candidate?.resume_url || '').trim();
-  const hasValidResume = isResumeReferenceValid(resumePath);
-  const hasLegacyResume = Boolean(resumePath) && !hasValidResume;
+  const hasValidResume = isResumeReferenceValid(resumePath, candidateId);
+  const hasLegacyResume = Boolean(resumePath) && !parseResumeReference(resumePath);
   const hasPending = Boolean(pendingCandidateResumeFile);
+  const canView = canViewCandidateResume(candidate);
 
   if (statusEl) {
     if (hasValidResume) {
       statusEl.textContent = `Attached: ${resumeFileLabel(resumePath)}`;
     } else if (hasLegacyResume) {
-      statusEl.textContent =
-        'Previous resume link is invalid — use Attach resume to upload again (PDF or Word).';
+      statusEl.textContent = canView
+        ? `Legacy resume on file (${resumeFileLabel(resumePath)}). Open to verify or replace.`
+        : 'Previous resume link is invalid — use Attach resume to upload again (PDF or Word).';
+    } else if (candidateResumeViewAvailable) {
+      statusEl.textContent = 'Resume found in candidate folder.';
     } else if (hasPending) {
       statusEl.textContent = `Ready to upload after save: ${pendingCandidateResumeFile?.name || 'Resume'}`;
     } else if (!currentCandidateId) {
@@ -1736,12 +1751,33 @@ function renderCandidateResumeUi(candidate: CandidateRecord | null): void {
     }
   }
 
-  viewBtn?.classList.toggle('hidden', !hasValidResume);
+  viewBtn?.classList.toggle(
+    'hidden',
+    !canView || (!hasValidResume && !hasLegacyResume && !candidateResumeViewAvailable)
+  );
   removeBtn?.classList.toggle('hidden', !hasValidResume && !hasLegacyResume && !hasPending);
   if (attachBtn) {
     attachBtn.textContent = hasValidResume || hasLegacyResume ? 'Replace resume' : 'Attach resume';
   }
   if (fileInput) fileInput.value = '';
+}
+
+async function refreshCandidateResumeAvailability(candidate: CandidateRecord | null): Promise<void> {
+  const candidateId = String(candidate?.id || currentCandidateId || '').trim();
+  candidateResumeViewAvailable = false;
+
+  if (!candidateId || !canViewCandidateResume(candidate)) {
+    renderCandidateResumeUi(candidate);
+    return;
+  }
+
+  if (isResumeReferenceValid(candidate?.resume_url, candidateId)) {
+    renderCandidateResumeUi(candidate);
+    return;
+  }
+
+  candidateResumeViewAvailable = await candidateResumeIsAvailable(candidate?.resume_url, candidateId);
+  renderCandidateResumeUi(candidate);
 }
 
 async function handleCandidateResumeSelected(file: File): Promise<void> {
@@ -1830,11 +1866,10 @@ function bindCandidateResumeUi(): void {
   });
 
   viewBtn?.addEventListener('click', async () => {
-    const candidate = currentCandidateId
-      ? await fetchCandidateById(currentCandidateId)
-      : null;
+    const candidateId = String(currentCandidateId || '').trim();
+    const candidate = candidateId ? await fetchCandidateById(candidateId) : null;
     try {
-      await openCandidateResume(candidate?.resume_url);
+      await openCandidateResume(candidate?.resume_url, candidateId);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not open resume.';
       showToast(message, 'error');
@@ -1878,6 +1913,7 @@ function fillCandidateDrawerFields(candidate: CandidateRecord): void {
   });
 
   renderCandidateResumeUi(candidate);
+  void refreshCandidateResumeAvailability(candidate);
   renderInternalCandidateBanner(candidate);
   updateConvertCandidateButtonLabel(candidate);
 }
