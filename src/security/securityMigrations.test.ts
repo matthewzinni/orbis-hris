@@ -56,4 +56,13 @@ describe('security migrations', () => {
     expect(sql).toContain('orbis_is_supervisor()');
     expect(sql).toContain('orbis_candidate_resumes_storage_select');
   });
+
+  it('restricts banked PTO baseline edits to Matthew only', () => {
+    const sql = readMigration('20260708120000_pto_balance_matthew_only.sql');
+
+    expect(sql).toContain('orbis_can_adjust_pto_balance');
+    expect(sql).toContain('matthew.zinni@btwglobal.com');
+    expect(sql).toContain('orbis_guard_pto_balance_update');
+    expect(sql).toContain('Only Matthew can adjust banked PTO hours');
+  });
 });

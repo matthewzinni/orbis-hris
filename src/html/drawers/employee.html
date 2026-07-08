@@ -1308,6 +1308,27 @@
                   <p class="muted" style="margin: 0 0 12px; font-size: 0.82rem; line-height: 1.45">
                     Baseline hours come from QuickBooks Time (already net of past approved PTO). Only new requests approved in Orbis reduce the remaining balance.
                   </p>
+                  <div id="ptoBalanceAdjustPanel" class="leave-pto-adjust hidden" data-pto-balance-editor>
+                    <div class="field">
+                      <label for="ptoBalanceAdjustHoursInput">Adjust banked PTO hours</label>
+                      <div class="candidate-resume-actions" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+                        <input
+                          class="input"
+                          id="ptoBalanceAdjustHoursInput"
+                          type="number"
+                          step="0.25"
+                          placeholder="+8 or -4"
+                          style="max-width: 8rem"
+                        />
+                        <button class="button soft" id="ptoBalanceAddBtn" type="button">Add hours</button>
+                        <button class="button soft" id="ptoBalanceSubtractBtn" type="button">Subtract hours</button>
+                        <button class="button soft" id="ptoBalanceSetBtn" type="button">Set baseline</button>
+                      </div>
+                      <p class="muted" style="margin: 8px 0 0; font-size: 0.78rem; line-height: 1.4">
+                        Add/subtract changes the banked baseline. Set baseline replaces the imported hours with the value entered.
+                      </p>
+                    </div>
+                  </div>
                   <div id="leaveRequestForm" class="leave-request-form">
                     <div class="field">
                       <label for="leaveRequestTypeInput">Type</label>

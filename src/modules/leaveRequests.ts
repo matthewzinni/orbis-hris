@@ -20,8 +20,11 @@ import {
   formatPtoHours,
   loadEmployeePtoSnapshot,
   ptoPanelHeaderLabel,
+  adjustEmployeePtoBaselineHours,
+  setEmployeePtoBaselineHours,
 } from '../services/ptoBalance';
 import {
+  canAdjustPtoBalance,
   employeeMatchesSupervisorAccess,
   isAdminUser,
   isSupervisorUser,
@@ -125,10 +128,107 @@ function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
 }
 
 let leaveUiBound = false;
+let ptoBalanceEditorBound = false;
+
+function readPtoAdjustHoursInput(): number | null {
+  const raw = String(safeGet<HTMLInputElement>('ptoBalanceAdjustHoursInput')?.value || '').trim();
+  if (!raw) return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value)) return null;
+  return value;
+}
+
+function patchCurrentEmployeePtoBaseline(hours: number, asOf: string): void {
+  const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
+  if (employee) {
+    employee.pto_balance_hours = hours;
+    employee.pto_balance_as_of = asOf;
+  }
+
+  const lists = [window.EMPLOYEES, window.ALL_EMPLOYEES, window.currentEmployeeRoster] as Array<
+    Array<Record<string, unknown>> | undefined
+  >;
+  const rosterId = getCurrentEmployeeRosterId();
+  lists.forEach((list) => {
+    if (!Array.isArray(list)) return;
+    const row = list.find((item) => String(item.id || item.employee_id || '') === rosterId);
+    if (!row) return;
+    row.pto_balance_hours = hours;
+    row.pto_balance_as_of = asOf;
+  });
+}
+
+async function applyPtoBaselineAdjustment(mode: 'add' | 'subtract' | 'set'): Promise<void> {
+  if (!canAdjustPtoBalance()) {
+    showToast('Only Matthew can adjust banked PTO hours.', 'error');
+    return;
+  }
+
+  const rosterId = getCurrentEmployeeRosterId();
+  if (!rosterId) {
+    showToast('Open an employee first.', 'error');
+    return;
+  }
+
+  const hoursInput = readPtoAdjustHoursInput();
+  if (hoursInput == null) {
+    showToast('Enter the number of hours to change.', 'error');
+    return;
+  }
+
+  try {
+    let result: { hours: number; asOf: string; previousHours?: number };
+    if (mode === 'set') {
+      if (hoursInput < 0) {
+        showToast('Baseline hours must be zero or greater.', 'error');
+        return;
+      }
+      const confirmed = await showOrbisConfirm(
+        `Set banked PTO baseline to ${formatPtoHours(hoursInput)} hours for this employee?`,
+        { title: 'Set PTO baseline', confirmLabel: 'Set baseline' }
+      );
+      if (!confirmed) return;
+      result = await setEmployeePtoBaselineHours(rosterId, hoursInput);
+    } else {
+      const delta = mode === 'subtract' ? -Math.abs(hoursInput) : Math.abs(hoursInput);
+      const verb = delta > 0 ? 'Add' : 'Subtract';
+      const confirmed = await showOrbisConfirm(
+        `${verb} ${formatPtoHours(Math.abs(delta))} hours ${delta > 0 ? 'to' : 'from'} this employee's banked PTO?`,
+        { title: 'Adjust banked PTO', confirmLabel: verb }
+      );
+      if (!confirmed) return;
+      result = await adjustEmployeePtoBaselineHours(rosterId, delta);
+    }
+
+    patchCurrentEmployeePtoBaseline(result.hours, result.asOf);
+    const input = safeGet<HTMLInputElement>('ptoBalanceAdjustHoursInput');
+    if (input) input.value = '';
+    await loadEmployeeLeaveRequests(rosterId);
+    showToast(`Banked PTO updated to ${formatPtoHours(result.hours)} hours.`, 'success');
+  } catch (err) {
+    showToast(err instanceof Error ? err.message : 'Could not update banked PTO.', 'error');
+  }
+}
+
+function bindPtoBalanceEditorUi(): void {
+  if (ptoBalanceEditorBound) return;
+  ptoBalanceEditorBound = true;
+
+  safeGet<HTMLButtonElement>('ptoBalanceAddBtn')?.addEventListener('click', () => {
+    void applyPtoBaselineAdjustment('add');
+  });
+  safeGet<HTMLButtonElement>('ptoBalanceSubtractBtn')?.addEventListener('click', () => {
+    void applyPtoBaselineAdjustment('subtract');
+  });
+  safeGet<HTMLButtonElement>('ptoBalanceSetBtn')?.addEventListener('click', () => {
+    void applyPtoBaselineAdjustment('set');
+  });
+}
 
 function bindLeaveRequestUi(): void {
   if (leaveUiBound) return;
   leaveUiBound = true;
+  bindPtoBalanceEditorUi();
 
   safeGet<HTMLButtonElement>('leaveRequestSubmitBtn')?.addEventListener('click', () => {
     void submitEmployeeLeaveRequest();
@@ -158,6 +258,12 @@ export function applyLeaveAccess(): void {
   document.querySelectorAll<HTMLElement>('[data-leave-access]').forEach((element) => {
     element.classList.toggle('hidden', !visible);
     element.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  });
+
+  const canEditBalance = canAdjustPtoBalance();
+  document.querySelectorAll<HTMLElement>('[data-pto-balance-editor]').forEach((element) => {
+    element.classList.toggle('hidden', !canEditBalance);
+    element.setAttribute('aria-hidden', canEditBalance ? 'false' : 'true');
   });
 }
 
@@ -204,6 +310,8 @@ export async function loadEmployeeLeaveRequests(employeeId: string): Promise<voi
   const list = safeGet('leaveRequestList');
   const form = safeGet('leaveRequestForm');
   if (!list) return;
+
+  applyLeaveAccess();
 
   if (!canManageLeaveRequests()) {
     if (form) form.classList.add('hidden');

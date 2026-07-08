@@ -438,6 +438,7 @@ declare global {
     canManageEmployeeRecords?: () => boolean;
     isSupervisorUser?: () => boolean;
     canEditEmployeeAdmin?: (employee?: EmployeeLike | null) => boolean;
+    canAdjustPtoBalance?: () => boolean;
     employeeMatchesSupervisorAccess?: (employee: EmployeeLike) => boolean;
     applyAdminDashboardView?: () => void;
     applySupervisorDashboardView?: () => void;

@@ -94,6 +94,52 @@ export async function loadEmployeePtoBaseline(
   return { hours, asOf };
 }
 
+export async function setEmployeePtoBaselineHours(
+  employeeId: string,
+  hours: number
+): Promise<{ hours: number; asOf: string }> {
+  const id = normalize(employeeId);
+  if (!id) {
+    throw new Error('Open an employee first.');
+  }
+
+  if (!Number.isFinite(hours) || hours < 0) {
+    throw new Error('PTO balance hours must be zero or greater.');
+  }
+
+  const rounded = Math.round(hours * 100) / 100;
+  const asOf = new Date().toISOString().slice(0, 10);
+
+  const { error } = await supabaseClient
+    .from('employees')
+    .update({
+      pto_balance_hours: rounded,
+      pto_balance_as_of: asOf,
+    })
+    .eq('id', id);
+
+  if (error) {
+    throw new Error(error.message || 'Could not update banked PTO hours.');
+  }
+
+  return { hours: rounded, asOf };
+}
+
+export async function adjustEmployeePtoBaselineHours(
+  employeeId: string,
+  deltaHours: number
+): Promise<{ hours: number; asOf: string; previousHours: number }> {
+  if (!Number.isFinite(deltaHours) || deltaHours === 0) {
+    throw new Error('Enter a non-zero hour adjustment.');
+  }
+
+  const baseline = await loadEmployeePtoBaseline(employeeId);
+  const previousHours = baseline.hours ?? 0;
+  const nextHours = Math.max(0, Math.round((previousHours + deltaHours) * 100) / 100);
+  const result = await setEmployeePtoBaselineHours(employeeId, nextHours);
+  return { ...result, previousHours };
+}
+
 export async function loadEmployeePtoSnapshot(
   employeeId: string,
   requests: LeaveRequestRecord[]

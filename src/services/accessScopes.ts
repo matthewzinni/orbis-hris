@@ -41,15 +41,25 @@ export const ORG_WIDE_DISCIPLINE_EMAILS = emailSet(BTW_DEFAULT_ORG_WIDE_DISCIPLI
 /** @deprecated Use getOrgWideDisciplineEmails() */
 export const DISCIPLINE_REPORTS_VIEWER_EMAIL = 'matthew.zinni@btwglobal.com';
 
+/** Only this account may manually add/subtract banked PTO baseline hours. */
+export const PTO_BALANCE_EDITOR_EMAIL = 'matthew.zinni@btwglobal.com';
+
 /** @deprecated Use getOrgWideScopeEmails() */
 export const ATTENDANCE_ORG_WIDE_EMAILS = PERFORMANCE_REVIEW_EXECUTIVE_NOTIFY_EMAILS;
 
 export function getCurrentAuthEmail(): string {
-  return String(
-    getCurrentUserAccess()?.email || (window as { currentUserEmail?: string }).currentUserEmail || ''
-  )
+  const accessEmail = String(getCurrentUserAccess()?.email || '').trim().toLowerCase();
+  if (accessEmail) return accessEmail;
+
+  if (typeof window === 'undefined') return '';
+  return String((window as { currentUserEmail?: string }).currentUserEmail || '')
     .trim()
     .toLowerCase();
+}
+
+/** Manual banked-PTO adjustments are restricted to Matthew only. */
+export function canAdjustPtoBalance(): boolean {
+  return getCurrentAuthEmail() === PTO_BALANCE_EDITOR_EMAIL;
 }
 
 export function hasOrgWideDisciplineAccess(): boolean {

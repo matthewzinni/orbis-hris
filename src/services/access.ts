@@ -49,6 +49,7 @@ export {
   employeeMatchesAttendanceScope,
   canAccessPerformanceReviews,
   canEditEmployeeAdmin,
+  canAdjustPtoBalance,
   canViewDisciplineReports,
   hasOrgWideDisciplineAccess,
   canAccessDisciplineForEmployee,
@@ -56,6 +57,7 @@ export {
   employeeMatchesDisciplineScope,
   DISCIPLINE_REPORTS_VIEWER_EMAIL,
   ORG_WIDE_DISCIPLINE_EMAILS,
+  PTO_BALANCE_EDITOR_EMAIL,
   getCurrentAuthEmail,
   resolveDirectReportIdsFromRoster,
   resolveDirectReportIdsForSupervisorName,
@@ -99,12 +101,14 @@ import {
 import {
   canAccessPerformanceReviews,
   canEditEmployeeAdmin,
+  canAdjustPtoBalance,
   canViewDisciplineReports,
   hasOrgWideDisciplineAccess,
   canAccessDisciplineForEmployee,
   canQueryDisciplineReports,
   employeeMatchesDisciplineScope,
   employeeMatchesSupervisorAccess,
+  PTO_BALANCE_EDITOR_EMAIL,
 } from './accessScopes';
 import {
   applyRoleNavigation,
@@ -134,6 +138,7 @@ window.getLinkedEmployeeId = getLinkedEmployeeId;
 window.applyEmployeePortalView = applyEmployeePortalView;
 window.canAccessPerformanceReviews = canAccessPerformanceReviews;
 window.canEditEmployeeAdmin = canEditEmployeeAdmin;
+window.canAdjustPtoBalance = canAdjustPtoBalance;
 window.canViewDisciplineReports = canViewDisciplineReports;
 window.hasOrgWideDisciplineAccess = hasOrgWideDisciplineAccess;
 window.canAccessDisciplineForEmployee = canAccessDisciplineForEmployee;
