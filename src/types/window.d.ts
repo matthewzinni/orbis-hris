@@ -473,6 +473,7 @@ declare global {
     __employeeDirtyFields?: Set<string>;
     __employeeOriginalAuditSnapshot?: Record<string, unknown>;
     __employeeAdminDirtyBind?: boolean;
+    __employeeAdminDirtyTrackingBound?: boolean;
     __employeeUpdateToastBind?: boolean;
     __employeeUpdateToastPending?: boolean;
     __employeeBeforeUpdate?: Record<string, unknown>;

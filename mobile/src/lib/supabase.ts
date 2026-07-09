@@ -41,7 +41,7 @@ function getAuthStorage(): AuthStorage {
 }
 
 function buildClientOptions(): SupabaseClientOptions<'public'> {
-  return {
+  const options: SupabaseClientOptions<'public'> = {
     auth: {
       storage: getAuthStorage(),
       autoRefreshToken: true,
@@ -49,6 +49,15 @@ function buildClientOptions(): SupabaseClientOptions<'public'> {
       detectSessionInUrl: false,
     },
   };
+
+  // Expo web static render runs on Node 20 without a global WebSocket.
+  if (Platform.OS === 'web' && typeof window === 'undefined') {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const WebSocketImpl = require('ws');
+    options.realtime = { transport: WebSocketImpl };
+  }
+
+  return options;
 }
 
 export const supabase = createClient(

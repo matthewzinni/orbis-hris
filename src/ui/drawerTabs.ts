@@ -120,21 +120,19 @@ function runEmployeeTabSideEffects(tabName: string): void {
       window.applyAddEmployeeAsCandidateAccess();
     }
 
-    setTimeout(() => {
+    const repopulateAdmin = () => {
       if (window.isCreatingEmployee || !window.currentEmployee) {
+        return;
+      }
+      if ((window.__employeeDirtyFields?.size ?? 0) > 0) {
         return;
       }
 
       window.forcePopulateEmployeeAdminPanel?.(window.currentEmployee);
-    }, 25);
+    };
 
-    setTimeout(() => {
-      if (window.isCreatingEmployee || !window.currentEmployee) {
-        return;
-      }
-
-      window.forcePopulateEmployeeAdminPanel?.(window.currentEmployee);
-    }, 150);
+    setTimeout(repopulateAdmin, 25);
+    setTimeout(repopulateAdmin, 150);
   }
 }
 

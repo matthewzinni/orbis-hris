@@ -5,6 +5,12 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { deleteEmployeeById } from '../modules/employeeAdmin';
 import { showOrbisConfirm } from './confirmModal';
+import {
+  bindEmployeeAdminDirtyFieldTracking,
+  clearEmployeeAdminDirtyFields,
+  hasEmployeeAdminDirtyFields,
+  shouldSkipEmployeeAdminFieldWrite,
+} from './employeeAdminFields';
 
 type RosterEmployee = Record<string, unknown> & {
   id?: string;
@@ -371,7 +377,7 @@ function populateEmployeeAdminFallback(employee) {
         return rect.width > 0 && rect.height > 0;
     };
     const applyValue = (el, value) => {
-        if (!el) return;
+        if (!el || shouldSkipEmployeeAdminFieldWrite(el)) return;
         const previousSuppress = window.__suppressAuditDirty;
         window.__suppressAuditDirty = true;
         el.value = value ?? '';
@@ -489,6 +495,7 @@ function populateEmployeeAdminByVisibleOrder(employee) {
     const setValue = (field: Element | null, value: unknown) => {
         if (!field || !('value' in field)) return;
         const input = field as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+        if (shouldSkipEmployeeAdminFieldWrite(input)) return;
         const previousSuppress = window.__suppressAuditDirty;
         window.__suppressAuditDirty = true;
         const nextValue = value ?? '';
@@ -867,32 +874,10 @@ async function openDrawerByEmployeeId(employeeId) {
     if (typeof win.populateEmployeeAdminForm === 'function') {
         win.populateEmployeeAdminForm(drawerEmployee);
     }
+    clearEmployeeAdminDirtyFields();
     populateEmployeeAdminFallback(drawerEmployee);
     populateEmployeeAdminByVisibleOrder(drawerEmployee);
     cleanEmployeeAdminVisibleNameFields();
-    [50, 150, 300, 600, 1000, 1500].forEach(delay => {
-        setTimeout(() => {
-            populateEmployeeAdminFallback(drawerEmployee);
-            populateEmployeeAdminByVisibleOrder(drawerEmployee);
-            if (typeof window.resetDrawerEntryForms === 'function') {
-                window.resetDrawerEntryForms();
-            }
-            cleanEmployeeAdminVisibleNameFields();
-            const visibleEmployeeIdField = Array.from(document.querySelectorAll('input')).find(input => {
-                const label = input.closest('div')?.querySelector('label')?.textContent?.trim().toLowerCase() || '';
-                return label === 'employee id' || input.placeholder?.trim().toLowerCase() === 'employee id';
-            });
-            if (visibleEmployeeIdField && finalEmployeeId) {
-                visibleEmployeeIdField.value = finalEmployeeId;
-                visibleEmployeeIdField.dispatchEvent(new Event('input', { bubbles: true }));
-                visibleEmployeeIdField.dispatchEvent(new Event('change', { bubbles: true }));
-                lockEmployeeIdField(visibleEmployeeIdField);
-            }
-            if (delay === 1500 && typeof setEmployeeAdminAuditBaseline === 'function') {
-                setEmployeeAdminAuditBaseline(getEmployeeAdminFormSnapshot());
-            }
-        }, delay);
-    });
     if (safeGet('saveEmployeeBtn')) {
         safeGet('saveEmployeeBtn').textContent = 'Update Employee';
     }
@@ -1058,7 +1043,7 @@ if (!window.__employeeAdminBind) {
         const tab = eventTargetElement(e.target)?.closest('button, .tab, [data-tab]');
         if (!tab) return; const text = (tab.textContent || '').toLowerCase();
         const isEmployeeAdmin = text.includes('employee admin') || tab.getAttribute('data-tab') === 'employee-admin';
-        const isHistoryTab = text.includes('history') || tab.getAttribute('data-tab') === 'history'; if (isEmployeeAdmin && window.currentEmployee && !window.isCreatingEmployee && typeof win.populateEmployeeAdminForm === 'function') {
+        const isHistoryTab = text.includes('history') || tab.getAttribute('data-tab') === 'history'; if (isEmployeeAdmin && window.currentEmployee && !window.isCreatingEmployee && !hasEmployeeAdminDirtyFields() && typeof win.populateEmployeeAdminForm === 'function') {
             setTimeout(() => {
                 win.populateEmployeeAdminForm!(window.currentEmployee!);
                 if (typeof populateEmployeeAdminFallback === 'function') {
@@ -1134,7 +1119,7 @@ function getEmployeeAdminFieldKey(label = '') {
 }
 
 function bindEmployeeAdminDirtyTracking() {
-    window.__employeeDirtyFields = window.__employeeDirtyFields || new Set();
+  bindEmployeeAdminDirtyFieldTracking();
 }
 
 function cleanEmployeeAdminVisibleNameFields() {

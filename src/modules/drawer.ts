@@ -1018,10 +1018,12 @@ async function saveEmployeeRecordInternal(): Promise<void> {
   }).updateEmployeeById;
 
   let error: { message?: string } | null = null;
+  let savedRow: Record<string, unknown> | null = null;
 
   if (typeof updateEmployeeById === 'function') {
     const result = await updateEmployeeById(originalRecordId, payload);
     error = result.error;
+    savedRow = (result as { data?: Record<string, unknown> | null }).data || null;
   } else {
     const result = await client
       .from('employees')
@@ -1034,6 +1036,13 @@ async function saveEmployeeRecordInternal(): Promise<void> {
   if (error) {
     showToast(error.message || 'Could not save employee.', 'error');
     return;
+  }
+
+  if (savedRow && window.currentEmployee) {
+    window.currentEmployee = {
+      ...(window.currentEmployee as Record<string, unknown>),
+      ...savedRow,
+    };
   }
 
   if (isEmployeeIdChanging) {

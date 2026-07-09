@@ -11,6 +11,11 @@ import { ensureDrawerLayout, setEmployeeDrawerCreateMode } from './drawerLayout'
 import { formatBenefitsEligibilitySummary } from '../services/employeeUtils';
 import { formatEmployeeTenureMonths, formatEmployeeTenureYears } from '../services/employeeTenure';
 import { resetDrawerForms } from '../modules/drawerForms';
+import {
+  clearEmployeeAdminDirtyFields,
+  hasEmployeeAdminDirtyFields,
+  shouldSkipEmployeeAdminFieldWrite,
+} from './employeeAdminFields';
 
 type DrawerUiEmployee = Record<string, unknown> & {
   id?: string;
@@ -196,7 +201,7 @@ function setDrawerAdminField(possibleIds: string[], value: unknown): void {
     possibleIds.forEach(id => {
         const field = domGet<HTMLInputElement>(id);
 
-        if (!field) return;
+        if (!field || shouldSkipEmployeeAdminFieldWrite(field)) return;
 
         if ('value' in field) {
             field.value = String(value ?? '');
@@ -239,7 +244,7 @@ function setDrawerAdminFieldByLabel(labelText, value) {
       | HTMLTextAreaElement
       | null;
 
-    if (!field) return;
+    if (!field || shouldSkipEmployeeAdminFieldWrite(field)) return;
 
     field.value = String(value ?? '');
     field.dispatchEvent(new Event('input', { bubbles: true }));
@@ -264,7 +269,7 @@ function forcePopulateEmployeeAdminFieldsByLabels(employee) {
         employee.termination_date || employee.terminationDate || ''
     );
     const nextReview = formatDrawerDateForInput(employee.nextReview || employee.next_review || employee.next_review_date || '');
-    const anniversaryDate = getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee));
+    const anniversaryDate = getEmployeeAnniversaryDateForInput(employee);
 
     setDrawerAdminFieldByLabel('Employee ID', employeeId);
     setDrawerAdminFieldByLabel('First Name', firstName);
@@ -286,7 +291,7 @@ function forcePopulateEmployeeAdminFieldsByLabels(employee) {
 }
 
 export function forcePopulateEmployeeAdminPanel(employee: DrawerUiEmployee | null | undefined): void {
-    if (window.isCreatingEmployee || !employee) {
+    if (window.isCreatingEmployee || !employee || hasEmployeeAdminDirtyFields()) {
         return;
     }
 
@@ -298,7 +303,7 @@ export function forcePopulateEmployeeAdminPanel(employee: DrawerUiEmployee | nul
 
     setDrawerAdminField(
         ['empAnniversaryDate', 'anniversaryDate', 'employeeAnniversaryDate', 'employeeAnniversaryInput', 'employeeAnniversaryDateInput', 'anniversaryInput', 'anniversaryDateInput', 'adminAnniversaryDate'],
-        getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee))
+        getEmployeeAnniversaryDateForInput(employee)
     );
 
     cleanVisibleDrawerNameInputs();
@@ -368,6 +373,14 @@ export function formatDrawerDateForDisplay(value: unknown): string {
     });
 }
 
+function getEmployeeAnniversaryDateForInput(employee: DrawerUiEmployee | null | undefined): string {
+  if (!employee) {
+    return '';
+  }
+
+  return formatDrawerDateForInput(employee.anniversaryDate || employee.anniversary_date || '');
+}
+
 function getEmployeeAnniversarySource(employee: DrawerUiEmployee | null | undefined): string {
   if (!employee) {
     return '';
@@ -384,7 +397,7 @@ function getEmployeeAnniversarySource(employee: DrawerUiEmployee | null | undefi
 
 function scheduleEmployeeAdminPopulate(delayMs: number): void {
   window.setTimeout(() => {
-    if (window.isCreatingEmployee || !window.currentEmployee) {
+    if (window.isCreatingEmployee || !window.currentEmployee || hasEmployeeAdminDirtyFields()) {
       return;
     }
 
@@ -446,7 +459,7 @@ function forcePopulateEmployeeAdminFields(employee) {
         employee.termination_date || employee.terminationDate || ''
     );
     const nextReview = formatDrawerDateForInput(employee.nextReview || employee.next_review || employee.next_review_date || '');
-    const anniversaryDate = getNextUpcomingAnniversaryDate(getEmployeeAnniversarySource(employee));
+    const anniversaryDate = getEmployeeAnniversaryDateForInput(employee);
 
     setDrawerAdminField(['empId', 'employeeId', 'employeeID', 'employee_id', 'adminEmployeeId'], employeeId);
     setDrawerAdminField(['empFirstName', 'firstName', 'employeeFirstName', 'firstNameInput', 'adminFirstName'], firstName);
@@ -671,6 +684,7 @@ export function openDrawer(employee: DrawerUiEmployee | null | undefined): void 
         window.populateEmployeeForm(employee);
     }
 
+    clearEmployeeAdminDirtyFields();
     forcePopulateEmployeeAdminPanel(employee);
     scheduleEmployeeAdminPopulate(50);
     scheduleEmployeeAdminPopulate(250);
@@ -949,26 +963,3 @@ window.getNextUpcomingAnniversaryDate = getNextUpcomingAnniversaryDate;
 bindDrawerEvents();
 ensureDrawerLayout('employeeDrawer');
 ensureDrawerLayout('candidateDrawer');
-
-setInterval(() => {
-    const drawer = domGet('employeeDrawer');
-    const adminPanel = getVisibleEmployeeAdminPanel();
-
-    if (
-        !drawer?.classList.contains('open') ||
-        !adminPanel ||
-        window.isCreatingEmployee ||
-        !window.currentEmployee
-    ) {
-        return;
-    }
-
-    const nextAnniversary = getNextUpcomingAnniversaryDate(
-        getEmployeeAnniversarySource(window.currentEmployee)
-    );
-
-    setDrawerAdminField(
-        ['empAnniversaryDate', 'anniversaryDate', 'employeeAnniversaryDate', 'employeeAnniversaryInput', 'employeeAnniversaryDateInput', 'anniversaryInput', 'anniversaryDateInput', 'adminAnniversaryDate'],
-        nextAnniversary
-    );
-}, 1000);

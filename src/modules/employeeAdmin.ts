@@ -8,6 +8,10 @@ import {
   readEmployeeHireDateRaw,
 } from '../services/employeeUtils';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  hasEmployeeAdminDirtyFields,
+  shouldSkipEmployeeAdminFieldWrite,
+} from '../ui/employeeAdminFields';
 import { resetDrawerForms } from './drawerForms';
 import { generateAvailableEmployeeId } from '../services/employeeIds';
 import { openNewEmployeeDrawer } from '../ui/drawerUi';
@@ -342,6 +346,9 @@ export async function updateEmployeeById(
   if (Object.prototype.hasOwnProperty.call(cleanPayload, 'next_review')) {
     cleanPayload.next_review_date = cleanPayload.next_review || null;
   }
+  if (Object.prototype.hasOwnProperty.call(cleanPayload, 'anniversaryDate')) {
+    cleanPayload.anniversary_date = cleanPayload.anniversaryDate || null;
+  }
 
   const stripKeys = [
     'nextReviewDate',
@@ -363,6 +370,7 @@ export async function updateEmployeeById(
     'tenureYears',
     'payType',
     'benefitsStatus',
+    'anniversaryDate',
     'first',
     'last',
     'dept',
@@ -417,7 +425,7 @@ function ensureBenefitsEligibilityBindings(): void {
 }
 
 export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefined): void {
-  if (!employee) return;
+  if (!employee || hasEmployeeAdminDirtyFields()) return;
 
   let normalized = employee;
   if (typeof window.normalizeEmployee === 'function') {
@@ -473,7 +481,7 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
 
   const setField = (id: string, value: unknown) => {
     const el = findEmployeeAdminField(id) as HTMLInputElement | null;
-    if (!el) return;
+    if (!el || shouldSkipEmployeeAdminFieldWrite(el)) return;
     el.value = String(value ?? '');
     el.dispatchEvent(new Event('input', { bubbles: true }));
     el.dispatchEvent(new Event('change', { bubbles: true }));
@@ -535,6 +543,7 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
   setField('employeeNextReviewInput', values.nextReviewDate);
   setField('empAnniversaryDate', values.anniversaryDate);
   setField('anniversaryDate', values.anniversaryDate);
+  setField('employeeAnniversaryDateInput', values.anniversaryDate);
   setField('empTenureBracket', values.tenureBracket);
   setField('tenureBracket', values.tenureBracket);
   setField('empWorkEmail', values.workEmail);
