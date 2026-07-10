@@ -2,10 +2,12 @@ import { switchMainView } from '../ui/navigation';
 import {
   getMobileMoreItems,
   getMobileTabsForUser,
+  scrollToAttentionSection,
   sectionIdToMobileTab,
   type MobileTabId,
 } from './mobileNav';
 import { isMobileLayout } from './mobileLayout';
+import { initMobileNavDrawer, closeMobileNavDrawer } from './mobileNavDrawer';
 import { initMobilePeople } from './mobilePeople';
 import { initMobileHome } from './mobileHome';
 import { initMobileDrawer } from './mobileDrawer';
@@ -14,6 +16,7 @@ import { initMobilePortal } from './mobilePortal';
 import { applyMobileTabBadges } from './mobileBadges';
 import { initMobileActivity } from './mobileActivity';
 import { initMobileForms } from './mobileForms';
+import { initMobileTables } from './mobileTables';
 import { initMobileNotifications } from './mobileNotifications';
 import { initMobileMoreModules } from './mobileMoreModules';
 
@@ -83,8 +86,10 @@ function setTabBarVisible(visible: boolean): void {
   tabBar.setAttribute('aria-hidden', visible ? 'false' : 'true');
 }
 
+let mobileActiveTabOverride: MobileTabId | null = null;
+
 function syncActiveTab(sectionId: string): void {
-  const tabId = sectionIdToMobileTab(sectionId);
+  const tabId = mobileActiveTabOverride || sectionIdToMobileTab(sectionId);
   document.querySelectorAll('#orbisMobileTabBar .orbis-mobile-tab').forEach((button) => {
     const el = button as HTMLElement;
     const isActive = el.dataset.mobileTab === tabId;
@@ -139,15 +144,28 @@ function clearIdleDrawerBackdrop(): void {
 function handleMobileTabPress(tabButton: HTMLElement): void {
   clearIdleDrawerBackdrop();
   closeAllMobileSheets();
+  closeMobileNavDrawer();
 
   const tabId = tabButton.dataset.mobileTab as MobileTabId | undefined;
   if (tabId === 'more') {
+    mobileActiveTabOverride = null;
     openMoreSheet();
     syncActiveTab(String(window.currentMainView || ''));
     return;
   }
 
   const sectionId = tabButton.dataset.navView || '';
+  if (tabId === 'attention') {
+    mobileActiveTabOverride = 'attention';
+    if (sectionId) {
+      switchMainView(sectionId);
+      requestAnimationFrame(() => scrollToAttentionSection());
+    }
+    syncActiveTab(sectionId);
+    return;
+  }
+
+  mobileActiveTabOverride = null;
   if (sectionId) {
     switchMainView(sectionId);
   }
@@ -204,6 +222,7 @@ function bindMobileShellEvents(): void {
       event.preventDefault();
       const sectionId = moreItem.dataset.navView || '';
       if (sectionId) {
+        mobileActiveTabOverride = null;
         clearIdleDrawerBackdrop();
         closeAllMobileSheets();
         switchMainView(sectionId);
@@ -218,10 +237,22 @@ function bindMobileShellEvents(): void {
     }
   });
 
+  const searchBtn = document.getElementById('orbisMobileSearchBtn');
+  searchBtn?.addEventListener('click', (event) => {
+    if (!isMobileLayout()) return;
+    event.preventDefault();
+    if (typeof window.openCommandPalette === 'function') {
+      window.openCommandPalette();
+    }
+  });
+
   window.addEventListener('orbis:section-change', (event) => {
     if (!isMobileLayout()) return;
     const detail = (event as CustomEvent<{ sectionId?: string }>).detail;
     const sectionId = String(detail?.sectionId || window.currentMainView || '');
+    if (mobileActiveTabOverride === 'attention' && sectionIdToMobileTab(sectionId) !== 'attention') {
+      mobileActiveTabOverride = null;
+    }
     if (sectionId) syncActiveTab(sectionId);
   });
 
@@ -233,6 +264,7 @@ function bindMobileShellEvents(): void {
 export function initMobileShell(): void {
   bindMobileTabBarEvents();
   bindMobileShellEvents();
+  initMobileNavDrawer();
   initMobilePeople();
   initMobileHome();
   initMobileDrawer();
@@ -240,6 +272,7 @@ export function initMobileShell(): void {
   initMobilePortal();
   initMobileActivity();
   initMobileForms();
+  initMobileTables();
   initMobileNotifications();
   initMobileMoreModules();
   refreshShell();

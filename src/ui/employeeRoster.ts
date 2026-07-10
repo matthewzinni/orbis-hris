@@ -234,6 +234,8 @@ function normalizeEmployeeForRoster(employee) {
     const tenureBracket = employee.tenure_bracket || employee.tenureBracket || '';
     return {
         ...employee,
+        dbId: String(employee.dbId || employee.id || ''),
+        id: String(employee.id || employee.dbId || ''),
         first_name: firstName,
         last_name: lastName,
         firstName,
@@ -832,7 +834,8 @@ function renderEmployeeRoster() {
 async function openDrawerByEmployeeId(employeeId) {
     const employee = getEmployeesList().find(item =>
         String(item.dbId || item.id || item.employee_id) === String(employeeId)
-    ); if (!employee) {
+    );
+    if (!employee) {
         showToast('Employee could not be found.', 'error');
         return;
     }
@@ -849,6 +852,8 @@ async function openDrawerByEmployeeId(employeeId) {
         ...employee,
         ...rosterSnapshot
     });
+    drawerEmployee.dbId = String(drawerEmployee.dbId || drawerEmployee.id || '').trim();
+    drawerEmployee.id = String(drawerEmployee.id || drawerEmployee.dbId || '').trim();
     const finalEmployeeId = getEmployeePublicId(drawerEmployee, drawerEmployee.displayName);
     drawerEmployee.employee_id = finalEmployeeId;
     drawerEmployee.employeeId = finalEmployeeId;
@@ -862,24 +867,21 @@ async function openDrawerByEmployeeId(employeeId) {
     win.isCreatingEmployee = false;
     window.currentEmployee = drawerEmployee;
 
-    if (typeof window.openEmployeeDrawer === 'function') {
-        await window.openEmployeeDrawer(recordId);
-    } else if (typeof win.openDrawer === 'function') {
+    if (typeof win.openDrawer === 'function') {
         win.openDrawer(drawerEmployee);
+    } else if (typeof window.openEmployeeDrawer === 'function') {
+        await window.openEmployeeDrawer(recordId);
     } else {
         showToast('Employee drawer is not available.', 'error');
         return;
     }
 
-    if (typeof win.populateEmployeeAdminForm === 'function') {
-        win.populateEmployeeAdminForm(drawerEmployee);
-    }
-    clearEmployeeAdminDirtyFields();
-    populateEmployeeAdminFallback(drawerEmployee);
-    populateEmployeeAdminByVisibleOrder(drawerEmployee);
-    cleanEmployeeAdminVisibleNameFields();
-    if (safeGet('saveEmployeeBtn')) {
-        safeGet('saveEmployeeBtn').textContent = 'Update Employee';
+    const drawerEl = document.getElementById('employeeDrawer');
+    if (!drawerEl?.classList.contains('open')) {
+        if (typeof window.resetEmployeeDrawerShell === 'function') {
+            window.resetEmployeeDrawerShell();
+        }
+        showToast('Could not open employee profile.', 'error');
     }
 }
 

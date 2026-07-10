@@ -312,6 +312,14 @@ function mountPaletteDom(): void {
           aria-autocomplete="list"
           placeholder="Search employees, candidates, or actions..."
         />
+        <button
+          type="button"
+          id="commandPaletteClose"
+          class="command-palette-close"
+          aria-label="Close search"
+        >
+          Close
+        </button>
       </div>
       <div id="commandPaletteTitle" class="sr-only">Command palette</div>
       <div
@@ -527,11 +535,23 @@ function renderResults(): void {
 
   results.innerHTML = filteredItems
     .map((item, index) => {
+      const prevKind = index > 0 ? filteredItems[index - 1].kind : null;
+      const groupHeader =
+        item.kind !== prevKind
+          ? `<div class="command-palette-group" role="presentation">${
+              item.kind === 'employee'
+                ? 'Employees'
+                : item.kind === 'candidate'
+                  ? 'Candidates'
+                  : 'Actions'
+            }</div>`
+          : '';
+
       const activeClass = index === activeIndex ? ' active' : '';
       const kindLabel =
         item.kind === 'employee' ? 'Employee' : item.kind === 'candidate' ? 'Candidate' : 'Action';
 
-      return `
+      return `${groupHeader}
         <button
           type="button"
           class="command-palette-item${activeClass}"
@@ -544,8 +564,7 @@ function renderResults(): void {
             <strong>${escapeHtml(item.title)}</strong>
             <small>${escapeHtml(item.subtitle)}</small>
           </span>
-        </button>
-      `;
+        </button>`;
     })
     .join('');
 }
@@ -679,6 +698,11 @@ function bindCommandPaletteEvents(): void {
     if (event.target === overlay) {
       closeCommandPalette();
     }
+  });
+
+  document.getElementById('commandPaletteClose')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    closeCommandPalette();
   });
 
   input?.addEventListener('input', () => {

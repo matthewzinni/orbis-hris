@@ -1,0 +1,214 @@
+/* Orbis Phase 3 — responsive forms for drawers, modals, and record editors */
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .two-col,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .two-col,
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field-grid.two-col,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field-grid.two-col,
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field-grid.three-col,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field-grid.three-col {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .detail-grid,
+body[data-layout='mobile'] #employeeDrawer #drawerDetails.detail-grid {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .button-row,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .button-row,
+body[data-layout='mobile'] #candidateDrawer .candidate-actions-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .button-row .button,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .button-row .button,
+body[data-layout='mobile'] #candidateDrawer .candidate-actions-row .button {
+  width: 100%;
+  min-height: var(--mobile-tap-min);
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field {
+  min-width: 0;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field label,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field input,
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field select,
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field textarea,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field input,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field select,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field textarea {
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--mobile-tap-min);
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field textarea,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field input[type='date'],
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field input[type='time'],
+body[data-layout='mobile'] #employeeDrawer .tab-panel .field input[type='datetime-local'],
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field input[type='date'],
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field input[type='time'],
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field input[type='datetime-local'] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .card-body > .button.primary,
+body[data-layout='mobile'] #employeeDrawer .tab-panel .card-body > .button.soft,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .card-body > .button.primary,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .card-body > .button.soft {
+  width: 100%;
+  min-height: var(--mobile-tap-min);
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .file-upload-row,
+body[data-layout='mobile'] #employeeDrawer .tab-panel .file-upload-row input[type='file'] {
+  width: 100%;
+  max-width: 100%;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel canvas,
+body[data-layout='mobile'] #candidateDrawer .tab-panel canvas {
+  width: 100%;
+  max-width: 100%;
+  touch-action: none;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel .muted,
+body[data-layout='mobile'] #candidateDrawer .tab-panel .muted,
+body[data-layout='mobile'] #employeeDrawer .tab-panel #noteEditStatus,
+body[data-layout='mobile'] #employeeDrawer .tab-panel .login-error {
+  overflow: visible;
+  word-break: break-word;
+}
+
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-panel .orbis-mobile-inline-save,
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-panel .orbis-mobile-inline-save {
+  display: none !important;
+}
+
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-footer,
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 6;
+  display: flex;
+  gap: 8px;
+  padding: 10px 0 calc(8px + var(--mobile-safe-bottom));
+  margin-top: 8px;
+  background: linear-gradient(180deg, transparent, var(--card, #fff) 28%);
+}
+
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-footer.hidden,
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-footer.hidden {
+  display: none;
+}
+
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-footer-btn,
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-footer-btn {
+  flex: 1;
+  min-height: var(--mobile-tap-min);
+}
+
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-panel:not(.active) .orbis-mobile-form-footer,
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-panel:not(.active) .orbis-mobile-form-footer {
+  display: none;
+}
+
+body[data-layout='mobile'] #employeeDrawer .tab-panel.active,
+body[data-layout='mobile'] #candidateDrawer .tab-panel.active {
+  padding-bottom: 4px;
+}
+
+/* Confirmation dialogs */
+body[data-layout='mobile'] .orbis-confirm-backdrop.open {
+  align-items: flex-end;
+  padding: max(12px, var(--safe-bottom)) max(12px, var(--safe-right)) max(12px, var(--safe-left));
+}
+
+body[data-layout='mobile'] .orbis-confirm-dialog {
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100dvh - 24px - var(--safe-top) - var(--safe-bottom));
+  overflow-y: auto;
+  border-radius: 16px 16px 12px 12px;
+  padding: 18px 16px calc(16px + var(--safe-bottom));
+}
+
+body[data-layout='mobile'] .orbis-confirm-actions {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 8px;
+}
+
+body[data-layout='mobile'] .orbis-confirm-actions .button {
+  width: 100%;
+  min-height: var(--mobile-tap-min);
+}
+
+body[data-layout='mobile'] .orbis-confirm-actions .button.danger {
+  order: -1;
+}
+
+/* Portal / standalone request forms */
+body[data-layout='mobile'] .employee-portal-form .field-grid.two-col,
+body[data-layout='mobile'] .employee-portal-form .two-col,
+body[data-layout='mobile'] #leaveRequestForm .two-col,
+body[data-layout='mobile'] #myTimeOffRequestForm .two-col {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+body[data-layout='mobile'] .employee-portal-form .field input,
+body[data-layout='mobile'] .employee-portal-form .field select,
+body[data-layout='mobile'] .employee-portal-form .field textarea,
+body[data-layout='mobile'] #leaveRequestForm .field input,
+body[data-layout='mobile'] #leaveRequestForm .field select,
+body[data-layout='mobile'] #leaveRequestForm .field textarea,
+body[data-layout='mobile'] #myTimeOffRequestForm .field input,
+body[data-layout='mobile'] #myTimeOffRequestForm .field select,
+body[data-layout='mobile'] #myTimeOffRequestForm .field textarea {
+  width: 100%;
+  max-width: 100%;
+  min-height: var(--mobile-tap-min);
+  font-size: 16px;
+}
+
+body[data-layout='mobile'] .employee-portal-form .button.primary,
+body[data-layout='mobile'] #leaveRequestForm .button.primary,
+body[data-layout='mobile'] #myTimeOffRequestForm .button.primary {
+  width: 100%;
+  min-height: var(--mobile-tap-min);
+}
+
+@media (min-width: 1024px) {
+  .orbis-mobile-form-footer {
+    display: none !important;
+  }
+
+  .orbis-mobile-inline-save {
+    display: inline-flex !important;
+  }
+}

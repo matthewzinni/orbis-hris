@@ -1529,6 +1529,7 @@ function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null
 
   drawer.classList.add('open');
   drawer.classList.remove('hidden');
+  window.refreshMobileDrawerForms?.();
   drawer.removeAttribute('hidden');
   drawer.setAttribute('aria-hidden', 'false');
   drawer.style.setProperty('display', 'flex', 'important');

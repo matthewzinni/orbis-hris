@@ -150,13 +150,15 @@ export function renderMobileCandidateCards(rows: CandidateRow[]): void {
     rows
       .map((row) => {
         const name = `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'Candidate';
+        const applied = row.applied_date ? String(row.applied_date).trim() : '';
+        const appliedLabel = applied ? ` · Applied ${applied}` : '';
         return `
       <button type="button" class="orbis-mobile-module-card" data-edit-candidate-id="${esc(row.id)}">
         <div class="orbis-mobile-module-card-top">
           <span class="badge badge-soft">${esc(row.stage || 'Applied')}</span>
         </div>
         <div class="orbis-mobile-module-card-title">${esc(name)}</div>
-        <div class="orbis-mobile-module-card-meta">${esc(row.position || '—')} · ${esc(row.department || '—')}</div>
+        <div class="orbis-mobile-module-card-meta">${esc(row.position || '—')} · ${esc(row.department || '—')}${esc(appliedLabel)}</div>
       </button>`;
       })
       .join('')

@@ -21,6 +21,34 @@
                 </button>
               </div>
               <div class="card-body">
+                <div
+                  class="orbis-mobile-hr-inbox-filters"
+                  id="mobileHrInboxFilters"
+                  role="group"
+                  aria-label="Filter HR action items"
+                >
+                  <button
+                    type="button"
+                    class="orbis-mobile-hr-filter active"
+                    data-mobile-hr-filter="all"
+                  >
+                    All
+                  </button>
+                  <button
+                    type="button"
+                    class="orbis-mobile-hr-filter"
+                    data-mobile-hr-filter="overdue"
+                  >
+                    Overdue
+                  </button>
+                  <button
+                    type="button"
+                    class="orbis-mobile-hr-filter"
+                    data-mobile-hr-filter="due_soon"
+                  >
+                    Due soon
+                  </button>
+                </div>
                 <p class="muted" id="mobileHrTasksSummary">Loading HR items…</p>
                 <div id="mobileHrTasksList" class="orbis-mobile-hr-task-list"></div>
               </div>

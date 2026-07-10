@@ -3,6 +3,7 @@
 // ============================================
 
 import { initMobileShell } from '../mobile/mobileShell';
+import { resetEmployeeDrawerShell } from '../ui/drawerUi';
 
 function safeGet(id: string): HTMLElement | null {
   if (typeof window.safeGet === 'function') {
@@ -211,6 +212,8 @@ function bindRosterSortHeaders(): void {
 
 /** UI wiring that does not require an authenticated session */
 export function initAppShell(): void {
+  resetEmployeeDrawerShell();
+
   const currentDateEl = safeGet('currentDate');
   if (currentDateEl) {
     currentDateEl.textContent = new Date().toLocaleDateString('en-US', {
@@ -225,7 +228,8 @@ export function initAppShell(): void {
 
   const backdrop = safeGet('drawerBackdrop');
   if (backdrop) {
-    backdrop.addEventListener('click', () => {
+    backdrop.addEventListener('click', (event) => {
+      if (event.target !== backdrop) return;
       if (typeof window.closeDrawer === 'function') {
         window.closeDrawer();
       }

@@ -7,6 +7,11 @@ import {
 import { applyPayrollHandoffAction } from '../modules/payrollHandoff';
 import { isMobileLayout } from './mobileLayout';
 import { refreshMobileTasksBadge } from './mobileBadges';
+import { mobileEmptyMarkup } from './mobileStates';
+
+type MobileHrInboxFilter = 'all' | 'overdue' | 'due_soon';
+
+let mobileHrInboxFilter: MobileHrInboxFilter = 'all';
 
 function esc(value: unknown): string {
   if (typeof window.esc === 'function') {
@@ -119,6 +124,15 @@ async function openMobileInboxItem(item: HrInboxItem): Promise<void> {
   }
 }
 
+function syncMobileHrFilterButtons(): void {
+  document.querySelectorAll<HTMLButtonElement>('[data-mobile-hr-filter]').forEach((button) => {
+    const filter = button.dataset.mobileHrFilter as MobileHrInboxFilter | undefined;
+    const isActive = filter === mobileHrInboxFilter;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
 export function renderMobileHrTasksPanel(): void {
   const card = document.getElementById('mobileHrTasksCard');
   const list = document.getElementById('mobileHrTasksList');
@@ -131,8 +145,10 @@ export function renderMobileHrTasksPanel(): void {
 
   if (!showPanel) return;
 
+  syncMobileHrFilterButtons();
+
   const items = window.__hrInboxCache || [];
-  const visible = filterHrInboxItems(items, 'all');
+  const visible = filterHrInboxItems(items, mobileHrInboxFilter);
   const overdue = items.filter((item) => item.severity === 'overdue').length;
   const dueSoon = items.filter((item) => item.severity === 'due_soon').length;
 
@@ -145,7 +161,7 @@ export function renderMobileHrTasksPanel(): void {
   }
 
   if (!visible.length) {
-    list.innerHTML = '<div class="orbis-mobile-empty muted">You are caught up on HR action items.</div>';
+    list.innerHTML = mobileEmptyMarkup('You are caught up', 'No open HR action items.');
     return;
   }
 
@@ -207,6 +223,20 @@ function bindMobileTasksEvents(): void {
         void refreshMobileTasksBadge();
       });
     }
+  });
+
+  document.getElementById('mobileHrInboxFilters')?.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+      '[data-mobile-hr-filter]'
+    );
+    if (!button) return;
+    event.preventDefault();
+
+    const next = button.dataset.mobileHrFilter as MobileHrInboxFilter | undefined;
+    if (!next || next === mobileHrInboxFilter) return;
+
+    mobileHrInboxFilter = next;
+    renderMobileHrTasksPanel();
   });
 
   window.addEventListener('orbis:layout-change', () => {

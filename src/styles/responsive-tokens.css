@@ -1,0 +1,86 @@
+/* Orbis responsive breakpoints — single source of truth for layout bands */
+
+:root {
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+
+  --space-page-x-mobile: 16px;
+  --space-page-y-mobile: 12px;
+  --space-touch-min: 44px;
+  --font-size-body-min: 14px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+/* Prevent horizontal page scroll on narrow viewports */
+@media (max-width: 1023px) {
+  body:not(.auth-only) {
+    overflow-x: clip;
+  }
+
+  body:not(.auth-only) .orbis-app-shell,
+  body:not(.auth-only) .orbis-app-main,
+  body:not(.auth-only) .orbis-workspace {
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  body:not(.auth-only) .orbis-app-main {
+    padding-left: var(--space-page-x-mobile);
+    padding-right: var(--space-page-x-mobile);
+  }
+
+  html[data-bp='xs'] body[data-layout='mobile'] .kpi-grid,
+  html[data-bp='xs'] body[data-layout='mobile'] .dashboard-kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Tablet band: sidebar still hidden until desktop breakpoint */
+@media (min-width: 768px) and (max-width: 1023px) {
+  body[data-layout='mobile'] .orbis-app-main {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  body[data-layout='mobile'] .dashboard-kpi-grid,
+  body[data-layout='mobile'] #dashboardLegacyKpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Utility: visible only below desktop shell breakpoint */
+.orbis-mobile-only {
+  display: none;
+}
+
+body[data-layout='mobile'] .orbis-mobile-only {
+  display: inline-flex;
+}
+
+body[data-layout='mobile'] .orbis-desktop-only {
+  display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbis-mobile-nav-drawer-panel,
+  .orbis-mobile-nav-drawer-backdrop {
+    transition: none !important;
+  }
+}

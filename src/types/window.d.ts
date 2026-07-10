@@ -83,6 +83,7 @@ declare global {
     clearImpactPlayerStatus?: () => void | Promise<void>;
     openDrawer?: (employee: Record<string, unknown>) => void;
     closeDrawer?: () => void;
+    resetEmployeeDrawerShell?: () => void;
     switchDrawerTab?: (tabName: string) => void;
     bindDrawerEvents?: () => void;
     forcePopulateEmployeeAdminPanel?: (employee: DrawerUiEmployee | null | undefined) => void;
@@ -218,6 +219,7 @@ declare global {
     refreshMobilePortalUi?: () => void;
     closeActiveDrawer?: () => void;
     renderMobileStayInterviewCards?: (rows: StayInterviewMobileRow[]) => void;
+    renderMobileDeptSummaryCards?: () => void;
     renderMobileOperationsCards?: (issues: OperationsIssue[]) => void;
     renderMobileInvestigationCards?: (rows: Investigation[]) => void;
     renderMobileCareCards?: (items: CareTrackerItem[]) => void;
@@ -227,6 +229,8 @@ declare global {
     renderMobileOrgChartDrill?: () => void;
     renderMobileSettingsNav?: () => void;
     refreshMobileNavigation?: () => void;
+    refreshMobileDrawerForms?: () => void;
+    refreshMobileTables?: () => void;
     initStayInterviewOrgInsights?: () => void;
     currentCandidateId?: string | null;
     currentCandidateNoteId?: string | null;

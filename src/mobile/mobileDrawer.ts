@@ -1,6 +1,10 @@
 import { isMobileLayout } from './mobileLayout';
 
-function closeEmployeeDrawerOnMobile(): void {
+type DrawerId = 'employeeDrawer' | 'candidateDrawer';
+
+const MOBILE_DRAWER_IDS: DrawerId[] = ['employeeDrawer', 'candidateDrawer'];
+
+function closeMobileDrawerOnSectionChange(): void {
   if (typeof window.closeActiveDrawer === 'function') {
     window.closeActiveDrawer();
     return;
@@ -10,14 +14,25 @@ function closeEmployeeDrawerOnMobile(): void {
   }
 }
 
-function promoteMobileDrawerTabs(): void {
-  const drawer = document.getElementById('employeeDrawer');
+function promoteMobileDrawerTabs(drawerId: DrawerId): void {
+  const drawer = document.getElementById(drawerId);
   if (!drawer) return;
 
-  const tablist = drawer.querySelector('.drawer-tablist, .tabs.drawer-tablist');
+  const tablist = drawer.querySelector('.drawer-tablist, .tabs.drawer-tablist, .tabs');
   if (!tablist || tablist.classList.contains('orbis-mobile-segmented')) return;
 
   tablist.classList.add('orbis-mobile-segmented');
+}
+
+function promoteAllMobileDrawerTabs(): void {
+  MOBILE_DRAWER_IDS.forEach(promoteMobileDrawerTabs);
+}
+
+function syncMobileDrawerBodyClass(): void {
+  const anyOpen = MOBILE_DRAWER_IDS.some((id) =>
+    document.getElementById(id)?.classList.contains('open')
+  );
+  document.body.classList.toggle('orbis-mobile-employee-profile-open', anyOpen);
 }
 
 function bindMobileDrawerEvents(): void {
@@ -27,34 +42,36 @@ function bindMobileDrawerEvents(): void {
   window.addEventListener('orbis:section-change', (event) => {
     if (!isMobileLayout()) return;
     const sectionId = (event as CustomEvent<{ sectionId?: string }>).detail?.sectionId;
-    const drawer = document.getElementById('employeeDrawer');
-    if (!drawer?.classList.contains('open')) return;
-    if (sectionId === 'employeesView') return;
-    closeEmployeeDrawerOnMobile();
+    const employeeDrawer = document.getElementById('employeeDrawer');
+    const candidateDrawer = document.getElementById('candidateDrawer');
+    const drawerOpen =
+      employeeDrawer?.classList.contains('open') || candidateDrawer?.classList.contains('open');
+    if (!drawerOpen) return;
+    if (sectionId === 'employeesView' || sectionId === 'candidatesView') return;
+    closeMobileDrawerOnSectionChange();
   });
 
   window.addEventListener('orbis:layout-change', () => {
-    promoteMobileDrawerTabs();
+    promoteAllMobileDrawerTabs();
   });
 
-  const observer = new MutationObserver(() => {
-    if (!isMobileLayout()) return;
-    const drawer = document.getElementById('employeeDrawer');
-    if (drawer?.classList.contains('open')) {
-      promoteMobileDrawerTabs();
-      document.body.classList.add('orbis-mobile-employee-profile-open');
-    } else {
-      document.body.classList.remove('orbis-mobile-employee-profile-open');
-    }
-  });
+  MOBILE_DRAWER_IDS.forEach((drawerId) => {
+    const drawer = document.getElementById(drawerId);
+    if (!drawer) return;
 
-  const drawer = document.getElementById('employeeDrawer');
-  if (drawer) {
+    const observer = new MutationObserver(() => {
+      if (!isMobileLayout()) return;
+      if (drawer.classList.contains('open')) {
+        promoteMobileDrawerTabs(drawerId);
+      }
+      syncMobileDrawerBodyClass();
+    });
+
     observer.observe(drawer, { attributes: true, attributeFilter: ['class'] });
-  }
+  });
 }
 
 export function initMobileDrawer(): void {
   bindMobileDrawerEvents();
-  promoteMobileDrawerTabs();
+  promoteAllMobileDrawerTabs();
 }

@@ -20,16 +20,16 @@ export function applyMobileTabBadges(): void {
 
   if (cachedTasksBadgeCount <= 0) return;
 
-  const tasksTab = document.querySelector(
-    '#orbisMobileTabBar .orbis-mobile-tab[data-mobile-tab="tasks"]'
+  const attentionTab = document.querySelector(
+    '#orbisMobileTabBar .orbis-mobile-tab[data-mobile-tab="attention"]'
   );
-  if (!tasksTab) return;
+  if (!attentionTab) return;
 
   const badge = document.createElement('span');
   badge.className = 'orbis-mobile-tab-badge';
   badge.textContent = cachedTasksBadgeCount > 99 ? '99+' : String(cachedTasksBadgeCount);
-  badge.setAttribute('aria-label', `${cachedTasksBadgeCount} pending tasks`);
-  tasksTab.appendChild(badge);
+  badge.setAttribute('aria-label', `${cachedTasksBadgeCount} items need attention`);
+  attentionTab.appendChild(badge);
 }
 
 export async function refreshMobileTasksBadge(): Promise<void> {

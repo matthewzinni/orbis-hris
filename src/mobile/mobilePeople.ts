@@ -10,6 +10,9 @@ type RosterEmployee = Record<string, unknown> & {
   displaySupervisor?: string;
   displayStatus?: string;
   displayStatusLabel?: string;
+  displayTerminationDate?: string;
+  termination_date?: string;
+  terminationDate?: string;
 };
 
 function esc(value: unknown): string {
@@ -28,6 +31,63 @@ function statusBadgeClass(status: unknown): string {
     return window.statusBadge(status);
   }
   return 'badge badge-inactive';
+}
+
+function formatTerminationDate(employee: RosterEmployee): string {
+  const raw =
+    employee.displayTerminationDate || employee.termination_date || employee.terminationDate || '';
+  if (!raw) return '';
+  if (typeof window.fmtDate === 'function') {
+    return window.fmtDate(raw);
+  }
+  return String(raw);
+}
+
+function updateMobileFilterButtonState(): void {
+  const button = document.getElementById('mobileRosterFilterBtn');
+  if (!button) return;
+
+  const dept = (document.getElementById('deptFilter') as HTMLSelectElement | null)?.value || '';
+  const status = (document.getElementById('statusFilter') as HTMLSelectElement | null)?.value || '';
+  const mode = String(window.rosterViewMode || 'active');
+  let count = 0;
+  if (dept) count += 1;
+  if (status) count += 1;
+  if (mode === 'former') count += 1;
+
+  button.classList.toggle('has-active-filters', count > 0);
+  button.setAttribute('data-filter-count', count > 0 ? String(count) : '0');
+  button.setAttribute(
+    'aria-label',
+    count > 0 ? `Roster filters, ${count} active` : 'Roster filters'
+  );
+}
+
+function syncMobileRosterModeFromDesktop(): void {
+  const mode = String(window.rosterViewMode || 'active');
+  document
+    .querySelectorAll<HTMLButtonElement>('#orbisMobileRosterViewToggle [data-mobile-roster-mode]')
+    .forEach((button) => {
+      const active = button.dataset.mobileRosterMode === mode;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+}
+
+function applyMobileRosterModeToDesktop(mode: string): void {
+  window.rosterViewMode = mode;
+  const tab = document.querySelector(
+    `#rosterViewTabs [data-roster-mode="${mode}"]`
+  ) as HTMLButtonElement | null;
+  if (tab) {
+    tab.click();
+    return;
+  }
+  if (typeof window.renderEmployeeRoster === 'function') {
+    window.renderEmployeeRoster();
+  } else {
+    renderMobileEmployeeRoster();
+  }
 }
 
 function getFilteredEmployees(): RosterEmployee[] {
@@ -92,6 +152,7 @@ export function renderMobileEmployeeRoster(): void {
   }
 
   const filtered = getFilteredEmployees();
+  const isFormerView = String(window.rosterViewMode || 'active') === 'former';
 
   const countEl = document.getElementById('empCount');
   if (countEl) {
@@ -117,11 +178,12 @@ export function renderMobileEmployeeRoster(): void {
       const supervisor = String(employee.displaySupervisor || '').trim();
       const statusLabel = String(employee.displayStatusLabel || employee.displayStatus || 'Active');
       const badge = statusBadgeClass(employee.displayStatus);
+      const terminationDate = isFormerView ? formatTerminationDate(employee) : '';
 
       return `
         <button
           type="button"
-          class="orbis-mobile-roster-card"
+          class="orbis-mobile-roster-card${isFormerView ? ' orbis-mobile-roster-card--former' : ''}"
           data-employee-id="${esc(recordId)}"
           aria-label="Open ${esc(name)}"
         >
@@ -133,11 +195,14 @@ export function renderMobileEmployeeRoster(): void {
             </div>
             <div class="orbis-mobile-roster-meta">${esc(position)} · ${esc(dept)}</div>
             ${supervisor ? `<div class="orbis-mobile-roster-sub muted">Supervisor: ${esc(supervisor)}</div>` : ''}
+            ${terminationDate ? `<div class="orbis-mobile-roster-sub muted">Terminated: ${esc(terminationDate)}</div>` : ''}
           </div>
           <span class="orbis-mobile-roster-chevron" aria-hidden="true">›</span>
         </button>`;
     })
     .join('');
+
+  updateMobileFilterButtonState();
 }
 
 function syncMobileFilterSelectsFromDesktop(): void {
@@ -154,6 +219,8 @@ function syncMobileFilterSelectsFromDesktop(): void {
   if (status && mobileStatus) {
     mobileStatus.value = status.value;
   }
+
+  syncMobileRosterModeFromDesktop();
 }
 
 function applyMobileFilterSelectsToDesktop(): void {
@@ -161,6 +228,10 @@ function applyMobileFilterSelectsToDesktop(): void {
   const status = document.getElementById('statusFilter') as HTMLSelectElement | null;
   const mobileDept = document.getElementById('orbisMobileDeptFilter') as HTMLSelectElement | null;
   const mobileStatus = document.getElementById('orbisMobileStatusFilter') as HTMLSelectElement | null;
+  const activeMode =
+    document.querySelector<HTMLButtonElement>(
+      '#orbisMobileRosterViewToggle [data-mobile-roster-mode].active'
+    )?.dataset.mobileRosterMode || 'active';
 
   if (dept && mobileDept) {
     dept.value = mobileDept.value;
@@ -171,6 +242,8 @@ function applyMobileFilterSelectsToDesktop(): void {
     status.value = mobileStatus.value;
     status.dispatchEvent(new Event('change', { bubbles: true }));
   }
+
+  applyMobileRosterModeToDesktop(activeMode);
 }
 
 function openRosterFilterSheet(): void {
@@ -287,13 +360,34 @@ function bindRosterFilterSheet(): void {
   document.getElementById('orbisMobileRosterFilterClear')?.addEventListener('click', () => {
     const dept = document.getElementById('deptFilter') as HTMLSelectElement | null;
     const status = document.getElementById('statusFilter') as HTMLSelectElement | null;
+    const mobileDept = document.getElementById('orbisMobileDeptFilter') as HTMLSelectElement | null;
+    const mobileStatus = document.getElementById('orbisMobileStatusFilter') as HTMLSelectElement | null;
     if (dept) dept.value = '';
     if (status) status.value = '';
-    window.rosterViewMode = 'active';
+    if (mobileDept) mobileDept.value = '';
+    if (mobileStatus) mobileStatus.value = '';
     if (typeof window.renderEmployeeRoster === 'function') {
       window.renderEmployeeRoster();
+    } else {
+      renderMobileEmployeeRoster();
     }
     closeRosterFilterSheet();
+  });
+
+  document.getElementById('orbisMobileRosterViewToggle')?.addEventListener('click', (event) => {
+    const button = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+      '[data-mobile-roster-mode]'
+    );
+    if (!button) return;
+    event.preventDefault();
+
+    document
+      .querySelectorAll<HTMLButtonElement>('#orbisMobileRosterViewToggle [data-mobile-roster-mode]')
+      .forEach((el) => {
+        const active = el === button;
+        el.classList.toggle('active', active);
+        el.setAttribute('aria-pressed', active ? 'true' : 'false');
+      });
   });
 }
 
@@ -301,17 +395,14 @@ function bindMobileRosterEvents(): void {
   if ((window as { __mobilePeopleBound?: boolean }).__mobilePeopleBound) return;
   (window as { __mobilePeopleBound?: boolean }).__mobilePeopleBound = true;
 
-  document.addEventListener('click', (event) => {
+  const rosterList = document.getElementById('mobileEmployeeRosterList');
+  rosterList?.addEventListener('click', (event) => {
     if (!isMobileLayout()) return;
-    const card = (event.target as HTMLElement | null)?.closest(
-      '.orbis-mobile-roster-card[data-employee-id]'
-    ) as HTMLElement | null;
+    const card = (event.target as HTMLElement | null)?.closest<HTMLElement>('[data-employee-id]');
     if (!card) return;
-
-    event.preventDefault();
-    const employeeId = card.dataset.employeeId || '';
+    const employeeId = String(card.dataset.employeeId || '').trim();
     if (!employeeId) return;
-
+    event.preventDefault();
     if (typeof window.openDrawerByEmployeeId === 'function') {
       void window.openDrawerByEmployeeId(employeeId);
     }
@@ -331,6 +422,16 @@ function bindMobileRosterEvents(): void {
   document.getElementById('statusFilter')?.addEventListener('change', () => {
     if (!isMobileLayout()) return;
     renderMobileEmployeeRoster();
+  });
+
+  const rosterTabs = document.getElementById('rosterViewTabs');
+  rosterTabs?.addEventListener('click', () => {
+    if (!isMobileLayout()) return;
+    window.setTimeout(() => {
+      syncMobileRosterModeFromDesktop();
+      updateMobileFilterButtonState();
+      renderMobileEmployeeRoster();
+    }, 0);
   });
 
   window.addEventListener('orbis:layout-change', () => {

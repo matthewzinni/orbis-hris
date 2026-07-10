@@ -1,4 +1,8 @@
-import './mobile/mobileLayout';
+import { initMobileLayout } from './mobile/mobileLayout';
+initMobileLayout();
+import './styles/responsive-tokens.css';
+import './styles/responsive-forms.css';
+import './styles/responsive-components.css';
 import './styles/app-shell.css';
 import './styles/orbis-mobile.css';
 import './styles/orbis-brand.css';

@@ -302,9 +302,9 @@ async function fetchEmployeeRecord(employeeId: string): Promise<DrawerEmployeeRe
             column: string,
             value: string
           ) => {
-            single: () => Promise<{
+            maybeSingle: () => Promise<{
               data: DrawerEmployeeRecord | null;
-              error: unknown;
+              error: { message?: string } | null;
             }>;
           };
         };
@@ -317,19 +317,25 @@ async function fetchEmployeeRecord(employeeId: string): Promise<DrawerEmployeeRe
       return null;
     }
 
-    const { data, error } = await client
+    const recordKey = String(employeeId || '').trim();
+    if (!recordKey) return null;
+
+    const byId = await client.from('employees').select('*').eq('id', recordKey).maybeSingle();
+    if (byId.data) return byId.data;
+
+    const byEmployeeId = await client
       .from('employees')
       .select('*')
-      .eq('id', employeeId)
-      .single();
+      .eq('employee_id', recordKey)
+      .maybeSingle();
 
-    if (error) {
-      console.error('[Drawer] Could not load employee:', error);
+    if (byEmployeeId.data) return byEmployeeId.data;
 
-      return null;
+    if (byId.error || byEmployeeId.error) {
+      console.error('[Drawer] Could not load employee:', byId.error || byEmployeeId.error);
     }
 
-    return data;
+    return null;
   } catch (err) {
     console.error('[Drawer] Unexpected employee load error:', err);
 
@@ -533,6 +539,7 @@ export async function openEmployeeDrawer(employeeId: string): Promise<void> {
 
   if (!employee) {
     console.warn('[Drawer] Employee not found.');
+    showToast('Employee could not be found.', 'error');
 
     return;
   }

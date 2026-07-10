@@ -5,6 +5,58 @@
           aria-hidden="true"
         ></nav>
         <div
+          id="orbisMobileNavDrawer"
+          class="orbis-mobile-nav-drawer"
+          aria-hidden="true"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+        >
+          <div class="orbis-mobile-nav-drawer-backdrop" id="orbisMobileNavDrawerBackdrop"></div>
+          <div class="orbis-mobile-nav-drawer-panel">
+            <div class="orbis-mobile-nav-drawer-header">
+              <div class="orbis-mobile-nav-drawer-brand">
+                <img src="/orbis-logo.svg" width="36" height="36" alt="" aria-hidden="true" />
+                <div>
+                  <div class="orbis-mobile-nav-drawer-title">Orbis</div>
+                  <div class="orbis-mobile-nav-drawer-subtitle muted">HR Intelligence</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="orbis-mobile-nav-drawer-close"
+                id="orbisMobileNavDrawerClose"
+                aria-label="Close navigation menu"
+              >
+                Close
+              </button>
+            </div>
+            <nav
+              id="orbisMobileNavDrawerNav"
+              class="orbis-mobile-nav-drawer-nav"
+              aria-label="Application sections"
+            ></nav>
+            <div class="orbis-mobile-nav-drawer-footer">
+              <button type="button" class="button soft" id="orbisMobileDrawerRefresh">
+                Refresh
+              </button>
+              <a
+                class="button soft orbis-mobile-drawer-payroll-link"
+                id="orbisMobileDrawerPayrollLink"
+                data-payroll-relief-link
+                href="https://login.accountantsoffice.com/login?firmCode=KATYL8287&amp;returnurl=https%3A%2F%2FEmployeeCenter.payrollrelief.com%2Faccount%2Flogin"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Payroll
+              </a>
+              <button type="button" class="button danger" id="orbisMobileDrawerLogout">
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+        <div
           id="orbisMobileRosterFilterSheet"
           class="orbis-mobile-sheet"
           aria-hidden="true"
@@ -21,6 +73,30 @@
               </button>
             </div>
             <div class="orbis-mobile-filter-form">
+              <div class="field">
+                <span class="field-label" id="orbisMobileRosterViewLabel">Roster view</span>
+                <div
+                  class="orbis-mobile-segmented-filter"
+                  id="orbisMobileRosterViewToggle"
+                  role="group"
+                  aria-labelledby="orbisMobileRosterViewLabel"
+                >
+                  <button
+                    type="button"
+                    class="orbis-mobile-segmented-filter-btn active"
+                    data-mobile-roster-mode="active"
+                  >
+                    Active
+                  </button>
+                  <button
+                    type="button"
+                    class="orbis-mobile-segmented-filter-btn"
+                    data-mobile-roster-mode="former"
+                  >
+                    Former
+                  </button>
+                </div>
+              </div>
               <div class="field">
                 <label for="orbisMobileDeptFilter">Department</label>
                 <select class="select" id="orbisMobileDeptFilter" data-mobile-filter-sync="deptFilter"></select>

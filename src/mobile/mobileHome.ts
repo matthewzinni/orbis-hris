@@ -61,6 +61,45 @@ function refreshMobileHomeLayout(): void {
   dashboard.querySelectorAll('.orbis-mobile-kpi-carousel').forEach((grid) => {
     grid.classList.remove('orbis-mobile-kpi-carousel');
   });
+
+  renderMobileDeptSummaryCards();
+}
+
+export function renderMobileDeptSummaryCards(): void {
+  const list = document.getElementById('mobileDeptSummaryList');
+  const tbody = document.getElementById('deptSummaryBody');
+  if (!list || !tbody) return;
+
+  if (!isMobileLayout()) {
+    list.classList.add('hidden');
+    list.innerHTML = '';
+    return;
+  }
+
+  const rows = Array.from(tbody.querySelectorAll('tr')).filter((row) => {
+    const cells = row.querySelectorAll('td');
+    return cells.length >= 2 && !row.querySelector('.empty');
+  });
+
+  if (!rows.length) {
+    list.classList.add('hidden');
+    list.innerHTML = '';
+    return;
+  }
+
+  list.classList.remove('hidden');
+  list.innerHTML = rows
+    .map((row) => {
+      const cells = row.querySelectorAll('td');
+      const dept = cells[0]?.textContent?.trim() || '—';
+      const count = cells[1]?.textContent?.trim() || '—';
+      return `
+    <div class="orbis-mobile-dept-card">
+      <span class="orbis-mobile-dept-card-label">${esc(dept)}</span>
+      <strong class="orbis-mobile-dept-card-value">${esc(count)}</strong>
+    </div>`;
+    })
+    .join('');
 }
 
 function bindMobileHomeEvents(): void {
@@ -77,6 +116,16 @@ function bindMobileHomeEvents(): void {
   window.addEventListener('orbis:layout-change', () => {
     refreshMobileHomeLayout();
   });
+
+  const deptSummaryBody = document.getElementById('deptSummaryBody');
+  if (deptSummaryBody) {
+    const observer = new MutationObserver(() => {
+      if (isMobileLayout()) {
+        renderMobileDeptSummaryCards();
+      }
+    });
+    observer.observe(deptSummaryBody, { childList: true, subtree: true });
+  }
 
   document.getElementById('mobileStayInterviewList')?.addEventListener('click', (event) => {
     const button = (event.target as Element | null)?.closest<HTMLElement>('[data-employee-id]');
@@ -95,3 +144,4 @@ export function initMobileHome(): void {
 }
 
 window.renderMobileStayInterviewCards = renderMobileStayInterviewCards;
+window.renderMobileDeptSummaryCards = renderMobileDeptSummaryCards;

@@ -4,8 +4,9 @@ import {
   isAdminUser,
   isSupervisorUser,
 } from '../services/access';
+import { isMobileLayout } from './mobileLayout';
 
-export type MobileTabId = 'home' | 'people' | 'tasks' | 'activity' | 'more';
+export type MobileTabId = 'dashboard' | 'employees' | 'candidates' | 'attention' | 'more';
 
 export interface MobileTabConfig {
   id: MobileTabId;
@@ -49,71 +50,74 @@ const MORE_SECTION_IDS = [
   'careEngagementView',
   'attendanceView',
   'orgChartView',
-  'candidatesView',
+  'activityView',
+  'myTimeOffView',
   'settingsView',
   'myProfileView',
-  'myTimeOffView',
   'myTasksView',
   'myDirectoryView',
   'employeesView',
   'dashboardView',
 ] as const;
 
-function primaryHomeSection(): string {
+function primaryDashboardSection(): string {
   return isEmployeeUser() ? 'myProfileView' : 'dashboardView';
 }
 
-function primaryPeopleSection(): string {
+function primaryEmployeesSection(): string {
   if (isEmployeeUser()) return 'myDirectoryView';
   return 'employeesView';
 }
 
-function primaryTasksSection(): string {
-  return 'myTasksView';
-}
-
-function primaryActivitySection(): string {
-  if (isEmployeeUser()) return 'myTimeOffView';
-  if (isSupervisorUser() || isAdminUser()) return 'activityView';
-  return 'myTimeOffView';
+function primaryAttentionSection(): string {
+  if (isEmployeeUser()) return 'myTasksView';
+  if (isMobileLayout() && (isAdminUser() || isSupervisorUser())) {
+    return 'myTasksView';
+  }
+  return 'dashboardView';
 }
 
 function buildPrimaryTabs(): MobileTabConfig[] {
   const tabs: MobileTabConfig[] = [
     {
-      id: 'home',
-      label: 'Home',
+      id: 'dashboard',
+      label: isEmployeeUser() ? 'Home' : 'Dashboard',
       icon: '⌂',
-      sectionId: primaryHomeSection(),
+      sectionId: primaryDashboardSection(),
     },
     {
-      id: 'people',
-      label: isEmployeeUser() ? 'Directory' : 'People',
+      id: 'employees',
+      label: isEmployeeUser() ? 'Directory' : 'Employees',
       icon: '👥',
-      sectionId: primaryPeopleSection(),
-    },
-    {
-      id: 'tasks',
-      label: 'Tasks',
-      icon: '✓',
-      sectionId: primaryTasksSection(),
-    },
-    {
-      id: 'activity',
-      label: isEmployeeUser() ? 'Time Off' : 'Activity',
-      icon: '◎',
-      sectionId: primaryActivitySection(),
-    },
-    {
-      id: 'more',
-      label: 'More',
-      icon: '⋯',
-      sectionId: '',
+      sectionId: primaryEmployeesSection(),
     },
   ];
 
+  if (canAccessAppSection('candidatesView')) {
+    tabs.push({
+      id: 'candidates',
+      label: 'Candidates',
+      icon: '📋',
+      sectionId: 'candidatesView',
+    });
+  }
+
+  tabs.push({
+    id: 'attention',
+    label: 'Attention',
+    icon: '!',
+    sectionId: primaryAttentionSection(),
+  });
+
+  tabs.push({
+    id: 'more',
+    label: 'More',
+    icon: '⋯',
+    sectionId: '',
+  });
+
   return tabs.filter((tab) => {
-    if (tab.id === 'more') return true;
+    if (tab.id === 'more' || tab.id === 'attention') return true;
     return canAccessAppSection(tab.sectionId);
   });
 }
@@ -140,16 +144,14 @@ export function getMobileMoreItems(): MobileMoreItem[] {
 }
 
 const SECTION_TO_TAB: Record<string, MobileTabId> = {
-  dashboardView: 'home',
-  myProfileView: 'home',
-  employeesView: 'people',
-  myDirectoryView: 'people',
-  myTasksView: 'tasks',
-  activityView: 'activity',
-  myTimeOffView: 'activity',
+  dashboardView: 'dashboard',
+  myProfileView: 'dashboard',
+  employeesView: 'employees',
+  myDirectoryView: 'employees',
+  candidatesView: 'candidates',
+  myTasksView: 'attention',
   operationsView: 'more',
   orgChartView: 'more',
-  candidatesView: 'more',
   documentsView: 'more',
   janusView: 'more',
   attendanceView: 'more',
@@ -157,8 +159,28 @@ const SECTION_TO_TAB: Record<string, MobileTabId> = {
   investigationsView: 'more',
   reportsView: 'more',
   settingsView: 'more',
+  activityView: 'more',
+  myTimeOffView: 'more',
 };
 
 export function sectionIdToMobileTab(sectionId: string): MobileTabId {
   return SECTION_TO_TAB[sectionId] || 'more';
+}
+
+/** Scroll the dashboard attention block into view after switching views. */
+export function scrollToAttentionSection(): void {
+  const targets = [
+    document.getElementById('mobileHrTasksCard'),
+    document.getElementById('mobileHrInboxFilters'),
+    document.getElementById('managerHomeAttentionList'),
+    document.getElementById('hrInboxCard'),
+    document.getElementById('myTasksPendingList'),
+  ].filter((el): el is HTMLElement => Boolean(el && !el.classList.contains('hidden')));
+
+  const target = targets[0];
+  if (!target) return;
+
+  requestAnimationFrame(() => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 }

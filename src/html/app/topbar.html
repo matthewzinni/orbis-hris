@@ -1,16 +1,27 @@
         <div class="orbis-workspace">
           <header class="orbis-topbar">
             <div class="orbis-topbar-left">
+              <button
+                type="button"
+                class="button soft orbis-icon-btn orbis-mobile-only"
+                id="orbisMobileMenuBtn"
+                aria-label="Open navigation menu"
+                aria-expanded="false"
+                aria-controls="orbisMobileNavDrawer"
+              >
+                <span class="orbis-topbar-icon" aria-hidden="true">☰</span>
+              </button>
               <h1 class="orbis-page-title" id="dashboardTitle">Dashboard</h1>
             </div>
             <div class="orbis-topbar-right">
-              <span class="orbis-topbar-meta-item" id="currentDate"></span>
-              <span class="orbis-topbar-meta-item">
-                Signed in as <strong id="currentUserEmail">—</strong>
-              </span>
-              <span class="orbis-topbar-meta-item" id="dashboardSyncLine">
-                Last synced: <span id="lastRefresh">—</span>
-              </span>
+              <button
+                type="button"
+                class="button soft orbis-icon-btn orbis-mobile-only"
+                id="orbisMobileSearchBtn"
+                aria-label="Search employees and records"
+              >
+                <span class="orbis-topbar-icon" aria-hidden="true">⌕</span>
+              </button>
               <div class="orbis-alerts-wrap">
                 <button
                   type="button"
@@ -36,26 +47,35 @@
                   </div>
                 </div>
               </div>
-              <a
-                class="button soft orbis-payroll-topbar-link"
-                id="payrollReliefTopbarLink"
-                data-payroll-relief-link
-                href="https://login.accountantsoffice.com/login?firmCode=KATYL8287&amp;returnurl=https%3A%2F%2FEmployeeCenter.payrollrelief.com%2Faccount%2Flogin"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Payroll
-              </a>
-              <button
-                type="button"
-                class="button soft"
-                id="refreshBtn"
-                onclick="refreshOrbisWorkspace()"
-              >
-                Refresh
-              </button>
-              <button type="button" class="button danger" id="logoutBtn">
-                Log out
-              </button>
+              <div class="orbis-topbar-desktop-actions orbis-desktop-only">
+                <span class="orbis-topbar-meta-item" id="currentDate"></span>
+                <span class="orbis-topbar-meta-item">
+                  Signed in as <strong id="currentUserEmail">—</strong>
+                </span>
+                <span class="orbis-topbar-meta-item" id="dashboardSyncLine">
+                  Last synced: <span id="lastRefresh">—</span>
+                </span>
+                <a
+                  class="button soft orbis-payroll-topbar-link"
+                  id="payrollReliefTopbarLink"
+                  data-payroll-relief-link
+                  href="https://login.accountantsoffice.com/login?firmCode=KATYL8287&amp;returnurl=https%3A%2F%2FEmployeeCenter.payrollrelief.com%2Faccount%2Flogin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Payroll
+                </a>
+                <button
+                  type="button"
+                  class="button soft"
+                  id="refreshBtn"
+                  onclick="refreshOrbisWorkspace()"
+                >
+                  Refresh
+                </button>
+                <button type="button" class="button danger" id="logoutBtn">
+                  Log out
+                </button>
+              </div>
             </div>
           </header>

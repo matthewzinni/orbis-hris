@@ -397,10 +397,22 @@ export function getDefaultAppSectionId(): string {
   return 'dashboardView';
 }
 
-export function initAppSections(): void {
+function resolveInitialRouteKey(): string {
   const hash = window.location.hash.replace(/^#\/?/, '').trim();
-  const initial = hash ? resolveAppSection(hash)?.id : getDefaultAppSectionId();
-  showAppSection(initial || getDefaultAppSectionId());
+  if (hash) return hash;
+
+  const segments = window.location.pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+  return segments.length ? segments[segments.length - 1] : '';
+}
+
+export function resolveInitialAppSectionId(): string {
+  const routeKey = resolveInitialRouteKey();
+  if (!routeKey) return getDefaultAppSectionId();
+  return resolveAppSection(routeKey)?.id || getDefaultAppSectionId();
+}
+
+export function initAppSections(): void {
+  showAppSection(resolveInitialAppSectionId());
 }
 
 window.showAppSection = showAppSection;
