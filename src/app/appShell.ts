@@ -230,7 +230,9 @@ export function initAppShell(): void {
   if (backdrop) {
     backdrop.addEventListener('click', (event) => {
       if (event.target !== backdrop) return;
-      if (typeof window.closeDrawer === 'function') {
+      if (typeof window.closeActiveDrawer === 'function') {
+        window.closeActiveDrawer();
+      } else if (typeof window.closeDrawer === 'function') {
         window.closeDrawer();
       }
     });

@@ -1,4 +1,5 @@
 import { isMobileLayout } from './mobileLayout';
+import { syncMobileSheetOpenClass } from './mobileOverlays';
 import { getWorkspaceAlerts } from '../ui/workspaceAlerts';
 import { switchMainView } from '../ui/navigation';
 import { refreshMobileTasksBadge } from './mobileBadges';
@@ -67,7 +68,7 @@ function openNotificationsSheet(): void {
 
   sheet.classList.add('open');
   sheet.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('orbis-mobile-sheet-open');
+  syncMobileSheetOpenClass();
 }
 
 function closeNotificationsSheet(): void {
@@ -76,13 +77,7 @@ function closeNotificationsSheet(): void {
 
   sheet.classList.remove('open');
   sheet.setAttribute('aria-hidden', 'true');
-
-  if (
-    !document.getElementById('orbisMobileMoreSheet')?.classList.contains('open') &&
-    !document.getElementById('orbisMobileRosterFilterSheet')?.classList.contains('open')
-  ) {
-    document.body.classList.remove('orbis-mobile-sheet-open');
-  }
+  syncMobileSheetOpenClass();
 }
 
 function bindMobileNotifications(): void {

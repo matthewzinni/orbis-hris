@@ -231,6 +231,9 @@ declare global {
     refreshMobileNavigation?: () => void;
     refreshMobileDrawerForms?: () => void;
     refreshMobileTables?: () => void;
+    closeAllMobileOverlays?: () => void;
+    closeMobileNavDrawer?: () => void;
+    unlockBodyScrollIfIdle?: () => void;
     initStayInterviewOrgInsights?: () => void;
     currentCandidateId?: string | null;
     currentCandidateNoteId?: string | null;
@@ -358,6 +361,7 @@ declare global {
     loadOffboardingTasks?: (employeeId: string) => Promise<void>;
     loadEmployeePayrollHandoffs?: (employeeId: string) => Promise<void>;
     closeCareEngagementDrawer?: () => void;
+    isCareEngagementDrawerOpen?: () => boolean;
     loadRecentActivity?: () => Promise<void>;
     getResolvedNoteEmployeeId?: (employeeId?: string | null) => string;
     startNoteEdit?: (note: EmployeeNote) => void;

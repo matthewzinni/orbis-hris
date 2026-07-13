@@ -8,6 +8,7 @@ import {
 } from './mobileNav';
 import { isMobileLayout } from './mobileLayout';
 import { initMobileNavDrawer, closeMobileNavDrawer } from './mobileNavDrawer';
+import { closeAllMobileOverlays, syncMobileSheetOpenClass } from './mobileOverlays';
 import { initMobilePeople } from './mobilePeople';
 import { initMobileHome } from './mobileHome';
 import { initMobileDrawer } from './mobileDrawer';
@@ -104,7 +105,7 @@ function openMoreSheet(): void {
   renderMoreMenu();
   sheet.classList.add('open');
   sheet.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('orbis-mobile-sheet-open');
+  syncMobileSheetOpenClass();
 }
 
 function closeMoreSheet(): void {
@@ -112,20 +113,7 @@ function closeMoreSheet(): void {
   if (!sheet) return;
   sheet.classList.remove('open');
   sheet.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('orbis-mobile-sheet-open');
-}
-
-function closeAllMobileSheets(): void {
-  closeMoreSheet();
-
-  ['orbisMobileNotificationsSheet', 'orbisMobileRosterFilterSheet'].forEach((id) => {
-    const sheet = document.getElementById(id);
-    if (!sheet) return;
-    sheet.classList.remove('open');
-    sheet.setAttribute('aria-hidden', 'true');
-  });
-
-  document.body.classList.remove('orbis-mobile-sheet-open');
+  syncMobileSheetOpenClass();
 }
 
 function clearIdleDrawerBackdrop(): void {
@@ -133,7 +121,7 @@ function clearIdleDrawerBackdrop(): void {
   if (!backdrop?.classList.contains('open')) return;
 
   const drawerOpen = document.querySelector(
-    '#employeeDrawer.open, #candidateDrawer.open, .drawer.open'
+    '#employeeDrawer.open, #candidateDrawer.open, #investigationDrawer.open, #operationsIssueDrawer.open, #careEngagementDrawer.open, #janusAccountDrawer.open, .drawer.open'
   );
   if (!drawerOpen) {
     backdrop.classList.remove('open');
@@ -143,8 +131,7 @@ function clearIdleDrawerBackdrop(): void {
 
 function handleMobileTabPress(tabButton: HTMLElement): void {
   clearIdleDrawerBackdrop();
-  closeAllMobileSheets();
-  closeMobileNavDrawer();
+  closeAllMobileOverlays();
 
   const tabId = tabButton.dataset.mobileTab as MobileTabId | undefined;
   if (tabId === 'more') {
@@ -183,7 +170,7 @@ function refreshShell(): void {
     const sectionId = String(window.currentMainView || '');
     if (sectionId) syncActiveTab(sectionId);
   } else {
-    closeMoreSheet();
+    closeAllMobileOverlays();
   }
 }
 
@@ -224,7 +211,7 @@ function bindMobileShellEvents(): void {
       if (sectionId) {
         mobileActiveTabOverride = null;
         clearIdleDrawerBackdrop();
-        closeAllMobileSheets();
+        closeAllMobileOverlays();
         switchMainView(sectionId);
       }
       return;

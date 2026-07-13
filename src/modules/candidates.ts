@@ -1,3 +1,4 @@
+import { applySharedDrawerOpenStyles } from '../mobile/mobileOverlays';
 import { supabaseClient } from '../services/supabaseClient';
 import {
   getCurrentUserAccess,
@@ -93,6 +94,10 @@ function nl2br(value: unknown): string {
 }
 
 function releaseDrawerScrollLock(): void {
+  if (typeof window.unlockBodyScrollIfIdle === 'function') {
+    window.unlockBodyScrollIfIdle();
+    return;
+  }
   document.body.classList.remove('orbis-drawer-open', 'orbis-modal-open');
   document.body.style.removeProperty('overflow');
 }
@@ -1516,39 +1521,8 @@ function todayInputValue(): string {
 }
 
 function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null): void {
-  if (backdrop) {
-    backdrop.classList.add('open');
-    backdrop.classList.remove('hidden');
-    backdrop.removeAttribute('hidden');
-    backdrop.setAttribute('aria-hidden', 'false');
-    backdrop.style.setProperty('display', 'block', 'important');
-    backdrop.style.setProperty('visibility', 'visible', 'important');
-    backdrop.style.setProperty('opacity', '1', 'important');
-    backdrop.style.setProperty('z-index', '99998', 'important');
-  }
-
-  drawer.classList.add('open');
-  drawer.classList.remove('hidden');
+  applySharedDrawerOpenStyles(drawer, backdrop, { desktopMaxWidth: 'min(760px, 92vw)' });
   window.refreshMobileDrawerForms?.();
-  drawer.removeAttribute('hidden');
-  drawer.setAttribute('aria-hidden', 'false');
-  drawer.style.setProperty('display', 'flex', 'important');
-  drawer.style.setProperty('flex-direction', 'column', 'important');
-  drawer.style.setProperty('visibility', 'visible', 'important');
-  drawer.style.setProperty('opacity', '1', 'important');
-  drawer.style.setProperty('pointer-events', 'auto', 'important');
-  drawer.style.setProperty('position', 'fixed', 'important');
-  drawer.style.setProperty('top', '0', 'important');
-  drawer.style.setProperty('right', '0', 'important');
-  drawer.style.setProperty('bottom', '0', 'important');
-  drawer.style.setProperty('height', '100vh', 'important');
-  drawer.style.setProperty('max-height', '100dvh', 'important');
-  drawer.style.setProperty('width', 'min(760px, 92vw)', 'important');
-  drawer.style.setProperty('max-width', '92vw', 'important');
-  drawer.style.setProperty('overflow', 'hidden', 'important');
-  drawer.style.setProperty('transform', 'translateX(0)', 'important');
-  drawer.style.setProperty('z-index', '99999', 'important');
-  document.body.classList.add('orbis-drawer-open');
 }
 
 function renderCandidateDrawerIdentityHeader(candidate: CandidateRecord | null): void {
@@ -1686,6 +1660,16 @@ export function closeActiveDrawer(): void {
 
   if (typeof window.isOperationsIssueDrawerOpen === 'function' && window.isOperationsIssueDrawerOpen()) {
     window.closeOperationsIssueDrawer?.();
+    return;
+  }
+
+  if (typeof window.isCareEngagementDrawerOpen === 'function' && window.isCareEngagementDrawerOpen()) {
+    window.closeCareEngagementDrawer?.();
+    return;
+  }
+
+  if (typeof window.isJanusAccountDrawerOpen === 'function' && window.isJanusAccountDrawerOpen()) {
+    window.closeJanusAccountDrawer?.();
     return;
   }
 

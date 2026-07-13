@@ -35,6 +35,7 @@ const SECTION_LABELS: Record<string, string> = {
   myTasksView: 'Tasks & Acknowledgments',
   myDirectoryView: 'Directory',
   myTimeOffView: 'My Time Off',
+  internalJobBoardView: 'Internal Job Board',
   activityView: 'Activity',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
@@ -52,6 +53,7 @@ const MORE_SECTION_IDS = [
   'orgChartView',
   'activityView',
   'myTimeOffView',
+  'internalJobBoardView',
   'settingsView',
   'myProfileView',
   'myTasksView',
@@ -161,6 +163,7 @@ const SECTION_TO_TAB: Record<string, MobileTabId> = {
   settingsView: 'more',
   activityView: 'more',
   myTimeOffView: 'more',
+  internalJobBoardView: 'more',
 };
 
 export function sectionIdToMobileTab(sectionId: string): MobileTabId {

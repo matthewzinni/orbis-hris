@@ -228,3 +228,5 @@ function bindDrawerEvents(): void {
 export function initMobileNavDrawer(): void {
   bindDrawerEvents();
 }
+
+window.closeMobileNavDrawer = closeMobileNavDrawer;

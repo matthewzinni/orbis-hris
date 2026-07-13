@@ -1,4 +1,5 @@
 import { isMobileLayout } from './mobileLayout';
+import { syncMobileSheetOpenClass } from './mobileOverlays';
 
 type RosterEmployee = Record<string, unknown> & {
   dbId?: string;
@@ -252,7 +253,7 @@ function openRosterFilterSheet(): void {
   syncMobileFilterSelectsFromDesktop();
   sheet.classList.add('open');
   sheet.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('orbis-mobile-sheet-open');
+  syncMobileSheetOpenClass();
 }
 
 function closeRosterFilterSheet(): void {
@@ -260,9 +261,7 @@ function closeRosterFilterSheet(): void {
   if (!sheet) return;
   sheet.classList.remove('open');
   sheet.setAttribute('aria-hidden', 'true');
-  if (!document.getElementById('orbisMobileMoreSheet')?.classList.contains('open')) {
-    document.body.classList.remove('orbis-mobile-sheet-open');
-  }
+  syncMobileSheetOpenClass();
 }
 
 async function refreshRosterFromPull(): Promise<void> {

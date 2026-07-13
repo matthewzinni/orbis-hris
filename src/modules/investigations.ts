@@ -1,3 +1,4 @@
+import { applySharedDrawerOpenStyles, clearSharedDrawerInlineStyles, unlockBodyScrollIfIdle } from '../mobile/mobileOverlays';
 import { supabaseClient } from '../services/supabaseClient';
 import {
   canAccessInvestigationsCenter,
@@ -94,35 +95,7 @@ function todayInputValue(): string {
 }
 
 function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null): void {
-  if (backdrop) {
-    backdrop.classList.add('open');
-    backdrop.classList.remove('hidden');
-    backdrop.removeAttribute('hidden');
-    backdrop.setAttribute('aria-hidden', 'false');
-    backdrop.style.setProperty('display', 'block', 'important');
-    backdrop.style.setProperty('visibility', 'visible', 'important');
-    backdrop.style.setProperty('opacity', '1', 'important');
-    backdrop.style.setProperty('z-index', '99998', 'important');
-  }
-
-  drawer.classList.add('open');
-  drawer.classList.remove('hidden');
-  drawer.removeAttribute('hidden');
-  drawer.setAttribute('aria-hidden', 'false');
-  drawer.style.setProperty('display', 'flex', 'important');
-  drawer.style.setProperty('flex-direction', 'column', 'important');
-  drawer.style.setProperty('visibility', 'visible', 'important');
-  drawer.style.setProperty('opacity', '1', 'important');
-  drawer.style.setProperty('pointer-events', 'auto', 'important');
-  drawer.style.setProperty('position', 'fixed', 'important');
-  drawer.style.setProperty('top', '0', 'important');
-  drawer.style.setProperty('right', '0', 'important');
-  drawer.style.setProperty('bottom', '0', 'important');
-  drawer.style.setProperty('height', '100vh', 'important');
-  drawer.style.setProperty('width', 'min(820px, 94vw)', 'important');
-  drawer.style.setProperty('max-width', '94vw', 'important');
-  drawer.style.setProperty('transform', 'translateX(0)', 'important');
-  drawer.style.setProperty('z-index', '99999', 'important');
+  applySharedDrawerOpenStyles(drawer, backdrop, { desktopMaxWidth: 'min(820px, 94vw)' });
 }
 
 function populateSelectOptions(
@@ -972,14 +945,14 @@ export function closeInvestigationDrawer(): void {
     backdrop.removeAttribute('style');
   }
 
+  // Keep employee drawer hidden after investigation closes — do not resurrect a ghost shell.
   if (employeeDrawer && !employeeOpen) {
-    employeeDrawer.classList.remove('hidden');
-    employeeDrawer.style.removeProperty('display');
-    employeeDrawer.removeAttribute('aria-hidden');
+    employeeDrawer.classList.add('hidden');
+    employeeDrawer.setAttribute('aria-hidden', 'true');
+    clearSharedDrawerInlineStyles(employeeDrawer);
   }
 
-  document.body.classList.remove('orbis-drawer-open');
-  document.body.style.overflow = '';
+  unlockBodyScrollIfIdle();
 
   const fileName = safeGet('invEvidenceFileName');
   if (fileName) fileName.textContent = 'No file chosen';

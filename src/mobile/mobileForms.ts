@@ -1,6 +1,13 @@
 import { isMobileLayout } from './mobileLayout';
 
-const DRAWER_IDS = ['employeeDrawer', 'candidateDrawer'] as const;
+const DRAWER_IDS = [
+  'employeeDrawer',
+  'candidateDrawer',
+  'investigationDrawer',
+  'operationsIssueDrawer',
+  'careEngagementDrawer',
+  'janusAccountDrawer',
+] as const;
 
 const PANEL_SAVE_SELECTORS = [
   '#saveNoteBtn',
@@ -164,6 +171,10 @@ function bindMobileFormsEvents(): void {
 
   bindDrawerTabEnhancement('employeeDrawer', '[data-tab]');
   bindDrawerTabEnhancement('candidateDrawer', '[data-candidate-tab]');
+  bindDrawerTabEnhancement('investigationDrawer', '[data-tab], .tab-btn');
+  bindDrawerTabEnhancement('operationsIssueDrawer', '[data-tab], .tab-btn');
+  bindDrawerTabEnhancement('careEngagementDrawer', '[data-tab], .tab-btn');
+  bindDrawerTabEnhancement('janusAccountDrawer', '[data-tab], .tab-btn');
 
   window.addEventListener('orbis:layout-change', () => {
     if (isMobileLayout()) {

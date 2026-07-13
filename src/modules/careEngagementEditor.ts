@@ -1,6 +1,10 @@
 // Care & Engagement editor drawer (Supabase-backed)
 
 import {
+  applySharedDrawerOpenStyles,
+  unlockBodyScrollIfIdle,
+} from '../mobile/mobileOverlays';
+import {
   clearMatrixCell,
   deleteCareItem,
   deleteEmployeeCareNote,
@@ -182,34 +186,7 @@ function hideOtherDrawers(): void {
 function applyCareDrawerOpenStyles(drawer: HTMLElement): void {
   const backdrop = safeGet('drawerBackdrop');
   hideOtherDrawers();
-
-  if (backdrop) {
-    backdrop.classList.add('open');
-    backdrop.classList.remove('hidden');
-    backdrop.removeAttribute('hidden');
-    backdrop.setAttribute('aria-hidden', 'false');
-  }
-
-  drawer.classList.add('open');
-  drawer.classList.remove('hidden');
-  drawer.removeAttribute('hidden');
-  drawer.setAttribute('aria-hidden', 'false');
-  drawer.style.setProperty('display', 'flex', 'important');
-  drawer.style.setProperty('flex-direction', 'column', 'important');
-  drawer.style.setProperty('visibility', 'visible', 'important');
-  drawer.style.setProperty('opacity', '1', 'important');
-  drawer.style.setProperty('pointer-events', 'auto', 'important');
-  drawer.style.setProperty('position', 'fixed', 'important');
-  drawer.style.setProperty('top', '0', 'important');
-  drawer.style.setProperty('right', '0', 'important');
-  drawer.style.setProperty('bottom', '0', 'important');
-  drawer.style.setProperty('height', '100vh', 'important');
-  drawer.style.setProperty('width', 'min(760px, 94vw)', 'important');
-  drawer.style.setProperty('max-width', '94vw', 'important');
-  drawer.style.setProperty('z-index', '99999', 'important');
-
-  document.body.classList.add('orbis-drawer-open');
-  document.body.style.overflow = 'hidden';
+  applySharedDrawerOpenStyles(drawer, backdrop, { desktopMaxWidth: 'min(760px, 94vw)' });
 }
 
 function applyCareDrawerCloseStyles(drawer: HTMLElement): void {
@@ -229,10 +206,7 @@ function applyCareDrawerCloseStyles(drawer: HTMLElement): void {
     backdrop.removeAttribute('style');
   }
 
-  if (!anotherDrawerOpen) {
-    document.body.classList.remove('orbis-drawer-open');
-    document.body.style.overflow = '';
-  }
+  unlockBodyScrollIfIdle();
 }
 
 function setDrawerOpen(open: boolean): void {
@@ -909,4 +883,5 @@ export function bindCareEngagementEditorEvents(): void {
 }
 
 window.closeCareEngagementDrawer = closeCareEngagementDrawer;
+window.isCareEngagementDrawerOpen = isCareEngagementDrawerOpen;
 

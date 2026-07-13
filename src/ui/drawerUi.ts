@@ -132,7 +132,12 @@ function deactivateEmployeeDrawerA11y(drawer: HTMLElement | null, backdrop: HTML
   }
 
   backdrop?.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('orbis-drawer-open');
+
+  if (typeof window.unlockBodyScrollIfIdle === 'function') {
+    window.unlockBodyScrollIfIdle();
+  } else {
+    document.body.classList.remove('orbis-drawer-open');
+  }
 
   if (drawerTriggerElement && typeof drawerTriggerElement.focus === 'function') {
     drawerTriggerElement.focus();
@@ -793,6 +798,10 @@ function populateOpenedDrawerContent(
 export function openDrawer(employee: DrawerUiEmployee | null | undefined): void {
     if (!employee) return;
 
+    if (typeof window.closeAllMobileOverlays === 'function') {
+        window.closeAllMobileOverlays();
+    }
+
     ensureEmployeeDrawerVisible();
     setEmployeeDrawerCreateMode(false);
     ensureDrawerLayout('employeeDrawer');
@@ -990,17 +999,25 @@ export function bindDrawerEvents(): void {
 
     const backdrop = document.getElementById('drawerBackdrop');
 
-    if (backdrop) {
-        backdrop.onclick = (event) => {
-            if (event.target === backdrop) {
+    if (backdrop && !(backdrop as HTMLElement & { __orbisCloseBound?: boolean }).__orbisCloseBound) {
+        (backdrop as HTMLElement & { __orbisCloseBound?: boolean }).__orbisCloseBound = true;
+        backdrop.addEventListener('click', (event) => {
+            if (event.target !== backdrop) return;
+            if (typeof window.closeActiveDrawer === 'function') {
+                window.closeActiveDrawer();
+            } else {
                 closeDrawer();
             }
-        };
+        });
     }
 
     if (!window.drawerEscapeKeyBound) {
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
+                if (typeof window.closeActiveDrawer === 'function') {
+                    window.closeActiveDrawer();
+                    return;
+                }
                 const drawer = document.getElementById('employeeDrawer');
                 if (drawer?.classList.contains('open')) {
                     closeDrawer();
