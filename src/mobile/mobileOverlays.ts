@@ -15,12 +15,38 @@ const MODULE_DRAWER_IDS = [
   'janusAccountDrawer',
 ] as const;
 
+export type ModuleDrawerId = (typeof MODULE_DRAWER_IDS)[number];
+
 function anyMobileSheetOpen(): boolean {
   return MOBILE_SHEET_IDS.some((id) => document.getElementById(id)?.classList.contains('open'));
 }
 
 function anyDrawerOpen(): boolean {
   return MODULE_DRAWER_IDS.some((id) => document.getElementById(id)?.classList.contains('open'));
+}
+
+export function isModuleDrawerOpen(drawerId: ModuleDrawerId): boolean {
+  const drawer = document.getElementById(drawerId);
+  if (!drawer) return false;
+  if (drawer.classList.contains('hidden')) return false;
+  return drawer.classList.contains('open') || drawer.getAttribute('aria-hidden') === 'false';
+}
+
+export function isAnySiblingModuleDrawerOpen(exceptId: ModuleDrawerId): boolean {
+  return MODULE_DRAWER_IDS.some((id) => id !== exceptId && isModuleDrawerOpen(id));
+}
+
+/** Hide every module drawer except the one being opened. */
+export function hideSiblingModuleDrawers(exceptId: ModuleDrawerId): void {
+  MODULE_DRAWER_IDS.forEach((id) => {
+    if (id === exceptId) return;
+    const drawer = document.getElementById(id);
+    if (!drawer) return;
+    drawer.classList.remove('open', 'closing');
+    drawer.classList.add('hidden');
+    drawer.setAttribute('aria-hidden', 'true');
+    clearSharedDrawerInlineStyles(drawer);
+  });
 }
 
 /** Keep body.orbis-mobile-sheet-open in sync with any open mobile sheet. */
@@ -96,8 +122,13 @@ export function lockBodyScrollForDrawer(): void {
 export function applySharedDrawerOpenStyles(
   drawer: HTMLElement,
   backdrop: HTMLElement | null,
-  options?: { desktopMaxWidth?: string }
+  options?: { desktopMaxWidth?: string; drawerId?: ModuleDrawerId }
 ): void {
+  const drawerId = (options?.drawerId || drawer.id) as ModuleDrawerId;
+  if (MODULE_DRAWER_IDS.includes(drawerId)) {
+    hideSiblingModuleDrawers(drawerId);
+  }
+
   closeAllMobileOverlays();
 
   if (backdrop) {
@@ -168,3 +199,4 @@ export function clearSharedDrawerInlineStyles(drawer: HTMLElement | null): void 
 
 window.closeAllMobileOverlays = closeAllMobileOverlays;
 window.unlockBodyScrollIfIdle = unlockBodyScrollIfIdle;
+window.hideSiblingModuleDrawers = hideSiblingModuleDrawers;

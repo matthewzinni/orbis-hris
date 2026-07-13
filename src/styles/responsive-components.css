@@ -15,7 +15,7 @@ body[data-layout='mobile'] .orbis-table-scroll-region {
 }
 
 body[data-layout='mobile'] .orbis-table-scroll-region[data-scroll-hint='true']::before {
-  content: 'Swipe for more columns';
+  content: 'Swipe for more';
   display: block;
   padding: 6px 10px 8px;
   font-size: 0.75rem;
@@ -25,8 +25,18 @@ body[data-layout='mobile'] .orbis-table-scroll-region[data-scroll-hint='true']::
   text-align: right;
 }
 
+body[data-layout='mobile'] .orbis-table-scroll-region.care-pulse-grid[data-scroll-hint='true']::before,
+body[data-layout='mobile'] .orbis-table-scroll-region.org-chart-tree[data-scroll-hint='true']::before {
+  content: 'Swipe for more';
+}
+
 body[data-layout='mobile'] .orbis-table-scroll-region table {
   min-width: 520px;
+}
+
+body[data-layout='mobile'] .orbis-table-scroll-region.org-chart-tree table,
+body[data-layout='mobile'] .orbis-table-scroll-region.care-pulse-grid table {
+  min-width: 0;
 }
 
 body[data-layout='mobile'] .orbis-table-scroll-region:focus-visible {

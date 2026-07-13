@@ -95,7 +95,10 @@ function todayInputValue(): string {
 }
 
 function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null): void {
-  applySharedDrawerOpenStyles(drawer, backdrop, { desktopMaxWidth: 'min(820px, 94vw)' });
+  applySharedDrawerOpenStyles(drawer, backdrop, {
+    desktopMaxWidth: 'min(820px, 94vw)',
+    drawerId: 'investigationDrawer',
+  });
 }
 
 function populateSelectOptions(
@@ -539,6 +542,7 @@ function renderInvestigationsTable(rows: Investigation[]): void {
     tbody.innerHTML =
       '<tr><td colspan="9" class="empty">No investigations match the current filters.</td></tr>';
     window.renderMobileInvestigationCards?.(filtered);
+    window.refreshMobileTables?.();
     return;
   }
 
@@ -593,6 +597,8 @@ function renderInvestigationsTable(rows: Investigation[]): void {
       if (id) void deleteInvestigationById(id);
     });
   });
+
+  window.refreshMobileTables?.();
 }
 
 function populateFilterSelects(): void {
@@ -962,17 +968,6 @@ export function closeInvestigationDrawer(): void {
   activeInvestigationTab = 'case';
 }
 
-function hideOtherDrawers(): void {
-  ['employeeDrawer', 'candidateDrawer', 'operationsIssueDrawer'].forEach((id) => {
-    const drawer = safeGet(id);
-    if (!drawer) return;
-    drawer.classList.remove('open');
-    drawer.classList.add('hidden');
-    drawer.setAttribute('aria-hidden', 'true');
-    drawer.style.setProperty('display', 'none', 'important');
-  });
-}
-
 export async function openInvestigationDrawer(investigationId: string): Promise<void> {
   let investigation = cachedInvestigations.find((row) => String(row.id) === String(investigationId));
 
@@ -1017,7 +1012,6 @@ export async function openInvestigationDrawer(investigationId: string): Promise<
   }
 
   currentInvestigationId = String(investigation.id);
-  hideOtherDrawers();
 
   const backdrop = safeGet('drawerBackdrop');
   const drawer = safeGet('investigationDrawer');
@@ -1038,7 +1032,6 @@ export function openNewInvestigationForm(): void {
   }
 
   currentInvestigationId = null;
-  hideOtherDrawers();
 
   const backdrop = safeGet('drawerBackdrop');
   const drawer = safeGet('investigationDrawer');

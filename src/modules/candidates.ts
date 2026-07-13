@@ -646,6 +646,7 @@ export async function loadCandidates(): Promise<void> {
 
       target.innerHTML = `<div class="empty">${escapeHtml(emptyMessage)}</div>`;
       window.renderMobileCandidateCards?.([]);
+      window.refreshMobileTables?.();
 
       return;
     }
@@ -731,6 +732,7 @@ export async function loadCandidates(): Promise<void> {
     
 
     window.renderMobileCandidateCards?.(rows);
+    window.refreshMobileTables?.();
 
     target.querySelectorAll<HTMLButtonElement>('[data-edit-candidate-id]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -1521,7 +1523,10 @@ function todayInputValue(): string {
 }
 
 function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null): void {
-  applySharedDrawerOpenStyles(drawer, backdrop, { desktopMaxWidth: 'min(760px, 92vw)' });
+  applySharedDrawerOpenStyles(drawer, backdrop, {
+    desktopMaxWidth: 'min(760px, 92vw)',
+    drawerId: 'candidateDrawer',
+  });
   window.refreshMobileDrawerForms?.();
 }
 

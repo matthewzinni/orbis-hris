@@ -274,6 +274,7 @@ function renderManagePostings(): void {
       'mobileInternalJobManageList',
       '<div class="orbis-mobile-empty muted">No postings match your filters.</div>'
     );
+    window.refreshMobileTables?.();
     return;
   }
 
@@ -332,6 +333,8 @@ function renderManagePostings(): void {
       )
       .join('')
   );
+
+  window.refreshMobileTables?.();
 }
 
 function filteredPipelineInterests(): InternalJobInterest[] {
@@ -364,6 +367,7 @@ function renderPipeline(): void {
       'mobileInternalJobPipelineList',
       '<div class="orbis-mobile-empty muted">No internal interest submissions yet.</div>'
     );
+    window.refreshMobileTables?.();
     return;
   }
 
@@ -424,6 +428,8 @@ function renderPipeline(): void {
       })
       .join('')
   );
+
+  window.refreshMobileTables?.();
 }
 
 function updateDashboardMetrics(): void {

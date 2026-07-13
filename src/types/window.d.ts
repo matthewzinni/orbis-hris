@@ -234,6 +234,7 @@ declare global {
     closeAllMobileOverlays?: () => void;
     closeMobileNavDrawer?: () => void;
     unlockBodyScrollIfIdle?: () => void;
+    hideSiblingModuleDrawers?: (exceptId: string) => void;
     initStayInterviewOrgInsights?: () => void;
     currentCandidateId?: string | null;
     currentCandidateNoteId?: string | null;

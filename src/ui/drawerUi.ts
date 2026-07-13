@@ -798,6 +798,10 @@ function populateOpenedDrawerContent(
 export function openDrawer(employee: DrawerUiEmployee | null | undefined): void {
     if (!employee) return;
 
+    if (typeof window.hideSiblingModuleDrawers === 'function') {
+        window.hideSiblingModuleDrawers('employeeDrawer');
+    }
+
     if (typeof window.closeAllMobileOverlays === 'function') {
         window.closeAllMobileOverlays();
     }

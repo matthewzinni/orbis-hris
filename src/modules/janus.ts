@@ -272,6 +272,7 @@ function renderAccountsTable(
   if (!visible.length) {
     tbody.innerHTML =
       '<tr><td colspan="7" class="empty">No accounts match your filters.</td></tr>';
+    window.refreshMobileTables?.();
     return;
   }
 
@@ -300,6 +301,8 @@ function renderAccountsTable(
       `;
     })
     .join('');
+
+  window.refreshMobileTables?.();
 }
 
 function escAttr(value: unknown): string {
@@ -320,6 +323,7 @@ function renderContactsTable(contacts: JanusContactWithAccount[]): void {
   if (!visible.length) {
     tbody.innerHTML =
       '<tr><td colspan="6" class="empty">No contacts match your filters.</td></tr>';
+    window.refreshMobileTables?.();
     return;
   }
 
@@ -356,6 +360,8 @@ function renderContactsTable(contacts: JanusContactWithAccount[]): void {
       `;
     })
     .join('');
+
+  window.refreshMobileTables?.();
 }
 
 function setJanusLoading(loading: boolean): void {

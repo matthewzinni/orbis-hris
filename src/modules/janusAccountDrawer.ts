@@ -1,4 +1,4 @@
-import { applySharedDrawerOpenStyles, unlockBodyScrollIfIdle } from '../mobile/mobileOverlays';
+import { applySharedDrawerOpenStyles, isAnySiblingModuleDrawerOpen, unlockBodyScrollIfIdle } from '../mobile/mobileOverlays';
 import { canEditJanus, isAdminUser } from '../services/access';
 import {
   createJanusAccount,
@@ -64,17 +64,9 @@ function showToast(message: string, type = 'success'): void {
 }
 
 function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null): void {
-  applySharedDrawerOpenStyles(drawer, backdrop, { desktopMaxWidth: 'min(760px, 92vw)' });
-}
-
-function closeOtherDrawers(): void {
-  ['employeeDrawer', 'candidateDrawer', 'operationsIssueDrawer'].forEach((id) => {
-    const drawer = safeGet(id);
-    if (!drawer) return;
-    drawer.classList.remove('open');
-    drawer.classList.add('hidden');
-    drawer.setAttribute('aria-hidden', 'true');
-    drawer.style.removeProperty('display');
+  applySharedDrawerOpenStyles(drawer, backdrop, {
+    desktopMaxWidth: 'min(760px, 92vw)',
+    drawerId: 'janusAccountDrawer',
   });
 }
 
@@ -346,11 +338,7 @@ export function closeJanusAccountDrawer(): void {
   drawer.setAttribute('aria-hidden', 'true');
   drawer.style.removeProperty('display');
 
-  if (
-    !safeGet('employeeDrawer')?.classList.contains('open') &&
-    !safeGet('candidateDrawer')?.classList.contains('open') &&
-    !safeGet('operationsIssueDrawer')?.classList.contains('open')
-  ) {
+  if (!isAnySiblingModuleDrawerOpen('janusAccountDrawer')) {
     backdrop?.classList.remove('open');
     backdrop?.classList.add('hidden');
     backdrop?.setAttribute('aria-hidden', 'true');
@@ -385,7 +373,6 @@ export async function openJanusAccountDrawer(
     ? (tab as typeof janusDrawerTab)
     : 'overview';
 
-  closeOtherDrawers();
   currentJanusAccountId = accountId || null;
   setJanusDrawerTab(resolvedTab);
   clearContactForm();

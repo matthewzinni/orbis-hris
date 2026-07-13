@@ -2,6 +2,7 @@
 
 import {
   applySharedDrawerOpenStyles,
+  isAnySiblingModuleDrawerOpen,
   unlockBodyScrollIfIdle,
 } from '../mobile/mobileOverlays';
 import {
@@ -155,13 +156,6 @@ function hideAllEditorFieldGroups(): void {
   groups.forEach((id) => safeGet(id)?.classList.add('hidden'));
 }
 
-const OTHER_DRAWER_IDS = [
-  'employeeDrawer',
-  'candidateDrawer',
-  'investigationDrawer',
-  'operationsIssueDrawer',
-] as const;
-
 function isDrawerVisiblyOpen(drawerId: string): boolean {
   const drawer = safeGet(drawerId);
   if (!drawer) return false;
@@ -172,21 +166,12 @@ export function isCareEngagementDrawerOpen(): boolean {
   return isDrawerVisiblyOpen('careEngagementDrawer');
 }
 
-function hideOtherDrawers(): void {
-  OTHER_DRAWER_IDS.forEach((id) => {
-    const drawer = safeGet(id);
-    if (!drawer) return;
-    drawer.classList.remove('open');
-    drawer.classList.add('hidden');
-    drawer.setAttribute('aria-hidden', 'true');
-    drawer.removeAttribute('style');
-  });
-}
-
 function applyCareDrawerOpenStyles(drawer: HTMLElement): void {
   const backdrop = safeGet('drawerBackdrop');
-  hideOtherDrawers();
-  applySharedDrawerOpenStyles(drawer, backdrop, { desktopMaxWidth: 'min(760px, 94vw)' });
+  applySharedDrawerOpenStyles(drawer, backdrop, {
+    desktopMaxWidth: 'min(760px, 94vw)',
+    drawerId: 'careEngagementDrawer',
+  });
 }
 
 function applyCareDrawerCloseStyles(drawer: HTMLElement): void {
@@ -197,7 +182,7 @@ function applyCareDrawerCloseStyles(drawer: HTMLElement): void {
   drawer.setAttribute('aria-hidden', 'true');
   drawer.removeAttribute('style');
 
-  const anotherDrawerOpen = OTHER_DRAWER_IDS.some((id) => isDrawerVisiblyOpen(id));
+  const anotherDrawerOpen = isAnySiblingModuleDrawerOpen('careEngagementDrawer');
 
   if (backdrop && !anotherDrawerOpen) {
     backdrop.classList.remove('open');

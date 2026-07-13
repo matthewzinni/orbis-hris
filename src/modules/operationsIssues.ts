@@ -73,7 +73,10 @@ function todayInputValue(): string {
 }
 
 function applyDrawerOpenStyles(drawer: HTMLElement, backdrop: HTMLElement | null): void {
-  applySharedDrawerOpenStyles(drawer, backdrop, { desktopMaxWidth: 'min(760px, 92vw)' });
+  applySharedDrawerOpenStyles(drawer, backdrop, {
+    desktopMaxWidth: 'min(760px, 92vw)',
+    drawerId: 'operationsIssueDrawer',
+  });
 }
 
 function getDepartmentOptions(): string[] {
@@ -287,6 +290,7 @@ function renderIssuesTable(issues: OperationsIssue[]): void {
     tbody.innerHTML =
       '<tr><td colspan="8" class="empty">No operational issues match the current filters.</td></tr>';
     window.renderMobileOperationsCards?.(filtered);
+    window.refreshMobileTables?.();
     return;
   }
 
@@ -340,6 +344,8 @@ function renderIssuesTable(issues: OperationsIssue[]): void {
       if (issueId) void deleteOperationsIssueById(issueId);
     });
   });
+
+  window.refreshMobileTables?.();
 }
 
 function populateFilterSelects(issues: OperationsIssue[]): void {
@@ -625,20 +631,6 @@ export async function openOperationsIssueDrawer(issueId: string): Promise<void> 
   }
 
   currentOperationsIssueId = String(issue.id);
-
-  const employeeDrawer = safeGet('employeeDrawer');
-  const candidateDrawer = safeGet('candidateDrawer');
-  if (employeeDrawer) {
-    employeeDrawer.classList.remove('open');
-    employeeDrawer.classList.add('hidden');
-    employeeDrawer.setAttribute('aria-hidden', 'true');
-    employeeDrawer.style.setProperty('display', 'none', 'important');
-  }
-  if (candidateDrawer) {
-    candidateDrawer.classList.remove('open');
-    candidateDrawer.classList.add('hidden');
-    candidateDrawer.setAttribute('aria-hidden', 'true');
-  }
 
   const backdrop = safeGet('drawerBackdrop');
   const drawer = safeGet('operationsIssueDrawer');
