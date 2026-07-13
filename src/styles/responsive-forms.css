@@ -2,10 +2,22 @@
 
 body[data-layout='mobile'] #employeeDrawer .tab-panel .two-col,
 body[data-layout='mobile'] #candidateDrawer .tab-panel .two-col,
+body[data-layout='mobile'] #investigationDrawer .two-col,
+body[data-layout='mobile'] #operationsIssueDrawer .two-col,
+body[data-layout='mobile'] #careEngagementDrawer .two-col,
+body[data-layout='mobile'] #janusAccountDrawer .two-col,
 body[data-layout='mobile'] #employeeDrawer .tab-panel .field-grid.two-col,
 body[data-layout='mobile'] #candidateDrawer .tab-panel .field-grid.two-col,
+body[data-layout='mobile'] #investigationDrawer .field-grid.two-col,
+body[data-layout='mobile'] #operationsIssueDrawer .field-grid.two-col,
+body[data-layout='mobile'] #careEngagementDrawer .field-grid.two-col,
+body[data-layout='mobile'] #janusAccountDrawer .field-grid.two-col,
 body[data-layout='mobile'] #employeeDrawer .tab-panel .field-grid.three-col,
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field-grid.three-col {
+body[data-layout='mobile'] #candidateDrawer .tab-panel .field-grid.three-col,
+body[data-layout='mobile'] #investigationDrawer .field-grid.three-col,
+body[data-layout='mobile'] #operationsIssueDrawer .field-grid.three-col,
+body[data-layout='mobile'] #careEngagementDrawer .field-grid.three-col,
+body[data-layout='mobile'] #janusAccountDrawer .field-grid.three-col {
   grid-template-columns: 1fr;
   gap: 12px;
 }
@@ -18,7 +30,14 @@ body[data-layout='mobile'] #employeeDrawer #drawerDetails.detail-grid {
 
 body[data-layout='mobile'] #employeeDrawer .tab-panel .button-row,
 body[data-layout='mobile'] #candidateDrawer .tab-panel .button-row,
-body[data-layout='mobile'] #candidateDrawer .candidate-actions-row {
+body[data-layout='mobile'] #candidateDrawer .candidate-actions-row,
+body[data-layout='mobile'] #candidateDrawer .candidate-resume-actions,
+body[data-layout='mobile'] #janusAccountDrawer .button-row,
+body[data-layout='mobile'] #investigationDrawer .button-row,
+body[data-layout='mobile'] #operationsIssueDrawer .button-row,
+body[data-layout='mobile'] #careEngagementDrawer .button-row,
+body[data-layout='mobile'] #investigationDrawer .file-upload-row,
+body[data-layout='mobile'] #operationsIssueDrawer .file-upload-row {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -27,18 +46,31 @@ body[data-layout='mobile'] #candidateDrawer .candidate-actions-row {
 
 body[data-layout='mobile'] #employeeDrawer .tab-panel .button-row .button,
 body[data-layout='mobile'] #candidateDrawer .tab-panel .button-row .button,
-body[data-layout='mobile'] #candidateDrawer .candidate-actions-row .button {
+body[data-layout='mobile'] #candidateDrawer .candidate-actions-row .button,
+body[data-layout='mobile'] #candidateDrawer .candidate-resume-actions .button,
+body[data-layout='mobile'] #janusAccountDrawer .button-row .button,
+body[data-layout='mobile'] #investigationDrawer .button-row .button,
+body[data-layout='mobile'] #operationsIssueDrawer .button-row .button,
+body[data-layout='mobile'] #careEngagementDrawer .button-row .button {
   width: 100%;
   min-height: var(--mobile-tap-min);
 }
 
-body[data-layout='mobile'] #employeeDrawer .tab-panel .field,
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field {
+body[data-layout='mobile'] #employeeDrawer .field,
+body[data-layout='mobile'] #candidateDrawer .field,
+body[data-layout='mobile'] #investigationDrawer .field,
+body[data-layout='mobile'] #operationsIssueDrawer .field,
+body[data-layout='mobile'] #careEngagementDrawer .field,
+body[data-layout='mobile'] #janusAccountDrawer .field {
   min-width: 0;
 }
 
-body[data-layout='mobile'] #employeeDrawer .tab-panel .field label,
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field label {
+body[data-layout='mobile'] #employeeDrawer .field label,
+body[data-layout='mobile'] #candidateDrawer .field label,
+body[data-layout='mobile'] #investigationDrawer .field label,
+body[data-layout='mobile'] #operationsIssueDrawer .field label,
+body[data-layout='mobile'] #careEngagementDrawer .field label,
+body[data-layout='mobile'] #janusAccountDrawer .field label {
   display: block;
   margin-bottom: 6px;
   font-size: 0.88rem;
@@ -46,12 +78,24 @@ body[data-layout='mobile'] #candidateDrawer .tab-panel .field label {
   line-height: 1.3;
 }
 
-body[data-layout='mobile'] #employeeDrawer .tab-panel .field input,
-body[data-layout='mobile'] #employeeDrawer .tab-panel .field select,
-body[data-layout='mobile'] #employeeDrawer .tab-panel .field textarea,
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field input,
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field select,
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field textarea {
+body[data-layout='mobile'] #employeeDrawer .field input,
+body[data-layout='mobile'] #employeeDrawer .field select,
+body[data-layout='mobile'] #employeeDrawer .field textarea,
+body[data-layout='mobile'] #candidateDrawer .field input,
+body[data-layout='mobile'] #candidateDrawer .field select,
+body[data-layout='mobile'] #candidateDrawer .field textarea,
+body[data-layout='mobile'] #investigationDrawer .field input,
+body[data-layout='mobile'] #investigationDrawer .field select,
+body[data-layout='mobile'] #investigationDrawer .field textarea,
+body[data-layout='mobile'] #operationsIssueDrawer .field input,
+body[data-layout='mobile'] #operationsIssueDrawer .field select,
+body[data-layout='mobile'] #operationsIssueDrawer .field textarea,
+body[data-layout='mobile'] #careEngagementDrawer .field input,
+body[data-layout='mobile'] #careEngagementDrawer .field select,
+body[data-layout='mobile'] #careEngagementDrawer .field textarea,
+body[data-layout='mobile'] #janusAccountDrawer .field input,
+body[data-layout='mobile'] #janusAccountDrawer .field select,
+body[data-layout='mobile'] #janusAccountDrawer .field textarea {
   width: 100%;
   max-width: 100%;
   min-height: var(--mobile-tap-min);
@@ -59,18 +103,34 @@ body[data-layout='mobile'] #candidateDrawer .tab-panel .field textarea {
   line-height: 1.35;
 }
 
-body[data-layout='mobile'] #employeeDrawer .tab-panel .field textarea,
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field textarea {
+body[data-layout='mobile'] #employeeDrawer .field textarea,
+body[data-layout='mobile'] #candidateDrawer .field textarea,
+body[data-layout='mobile'] #investigationDrawer .field textarea,
+body[data-layout='mobile'] #operationsIssueDrawer .field textarea,
+body[data-layout='mobile'] #careEngagementDrawer .field textarea,
+body[data-layout='mobile'] #janusAccountDrawer .field textarea {
   min-height: 120px;
   resize: vertical;
 }
 
-body[data-layout='mobile'] #employeeDrawer .tab-panel .field input[type='date'],
-body[data-layout='mobile'] #employeeDrawer .tab-panel .field input[type='time'],
-body[data-layout='mobile'] #employeeDrawer .tab-panel .field input[type='datetime-local'],
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field input[type='date'],
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field input[type='time'],
-body[data-layout='mobile'] #candidateDrawer .tab-panel .field input[type='datetime-local'] {
+body[data-layout='mobile'] #investigationDrawer select.orbis-mobile-multi-select {
+  min-height: 160px;
+  padding: 8px;
+}
+
+body[data-layout='mobile'] #employeeDrawer .field input[type='date'],
+body[data-layout='mobile'] #employeeDrawer .field input[type='time'],
+body[data-layout='mobile'] #employeeDrawer .field input[type='datetime-local'],
+body[data-layout='mobile'] #candidateDrawer .field input[type='date'],
+body[data-layout='mobile'] #candidateDrawer .field input[type='time'],
+body[data-layout='mobile'] #candidateDrawer .field input[type='datetime-local'],
+body[data-layout='mobile'] #investigationDrawer .field input[type='date'],
+body[data-layout='mobile'] #investigationDrawer .field input[type='time'],
+body[data-layout='mobile'] #operationsIssueDrawer .field input[type='date'],
+body[data-layout='mobile'] #careEngagementDrawer .field input[type='date'],
+body[data-layout='mobile'] #janusAccountDrawer .field input[type='date'],
+body[data-layout='mobile'] #janusAccountDrawer .field input[type='time'],
+body[data-layout='mobile'] #janusAccountDrawer .field input[type='datetime-local'] {
   -webkit-appearance: none;
   appearance: none;
 }
@@ -78,13 +138,20 @@ body[data-layout='mobile'] #candidateDrawer .tab-panel .field input[type='dateti
 body[data-layout='mobile'] #employeeDrawer .tab-panel .card-body > .button.primary,
 body[data-layout='mobile'] #employeeDrawer .tab-panel .card-body > .button.soft,
 body[data-layout='mobile'] #candidateDrawer .tab-panel .card-body > .button.primary,
-body[data-layout='mobile'] #candidateDrawer .tab-panel .card-body > .button.soft {
+body[data-layout='mobile'] #candidateDrawer .tab-panel .card-body > .button.soft,
+body[data-layout='mobile'] #janusAccountDrawer .card-body > .button.primary,
+body[data-layout='mobile'] #janusAccountDrawer .card-body > .button.soft {
   width: 100%;
   min-height: var(--mobile-tap-min);
 }
 
-body[data-layout='mobile'] #employeeDrawer .tab-panel .file-upload-row,
-body[data-layout='mobile'] #employeeDrawer .tab-panel .file-upload-row input[type='file'] {
+body[data-layout='mobile'] #employeeDrawer .file-upload-row,
+body[data-layout='mobile'] #employeeDrawer .file-upload-row input[type='file'],
+body[data-layout='mobile'] #investigationDrawer .file-upload-row,
+body[data-layout='mobile'] #investigationDrawer .file-upload-row input[type='file'],
+body[data-layout='mobile'] #operationsIssueDrawer .file-upload-row,
+body[data-layout='mobile'] #operationsIssueDrawer .file-upload-row input[type='file'],
+body[data-layout='mobile'] #janusAccountDrawer input[type='file'] {
   width: 100%;
   max-width: 100%;
 }
@@ -96,21 +163,23 @@ body[data-layout='mobile'] #candidateDrawer .tab-panel canvas {
   touch-action: none;
 }
 
-body[data-layout='mobile'] #employeeDrawer .tab-panel .muted,
-body[data-layout='mobile'] #candidateDrawer .tab-panel .muted,
-body[data-layout='mobile'] #employeeDrawer .tab-panel #noteEditStatus,
-body[data-layout='mobile'] #employeeDrawer .tab-panel .login-error {
+body[data-layout='mobile'] #employeeDrawer .muted,
+body[data-layout='mobile'] #candidateDrawer .muted,
+body[data-layout='mobile'] #investigationDrawer .muted,
+body[data-layout='mobile'] #operationsIssueDrawer .muted,
+body[data-layout='mobile'] #careEngagementDrawer .muted,
+body[data-layout='mobile'] #janusAccountDrawer .muted,
+body[data-layout='mobile'] #employeeDrawer #noteEditStatus,
+body[data-layout='mobile'] #employeeDrawer .login-error {
   overflow: visible;
   word-break: break-word;
 }
 
-body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-panel .orbis-mobile-inline-save,
-body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-panel .orbis-mobile-inline-save {
+body[data-layout='mobile'] .orbis-mobile-form-panel .orbis-mobile-inline-save {
   display: none !important;
 }
 
-body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-footer,
-body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-footer {
+body[data-layout='mobile'] .orbis-mobile-form-footer {
   position: sticky;
   bottom: 0;
   z-index: 6;
@@ -121,25 +190,47 @@ body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-footer {
   background: linear-gradient(180deg, transparent, var(--card, #fff) 28%);
 }
 
-body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-footer.hidden,
-body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-footer.hidden {
+body[data-layout='mobile'] .orbis-mobile-form-footer.hidden {
   display: none;
 }
 
-body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-footer-btn,
-body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-footer-btn {
+body[data-layout='mobile'] .orbis-mobile-form-footer-btn {
   flex: 1;
   min-height: var(--mobile-tap-min);
 }
 
-body[data-layout='mobile'] #employeeDrawer .orbis-mobile-form-panel:not(.active) .orbis-mobile-form-footer,
-body[data-layout='mobile'] #candidateDrawer .orbis-mobile-form-panel:not(.active) .orbis-mobile-form-footer {
+body[data-layout='mobile'] .orbis-mobile-form-panel:not(.active) .orbis-mobile-form-footer,
+body[data-layout='mobile'] .orbis-mobile-form-panel.hidden .orbis-mobile-form-footer {
   display: none;
 }
 
 body[data-layout='mobile'] #employeeDrawer .tab-panel.active,
-body[data-layout='mobile'] #candidateDrawer .tab-panel.active {
+body[data-layout='mobile'] #candidateDrawer .tab-panel.active,
+body[data-layout='mobile'] #janusAccountDrawer [data-janus-drawer-panel]:not(.hidden) {
   padding-bottom: 4px;
+}
+
+/* Pinned drawer footers — stack + safe area */
+body[data-layout='mobile'] #investigationDrawer .orbis-mobile-drawer-footer,
+body[data-layout='mobile'] #operationsIssueDrawer .orbis-mobile-drawer-footer,
+body[data-layout='mobile'] #careEngagementDrawer .orbis-mobile-drawer-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 12px 16px calc(12px + var(--mobile-safe-bottom));
+  position: sticky;
+  bottom: 0;
+  z-index: 8;
+  background: var(--card, #fff);
+  box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
+}
+
+body[data-layout='mobile'] #investigationDrawer .orbis-mobile-drawer-footer .button,
+body[data-layout='mobile'] #operationsIssueDrawer .orbis-mobile-drawer-footer .button,
+body[data-layout='mobile'] #careEngagementDrawer .orbis-mobile-drawer-footer .button {
+  width: 100%;
+  min-height: var(--mobile-tap-min);
 }
 
 /* Confirmation dialogs */
@@ -170,6 +261,50 @@ body[data-layout='mobile'] .orbis-confirm-actions .button {
 
 body[data-layout='mobile'] .orbis-confirm-actions .button.danger {
   order: -1;
+}
+
+/* Job board posting modal → bottom sheet on mobile */
+body[data-layout='mobile'] .orbis-modal-backdrop {
+  align-items: flex-end;
+  padding: 0;
+}
+
+body[data-layout='mobile'] .orbis-modal {
+  width: 100%;
+  max-width: 100%;
+  max-height: min(92dvh, 100%);
+  border-radius: 16px 16px 0 0;
+}
+
+body[data-layout='mobile'] .orbis-modal-header,
+body[data-layout='mobile'] .orbis-modal-footer,
+body[data-layout='mobile'] .orbis-modal-body {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+body[data-layout='mobile'] .orbis-modal-footer {
+  flex-direction: column;
+  align-items: stretch;
+  padding-bottom: calc(16px + var(--mobile-safe-bottom));
+}
+
+body[data-layout='mobile'] .orbis-modal-footer .button,
+body[data-layout='mobile'] .orbis-modal-header .button {
+  width: 100%;
+  min-height: var(--mobile-tap-min);
+}
+
+body[data-layout='mobile'] #internalJobPostingModal .field-grid.two-col {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+body[data-layout='mobile'] #internalJobPostingModal .input,
+body[data-layout='mobile'] #internalJobPostingModal .select,
+body[data-layout='mobile'] #internalJobPostingModal textarea.input {
+  min-height: var(--mobile-tap-min);
+  font-size: 16px;
 }
 
 /* Portal / standalone request forms */

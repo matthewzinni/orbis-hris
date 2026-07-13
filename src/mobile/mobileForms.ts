@@ -9,6 +9,12 @@ const DRAWER_IDS = [
   'janusAccountDrawer',
 ] as const;
 
+const PANEL_SELECTORS = [
+  '.tab-panel',
+  '[data-investigation-panel]',
+  '[data-janus-drawer-panel]',
+].join(', ');
+
 const PANEL_SAVE_SELECTORS = [
   '#saveNoteBtn',
   '#saveDisciplineBtn',
@@ -20,7 +26,18 @@ const PANEL_SAVE_SELECTORS = [
   '#saveEmployeeBtn',
   '#saveCandidateBtn',
   '#saveCandidateNoteBtn',
+  '#saveJanusAccountBtn',
+  '#saveJanusContactBtn',
+  '#janusSaveMeetingBtn',
+  '#janusSaveActivityBtn',
+  '#janusUploadDocumentBtn',
 ].join(', ');
+
+const DRAWER_LEVEL_FOOTERS: Record<string, string> = {
+  investigationDrawer: 'saveInvestigationBtn',
+  operationsIssueDrawer: 'saveOperationsIssueBtn',
+  careEngagementDrawer: 'saveCareEngagementBtn',
+};
 
 function escAttr(value: string): string {
   return value.replace(/"/g, '&quot;');
@@ -30,6 +47,14 @@ function panelHasFormFields(panel: HTMLElement): boolean {
   return Boolean(
     panel.querySelector('.field, textarea, select, .button-row, .file-upload-row, canvas')
   );
+}
+
+function isPanelVisible(panel: HTMLElement): boolean {
+  if (panel.classList.contains('hidden') || panel.hasAttribute('hidden')) return false;
+  if (panel.classList.contains('tab-panel')) {
+    return panel.classList.contains('active');
+  }
+  return true;
 }
 
 function findPanelSaveButton(panel: HTMLElement): HTMLButtonElement | null {
@@ -54,6 +79,7 @@ function findPanelSaveButton(panel: HTMLElement): HTMLButtonElement | null {
     if (button.classList.contains('hidden') || button.offsetParent === null) continue;
     const label = (button.textContent || '').toLowerCase();
     if (label.includes('print') || label.includes('pdf') || label.includes('invite')) continue;
+    if (label.includes('email')) continue;
     return button;
   }
 
@@ -61,7 +87,7 @@ function findPanelSaveButton(panel: HTMLElement): HTMLButtonElement | null {
 }
 
 function ensureStickyFooter(panel: HTMLElement, saveButton: HTMLButtonElement): void {
-  const footerId = `orbisMobileFormFooter-${panel.id}`;
+  const footerId = `orbisMobileFormFooter-${panel.id || panel.getAttribute('data-janus-drawer-panel') || panel.getAttribute('data-investigation-panel') || 'panel'}`;
   let footer = document.getElementById(footerId);
 
   if (!footer) {
@@ -92,9 +118,51 @@ function ensureStickyFooter(panel: HTMLElement, saveButton: HTMLButtonElement): 
     });
   }
 
-  const showFooter = isMobileLayout() && panel.classList.contains('active');
+  const showFooter = isMobileLayout() && isPanelVisible(panel);
   footer.classList.toggle('hidden', !showFooter);
   saveButton.classList.toggle('orbis-mobile-inline-save', showFooter);
+}
+
+function enhanceDrawerLevelFooter(drawerId: string): void {
+  const saveId = DRAWER_LEVEL_FOOTERS[drawerId];
+  if (!saveId) return;
+
+  const drawer = document.getElementById(drawerId);
+  const footer = drawer?.querySelector<HTMLElement>('.drawer-footer, .drawer-actions');
+  if (!drawer || !footer) return;
+
+  const mobile = isMobileLayout() && drawer.classList.contains('open');
+  footer.classList.toggle('orbis-mobile-drawer-footer', mobile);
+}
+
+function enhanceInvestigationMultiSelects(drawer: HTMLElement): void {
+  const selects = drawer.querySelectorAll<HTMLSelectElement>(
+    '#invTargetedEmployeesInput, #invFocusEmployeesInput'
+  );
+
+  selects.forEach((select) => {
+    const field = select.closest('.field');
+    if (!field) return;
+
+    const hint = field.querySelector<HTMLElement>('.muted');
+    if (hint && isMobileLayout()) {
+      if (!hint.dataset.desktopHint) {
+        hint.dataset.desktopHint = hint.textContent || '';
+      }
+      hint.textContent = 'Tap options to select one or more people.';
+    } else if (hint?.dataset.desktopHint) {
+      hint.textContent = hint.dataset.desktopHint;
+    }
+
+    select.classList.toggle('orbis-mobile-multi-select', isMobileLayout());
+    if (isMobileLayout()) {
+      select.size = Math.min(8, Math.max(4, select.options.length || 4));
+    } else if (select.dataset.desktopSize) {
+      select.size = Number(select.dataset.desktopSize) || 6;
+    } else {
+      select.dataset.desktopSize = String(select.size || 6);
+    }
+  });
 }
 
 function cleanupDrawerFormEnhancements(drawerId: string): void {
@@ -112,6 +180,11 @@ function cleanupDrawerFormEnhancements(drawerId: string): void {
   drawer.querySelectorAll('.orbis-mobile-form-footer').forEach((footer) => {
     footer.remove();
   });
+
+  drawer.querySelector('.drawer-footer, .drawer-actions')?.classList.remove('orbis-mobile-drawer-footer');
+  drawer.querySelectorAll('.orbis-mobile-multi-select').forEach((el) => {
+    el.classList.remove('orbis-mobile-multi-select');
+  });
 }
 
 function enhanceDrawerFormPanels(drawerId: string): void {
@@ -123,7 +196,18 @@ function enhanceDrawerFormPanels(drawerId: string): void {
     return;
   }
 
-  drawer.querySelectorAll<HTMLElement>('.tab-panel').forEach((panel) => {
+  enhanceDrawerLevelFooter(drawerId);
+
+  if (drawerId === 'investigationDrawer') {
+    enhanceInvestigationMultiSelects(drawer);
+  }
+
+  // Drawers with a single pinned footer don't need per-panel sticky saves.
+  if (DRAWER_LEVEL_FOOTERS[drawerId]) {
+    return;
+  }
+
+  drawer.querySelectorAll<HTMLElement>(PANEL_SELECTORS).forEach((panel) => {
     if (!panelHasFormFields(panel)) return;
 
     panel.classList.add('orbis-mobile-form-panel');
@@ -134,8 +218,14 @@ function enhanceDrawerFormPanels(drawerId: string): void {
       return;
     }
 
-    const footer = document.getElementById(`orbisMobileFormFooter-${panel.id}`);
-    footer?.remove();
+    const key =
+      panel.id ||
+      panel.getAttribute('data-janus-drawer-panel') ||
+      panel.getAttribute('data-investigation-panel') ||
+      '';
+    if (key) {
+      document.getElementById(`orbisMobileFormFooter-${key}`)?.remove();
+    }
   });
 }
 
@@ -179,10 +269,10 @@ function bindMobileFormsEvents(): void {
 
   bindDrawerTabEnhancement('employeeDrawer', '[data-tab]');
   bindDrawerTabEnhancement('candidateDrawer', '[data-candidate-tab]');
-  bindDrawerTabEnhancement('investigationDrawer', '[data-tab], .tab-btn');
+  bindDrawerTabEnhancement('investigationDrawer', '[data-investigation-tab]');
   bindDrawerTabEnhancement('operationsIssueDrawer', '[data-tab], .tab-btn');
   bindDrawerTabEnhancement('careEngagementDrawer', '[data-tab], .tab-btn');
-  bindDrawerTabEnhancement('janusAccountDrawer', '[data-tab], .tab-btn');
+  bindDrawerTabEnhancement('janusAccountDrawer', '[data-janus-drawer-tab]');
 
   window.addEventListener('orbis:layout-change', () => {
     if (isMobileLayout()) {

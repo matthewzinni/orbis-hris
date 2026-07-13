@@ -929,7 +929,9 @@ body[data-layout='mobile'] #janusAccountDrawer .drawer-body {
 }
 
 body[data-layout='mobile'] #employeeDrawer .orbis-mobile-segmented,
-body[data-layout='mobile'] #candidateDrawer .orbis-mobile-segmented {
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-segmented,
+body[data-layout='mobile'] #investigationDrawer .orbis-mobile-segmented,
+body[data-layout='mobile'] #janusAccountDrawer .orbis-mobile-segmented {
   display: flex;
   flex-wrap: nowrap;
   gap: 6px;
@@ -942,12 +944,16 @@ body[data-layout='mobile'] #candidateDrawer .orbis-mobile-segmented {
 }
 
 body[data-layout='mobile'] #employeeDrawer .orbis-mobile-segmented::-webkit-scrollbar,
-body[data-layout='mobile'] #candidateDrawer .orbis-mobile-segmented::-webkit-scrollbar {
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-segmented::-webkit-scrollbar,
+body[data-layout='mobile'] #investigationDrawer .orbis-mobile-segmented::-webkit-scrollbar,
+body[data-layout='mobile'] #janusAccountDrawer .orbis-mobile-segmented::-webkit-scrollbar {
   display: none;
 }
 
 body[data-layout='mobile'] #employeeDrawer .orbis-mobile-segmented .tab-btn,
-body[data-layout='mobile'] #candidateDrawer .orbis-mobile-segmented .tab-btn {
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-segmented .tab-btn,
+body[data-layout='mobile'] #investigationDrawer .orbis-mobile-segmented .tab-btn,
+body[data-layout='mobile'] #janusAccountDrawer .orbis-mobile-segmented .tab-btn {
   flex: 0 0 auto;
   min-height: var(--mobile-tap-min);
   min-width: var(--mobile-tap-min);
@@ -960,9 +966,32 @@ body[data-layout='mobile'] #employeeDrawer .field select,
 body[data-layout='mobile'] #employeeDrawer .field textarea,
 body[data-layout='mobile'] #candidateDrawer .field input,
 body[data-layout='mobile'] #candidateDrawer .field select,
-body[data-layout='mobile'] #candidateDrawer .field textarea {
+body[data-layout='mobile'] #candidateDrawer .field textarea,
+body[data-layout='mobile'] #investigationDrawer .field input,
+body[data-layout='mobile'] #investigationDrawer .field select,
+body[data-layout='mobile'] #investigationDrawer .field textarea,
+body[data-layout='mobile'] #operationsIssueDrawer .field input,
+body[data-layout='mobile'] #operationsIssueDrawer .field select,
+body[data-layout='mobile'] #operationsIssueDrawer .field textarea,
+body[data-layout='mobile'] #careEngagementDrawer .field input,
+body[data-layout='mobile'] #careEngagementDrawer .field select,
+body[data-layout='mobile'] #careEngagementDrawer .field textarea,
+body[data-layout='mobile'] #janusAccountDrawer .field input,
+body[data-layout='mobile'] #janusAccountDrawer .field select,
+body[data-layout='mobile'] #janusAccountDrawer .field textarea {
   min-height: var(--mobile-tap-min);
   font-size: 16px;
+}
+
+/* Touch targets — bump small buttons and default actions on mobile */
+body[data-layout='mobile'] .button.sm {
+  min-height: var(--mobile-tap-min);
+  min-width: var(--mobile-tap-min);
+  padding: 10px 14px;
+}
+
+body[data-layout='mobile'] .button:not(.icon-only):not(.drawer-close) {
+  min-height: var(--mobile-tap-min);
 }
 
 /* Home — stacked cards */
