@@ -30,6 +30,12 @@ function severityLabel(severity: HrInboxItem['severity']): string {
   return 'Open';
 }
 
+function leaveRequestIdFromItem(item: HrInboxItem): string | null {
+  if (item.kind !== 'leave_request') return null;
+  const match = /^leave:(.+)$/.exec(item.id);
+  return match?.[1]?.trim() || null;
+}
+
 function renderHrTaskCard(item: HrInboxItem): string {
   const payrollActions =
     item.kind === 'payroll_handoff' && item.route.type === 'payroll_handoff'
@@ -38,6 +44,14 @@ function renderHrTaskCard(item: HrInboxItem): string {
           <button type="button" class="button soft sm" data-mobile-payroll-action="confirmed" data-mobile-payroll-id="${esc(item.route.handoffId)}">Confirmed</button>
         </div>`
       : '';
+
+  const leaveId = leaveRequestIdFromItem(item);
+  const leaveActions = leaveId
+    ? `<div class="orbis-mobile-hr-task-actions">
+          <button type="button" class="button soft sm" data-mobile-leave-action="approve" data-mobile-leave-id="${esc(leaveId)}">Approve</button>
+          <button type="button" class="button soft sm" data-mobile-leave-action="deny" data-mobile-leave-id="${esc(leaveId)}">Deny</button>
+        </div>`
+    : '';
 
   return `
     <article class="orbis-mobile-hr-task-card severity-${esc(item.severity)}">
@@ -53,8 +67,18 @@ function renderHrTaskCard(item: HrInboxItem): string {
         <span class="orbis-mobile-hr-task-title">${esc(item.title)}</span>
         <span class="orbis-mobile-hr-task-detail muted">${esc(item.detail)}</span>
       </button>
-      ${payrollActions}
+      ${payrollActions}${leaveActions}
     </article>`;
+}
+
+function syncMobileAttentionDedup(): void {
+  const hrCard = document.getElementById('mobileHrTasksCard');
+  const attentionCard = document.getElementById('myTasksAttentionCard');
+  if (!attentionCard) return;
+
+  const hideDuplicate =
+    isMobileLayout() && Boolean(hrCard && !hrCard.classList.contains('hidden'));
+  attentionCard.classList.toggle('hidden', hideDuplicate);
 }
 
 async function openMobileInboxItem(item: HrInboxItem): Promise<void> {
@@ -142,6 +166,7 @@ export function renderMobileHrTasksPanel(): void {
 
   const showPanel = isMobileLayout() && (isAdminUser() || isSupervisorUser());
   card.classList.toggle('hidden', !showPanel);
+  syncMobileAttentionDedup();
 
   if (!showPanel) return;
 
@@ -195,6 +220,43 @@ function bindMobileTasksEvents(): void {
           }
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Could not update handoff.';
+          if (typeof window.showToast === 'function') {
+            window.showToast(message, 'error');
+          }
+        }
+      })();
+      return;
+    }
+
+    const leaveButton = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+      '[data-mobile-leave-action]'
+    );
+    if (leaveButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      const leaveId = leaveButton.dataset.mobileLeaveId || '';
+      const action = leaveButton.dataset.mobileLeaveAction;
+      if (!leaveId || (action !== 'approve' && action !== 'deny')) return;
+
+      void (async () => {
+        try {
+          if (action === 'approve') {
+            await window.approveLeaveRequestById?.(leaveId);
+          } else {
+            await window.denyLeaveRequestById?.(leaveId);
+          }
+          if (typeof window.loadHrInbox === 'function') {
+            await window.loadHrInbox(true);
+          }
+          renderMobileHrTasksPanel();
+          void refreshMobileTasksBadge();
+        } catch (err) {
+          const message =
+            err instanceof Error
+              ? err.message
+              : action === 'approve'
+                ? 'Could not approve leave request.'
+                : 'Could not deny leave request.';
           if (typeof window.showToast === 'function') {
             window.showToast(message, 'error');
           }

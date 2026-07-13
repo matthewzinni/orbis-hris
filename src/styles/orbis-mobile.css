@@ -1014,6 +1014,14 @@ body[data-layout='mobile'] #dashboardTop .mini-table-wrap table {
   min-width: 520px;
 }
 
+body[data-layout='mobile'] .orbis-mobile-home .mini-table-wrap,
+body[data-layout='mobile'] #dashboardTop .mini-table-wrap {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 body[data-layout='mobile'] #mobileDeptSummaryList:not(.hidden) + .mini-table-wrap {
   display: none;
 }

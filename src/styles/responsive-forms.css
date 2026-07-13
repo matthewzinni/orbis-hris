@@ -118,6 +118,55 @@ body[data-layout='mobile'] #investigationDrawer select.orbis-mobile-multi-select
   padding: 8px;
 }
 
+body[data-layout='mobile'] #investigationDrawer select.orbis-mobile-native-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  min-height: 0;
+}
+
+body[data-layout='mobile'] #investigationDrawer .orbis-mobile-multi-picker {
+  display: grid;
+  gap: 8px;
+  max-height: min(280px, 40dvh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px 0 8px;
+}
+
+body[data-layout='mobile'] #investigationDrawer .orbis-mobile-multi-picker-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: var(--mobile-tap-min);
+  padding: 10px 12px;
+  border: 1px solid var(--line, #dbe3ee);
+  border-radius: 12px;
+  background: var(--card, #fff);
+  font-size: 0.95rem;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+body[data-layout='mobile'] #investigationDrawer .orbis-mobile-multi-picker-option:has(input:checked) {
+  border-color: var(--blue-strong, #2563eb);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+body[data-layout='mobile'] #investigationDrawer .orbis-mobile-multi-picker-option input {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
 body[data-layout='mobile'] #employeeDrawer .field input[type='date'],
 body[data-layout='mobile'] #employeeDrawer .field input[type='time'],
 body[data-layout='mobile'] #employeeDrawer .field input[type='datetime-local'],
@@ -154,6 +203,19 @@ body[data-layout='mobile'] #operationsIssueDrawer .file-upload-row input[type='f
 body[data-layout='mobile'] #janusAccountDrawer input[type='file'] {
   width: 100%;
   max-width: 100%;
+}
+
+body[data-layout='mobile'] #janusAccountDrawer .file-upload-row,
+body[data-layout='mobile'] #janusAccountDrawer .file-upload-row input[type='file'] {
+  width: 100%;
+  max-width: 100%;
+}
+
+body[data-layout='mobile'] #janusAccountDrawer .file-upload-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
 }
 
 body[data-layout='mobile'] #employeeDrawer .tab-panel canvas,

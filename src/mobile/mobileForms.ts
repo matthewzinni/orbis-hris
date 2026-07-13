@@ -135,33 +135,103 @@ function enhanceDrawerLevelFooter(drawerId: string): void {
   footer.classList.toggle('orbis-mobile-drawer-footer', mobile);
 }
 
+function escText(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function clearInvestigationMultiPicker(select: HTMLSelectElement): void {
+  const field = select.closest('.field');
+  field?.querySelector('.orbis-mobile-multi-picker')?.remove();
+  select.classList.remove('orbis-mobile-native-hidden', 'orbis-mobile-multi-select');
+
+  const hint = field?.querySelector<HTMLElement>('.muted');
+  if (hint?.dataset.desktopHint) {
+    hint.textContent = hint.dataset.desktopHint;
+  }
+}
+
+function rebuildInvestigationMultiPicker(select: HTMLSelectElement): void {
+  const field = select.closest('.field');
+  if (!field) return;
+
+  const hint = field.querySelector<HTMLElement>('.muted');
+  if (hint) {
+    if (!hint.dataset.desktopHint) {
+      hint.dataset.desktopHint = hint.textContent || '';
+    }
+    hint.textContent = 'Tap people to select or deselect.';
+  }
+
+  select.classList.add('orbis-mobile-native-hidden', 'orbis-mobile-multi-select');
+
+  let picker = field.querySelector<HTMLElement>('.orbis-mobile-multi-picker');
+  if (!picker) {
+    picker = document.createElement('div');
+    picker.className = 'orbis-mobile-multi-picker';
+    picker.setAttribute('role', 'group');
+    picker.setAttribute(
+      'aria-label',
+      select.id === 'invTargetedEmployeesInput' ? 'Targeted employees' : 'Focus employees'
+    );
+    select.insertAdjacentElement('afterend', picker);
+  }
+
+  const options = Array.from(select.options).filter((option) => option.value);
+  picker.innerHTML = options.length
+    ? options
+        .map(
+          (option) => `
+      <label class="orbis-mobile-multi-picker-option">
+        <input
+          type="checkbox"
+          value="${escAttr(option.value)}"
+          ${option.selected ? 'checked' : ''}
+        />
+        <span>${escText(option.textContent || option.value)}</span>
+      </label>`
+        )
+        .join('')
+    : '<div class="muted">No employees available.</div>';
+
+  if (picker.dataset.bound !== '1') {
+    picker.dataset.bound = '1';
+    picker.addEventListener('change', (event) => {
+      const input = event.target as HTMLInputElement | null;
+      if (!input || input.type !== 'checkbox') return;
+      const option = Array.from(select.options).find((row) => row.value === input.value);
+      if (!option) return;
+      option.selected = input.checked;
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }
+
+  if (select.dataset.pickerObserved !== '1') {
+    select.dataset.pickerObserved = '1';
+    new MutationObserver(() => {
+      if (!isMobileLayout()) {
+        clearInvestigationMultiPicker(select);
+        return;
+      }
+      rebuildInvestigationMultiPicker(select);
+    }).observe(select, { childList: true });
+  }
+}
+
 function enhanceInvestigationMultiSelects(drawer: HTMLElement): void {
   const selects = drawer.querySelectorAll<HTMLSelectElement>(
     '#invTargetedEmployeesInput, #invFocusEmployeesInput'
   );
 
   selects.forEach((select) => {
-    const field = select.closest('.field');
-    if (!field) return;
-
-    const hint = field.querySelector<HTMLElement>('.muted');
-    if (hint && isMobileLayout()) {
-      if (!hint.dataset.desktopHint) {
-        hint.dataset.desktopHint = hint.textContent || '';
-      }
-      hint.textContent = 'Tap options to select one or more people.';
-    } else if (hint?.dataset.desktopHint) {
-      hint.textContent = hint.dataset.desktopHint;
+    if (!isMobileLayout()) {
+      clearInvestigationMultiPicker(select);
+      return;
     }
-
-    select.classList.toggle('orbis-mobile-multi-select', isMobileLayout());
-    if (isMobileLayout()) {
-      select.size = Math.min(8, Math.max(4, select.options.length || 4));
-    } else if (select.dataset.desktopSize) {
-      select.size = Number(select.dataset.desktopSize) || 6;
-    } else {
-      select.dataset.desktopSize = String(select.size || 6);
-    }
+    rebuildInvestigationMultiPicker(select);
   });
 }
 
@@ -182,9 +252,9 @@ function cleanupDrawerFormEnhancements(drawerId: string): void {
   });
 
   drawer.querySelector('.drawer-footer, .drawer-actions')?.classList.remove('orbis-mobile-drawer-footer');
-  drawer.querySelectorAll('.orbis-mobile-multi-select').forEach((el) => {
-    el.classList.remove('orbis-mobile-multi-select');
-  });
+  drawer
+    .querySelectorAll<HTMLSelectElement>('#invTargetedEmployeesInput, #invFocusEmployeesInput')
+    .forEach((select) => clearInvestigationMultiPicker(select));
 }
 
 function enhanceDrawerFormPanels(drawerId: string): void {

@@ -1,6 +1,26 @@
 /* Orbis Phase 4 — tables, search, dialogs, filters, empty/loading states */
 
 /* Scrollable table regions (settings, reports, janus, etc.) */
+body[data-layout='mobile'] .orbis-app-section,
+body[data-layout='mobile'] .orbis-workspace,
+body[data-layout='mobile'] #appMain,
+body[data-layout='mobile'] .page {
+  max-width: 100%;
+  min-width: 0;
+}
+
+body[data-layout='mobile'] .table-wrap,
+body[data-layout='mobile'] .mini-table-wrap,
+body[data-layout='mobile'] .care-matrix-wrap,
+body[data-layout='mobile'] .attendance-table-scroll,
+body[data-layout='mobile'] .org-chart-tree,
+body[data-layout='mobile'] .care-pulse-grid {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 body[data-layout='mobile'] .orbis-table-scroll-region {
   position: relative;
   display: block;

@@ -65,6 +65,8 @@
 .care-matrix-wrap {
   overflow-x: auto;
   margin-top: 4px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .care-matrix-table {
