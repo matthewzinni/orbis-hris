@@ -1624,27 +1624,42 @@ export function closeCandidateDrawer(): void {
     drawer.removeAttribute('style');
   }
 
+  const shouldResumeEmployee = resumeEmployeeDrawerOnCandidateClose;
+  resumeEmployeeDrawerOnCandidateClose = false;
+
   releaseDrawerScrollLock();
 
   if (employeeDrawer) {
-    if (resumeEmployeeDrawerOnCandidateClose) {
+    if (shouldResumeEmployee) {
       employeeDrawer.classList.remove('hidden');
       employeeDrawer.style.removeProperty('display');
       employeeDrawer.classList.add('open');
       employeeDrawer.setAttribute('aria-hidden', 'false');
+      if (backdrop) {
+        backdrop.classList.add('open');
+        backdrop.classList.remove('hidden');
+        backdrop.setAttribute('aria-hidden', 'false');
+        backdrop.style.setProperty('display', 'block', 'important');
+        backdrop.style.setProperty('visibility', 'visible', 'important');
+        backdrop.style.setProperty('opacity', '1', 'important');
+        backdrop.style.setProperty('z-index', '140', 'important');
+      }
       document.body.classList.add('orbis-drawer-open');
+      document.body.style.overflow = 'hidden';
     } else {
       hideEmployeeDrawerForCandidate();
       if (typeof window.closeEmployeeDrawer === 'function') {
         window.closeEmployeeDrawer();
       }
     }
-  } else if (!resumeEmployeeDrawerOnCandidateClose && typeof window.closeEmployeeDrawer === 'function') {
+  } else if (!shouldResumeEmployee && typeof window.closeEmployeeDrawer === 'function') {
     window.closeEmployeeDrawer();
   }
 
-  resumeEmployeeDrawerOnCandidateClose = false;
-  document.body.style.overflow = '';
+  if (!shouldResumeEmployee) {
+    document.body.style.removeProperty('overflow');
+  }
+
   currentCandidateId = null;
   currentLinkedEmployeeId = null;
   setInputValue('candidateLinkedEmployeeIdInput', '');

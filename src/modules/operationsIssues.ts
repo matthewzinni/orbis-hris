@@ -581,7 +581,38 @@ export function closeOperationsIssueDrawer(): void {
 }
 
 export async function openOperationsIssueDrawer(issueId: string): Promise<void> {
-  const issue = cachedOperationsIssues.find((row) => String(row.id) === String(issueId));
+  let issue = cachedOperationsIssues.find((row) => String(row.id) === String(issueId));
+
+  if (!issue?.id) {
+    if (!operationsIssuesHydrated) {
+      await loadOperationsIssues();
+      issue = cachedOperationsIssues.find((row) => String(row.id) === String(issueId));
+    }
+  }
+
+  if (!issue?.id) {
+    const { data, error } = await supabaseClient
+      .from('operations_issues')
+      .select('*')
+      .eq('id', issueId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('[Operations] Could not load issue:', error);
+    }
+
+    if (data) {
+      issue = data as OperationsIssue;
+      const existingIndex = cachedOperationsIssues.findIndex(
+        (row) => String(row.id) === String(issueId)
+      );
+      if (existingIndex >= 0) {
+        cachedOperationsIssues[existingIndex] = issue;
+      } else {
+        cachedOperationsIssues.push(issue);
+      }
+    }
+  }
 
   if (!issue?.id) {
     showToast('Issue not found.', 'error');

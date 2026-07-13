@@ -1,8 +1,21 @@
 import { isMobileLayout } from './mobileLayout';
 
-type DrawerId = 'employeeDrawer' | 'candidateDrawer';
+type DrawerId =
+  | 'employeeDrawer'
+  | 'candidateDrawer'
+  | 'investigationDrawer'
+  | 'operationsIssueDrawer'
+  | 'careEngagementDrawer'
+  | 'janusAccountDrawer';
 
-const MOBILE_DRAWER_IDS: DrawerId[] = ['employeeDrawer', 'candidateDrawer'];
+const MOBILE_DRAWER_IDS: DrawerId[] = [
+  'employeeDrawer',
+  'candidateDrawer',
+  'investigationDrawer',
+  'operationsIssueDrawer',
+  'careEngagementDrawer',
+  'janusAccountDrawer',
+];
 
 function closeMobileDrawerOnSectionChange(): void {
   if (typeof window.closeActiveDrawer === 'function') {
@@ -39,15 +52,12 @@ function bindMobileDrawerEvents(): void {
   if ((window as { __mobileDrawerBound?: boolean }).__mobileDrawerBound) return;
   (window as { __mobileDrawerBound?: boolean }).__mobileDrawerBound = true;
 
-  window.addEventListener('orbis:section-change', (event) => {
+  window.addEventListener('orbis:section-change', () => {
     if (!isMobileLayout()) return;
-    const sectionId = (event as CustomEvent<{ sectionId?: string }>).detail?.sectionId;
-    const employeeDrawer = document.getElementById('employeeDrawer');
-    const candidateDrawer = document.getElementById('candidateDrawer');
-    const drawerOpen =
-      employeeDrawer?.classList.contains('open') || candidateDrawer?.classList.contains('open');
-    if (!drawerOpen) return;
-    if (sectionId === 'employeesView' || sectionId === 'candidatesView') return;
+    const anyOpen = MOBILE_DRAWER_IDS.some((id) =>
+      document.getElementById(id)?.classList.contains('open')
+    );
+    if (!anyOpen) return;
     closeMobileDrawerOnSectionChange();
   });
 

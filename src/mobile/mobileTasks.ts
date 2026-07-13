@@ -212,7 +212,6 @@ function bindMobileTasksEvents(): void {
     const id = button.dataset.mobileInboxId || '';
     const item = window.__hrInboxCache?.find((row) => row.id === id);
     if (!item) return;
-    if (item.kind === 'payroll_handoff') return;
     void openMobileInboxItem(item);
   });
 

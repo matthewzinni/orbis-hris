@@ -8,7 +8,7 @@ import {
 } from './mobileNav';
 import { isMobileLayout } from './mobileLayout';
 import { initMobileNavDrawer, closeMobileNavDrawer } from './mobileNavDrawer';
-import { closeAllMobileOverlays, syncMobileSheetOpenClass } from './mobileOverlays';
+import { closeAllMobileOverlays, openMobileSheetExclusive, syncMobileSheetOpenClass } from './mobileOverlays';
 import { initMobilePeople } from './mobilePeople';
 import { initMobileHome } from './mobileHome';
 import { initMobileDrawer } from './mobileDrawer';
@@ -103,9 +103,7 @@ function openMoreSheet(): void {
   const sheet = document.getElementById('orbisMobileMoreSheet');
   if (!sheet) return;
   renderMoreMenu();
-  sheet.classList.add('open');
-  sheet.setAttribute('aria-hidden', 'false');
-  syncMobileSheetOpenClass();
+  openMobileSheetExclusive('orbisMobileMoreSheet');
 }
 
 function closeMoreSheet(): void {

@@ -8,6 +8,7 @@ import {
   resolveCurrentUserDisplayName,
 } from '../services/internalJobBoardAccess';
 import { getLinkedEmployeeId, isAdminUser, isEmployeeUser, isSupervisorUser } from '../services/access';
+import { isMobileLayout } from '../mobile/mobileLayout';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { recordInternalJobPostingEvent } from './internalJobBoardEvents';
 import {
@@ -36,6 +37,14 @@ function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
     return window.safeGet(id) as T | null;
   }
   return document.getElementById(id) as T | null;
+}
+
+function syncInternalJobMobileList(listId: string, html: string): void {
+  const mobileList = safeGet(listId);
+  if (!mobileList) return;
+  const show = isMobileLayout();
+  mobileList.classList.toggle('hidden', !show);
+  mobileList.innerHTML = show ? html : '';
 }
 
 function esc(value: unknown): string {
@@ -251,7 +260,6 @@ function filteredManagePostings(): InternalJobPosting[] {
 function renderManagePostings(): void {
   const tbody = safeGet<HTMLTableSectionElement>('internalJobManageBody');
   const countEl = safeGet('internalJobManageCount');
-  const mobileList = safeGet('mobileInternalJobManageList');
   const postings = filteredManagePostings();
 
   if (countEl) {
@@ -262,9 +270,10 @@ function renderManagePostings(): void {
 
   if (!postings.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="empty">No postings match your filters.</td></tr>';
-    if (mobileList) {
-      mobileList.innerHTML = '<div class="empty">No postings match your filters.</div>';
-    }
+    syncInternalJobMobileList(
+      'mobileInternalJobManageList',
+      '<div class="orbis-mobile-empty muted">No postings match your filters.</div>'
+    );
     return;
   }
 
@@ -304,8 +313,9 @@ function renderManagePostings(): void {
     })
     .join('');
 
-  if (mobileList) {
-    mobileList.innerHTML = postings
+  syncInternalJobMobileList(
+    'mobileInternalJobManageList',
+    postings
       .map(
         (posting) => `
         <article class="orbis-mobile-module-card">
@@ -320,8 +330,8 @@ function renderManagePostings(): void {
         </article>
       `
       )
-      .join('');
-  }
+      .join('')
+  );
 }
 
 function filteredPipelineInterests(): InternalJobInterest[] {
@@ -339,7 +349,6 @@ function filteredPipelineInterests(): InternalJobInterest[] {
 function renderPipeline(): void {
   const tbody = safeGet<HTMLTableSectionElement>('internalJobPipelineBody');
   const countEl = safeGet('internalJobPipelineCount');
-  const mobileList = safeGet('mobileInternalJobPipelineList');
   const interests = filteredPipelineInterests();
 
   if (countEl) {
@@ -351,9 +360,10 @@ function renderPipeline(): void {
   if (!interests.length) {
     tbody.innerHTML =
       '<tr><td colspan="7" class="empty">No internal interest submissions yet.</td></tr>';
-    if (mobileList) {
-      mobileList.innerHTML = '<div class="empty">No internal interest submissions yet.</div>';
-    }
+    syncInternalJobMobileList(
+      'mobileInternalJobPipelineList',
+      '<div class="orbis-mobile-empty muted">No internal interest submissions yet.</div>'
+    );
     return;
   }
 
@@ -395,8 +405,9 @@ function renderPipeline(): void {
     })
     .join('');
 
-  if (mobileList) {
-    mobileList.innerHTML = interests
+  syncInternalJobMobileList(
+    'mobileInternalJobPipelineList',
+    interests
       .map((interest) => {
         const postingTitle =
           interest.internal_job_postings?.title ||
@@ -411,8 +422,8 @@ function renderPipeline(): void {
           </article>
         `;
       })
-      .join('');
-  }
+      .join('')
+  );
 }
 
 function updateDashboardMetrics(): void {

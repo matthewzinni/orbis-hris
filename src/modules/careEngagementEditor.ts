@@ -884,4 +884,5 @@ export function bindCareEngagementEditorEvents(): void {
 
 window.closeCareEngagementDrawer = closeCareEngagementDrawer;
 window.isCareEngagementDrawerOpen = isCareEngagementDrawerOpen;
+window.openCareItemEditor = openCareItemEditor;
 

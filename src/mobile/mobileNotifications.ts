@@ -1,5 +1,5 @@
 import { isMobileLayout } from './mobileLayout';
-import { syncMobileSheetOpenClass } from './mobileOverlays';
+import { openMobileSheetExclusive, syncMobileSheetOpenClass } from './mobileOverlays';
 import { getWorkspaceAlerts } from '../ui/workspaceAlerts';
 import { switchMainView } from '../ui/navigation';
 import { refreshMobileTasksBadge } from './mobileBadges';
@@ -65,10 +65,7 @@ function openNotificationsSheet(): void {
 
   renderNotificationSheet(getWorkspaceAlerts());
   void refreshMobileTasksBadge();
-
-  sheet.classList.add('open');
-  sheet.setAttribute('aria-hidden', 'false');
-  syncMobileSheetOpenClass();
+  openMobileSheetExclusive('orbisMobileNotificationsSheet');
 }
 
 function closeNotificationsSheet(): void {

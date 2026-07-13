@@ -46,6 +46,21 @@ export function closeAllMobileSheets(): void {
   document.body.classList.remove('orbis-mobile-sheet-open');
 }
 
+export function openMobileSheetExclusive(sheetId: string): void {
+  MOBILE_SHEET_IDS.forEach((id) => {
+    const sheet = document.getElementById(id);
+    if (!sheet) return;
+    if (id === sheetId) {
+      sheet.classList.add('open');
+      sheet.setAttribute('aria-hidden', 'false');
+      return;
+    }
+    sheet.classList.remove('open');
+    sheet.setAttribute('aria-hidden', 'true');
+  });
+  syncMobileSheetOpenClass();
+}
+
 export function closeAllMobileOverlays(): void {
   closeAllMobileSheets();
 

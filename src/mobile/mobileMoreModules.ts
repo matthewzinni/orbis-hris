@@ -322,9 +322,17 @@ function bindMobileMoreModuleEvents(): void {
     if (care && target?.closest('#mobileCareList')) {
       event.preventDefault();
       const id = care.dataset.careItemId || '';
-      document
-        .querySelector<HTMLElement>(`#careTrackerBody [data-care-item-id="${id}"]`)
-        ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      if (!id) return;
+      const editBtn = document.querySelector<HTMLElement>(
+        `#careTrackerBody [data-edit-care-item="${id}"]`
+      );
+      if (editBtn) {
+        editBtn.click();
+        return;
+      }
+      if (typeof window.showToast === 'function') {
+        window.showToast('Could not open care item editor.', 'error');
+      }
       return;
     }
 

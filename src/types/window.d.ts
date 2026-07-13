@@ -362,6 +362,7 @@ declare global {
     loadEmployeePayrollHandoffs?: (employeeId: string) => Promise<void>;
     closeCareEngagementDrawer?: () => void;
     isCareEngagementDrawerOpen?: () => boolean;
+    openCareItemEditor?: (item: CareTrackerItem | null, presetEmployeeId?: string) => Promise<void>;
     loadRecentActivity?: () => Promise<void>;
     getResolvedNoteEmployeeId?: (employeeId?: string | null) => string;
     startNoteEdit?: (note: EmployeeNote) => void;

@@ -38,6 +38,14 @@ function findPanelSaveButton(panel: HTMLElement): HTMLButtonElement | null {
     return explicit;
   }
 
+  // Candidate Interview tab has no local save — edits persist via profile Save Candidate.
+  if (panel.id === 'candidate-tab-interview') {
+    const profileSave = document.getElementById('saveCandidateBtn') as HTMLButtonElement | null;
+    if (profileSave && !profileSave.classList.contains('hidden')) {
+      return profileSave;
+    }
+  }
+
   const primaryButtons = panel.querySelectorAll<HTMLButtonElement>(
     '.card-body > .button.primary, .button-row .button.primary'
   );
