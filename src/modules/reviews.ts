@@ -607,6 +607,9 @@ export async function saveReviewRecord(): Promise<void> {
   if (typeof window.loadPerformanceReviewSupervisorNotify === 'function') {
     void window.loadPerformanceReviewSupervisorNotify();
   }
+  if (typeof window.loadCompletedPerformanceReviewsLedgerPanel === 'function') {
+    void window.loadCompletedPerformanceReviewsLedgerPanel();
+  }
   } finally {
     isReviewSaveInProgress = false;
   }

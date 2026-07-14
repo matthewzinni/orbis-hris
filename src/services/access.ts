@@ -50,6 +50,7 @@ export {
   canAccessPerformanceReviews,
   canEditEmployeeAdmin,
   canAdjustPtoBalance,
+  canViewCompletedPerformanceReviewsLedger,
   canViewDisciplineReports,
   hasOrgWideDisciplineAccess,
   canAccessDisciplineForEmployee,
@@ -102,6 +103,7 @@ import {
   canAccessPerformanceReviews,
   canEditEmployeeAdmin,
   canAdjustPtoBalance,
+  canViewCompletedPerformanceReviewsLedger,
   canViewDisciplineReports,
   hasOrgWideDisciplineAccess,
   canAccessDisciplineForEmployee,
@@ -139,6 +141,7 @@ window.applyEmployeePortalView = applyEmployeePortalView;
 window.canAccessPerformanceReviews = canAccessPerformanceReviews;
 window.canEditEmployeeAdmin = canEditEmployeeAdmin;
 window.canAdjustPtoBalance = canAdjustPtoBalance;
+window.canViewCompletedPerformanceReviewsLedger = canViewCompletedPerformanceReviewsLedger;
 window.canViewDisciplineReports = canViewDisciplineReports;
 window.hasOrgWideDisciplineAccess = hasOrgWideDisciplineAccess;
 window.canAccessDisciplineForEmployee = canAccessDisciplineForEmployee;

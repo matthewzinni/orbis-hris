@@ -235,6 +235,54 @@
   color: var(--muted, #64748b);
 }
 
+.completed-reviews-ledger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(520px, 55vh);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.completed-reviews-ledger-row {
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: 14px;
+  background: var(--surface-muted, #f8fafc);
+  overflow: hidden;
+}
+
+.completed-reviews-ledger-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.completed-reviews-ledger-main:hover,
+.completed-reviews-ledger-main:focus-visible {
+  background: rgba(37, 99, 235, 0.06);
+  outline: none;
+}
+
+.completed-reviews-ledger-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.completed-reviews-ledger-detail,
+.completed-reviews-ledger-meta {
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
 .performance-review-supervisor-notify-list {
   display: flex;
   flex-direction: column;

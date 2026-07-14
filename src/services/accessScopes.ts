@@ -62,6 +62,11 @@ export function canAdjustPtoBalance(): boolean {
   return getCurrentAuthEmail() === PTO_BALANCE_EDITOR_EMAIL;
 }
 
+/** Private org-wide completed performance-review ledger is Matthew-only. */
+export function canViewCompletedPerformanceReviewsLedger(): boolean {
+  return getCurrentAuthEmail() === PTO_BALANCE_EDITOR_EMAIL;
+}
+
 export function hasOrgWideDisciplineAccess(): boolean {
   return getOrgWideDisciplineEmails().has(getCurrentAuthEmail());
 }

@@ -22,7 +22,11 @@ vi.mock('../config/instanceConfig', () => ({
 }));
 
 import { getCurrentUserAccess } from './accessState';
-import { canAdjustPtoBalance, PTO_BALANCE_EDITOR_EMAIL } from './accessScopes';
+import {
+  canAdjustPtoBalance,
+  canViewCompletedPerformanceReviewsLedger,
+  PTO_BALANCE_EDITOR_EMAIL,
+} from './accessScopes';
 
 describe('canAdjustPtoBalance', () => {
   beforeEach(() => {
@@ -46,5 +50,25 @@ describe('canAdjustPtoBalance', () => {
   it('blocks when no email is present', () => {
     vi.mocked(getCurrentUserAccess).mockReturnValue(null);
     expect(canAdjustPtoBalance()).toBe(false);
+  });
+});
+
+describe('canViewCompletedPerformanceReviewsLedger', () => {
+  beforeEach(() => {
+    vi.mocked(getCurrentUserAccess).mockReset();
+  });
+
+  it('allows only Matthew Zinni email', () => {
+    vi.mocked(getCurrentUserAccess).mockReturnValue({
+      email: PTO_BALANCE_EDITOR_EMAIL,
+    } as never);
+    expect(canViewCompletedPerformanceReviewsLedger()).toBe(true);
+  });
+
+  it('blocks other org-wide admins', () => {
+    vi.mocked(getCurrentUserAccess).mockReturnValue({
+      email: 'brent@btwglobal.com',
+    } as never);
+    expect(canViewCompletedPerformanceReviewsLedger()).toBe(false);
   });
 });

@@ -410,6 +410,7 @@ declare global {
     toggleOffboardingTask?: (taskId: string, isComplete: boolean) => Promise<void>;
     createDefaultOffboardingTasks?: (employeeId: string) => Promise<void>;
     loadPerformanceReviewSupervisorNotify?: () => Promise<void>;
+    loadCompletedPerformanceReviewsLedgerPanel?: () => Promise<void>;
     refreshEmployeeDrawer?: () => Promise<void>;
     deleteEmployeeRecord?: () => Promise<void>;
     selectedEmployeeId?: string | null;
@@ -449,6 +450,7 @@ declare global {
     isSupervisorUser?: () => boolean;
     canEditEmployeeAdmin?: (employee?: EmployeeLike | null) => boolean;
     canAdjustPtoBalance?: () => boolean;
+    canViewCompletedPerformanceReviewsLedger?: () => boolean;
     employeeMatchesSupervisorAccess?: (employee: EmployeeLike) => boolean;
     applyAdminDashboardView?: () => void;
     applySupervisorDashboardView?: () => void;

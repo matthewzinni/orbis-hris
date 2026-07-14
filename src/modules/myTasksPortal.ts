@@ -488,6 +488,10 @@ export async function loadMyTasksPortal(): Promise<void> {
     void window.loadPerformanceReviewSupervisorNotify();
   }
 
+  if (typeof window.loadCompletedPerformanceReviewsLedgerPanel === 'function') {
+    void window.loadCompletedPerformanceReviewsLedgerPanel();
+  }
+
   let employeeId = getLinkedEmployeeId();
   if (!employeeId) {
     employeeId = (await ensureLinkedEmployeeRecord()) || '';
