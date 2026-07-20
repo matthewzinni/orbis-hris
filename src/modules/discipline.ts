@@ -6,7 +6,6 @@ import {
   getDrawerEmployee,
   getEmployeeId,
   loadEmployeeRecordHistory,
-  renderBasicDashboardKpisIfAvailable,
   saveEmployeeRecordRow,
   setDrawerInputValue,
   setRecordEditModeUi,
@@ -237,7 +236,13 @@ function bindDisciplineExtraActions(
 
 async function refreshDisciplineDependentUi(employeeId: string): Promise<void> {
   await loadEmployeeDiscipline(employeeId);
-  renderBasicDashboardKpisIfAvailable();
+  // Open Discipline KPI comes from loadSummaryMetrics (not the basic roster refresh).
+  // Basic KPI refresh preserves a stale discipline tooltip after save/delete.
+  if (typeof window.loadSummaryMetrics === 'function') {
+    await window.loadSummaryMetrics();
+  } else if (typeof window.renderBasicDashboardKpis === 'function') {
+    window.renderBasicDashboardKpis();
+  }
 }
 
 export async function loadEmployeeDiscipline(employeeId: string): Promise<void> {
