@@ -68,9 +68,8 @@ async function refreshDashboardAfterNoteChange(): Promise<void> {
     await window.loadRecentActivity();
   }
 
-  if (typeof window.loadSummaryMetrics === 'function') {
-    await window.loadSummaryMetrics();
-  }
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('notes');
 
   if (typeof window.loadReviewDashboard === 'function') {
     await window.loadReviewDashboard();

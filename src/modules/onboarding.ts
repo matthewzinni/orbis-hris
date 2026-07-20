@@ -276,6 +276,8 @@ export async function updateOnboardingTaskField(
   }
 
   await loadOnboardingTasks(getCurrentEmployeeId());
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('onboarding');
 }
 
 export async function toggleOnboardingTask(taskId: string, isComplete: boolean): Promise<void> {
@@ -296,6 +298,8 @@ export async function toggleOnboardingTask(taskId: string, isComplete: boolean):
   }
 
   await loadOnboardingTasks(getCurrentEmployeeId());
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('onboarding');
 }
 
 window.loadOnboardingTasks = loadOnboardingTasks;

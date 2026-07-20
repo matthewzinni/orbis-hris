@@ -24,7 +24,7 @@ export async function fetchEmployeeNextStayInterviewDate(
 
   const { data, error } = await supabaseClient
     .from('employees')
-    .select('next_review_date')
+    .select('next_stay_interview_date, next_review_date')
     .eq('id', recordId)
     .maybeSingle();
 
@@ -33,7 +33,11 @@ export async function fetchEmployeeNextStayInterviewDate(
     return null;
   }
 
-  return String(data?.next_review_date || '').trim() || null;
+  return (
+    String(data?.next_stay_interview_date || '').trim() ||
+    String(data?.next_review_date || '').trim() ||
+    null
+  );
 }
 
 export async function fetchLatestStayInterviewDate(
@@ -86,7 +90,7 @@ export async function syncEmployeeNextStayInterviewFromLastDate(
 
   const { error } = await supabaseClient
     .from('employees')
-    .update({ next_review_date: nextDate })
+    .update({ next_stay_interview_date: nextDate })
     .eq('id', recordId);
 
   if (error) {

@@ -61,7 +61,7 @@ export interface Investigation {
   primary_employee_id?: string | null;
   targeted_employee_id?: string | null;
   linked_incident_report_id?: string | null;
-  linked_discipline_report_id?: string | null;
+  linked_discipline_report_id?: number | string | null;
   ai_guidance?: string | null;
   created_at?: string;
   updated_at?: string;

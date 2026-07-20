@@ -119,9 +119,8 @@ async function refreshAfterFlagChange(employee: EmployeeRow): Promise<void> {
     await window.loadEmployeeNotes(employeeId);
   }
 
-  if (typeof window.loadSummaryMetrics === 'function') {
-    await window.loadSummaryMetrics();
-  }
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('flags');
 
   if (typeof window.loadRiskEmployeesFallback === 'function') {
     await window.loadRiskEmployeesFallback();

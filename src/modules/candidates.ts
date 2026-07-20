@@ -593,10 +593,8 @@ async function resolveCurrentCandidateId(): Promise<string> {
 
 async function refreshCandidatesUi(): Promise<void> {
   await loadCandidates();
-
-  if (typeof window.renderBasicDashboardKpis === 'function') {
-    window.renderBasicDashboardKpis();
-  }
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('employeeLifecycle');
 }
 
 export async function loadCandidates(): Promise<void> {

@@ -128,6 +128,15 @@ export function normalizeEmployee(
 
   const hireDateRaw = String(employee.hire_date || employee.hireDate || '');
 
+  const nextStayRaw = String(
+    employee.next_stay_interview_date ||
+      employee.nextStayInterviewDate ||
+      employee.next_review_date ||
+      employee.nextReviewDate ||
+      employee.nextReview ||
+      ''
+  );
+
   const nextReviewRaw = String(
     employee.next_review_date || employee.nextReviewDate || employee.nextReview || ''
   );
@@ -135,6 +144,7 @@ export function normalizeEmployee(
   const hireDate = parseLocalDate(hireDateRaw);
 
   const nextReview = parseLocalDate(nextReviewRaw);
+  const nextStay = parseLocalDate(nextStayRaw);
 
   return {
     ...employee,
@@ -172,6 +182,9 @@ export function normalizeEmployee(
 
     nextReview,
     next_review_date: nextReviewRaw,
+
+    nextStayInterviewDate: nextStay,
+    next_stay_interview_date: nextStayRaw,
 
     tenureMonths: normalizeNumber(employee.tenureMonths || employee.tenure_months),
 

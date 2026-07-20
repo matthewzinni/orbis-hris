@@ -94,9 +94,8 @@ export async function runEmployeeTerminationSideEffects(input: {
     }
   }
 
-  if (typeof window.loadHrInbox === 'function') {
-    void window.loadHrInbox(true);
-  }
+  const { refreshDerivedUiProfile } = await import('./derivedDataRefresh');
+  await refreshDerivedUiProfile('employeeLifecycle');
 
   return { offboardingReady, payrollHandoffs, warnings };
 }

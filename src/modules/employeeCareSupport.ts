@@ -294,6 +294,8 @@ async function confirmDeleteDrawerRecord(
   if (typeof window.ensureCareEngagementLoaded === 'function') {
     window.ensureCareEngagementLoaded(true);
   }
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('care');
   await loadEmployeeCareSupport(employeeId);
 }
 

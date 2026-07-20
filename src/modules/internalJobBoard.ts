@@ -789,9 +789,8 @@ async function savePostingRecord(): Promise<void> {
   boardHydrated = false;
   await loadInternalJobBoard(true);
 
-  if (typeof window.loadHrInbox === 'function') {
-    void window.loadHrInbox();
-  }
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('jobBoard');
   if (typeof window.updateWorkspaceAlerts === 'function') {
     window.updateWorkspaceAlerts();
   }
@@ -893,9 +892,8 @@ async function submitInterest(postingId: string): Promise<void> {
     showToast('Interest submitted — HR and your hiring manager have been notified.');
     renderOpenPostings();
 
-    if (typeof window.loadHrInbox === 'function') {
-      void window.loadHrInbox();
-    }
+    const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+    await refreshDerivedUiProfile('jobBoard');
     if (typeof window.updateWorkspaceAlerts === 'function') {
       window.updateWorkspaceAlerts();
     }
@@ -939,9 +937,8 @@ async function updateInterestStatus(interestId: string, status: InternalJobInter
   renderPipeline();
   updateDashboardMetrics();
 
-  if (typeof window.loadHrInbox === 'function') {
-    void window.loadHrInbox();
-  }
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('jobBoard');
 }
 
 async function showPostingDetails(postingId: string): Promise<void> {

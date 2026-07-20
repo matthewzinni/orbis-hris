@@ -12,6 +12,7 @@ import {
   type EmployeeLike,
   type EmployeeRecordRow,
 } from '../services/employeeRecordCrud';
+import { refreshDerivedUiProfile } from '../services/derivedDataRefresh';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 import {
   clearCanvasSignature,
@@ -45,6 +46,7 @@ const EDIT_UI = {
 };
 
 let currentDisciplineId: string | null = null;
+let isDisciplineSaveInProgress = false;
 
 function normalizeDateInputValue(value: unknown): string {
   const raw = String(value ?? '').trim();
@@ -236,13 +238,7 @@ function bindDisciplineExtraActions(
 
 async function refreshDisciplineDependentUi(employeeId: string): Promise<void> {
   await loadEmployeeDiscipline(employeeId);
-  // Open Discipline KPI comes from loadSummaryMetrics (not the basic roster refresh).
-  // Basic KPI refresh preserves a stale discipline tooltip after save/delete.
-  if (typeof window.loadSummaryMetrics === 'function') {
-    await window.loadSummaryMetrics();
-  } else if (typeof window.renderBasicDashboardKpis === 'function') {
-    window.renderBasicDashboardKpis();
-  }
+  await refreshDerivedUiProfile('discipline');
 }
 
 export async function loadEmployeeDiscipline(employeeId: string): Promise<void> {
@@ -348,56 +344,67 @@ export async function deleteDisciplineRecord(recordId: string, employeeId: strin
 }
 
 export async function saveDisciplineRecord(): Promise<void> {
-  stopAllDictation();
-
-  const employee = getDrawerEmployee();
-  const employeeId = getEmployeeId(employee);
-
-  if (!employeeId) {
-    showToast('Open an employee before saving a discipline record.', 'error');
+  if (isDisciplineSaveInProgress) {
+    showToast('Discipline save already in progress. Please wait.', 'error');
     return;
   }
 
-  const disciplinePayload = buildDisciplinePayload(employeeId);
-  if (!disciplinePayload.incident_date || !disciplinePayload.description) {
-    showToast('Enter an incident date and description before saving.', 'error');
-    return;
-  }
+  isDisciplineSaveInProgress = true;
 
-  const recordId = currentDisciplineId || window.currentDisciplineId;
-  const result = await saveEmployeeRecordRow<DisciplineRecord>(
-    TABLE,
-    disciplinePayload,
-    recordId,
-    {
-      logPrefix: 'Discipline',
-      stripMissingColumns: false,
-      updateMatch: recordId ? { employee_id: employeeId } : undefined,
+  try {
+    stopAllDictation();
+
+    const employee = getDrawerEmployee();
+    const employeeId = getEmployeeId(employee);
+
+    if (!employeeId) {
+      showToast('Open an employee before saving a discipline record.', 'error');
+      return;
     }
-  );
 
-  if (result.error) {
-    console.error('[Discipline] Save failed:', result.error);
-    showToast(result.error.message || 'Could not save discipline record.', 'error');
-    return;
+    const disciplinePayload = buildDisciplinePayload(employeeId);
+    if (!disciplinePayload.incident_date || !disciplinePayload.description) {
+      showToast('Enter an incident date and description before saving.', 'error');
+      return;
+    }
+
+    const recordId = currentDisciplineId || window.currentDisciplineId;
+    const result = await saveEmployeeRecordRow<DisciplineRecord>(
+      TABLE,
+      disciplinePayload,
+      recordId,
+      {
+        logPrefix: 'Discipline',
+        stripMissingColumns: false,
+        updateMatch: recordId ? { employee_id: employeeId } : undefined,
+      }
+    );
+
+    if (result.error) {
+      console.error('[Discipline] Save failed:', result.error);
+      showToast(result.error.message || 'Could not save discipline record.', 'error');
+      return;
+    }
+
+    const savedRecord = Array.isArray(result.data) ? result.data[0] : null;
+    const savedRecordId = String(savedRecord?.id || recordId || '').trim();
+
+    showToast(recordId ? 'Discipline report updated.' : 'Discipline report saved.');
+
+    if (savedRecordId) {
+      setDisciplineSignatureContext(savedRecordId, employee);
+    }
+
+    currentDisciplineId = null;
+    window.currentDisciplineId = null;
+    window.currentDisciplineReportId = null;
+    clearRecordEditModeUi(EDIT_UI);
+    resetDisciplineForm();
+
+    await refreshDisciplineDependentUi(employeeId);
+  } finally {
+    isDisciplineSaveInProgress = false;
   }
-
-  const savedRecord = Array.isArray(result.data) ? result.data[0] : null;
-  const savedRecordId = String(savedRecord?.id || recordId || '').trim();
-
-  showToast(recordId ? 'Discipline report updated.' : 'Discipline report saved.');
-
-  if (savedRecordId) {
-    setDisciplineSignatureContext(savedRecordId, employee);
-  }
-
-  currentDisciplineId = null;
-  window.currentDisciplineId = null;
-  window.currentDisciplineReportId = null;
-  clearRecordEditModeUi(EDIT_UI);
-  resetDisciplineForm();
-
-  await refreshDisciplineDependentUi(employeeId);
 }
 
 window.loadEmployeeDiscipline = loadEmployeeDiscipline;

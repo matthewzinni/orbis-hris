@@ -6,6 +6,7 @@ import {
   countInHouseFteEmployees,
   isActiveDashboardEmployee,
 } from '../services/employeeUtils';
+import { isOpenDisciplineStatus } from '../services/hrIntelligence';
 
 type EmployeeRow = Record<string, unknown>;
 
@@ -172,7 +173,7 @@ function isRecordInScope(employeeId: string, scope: Set<string>): boolean {
   return scope.has(String(employeeId || '').trim());
 }
 
-function isOpenErStatus(status: string): boolean {
+function isOpenIncidentStatus(status: string): boolean {
   return String(status || '').trim().toLowerCase() !== 'closed';
 }
 
@@ -361,10 +362,10 @@ async function loadErTrendsReport(): Promise<void> {
     ) as IncidentReportRow[];
 
     const openDiscipline = disciplineRows.filter((row) =>
-      isOpenErStatus(String(row.report_status || ''))
+      isOpenDisciplineStatus(row.report_status)
     ).length;
     const openIncidents = incidentRows.filter((row) =>
-      isOpenErStatus(String(row.status || ''))
+      isOpenIncidentStatus(String(row.status || ''))
     ).length;
 
     setSummary('reportsErOpenDiscipline', openDiscipline);

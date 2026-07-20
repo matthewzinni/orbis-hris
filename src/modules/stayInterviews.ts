@@ -118,6 +118,8 @@ function applyNextStayInterviewToEmployeeState(
   employee: StayInterviewEmployee,
   nextDate: string
 ): void {
+  employee.next_stay_interview_date = nextDate;
+  employee.nextStayInterviewDate = nextDate;
   employee.next_review_date = nextDate;
   employee.nextReviewDate = nextDate;
   employee.nextReview = nextDate;
@@ -131,9 +133,8 @@ function applyNextStayInterviewToEmployeeState(
 }
 
 async function refreshStayInterviewSchedulingUi(): Promise<void> {
-  if (typeof window.loadSummaryMetrics === 'function') {
-    await window.loadSummaryMetrics();
-  }
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('stay');
 
   if (typeof window.loadReviewDashboard === 'function') {
     await window.loadReviewDashboard();
