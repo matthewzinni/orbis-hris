@@ -21,8 +21,26 @@ function anyMobileSheetOpen(): boolean {
   return MOBILE_SHEET_IDS.some((id) => document.getElementById(id)?.classList.contains('open'));
 }
 
+function isDrawerEffectivelyOpen(id: string): boolean {
+  const drawer = document.getElementById(id);
+  if (!drawer) return false;
+  if (drawer.classList.contains('hidden')) return false;
+  return drawer.classList.contains('open');
+}
+
 function anyDrawerOpen(): boolean {
-  return MODULE_DRAWER_IDS.some((id) => document.getElementById(id)?.classList.contains('open'));
+  return MODULE_DRAWER_IDS.some((id) => isDrawerEffectivelyOpen(id));
+}
+
+/** Strip leftover fullscreen inline styles from closed drawers so they cannot block scroll. */
+function clearClosedDrawerGhostStyles(): void {
+  MODULE_DRAWER_IDS.forEach((id) => {
+    if (isDrawerEffectivelyOpen(id)) return;
+    const drawer = document.getElementById(id);
+    if (!drawer) return;
+    if (!drawer.getAttribute('style')) return;
+    clearSharedDrawerInlineStyles(drawer);
+  });
 }
 
 export function isModuleDrawerOpen(drawerId: ModuleDrawerId): boolean {
@@ -101,6 +119,8 @@ export function closeAllMobileOverlays(): void {
 
 /** Clear body scroll lock only when no drawer / sheet / nav overlay remains open. */
 export function unlockBodyScrollIfIdle(): void {
+  clearClosedDrawerGhostStyles();
+
   if (anyDrawerOpen()) return;
   if (anyMobileSheetOpen()) return;
   if (document.body.classList.contains('orbis-mobile-nav-drawer-open')) return;
@@ -108,6 +128,14 @@ export function unlockBodyScrollIfIdle(): void {
 
   document.body.classList.remove('orbis-drawer-open', 'orbis-mobile-employee-profile-open');
   document.body.style.removeProperty('overflow');
+
+  const backdrop = document.getElementById('drawerBackdrop');
+  if (backdrop?.classList.contains('open')) {
+    backdrop.classList.remove('open');
+    backdrop.classList.add('hidden');
+    backdrop.setAttribute('aria-hidden', 'true');
+    backdrop.removeAttribute('style');
+  }
 }
 
 export function lockBodyScrollForDrawer(): void {
@@ -200,3 +228,4 @@ export function clearSharedDrawerInlineStyles(drawer: HTMLElement | null): void 
 window.closeAllMobileOverlays = closeAllMobileOverlays;
 window.unlockBodyScrollIfIdle = unlockBodyScrollIfIdle;
 window.hideSiblingModuleDrawers = hideSiblingModuleDrawers;
+window.clearSharedDrawerInlineStyles = clearSharedDrawerInlineStyles;

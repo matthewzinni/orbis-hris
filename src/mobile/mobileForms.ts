@@ -86,41 +86,54 @@ function findPanelSaveButton(panel: HTMLElement): HTMLButtonElement | null {
   return null;
 }
 
-function ensureStickyFooter(panel: HTMLElement, saveButton: HTMLButtonElement): void {
-  const footerId = `orbisMobileFormFooter-${panel.id || panel.getAttribute('data-janus-drawer-panel') || panel.getAttribute('data-investigation-panel') || 'panel'}`;
-  let footer = document.getElementById(footerId);
+function clearPinnedDrawerSaveFooter(drawer: HTMLElement): void {
+  drawer.querySelector('.orbis-mobile-pinned-save-footer')?.remove();
+  drawer.querySelectorAll('.orbis-mobile-inline-save').forEach((button) => {
+    button.classList.remove('orbis-mobile-inline-save');
+  });
+}
 
+/** Pin the active panel's primary save outside `.drawer-body` so it stays visible. */
+function ensurePinnedDrawerSaveFooter(
+  drawer: HTMLElement,
+  saveButton: HTMLButtonElement | null
+): void {
+  if (!saveButton) {
+    clearPinnedDrawerSaveFooter(drawer);
+    return;
+  }
+
+  let footer = drawer.querySelector<HTMLElement>('.orbis-mobile-pinned-save-footer');
   if (!footer) {
     footer = document.createElement('div');
-    footer.id = footerId;
-    footer.className = 'orbis-mobile-form-footer hidden';
+    footer.className =
+      'drawer-footer orbis-mobile-pinned-save-footer orbis-mobile-drawer-footer';
     footer.innerHTML = `
       <button
         type="button"
         class="button primary orbis-mobile-form-footer-btn"
-        data-mobile-form-submit-for="${escAttr(saveButton.id)}"
       ></button>`;
-    panel.appendChild(footer);
+    drawer.appendChild(footer);
   }
 
   const footerBtn = footer.querySelector<HTMLButtonElement>('.orbis-mobile-form-footer-btn');
   if (!footerBtn) return;
 
-  footerBtn.textContent = saveButton.textContent?.trim() || 'Save';
+  const label = saveButton.textContent?.trim() || 'Save';
+  footerBtn.textContent = label;
   footerBtn.dataset.mobileFormSubmitFor = saveButton.id;
-  footerBtn.setAttribute('aria-label', saveButton.textContent?.trim() || 'Save changes');
+  footerBtn.setAttribute('aria-label', label);
+  footerBtn.disabled = saveButton.disabled;
 
-  if (footerBtn.dataset.bound !== '1') {
-    footerBtn.dataset.bound = '1';
-    footerBtn.addEventListener('click', () => {
-      if (saveButton.disabled) return;
-      saveButton.click();
-    });
-  }
+  footerBtn.onclick = () => {
+    if (saveButton.disabled) return;
+    saveButton.click();
+  };
 
-  const showFooter = isMobileLayout() && isPanelVisible(panel);
-  footer.classList.toggle('hidden', !showFooter);
-  saveButton.classList.toggle('orbis-mobile-inline-save', showFooter);
+  drawer.querySelectorAll('.orbis-mobile-inline-save').forEach((button) => {
+    if (button !== saveButton) button.classList.remove('orbis-mobile-inline-save');
+  });
+  saveButton.classList.add('orbis-mobile-inline-save');
 }
 
 function enhanceDrawerLevelFooter(drawerId: string): void {
@@ -243,15 +256,11 @@ function cleanupDrawerFormEnhancements(drawerId: string): void {
     panel.classList.remove('orbis-mobile-form-panel');
   });
 
-  drawer.querySelectorAll('.orbis-mobile-inline-save').forEach((button) => {
-    button.classList.remove('orbis-mobile-inline-save');
-  });
+  clearPinnedDrawerSaveFooter(drawer);
 
-  drawer.querySelectorAll('.orbis-mobile-form-footer').forEach((footer) => {
-    footer.remove();
-  });
-
-  drawer.querySelector('.drawer-footer, .drawer-actions')?.classList.remove('orbis-mobile-drawer-footer');
+  drawer
+    .querySelector('.drawer-footer:not(.orbis-mobile-pinned-save-footer), .drawer-actions')
+    ?.classList.remove('orbis-mobile-drawer-footer');
   drawer
     .querySelectorAll<HTMLSelectElement>('#invTargetedEmployeesInput, #invFocusEmployeesInput')
     .forEach((select) => clearInvestigationMultiPicker(select));
@@ -272,31 +281,28 @@ function enhanceDrawerFormPanels(drawerId: string): void {
     enhanceInvestigationMultiSelects(drawer);
   }
 
-  // Drawers with a single pinned footer don't need per-panel sticky saves.
+  // Drawers with a single pinned footer don't need per-panel save proxies.
   if (DRAWER_LEVEL_FOOTERS[drawerId]) {
+    clearPinnedDrawerSaveFooter(drawer);
     return;
   }
+
+  let activeSave: HTMLButtonElement | null = null;
 
   drawer.querySelectorAll<HTMLElement>(PANEL_SELECTORS).forEach((panel) => {
     if (!panelHasFormFields(panel)) return;
 
     panel.classList.add('orbis-mobile-form-panel');
 
+    if (!isPanelVisible(panel)) return;
+
     const saveButton = findPanelSaveButton(panel);
     if (saveButton) {
-      ensureStickyFooter(panel, saveButton);
-      return;
-    }
-
-    const key =
-      panel.id ||
-      panel.getAttribute('data-janus-drawer-panel') ||
-      panel.getAttribute('data-investigation-panel') ||
-      '';
-    if (key) {
-      document.getElementById(`orbisMobileFormFooter-${key}`)?.remove();
+      activeSave = saveButton;
     }
   });
+
+  ensurePinnedDrawerSaveFooter(drawer, activeSave);
 }
 
 function enhanceAllDrawerForms(): void {

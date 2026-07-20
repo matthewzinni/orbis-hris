@@ -336,13 +336,14 @@ export function closeJanusAccountDrawer(): void {
   drawer.classList.remove('open');
   drawer.classList.add('hidden');
   drawer.setAttribute('aria-hidden', 'true');
-  drawer.style.removeProperty('display');
+  // Clear fullscreen open styles — leaving position:fixed + left:0 blocks page scroll.
+  drawer.removeAttribute('style');
 
   if (!isAnySiblingModuleDrawerOpen('janusAccountDrawer')) {
     backdrop?.classList.remove('open');
     backdrop?.classList.add('hidden');
     backdrop?.setAttribute('aria-hidden', 'true');
-    backdrop?.style.removeProperty('display');
+    backdrop?.removeAttribute('style');
   }
 
   unlockBodyScrollIfIdle();

@@ -1405,6 +1405,16 @@ body[data-layout='mobile'] .orbis-desktop-module-table {
   display: none !important;
 }
 
+/* Keep personal My Tasks when mobile HR inbox is showing — hide only admin dupes */
+body[data-layout='mobile']
+  #myTasksAttentionCard.orbis-mobile-dedupe-admin-attention
+  .employee-portal-attention-group,
+body[data-layout='mobile']
+  #myTasksAttentionCard.orbis-mobile-dedupe-admin-attention
+  .employee-portal-task-row--admin {
+  display: none;
+}
+
 .orbis-mobile-module-card {
   display: flex;
   flex-direction: column;

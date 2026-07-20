@@ -417,12 +417,31 @@ function renderPipeline(): void {
           interest.internal_job_postings?.title ||
           cachedPostings.find((posting) => posting.id === interest.posting_id)?.title ||
           'Opening';
+        const statusOptions = INTERNAL_JOB_INTEREST_STATUSES.map(
+          (status) =>
+            `<option value="${esc(status)}" ${status === interest.status ? 'selected' : ''}>${esc(formatInternalJobStatus(status))}</option>`
+        ).join('');
         return `
           <article class="orbis-mobile-module-card">
             <strong>${esc(interest.employee_name)}</strong>
             <div class="muted">${esc(postingTitle)}</div>
             <div class="muted">${esc(formatDateTimeLabel(interest.submitted_at))}</div>
-            <div style="margin-top:8px"><span class="${statusBadgeClass(interest.status)}">${esc(formatInternalJobStatus(interest.status))}</span></div>
+            <div class="field" style="margin-top:10px">
+              <label for="mobileInterestStatus-${esc(interest.id)}">Status</label>
+              <select
+                class="select"
+                id="mobileInterestStatus-${esc(interest.id)}"
+                data-internal-job-interest-status="${esc(interest.id)}"
+                aria-label="Candidate status"
+              >
+                ${statusOptions}
+              </select>
+            </div>
+            ${
+              interest.interest_note
+                ? `<div class="muted" style="margin-top:6px;font-size:0.82rem">"${esc(interest.interest_note)}"</div>`
+                : ''
+            }
           </article>
         `;
       })

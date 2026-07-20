@@ -176,6 +176,23 @@ test.describe('mobile shell chrome (unauthenticated DOM)', () => {
     await expect(page.locator('#careEngagementDrawer .orbis-mobile-drawer-footer')).toHaveCount(1);
   });
 
+  test('candidate and janus drawers pin a save footer outside the scroll body', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    await openDrawerFixture(page, 'candidateDrawer');
+    await expect(
+      page.locator('#candidateDrawer > .orbis-mobile-pinned-save-footer')
+    ).toHaveCount(1);
+
+    await openDrawerFixture(page, 'janusAccountDrawer');
+    await expect(
+      page.locator('#janusAccountDrawer > .orbis-mobile-pinned-save-footer')
+    ).toHaveCount(1);
+  });
+
   test('investigation multi-select becomes checkbox picker on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');

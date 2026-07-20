@@ -32,7 +32,46 @@ let adminAttentionBound = false;
 let cachedAttentionItems: HrInboxItem[] = [];
 
 async function openTasksAttentionRoute(route: HrInboxRoute): Promise<void> {
+  if (route.type === 'view') {
+    if (typeof window.switchMainView === 'function') {
+      window.switchMainView(route.viewId);
+    }
+    return;
+  }
+
+  if (route.type === 'investigation') {
+    if (typeof window.switchMainView === 'function') {
+      window.switchMainView('investigationsView');
+    }
+    if (typeof window.openInvestigationDrawer === 'function') {
+      await window.openInvestigationDrawer(route.investigationId);
+    }
+    return;
+  }
+
+  if (route.type === 'operations') {
+    if (typeof window.switchMainView === 'function') {
+      window.switchMainView('operationsView');
+    }
+    if (typeof window.openOperationsIssueDrawer === 'function') {
+      await window.openOperationsIssueDrawer(route.issueId);
+    }
+    return;
+  }
+
+  if (route.type === 'internal_job') {
+    if (typeof window.openInternalJobBoardView === 'function') {
+      window.openInternalJobBoardView(route.postingId, 'pipeline');
+    } else if (typeof window.switchMainView === 'function') {
+      window.switchMainView('internalJobBoardView');
+    }
+    return;
+  }
+
   if (route.type === 'payroll_handoff') {
+    if (typeof window.switchMainView === 'function') {
+      window.switchMainView('employeesView');
+    }
     if (typeof window.openEmployeeDrawer === 'function') {
       await window.openEmployeeDrawer(route.employeeId);
     }
@@ -41,6 +80,9 @@ async function openTasksAttentionRoute(route: HrInboxRoute): Promise<void> {
 
   if (route.type !== 'employee') return;
 
+  if (typeof window.switchMainView === 'function') {
+    window.switchMainView('employeesView');
+  }
   if (typeof window.openEmployeeDrawer === 'function') {
     await window.openEmployeeDrawer(route.employeeId);
   }
@@ -88,13 +130,20 @@ function adminAttentionSeverityLabel(severity: HrInboxItem['severity']): string 
 }
 
 function renderAdminAttentionRow(item: HrInboxItem): string {
-  const actions =
+  const payrollActions =
     item.kind === 'payroll_handoff' && item.route.type === 'payroll_handoff'
       ? `<button type="button" class="button soft sm" data-tasks-payroll-action="sent" data-tasks-payroll-id="${esc(item.route.handoffId)}">Mark sent</button>
          <button type="button" class="button soft sm" data-tasks-payroll-action="confirmed" data-tasks-payroll-id="${esc(item.route.handoffId)}">Confirmed</button>`
-      : item.kind === 'performance_review' && item.route.type === 'employee'
-        ? `<button type="button" class="button primary sm" data-tasks-attention-id="${esc(item.id)}">Open review</button>`
-        : '';
+      : '';
+
+  const openLabel =
+    item.kind === 'performance_review'
+      ? 'Open review'
+      : item.kind === 'benefits_eligibility'
+        ? 'Open employee'
+        : 'Open';
+
+  const openAction = `<button type="button" class="button primary sm" data-tasks-attention-id="${esc(item.id)}">${esc(openLabel)}</button>`;
 
   return `
     <article class="employee-portal-task-row employee-portal-task-row--pending employee-portal-task-row--admin">
@@ -106,7 +155,7 @@ function renderAdminAttentionRow(item: HrInboxItem): string {
         </div>
         <p class="muted employee-portal-task-detail">${esc(item.detail)}</p>
       </div>
-      <div class="employee-portal-task-row-actions">${actions}</div>
+      <div class="employee-portal-task-row-actions">${payrollActions}${openAction}</div>
     </article>
   `;
 }

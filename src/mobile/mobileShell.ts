@@ -8,7 +8,12 @@ import {
 } from './mobileNav';
 import { isMobileLayout } from './mobileLayout';
 import { initMobileNavDrawer, closeMobileNavDrawer } from './mobileNavDrawer';
-import { closeAllMobileOverlays, openMobileSheetExclusive, syncMobileSheetOpenClass } from './mobileOverlays';
+import {
+  closeAllMobileOverlays,
+  openMobileSheetExclusive,
+  syncMobileSheetOpenClass,
+  unlockBodyScrollIfIdle,
+} from './mobileOverlays';
 import { initMobilePeople } from './mobilePeople';
 import { initMobileHome } from './mobileHome';
 import { initMobileDrawer } from './mobileDrawer';
@@ -115,16 +120,7 @@ function closeMoreSheet(): void {
 }
 
 function clearIdleDrawerBackdrop(): void {
-  const backdrop = document.getElementById('drawerBackdrop');
-  if (!backdrop?.classList.contains('open')) return;
-
-  const drawerOpen = document.querySelector(
-    '#employeeDrawer.open, #candidateDrawer.open, #investigationDrawer.open, #operationsIssueDrawer.open, #careEngagementDrawer.open, #janusAccountDrawer.open, .drawer.open'
-  );
-  if (!drawerOpen) {
-    backdrop.classList.remove('open');
-    backdrop.setAttribute('aria-hidden', 'true');
-  }
+  unlockBodyScrollIfIdle();
 }
 
 function handleMobileTabPress(tabButton: HTMLElement): void {
@@ -232,6 +228,7 @@ function bindMobileShellEvents(): void {
   });
 
   window.addEventListener('orbis:section-change', (event) => {
+    unlockBodyScrollIfIdle();
     if (!isMobileLayout()) return;
     const detail = (event as CustomEvent<{ sectionId?: string }>).detail;
     const sectionId = String(detail?.sectionId || window.currentMainView || '');
@@ -242,6 +239,7 @@ function bindMobileShellEvents(): void {
   });
 
   window.addEventListener('orbis:layout-change', () => {
+    unlockBodyScrollIfIdle();
     refreshShell();
   });
 }
@@ -260,6 +258,7 @@ export function initMobileShell(): void {
   initMobileTables();
   initMobileNotifications();
   initMobileMoreModules();
+  unlockBodyScrollIfIdle();
   refreshShell();
 }
 

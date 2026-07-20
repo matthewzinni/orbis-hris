@@ -237,33 +237,8 @@ body[data-layout='mobile'] #employeeDrawer .login-error {
   word-break: break-word;
 }
 
-body[data-layout='mobile'] .orbis-mobile-form-panel .orbis-mobile-inline-save {
+body[data-layout='mobile'] .orbis-mobile-inline-save {
   display: none !important;
-}
-
-body[data-layout='mobile'] .orbis-mobile-form-footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 6;
-  display: flex;
-  gap: 8px;
-  padding: 10px 0 calc(8px + var(--mobile-safe-bottom));
-  margin-top: 8px;
-  background: linear-gradient(180deg, transparent, var(--card, #fff) 28%);
-}
-
-body[data-layout='mobile'] .orbis-mobile-form-footer.hidden {
-  display: none;
-}
-
-body[data-layout='mobile'] .orbis-mobile-form-footer-btn {
-  flex: 1;
-  min-height: var(--mobile-tap-min);
-}
-
-body[data-layout='mobile'] .orbis-mobile-form-panel:not(.active) .orbis-mobile-form-footer,
-body[data-layout='mobile'] .orbis-mobile-form-panel.hidden .orbis-mobile-form-footer {
-  display: none;
 }
 
 body[data-layout='mobile'] #employeeDrawer .tab-panel.active,
@@ -272,17 +247,19 @@ body[data-layout='mobile'] #janusAccountDrawer [data-janus-drawer-panel]:not(.hi
   padding-bottom: 4px;
 }
 
-/* Pinned drawer footers — stack + safe area */
+/* Pinned drawer footers — outside scroll body + safe area */
 body[data-layout='mobile'] #investigationDrawer .orbis-mobile-drawer-footer,
 body[data-layout='mobile'] #operationsIssueDrawer .orbis-mobile-drawer-footer,
-body[data-layout='mobile'] #careEngagementDrawer .orbis-mobile-drawer-footer {
+body[data-layout='mobile'] #careEngagementDrawer .orbis-mobile-drawer-footer,
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-drawer-footer,
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-drawer-footer,
+body[data-layout='mobile'] #janusAccountDrawer .orbis-mobile-drawer-footer {
   display: flex;
   flex-direction: column;
   align-items: stretch;
   gap: 8px;
+  flex-shrink: 0;
   padding: 12px 16px calc(12px + var(--mobile-safe-bottom));
-  position: sticky;
-  bottom: 0;
   z-index: 8;
   background: var(--card, #fff);
   box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.08);
@@ -290,7 +267,10 @@ body[data-layout='mobile'] #careEngagementDrawer .orbis-mobile-drawer-footer {
 
 body[data-layout='mobile'] #investigationDrawer .orbis-mobile-drawer-footer .button,
 body[data-layout='mobile'] #operationsIssueDrawer .orbis-mobile-drawer-footer .button,
-body[data-layout='mobile'] #careEngagementDrawer .orbis-mobile-drawer-footer .button {
+body[data-layout='mobile'] #careEngagementDrawer .orbis-mobile-drawer-footer .button,
+body[data-layout='mobile'] #employeeDrawer .orbis-mobile-drawer-footer .button,
+body[data-layout='mobile'] #candidateDrawer .orbis-mobile-drawer-footer .button,
+body[data-layout='mobile'] #janusAccountDrawer .orbis-mobile-drawer-footer .button {
   width: 100%;
   min-height: var(--mobile-tap-min);
 }

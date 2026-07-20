@@ -500,15 +500,30 @@ export function ensureEmployeeDrawerVisible(): HTMLElement | null {
 function clearStuckDrawerInlineStyles(drawer: HTMLElement | null): void {
   if (!drawer) return;
 
-  drawer.style.removeProperty('top');
-  drawer.style.removeProperty('right');
-  drawer.style.removeProperty('left');
-  drawer.style.removeProperty('width');
-  drawer.style.removeProperty('max-width');
-  drawer.style.removeProperty('height');
-  drawer.style.removeProperty('z-index');
-  drawer.style.removeProperty('visibility');
-  drawer.style.removeProperty('transform');
+  if (typeof window.clearSharedDrawerInlineStyles === 'function') {
+    window.clearSharedDrawerInlineStyles(drawer);
+    return;
+  }
+
+  [
+    'display',
+    'flex-direction',
+    'visibility',
+    'opacity',
+    'pointer-events',
+    'position',
+    'top',
+    'right',
+    'bottom',
+    'left',
+    'height',
+    'max-height',
+    'width',
+    'max-width',
+    'overflow',
+    'transform',
+    'z-index',
+  ].forEach((prop) => drawer.style.removeProperty(prop));
 }
 
 /** Force-close employee drawer shell — used on boot and after failed opens. */

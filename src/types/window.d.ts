@@ -235,6 +235,7 @@ declare global {
     closeMobileNavDrawer?: () => void;
     unlockBodyScrollIfIdle?: () => void;
     hideSiblingModuleDrawers?: (exceptId: string) => void;
+    clearSharedDrawerInlineStyles?: (drawer: HTMLElement | null) => void;
     initStayInterviewOrgInsights?: () => void;
     currentCandidateId?: string | null;
     currentCandidateNoteId?: string | null;

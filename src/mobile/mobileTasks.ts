@@ -74,11 +74,20 @@ function renderHrTaskCard(item: HrInboxItem): string {
 function syncMobileAttentionDedup(): void {
   const hrCard = document.getElementById('mobileHrTasksCard');
   const attentionCard = document.getElementById('myTasksAttentionCard');
+  const pendingList = document.getElementById('myTasksPendingList');
   if (!attentionCard) return;
 
-  const hideDuplicate =
+  // Mobile HR card already covers admin/supervisor inbox items — hide those
+  // duplicates, but keep personal pending tasks (signatures, handbook, etc.).
+  const dedupeAdmin =
     isMobileLayout() && Boolean(hrCard && !hrCard.classList.contains('hidden'));
-  attentionCard.classList.toggle('hidden', hideDuplicate);
+  attentionCard.classList.toggle('orbis-mobile-dedupe-admin-attention', dedupeAdmin);
+
+  const personalRows = pendingList?.querySelectorAll(
+    '.employee-portal-task-row:not(.employee-portal-task-row--admin)'
+  );
+  const hideCard = dedupeAdmin && !(personalRows && personalRows.length > 0);
+  attentionCard.classList.toggle('hidden', hideCard);
 }
 
 async function openMobileInboxItem(item: HrInboxItem): Promise<void> {
