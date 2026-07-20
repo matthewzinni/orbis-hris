@@ -470,6 +470,8 @@ export async function acknowledgePolicyFromPortal(
     await recordPolicyCampaignAcknowledgment({ employeeId, assignmentId });
     showToast('Policy acknowledgment saved.');
     await loadMyTasksPortal();
+    const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+    await refreshDerivedUiProfile('policyCampaigns');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Could not save acknowledgment.';
     showToast(message, 'error');

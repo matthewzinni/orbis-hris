@@ -83,6 +83,20 @@ describe('refreshDerivedUiAfterMutation', () => {
     expect(managerHome).toHaveBeenCalledWith(true);
   });
 
+  it('care and policy campaign profiles force inbox refresh', async () => {
+    const inbox = vi.fn(async () => undefined);
+    window.loadHrInbox = inbox;
+
+    expect(DERIVED_REFRESH_PROFILES.care).toEqual({ inbox: true });
+    expect(DERIVED_REFRESH_PROFILES.policyCampaigns).toEqual({ inbox: true });
+
+    await refreshDerivedUiProfile('care');
+    await refreshDerivedUiProfile('policyCampaigns');
+
+    expect(inbox).toHaveBeenCalledTimes(2);
+    expect(inbox).toHaveBeenCalledWith(true);
+  });
+
   it('filters deleted/closed discipline out of open lists using canonical predicate', () => {
     const rows = [
       { id: 1, report_status: 'Open' },

@@ -428,6 +428,8 @@ function bindCampaignActions(campaigns: PolicyCampaignWithStats[]): void {
           const count = await publishPolicyCampaign(campaignId);
           showToast(`Campaign published to ${count} employee${count === 1 ? '' : 's'}.`);
           await loadPolicyCampaignsAdmin();
+          const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+          await refreshDerivedUiProfile('policyCampaigns');
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Could not publish campaign.';
           showToast(message, 'error');
@@ -458,6 +460,8 @@ function bindCampaignActions(campaigns: PolicyCampaignWithStats[]): void {
           const count = await syncPolicyCampaignRoster(campaignId);
           showToast(`Roster refreshed (${count} matching employees).`);
           await loadPolicyCampaignsAdmin();
+          const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+          await refreshDerivedUiProfile('policyCampaigns');
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Could not refresh roster.';
           showToast(message, 'error');
@@ -482,6 +486,8 @@ function bindCampaignActions(campaigns: PolicyCampaignWithStats[]): void {
           await closePolicyCampaign(campaignId);
           showToast('Campaign closed.');
           await loadPolicyCampaignsAdmin();
+          const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+          await refreshDerivedUiProfile('policyCampaigns');
         } catch (err) {
           const message = err instanceof Error ? err.message : 'Could not close campaign.';
           showToast(message, 'error');

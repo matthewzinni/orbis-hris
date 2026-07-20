@@ -607,9 +607,8 @@ export async function saveAttendance(): Promise<void> {
         await window.loadEmployees();
       }
       renderAttendance(snapshot);
-      if (typeof window.refreshDashboardKpis === 'function') {
-        window.refreshDashboardKpis();
-      }
+      const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+      await refreshDerivedUiProfile('attendance');
     }
 
     let toast = `Attendance saved for ${date}.`;

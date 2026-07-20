@@ -558,6 +558,8 @@ async function confirmDeleteCareItem(itemId: string): Promise<void> {
     selectedCareItemId = null;
     showToast('Care item deleted.');
     await refreshCareEngagementView();
+    const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+    await refreshDerivedUiProfile('care');
   } catch (err) {
     console.error('[CareEngagement] Delete care item failed:', err);
     showToast('Could not delete care item.', 'error');

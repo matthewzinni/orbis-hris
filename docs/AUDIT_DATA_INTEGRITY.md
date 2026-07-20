@@ -38,12 +38,13 @@ Living checklist for the full production integrity audit. Updated through Phases
 | Offboarding / payroll | 3D | Termination refresh wired | Code path review | **Pass (code)** |
 | Investigations | 3E | Yes after save/delete | Code path review | **Pass (code)** |
 | Operations | 3E | Yes after save/delete | Code path review | **Pass (code)** |
-| Care (drawer delete) | 3E | Yes | Code path review | **Pass (code)** — center saves still local |
+| Care (drawer delete) | 3E | Yes | Code path review | **Pass (code)** |
+| Care (center item/follow-up CUD) | 3E | Yes (`care` profile) | Code path review | **Pass (code)** |
 | Job board | 3F | Yes (force inbox) | Code path review | **Pass (code)** |
 | Documents / storage | 3F | Existing storage delete path | Code review only | **Partial** |
-| Policy / signatures | 3F | Not changed this pass | Not fully exercised | **Open** |
-| Janus | 3G | Not changed this pass | Not fully exercised | **Open** |
-| Attendance | 3G | Not changed this pass | Not fully exercised | **Open** |
+| Policy / signatures | 3F | Publish/close/roster/ack → inbox | Code path review | **Pass (code)** |
+| Janus | 3G | Local `loadJanus` only (correct) | Code path review | **Pass (code)** — no inbox coupling |
+| Attendance | 3G | Status sync → `attendance` profile | Code path review | **Pass (code)** |
 | Reports | 3G | Open-status unified | Code path review | **Pass (code)** |
 | Mobile badges | 3G | Dashboard force inbox | Code path review | **Pass (code)** |
 | Search / org / directory | 3H | Drawer race guard | Code path review | **Partial** |
@@ -75,6 +76,10 @@ Living checklist for the full production integrity audit. Updated through Phases
 | AUD-008 | Medium | Double-click could duplicate discipline inserts | No in-flight guard | `isDisciplineSaveInProgress` | code |
 | AUD-009 | Medium | Date-only ISO UTC could shift calendar day | `new Date(iso)` local | Prefer `YYYY-MM-DD` prefix in `parseDueDate` | `parseDueDate.test.ts` |
 | AUD-010 | Medium | Rapid employee drawer switch could show wrong person | Out-of-order fetch | Generation counter in `openEmployeeDrawer` | code |
+| AUD-011 | High | Care center care-item save/delete left inbox stale | Local refresh only | `notifySaved` / list delete → `refreshDerivedUiProfile('care')` | unit profile |
+| AUD-012 | Medium | Policy publish/close/ack left inbox stale | No derived refresh | `policyCampaigns` profile | unit profile |
+| AUD-013 | Low | Attendance status sync used ad-hoc KPI refresh | Inconsistent path | `attendance` profile | code |
+| AUD-014 | High | Legacy incident policies OR'd with HR-only | Permissive policies remained | Dropped; live JWT sim: employee blocked, admin allowed | SQL notice + migration |
 
 ## Explicit confirmation (Open Discipline)
 
@@ -82,7 +87,13 @@ Living checklist for the full production integrity audit. Updated through Phases
 - Open filter is identical for KPI and inbox (`isOpenDisciplineStatus`).
 - Basic KPI hover no longer preserves a stale discipline tooltip.
 - Prior production DB spot-check (2026-07-20): only one open Ingrid report + Troy; duplicate id 45 was already deleted — UI lag was the bug class fixed here.
-- **Migrations must be applied** (`supabase db push`) before stay-date split and RLS changes take effect in production.
+- Migrations applied on production including stay-date split and incident HR-only RLS.
+
+## Explicit confirmation (Incidents / employee role)
+
+- Live DB (2026-07-20): only `orbis_incident_reports_*` policies remain.
+- `orbis_hr_staff_child_accessible` requires admin or (supervisor + scope).
+- JWT claim simulation: employee `wen.oterog@gmail.com` (role user, linked BTW2522) → **denied**; `matthew.zinni@btwglobal.com` (admin) → **allowed**.
 
 ## Final verification (this pass)
 
@@ -97,12 +108,9 @@ Living checklist for the full production integrity audit. Updated through Phases
 
 ## Unresolved / deferred
 
-- Full interactive lifecycle for Janus, attendance, policy campaigns, document edge cases
-- Live multi-role RLS penetration with authenticated non-privileged tokens
-- Missing FKs on leave/onboarding/emergency (documented; not migrated this pass)
-- Care Engagement **center** create/update paths beyond drawer deletes
+- Full interactive lifecycle for document edge cases and search/org directory
+- Care matrix / pulse / recognition (intentionally local-only; not inbox-backed)
 - Realtime cross-tab sync (section-enter force refresh used instead)
-- Production migration apply may require network/CLI auth (Management API blocked in this environment)
 
 ## Conclusion
 

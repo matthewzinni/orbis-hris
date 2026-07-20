@@ -34,6 +34,8 @@ export const DERIVED_REFRESH_PROFILES = {
   onboarding: { inbox: true } satisfies DerivedRefreshOptions,
   leave: { inbox: true, managerHome: true } satisfies DerivedRefreshOptions,
   jobBoard: { inbox: true } satisfies DerivedRefreshOptions,
+  policyCampaigns: { inbox: true } satisfies DerivedRefreshOptions,
+  attendance: { basicKpis: true } satisfies DerivedRefreshOptions,
   employeeLifecycle: {
     summary: true,
     inbox: true,

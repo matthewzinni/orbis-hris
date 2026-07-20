@@ -220,7 +220,7 @@ export function setCareEditorOnSaved(callback: () => void): void {
   onSavedCallback = callback;
 }
 
-function notifySaved(): void {
+function notifySaved(mode?: CareEditorMode): void {
   invalidateCareEngagementCache();
   onSavedCallback?.();
   if (typeof window.invalidateEmployeeCareSupportCache === 'function') {
@@ -229,6 +229,13 @@ function notifySaved(): void {
   const employeeId = editorState?.employeeId;
   if (employeeId && typeof window.loadEmployeeCareSupport === 'function') {
     void window.loadEmployeeCareSupport(employeeId);
+  }
+
+  const refreshMode = mode || editorState?.mode;
+  if (refreshMode === 'care-item' || refreshMode === 'employee-follow-up') {
+    void import('../services/derivedDataRefresh').then(({ refreshDerivedUiProfile }) =>
+      refreshDerivedUiProfile('care')
+    );
   }
 }
 
@@ -733,7 +740,7 @@ export async function saveCareEngagementEditor(): Promise<void> {
   }
 
   closeCareEngagementDrawer();
-  notifySaved();
+  notifySaved(mode);
   } catch (err) {
     console.error('[CareEngagement] Save failed:', err);
     showToast('Could not save care record. Check Supabase migration and admin access.', 'error');
@@ -823,7 +830,7 @@ export async function deleteCareEngagementEditor(): Promise<void> {
     }
 
     closeCareEngagementDrawer();
-    notifySaved();
+    notifySaved(mode);
   } catch (err) {
     console.error('[CareEngagement] Delete failed:', err);
     showToast('Could not delete care record.', 'error');
