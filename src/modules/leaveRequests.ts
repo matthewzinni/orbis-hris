@@ -379,9 +379,8 @@ export async function submitEmployeeLeaveRequest(): Promise<void> {
     showToast('Leave request submitted.');
     safeGet<HTMLTextAreaElement>('leaveRequestNotesInput')!.value = '';
     await loadEmployeeLeaveRequests(rosterId);
-    if (typeof window.loadHrInbox === 'function') {
-      void window.loadHrInbox(true);
-    }
+    const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+    await refreshDerivedUiProfile('leave');
   } catch (err) {
     showToast(err instanceof Error ? err.message : 'Could not submit request.', 'error');
   }
@@ -402,9 +401,8 @@ export async function approveLeaveRequestById(requestId: string): Promise<void> 
     if (typeof window.loadEmployees === 'function') {
       await window.loadEmployees();
     }
-    if (typeof window.loadHrInbox === 'function') {
-      void window.loadHrInbox(true);
-    }
+    const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+    await refreshDerivedUiProfile('leave');
   } catch (err) {
     showToast(err instanceof Error ? err.message : 'Could not approve.', 'error');
   }
@@ -417,9 +415,8 @@ export async function denyLeaveRequestById(requestId: string): Promise<void> {
     await denyLeaveRequest(requestId);
     showToast('Leave request denied.');
     await loadEmployeeLeaveRequests(rosterId);
-    if (typeof window.loadHrInbox === 'function') {
-      void window.loadHrInbox(true);
-    }
+    const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+    await refreshDerivedUiProfile('leave');
   } catch (err) {
     showToast(err instanceof Error ? err.message : 'Could not deny.', 'error');
   }
@@ -437,9 +434,8 @@ export async function cancelLeaveRequestById(requestId: string): Promise<void> {
     await cancelLeaveRequest(requestId);
     showToast('Leave request cancelled.');
     await loadEmployeeLeaveRequests(rosterId);
-    if (typeof window.loadHrInbox === 'function') {
-      void window.loadHrInbox(true);
-    }
+    const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+    await refreshDerivedUiProfile('leave');
   } catch (err) {
     showToast(err instanceof Error ? err.message : 'Could not cancel.', 'error');
   }
@@ -497,9 +493,8 @@ async function deleteLeaveRequestById(requestId: string): Promise<void> {
     if (typeof window.loadEmployees === 'function') {
       await window.loadEmployees();
     }
-    if (typeof window.loadHrInbox === 'function') {
-      void window.loadHrInbox(true);
-    }
+    const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+    await refreshDerivedUiProfile('leave');
     void renderOutTodayCard();
   } catch (err) {
     showToast(err instanceof Error ? err.message : 'Could not delete.', 'error');

@@ -5,12 +5,12 @@ import {
   getDrawerEmployee,
   getEmployeeId,
   loadEmployeeRecordHistory,
-  renderBasicDashboardKpisIfAvailable,
   saveEmployeeRecordRow,
   setDrawerInputValue,
   setRecordEditModeUi,
   type EmployeeRecordRow,
 } from '../services/employeeRecordCrud';
+import { refreshDerivedUiProfile } from '../services/derivedDataRefresh';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 import {
   clearCanvasSignature,
@@ -124,7 +124,7 @@ function renderIncidentRows(rows: IncidentRecord[]): string {
 
 async function refreshIncidentDependentUi(employeeId: string): Promise<void> {
   await loadEmployeeIncidents(employeeId);
-  renderBasicDashboardKpisIfAvailable();
+  await refreshDerivedUiProfile('incidents');
 }
 
 export async function loadEmployeeIncidents(employeeId: string): Promise<void> {

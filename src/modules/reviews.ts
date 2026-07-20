@@ -305,6 +305,9 @@ async function refreshReviewDependentUi(employeeId: string): Promise<void> {
   window.invalidateEmployeeDrawerTab?.('reviews');
   await loadEmployeeReviews(employeeId);
 
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('reviews');
+
   if (typeof window.loadImpactPlayersFallback === 'function') {
     await window.loadImpactPlayersFallback();
   }
@@ -317,10 +320,6 @@ async function refreshReviewDependentUi(employeeId: string): Promise<void> {
     await window.loadReviewDashboardFallback();
   }
 
-  if (typeof window.renderBasicDashboardKpis === 'function') {
-    window.renderBasicDashboardKpis();
-  }
-
   if (typeof window.buildKpiHoverDetails === 'function') {
     window.buildKpiHoverDetails();
   }
@@ -329,6 +328,10 @@ async function refreshReviewDependentUi(employeeId: string): Promise<void> {
     window.renderRoster();
   } else if (typeof window.renderEmployeeRoster === 'function') {
     window.renderEmployeeRoster();
+  }
+
+  if (typeof window.refreshPerformanceReviewsDueKpi === 'function') {
+    void window.refreshPerformanceReviewsDueKpi();
   }
 }
 
@@ -595,14 +598,8 @@ export async function saveReviewRecord(): Promise<void> {
 
   await refreshReviewDependentUi(employeeId);
 
-  if (typeof window.loadHrInbox === 'function') {
-    void window.loadHrInbox(true);
-  }
   if (typeof window.loadMyTasksPortal === 'function') {
     void window.loadMyTasksPortal();
-  }
-  if (typeof window.refreshPerformanceReviewsDueKpi === 'function') {
-    void window.refreshPerformanceReviewsDueKpi();
   }
   if (typeof window.loadPerformanceReviewSupervisorNotify === 'function') {
     void window.loadPerformanceReviewSupervisorNotify();

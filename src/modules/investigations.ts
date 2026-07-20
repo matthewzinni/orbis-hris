@@ -702,6 +702,12 @@ export async function loadInvestigations(): Promise<void> {
   }
 }
 
+async function reloadInvestigationsAfterMutation(): Promise<void> {
+  await loadInvestigations();
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('investigations');
+}
+
 async function loadInvestigationInterviews(investigationId: string): Promise<InvestigationInterview[]> {
   const { data, error } = await supabaseClient
     .from('investigation_interviews')
@@ -1425,7 +1431,7 @@ async function saveInvestigationRecordInner(): Promise<void> {
       showToast('Investigation created.');
     }
 
-    await loadInvestigations();
+    await reloadInvestigationsAfterMutation();
 
     if (currentInvestigationId) {
       const refreshed = cachedInvestigations.find(
@@ -1478,7 +1484,7 @@ export async function deleteInvestigationById(investigationId: string): Promise<
   }
 
   showToast('Investigation deleted.');
-  await loadInvestigations();
+  await reloadInvestigationsAfterMutation();
 }
 
 export async function deleteInvestigationRecord(): Promise<void> {

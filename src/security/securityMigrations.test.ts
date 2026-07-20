@@ -65,4 +65,36 @@ describe('security migrations', () => {
     expect(sql).toContain('orbis_guard_pto_balance_update');
     expect(sql).toContain('Only Matthew can adjust banked PTO hours');
   });
+
+  it('splits stay interview due dates from performance next_review_date', () => {
+    const sql = readMigration('20260720153000_split_stay_interview_due_date.sql');
+
+    expect(sql).toContain('next_stay_interview_date');
+    expect(sql).toContain('set next_stay_interview_date = next_due');
+    expect(sql).not.toContain('set next_review_date = next_due');
+  });
+
+  it('fixes linked_discipline_report_id to bigint FK', () => {
+    const sql = readMigration('20260720153100_fix_linked_discipline_report_id.sql');
+
+    expect(sql).toContain('linked_discipline_report_id bigint');
+    expect(sql).toContain('references public.discipline_reports(id)');
+  });
+
+  it('restricts incident_reports to HR staff', () => {
+    const sql = readMigration('20260720153200_incident_reports_hr_only.sql');
+
+    expect(sql).toContain('orbis_hr_staff_child_accessible');
+    expect(sql).toContain('orbis_incident_reports_select');
+    expect(sql).not.toContain('orbis_employee_child_accessible');
+  });
+
+  it('enables RLS on previously unprotected baseline tables', () => {
+    const sql = readMigration('20260720153300_enable_rls_baseline_unprotected.sql');
+
+    expect(sql).toContain('job_requisitions enable row level security');
+    expect(sql).toContain('candidate_interviews enable row level security');
+    expect(sql).toContain('onboarding_templates enable row level security');
+    expect(sql).toContain('separation_log enable row level security');
+  });
 });

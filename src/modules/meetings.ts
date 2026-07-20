@@ -5,13 +5,13 @@ import {
   getDrawerEmployee,
   getEmployeeId,
   loadEmployeeRecordHistory,
-  renderBasicDashboardKpisIfAvailable,
   saveEmployeeRecordRow,
   setDrawerInputValue,
   setRecordEditModeUi,
   bindHistoryItemActions,
   type EmployeeRecordRow,
 } from '../services/employeeRecordCrud';
+import { refreshDerivedUiProfile } from '../services/derivedDataRefresh';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 
 interface MeetingRecord extends EmployeeRecordRow {
@@ -95,7 +95,7 @@ function renderMeetingRows(rows: MeetingRecord[]): string {
 
 async function refreshMeetingDependentUi(employeeId: string): Promise<void> {
   await loadEmployeeMeetings(employeeId);
-  renderBasicDashboardKpisIfAvailable();
+  await refreshDerivedUiProfile('meetings');
 }
 
 export async function loadEmployeeMeetings(employeeId: string): Promise<void> {

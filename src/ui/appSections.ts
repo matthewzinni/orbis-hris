@@ -74,11 +74,12 @@ const APP_SECTIONS: AppSection[] = [
     targetId: 'dashboardTop',
     aliases: ['dashboard'],
     onEnter: () => {
+      // Always force-refetch so mutations from other sections cannot leave stale caches.
       if (typeof window.loadHrInbox === 'function') {
-        void window.loadHrInbox();
+        void window.loadHrInbox(true);
       }
       if (typeof window.loadManagerHome === 'function') {
-        void window.loadManagerHome();
+        void window.loadManagerHome(true);
       }
       if (typeof window.updateWorkspaceAlerts === 'function') {
         window.updateWorkspaceAlerts();

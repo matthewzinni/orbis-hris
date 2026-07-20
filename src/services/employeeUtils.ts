@@ -305,14 +305,16 @@ export function daysUntilDate(dateValue: unknown): number | null {
 /** Calendar date at local midnight, or null when invalid. */
 export function parseDueDate(dateValue: unknown): Date | null {
   if (dateValue instanceof Date && !Number.isNaN(dateValue.getTime())) {
-    const copy = new Date(dateValue);
-    copy.setHours(0, 0, 0, 0);
+    const copy = new Date(dateValue.getFullYear(), dateValue.getMonth(), dateValue.getDate());
     return copy;
   }
 
   if (!dateValue) return null;
 
-  const parsed = new Date(`${String(dateValue).trim()}T00:00:00`);
+  const raw = String(dateValue).trim();
+  // Prefer YYYY-MM-DD so UTC midnight ISO strings do not shift the calendar day.
+  const dateOnly = raw.match(/^(\d{4}-\d{2}-\d{2})/)?.[1];
+  const parsed = new Date(`${dateOnly || raw}T00:00:00`);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
@@ -340,14 +342,22 @@ export function readEmployeeNextStayInterviewDateRaw(
     nextReview?: string | Date | null;
     next_review_date?: string;
     nextReviewDate?: string | Date;
+    next_stay_interview_date?: string;
+    nextStayInterviewDate?: string | Date;
   };
+
+  if (record.nextStayInterviewDate instanceof Date && !Number.isNaN(record.nextStayInterviewDate.getTime())) {
+    return record.nextStayInterviewDate.toISOString().slice(0, 10);
+  }
 
   if (record.nextReview instanceof Date && !Number.isNaN(record.nextReview.getTime())) {
     return record.nextReview.toISOString().slice(0, 10);
   }
 
   return String(
-    record.nextReview ||
+    record.next_stay_interview_date ||
+      record.nextStayInterviewDate ||
+      record.nextReview ||
       record.next_review_date ||
       record.nextReviewDate ||
       ''
@@ -404,18 +414,11 @@ export function formatEmployeeDueDateLine(
   return label ? `${name} • ${label}` : name;
 }
 
-window.cleanEmployeeNameValue =
-  cleanEmployeeNameValue;
-
-window.employeeDisplayName =
-  employeeDisplayName;
-
-window.isActiveDashboardEmployee =
-  isActiveDashboardEmployee;
-
-window.isInHouseFteEmployee = isInHouseFteEmployee;
-
-window.countInHouseFteEmployees = countInHouseFteEmployees;
-
-window.daysUntilDate =
-  daysUntilDate;
+if (typeof window !== 'undefined') {
+  window.cleanEmployeeNameValue = cleanEmployeeNameValue;
+  window.employeeDisplayName = employeeDisplayName;
+  window.isActiveDashboardEmployee = isActiveDashboardEmployee;
+  window.isInHouseFteEmployee = isInHouseFteEmployee;
+  window.countInHouseFteEmployees = countInHouseFteEmployees;
+  window.daysUntilDate = daysUntilDate;
+}

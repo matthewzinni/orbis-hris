@@ -120,7 +120,7 @@ test.describe('mobile shell chrome (unauthenticated DOM)', () => {
       .toEqual({
         drawerOpen: false,
         overflow: '',
-        backdropOpen: true,
+        backdropOpen: false,
       });
   });
 

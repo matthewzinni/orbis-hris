@@ -446,6 +446,12 @@ export async function loadOperationsIssues(): Promise<void> {
   }
 }
 
+async function reloadOperationsIssuesAfterMutation(): Promise<void> {
+  await loadOperationsIssues();
+  const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
+  await refreshDerivedUiProfile('operations');
+}
+
 async function refreshIssueDrawerPanels(issueId: string): Promise<void> {
   const [events, attachments] = await Promise.all([
     loadOperationsIssueEvents(issueId),
@@ -808,7 +814,7 @@ async function saveOperationsIssueRecordInner(): Promise<void> {
       showToast('Operational issue created.');
     }
 
-    await loadOperationsIssues();
+    await reloadOperationsIssuesAfterMutation();
 
     if (currentOperationsIssueId) {
       const refreshed = cachedOperationsIssues.find(
@@ -853,7 +859,7 @@ export async function deleteOperationsIssueById(issueId: string): Promise<void> 
   }
 
   showToast('Operational issue deleted.');
-  await loadOperationsIssues();
+  await reloadOperationsIssuesAfterMutation();
 }
 
 export async function deleteOperationsIssueRecord(): Promise<void> {

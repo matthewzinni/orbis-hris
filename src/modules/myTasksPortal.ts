@@ -530,7 +530,7 @@ export async function loadMyTasksPortal(): Promise<void> {
       : Promise.resolve([] as HrInboxItem[]);
 
   if ((isAdminUser() || isSupervisorUser()) && typeof window.loadHrInbox === 'function') {
-    void window.loadHrInbox();
+    void window.loadHrInbox(true);
   }
 
   if (typeof window.loadPerformanceReviewSupervisorNotify === 'function') {

@@ -29,6 +29,7 @@ import {
   buildHrIntelligenceContext,
   computeTurnoverRiskPercentage,
   enrichAtRiskMetaFromContext,
+  isOpenDisciplineStatus,
   isOpenInvestigationStatus,
   isOpenOperationsIssue,
   isTurnoverRiskContributor,
@@ -952,20 +953,13 @@ export function buildKpiHoverDetails(): void {
     'No employees currently on leave'
   );
 
-  const disciplineCard = document.getElementById('cardOpenDiscipline');
-  const existingDisciplineTooltip = disciplineCard?.getAttribute('data-tooltip') || '';
+  // Do not preserve a prior discipline tooltip here — it goes stale after delete/close.
+  // Open Discipline names are owned exclusively by loadSummaryMetrics.
   const disciplineCountText = String(safeGet('kOpenDiscipline')?.textContent || '').trim();
-  const hasRealDisciplineTooltip =
-    Boolean(existingDisciplineTooltip) &&
-    existingDisciplineTooltip !== 'No open discipline cases' &&
-    existingDisciplineTooltip !== 'Could not load discipline cases';
-
-  if (!hasRealDisciplineTooltip) {
-    if (disciplineCountText === '0') {
-      setKpiCardTooltip('cardOpenDiscipline', [], 'No open discipline cases');
-    } else if (disciplineCountText === '—' || disciplineCountText === '') {
-      setKpiCardTooltip('cardOpenDiscipline', [], 'Could not load discipline cases');
-    }
+  if (disciplineCountText === '0') {
+    setKpiCardTooltip('cardOpenDiscipline', [], 'No open discipline cases');
+  } else if (disciplineCountText === '—' || disciplineCountText === '') {
+    setKpiCardTooltip('cardOpenDiscipline', [], 'Could not load discipline cases');
   }
 
   const overdueReviewEmployees = reviewEligibleActive.filter(isReviewOverdue);
@@ -1099,11 +1093,6 @@ export function renderKpiEmployeeMetrics(): void {
   }
 }
 
-function isOpenDisciplineReport(status: unknown): boolean {
-  const normalized = String(status || 'open').trim().toLowerCase();
-  return normalized !== 'closed';
-}
-
 async function ensureKpiEmployeeRoster(): Promise<void> {
   if (getDashboardKpiEmployees().length) {
     return;
@@ -1169,7 +1158,7 @@ export async function loadSummaryMetrics(): Promise<void> {
 
     if (!disciplineRes.error) {
       const openDisciplineCases = (disciplineRes.data || []).filter((row) =>
-        isOpenDisciplineReport((row as { report_status?: string }).report_status)
+        isOpenDisciplineStatus((row as { report_status?: string }).report_status)
       );
       const openCount = openDisciplineCases.length;
       setKpiText('kOpenDiscipline', openCount);

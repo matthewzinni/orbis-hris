@@ -82,6 +82,7 @@ let selectedEmployee: DrawerEmployeeRecord | null = null;
 
 /** Primary key captured when the drawer opens — never read from the form. */
 let openedEmployeeRecordId: string | null = null;
+let openEmployeeDrawerGeneration = 0;
 
 function escapeHtml(value: unknown): string {
   if (typeof (window as Window & { esc?: (v: unknown) => string }).esc === 'function') {
@@ -521,7 +522,13 @@ export async function openEmployeeDrawer(employeeId: string): Promise<void> {
     return;
   }
 
+  const generation = ++openEmployeeDrawerGeneration;
+
   let employee = await fetchEmployeeRecord(employeeId);
+
+  if (generation !== openEmployeeDrawerGeneration) {
+    return;
+  }
 
   if (!employee) {
     const current = window.currentEmployee as DrawerEmployeeRecord | null | undefined;
@@ -537,6 +544,10 @@ export async function openEmployeeDrawer(employeeId: string): Promise<void> {
     }
   }
 
+  if (generation !== openEmployeeDrawerGeneration) {
+    return;
+  }
+
   if (!employee) {
     console.warn('[Drawer] Employee not found.');
     showToast('Employee could not be found.', 'error');
@@ -550,6 +561,10 @@ export async function openEmployeeDrawer(employeeId: string): Promise<void> {
       ? (window as Window & { normalizeEmployee: (e: DrawerEmployeeRecord) => DrawerEmployeeRecord | null })
           .normalizeEmployee(employee) || employee
       : employee;
+
+  if (generation !== openEmployeeDrawerGeneration) {
+    return;
+  }
 
   const recordId = String(
     (normalized as DrawerEmployeeRecord & { dbId?: string }).dbId || normalized.id || employeeId
