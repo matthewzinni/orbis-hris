@@ -1,4 +1,9 @@
 import { isMobileLayout } from './mobileLayout';
+import {
+  applyBodyScrollLock,
+  clearBodyScrollLock,
+  clearOrphanedScrollLockStyles,
+} from '../utils/bodyScrollLock';
 
 const MOBILE_SHEET_IDS = [
   'orbisMobileMoreSheet',
@@ -13,6 +18,15 @@ const MODULE_DRAWER_IDS = [
   'operationsIssueDrawer',
   'careEngagementDrawer',
   'janusAccountDrawer',
+] as const;
+
+const BODY_SCROLL_LOCK_CLASSES = [
+  'orbis-drawer-open',
+  'orbis-mobile-employee-profile-open',
+  'orbis-mobile-sheet-open',
+  'orbis-mobile-nav-drawer-open',
+  'orbis-modal-open',
+  'orbis-mobile-signing-open',
 ] as const;
 
 export type ModuleDrawerId = (typeof MODULE_DRAWER_IDS)[number];
@@ -30,6 +44,15 @@ function isDrawerEffectivelyOpen(id: string): boolean {
 
 function anyDrawerOpen(): boolean {
   return MODULE_DRAWER_IDS.some((id) => isDrawerEffectivelyOpen(id));
+}
+
+function anyModalOpen(): boolean {
+  const confirmOpen = document.getElementById('orbisConfirmBackdrop')?.classList.contains('open');
+  const signingOpen = document.getElementById('erSigningBackdrop')?.classList.contains('open');
+  const palette = document.getElementById('commandPaletteOverlay');
+  const paletteOpen = Boolean(palette && !palette.classList.contains('hidden'));
+  // Prefer live modal surfaces over a possibly-stale body class.
+  return Boolean(confirmOpen || signingOpen || paletteOpen);
 }
 
 /** Strip leftover fullscreen inline styles from closed drawers so they cannot block scroll. */
@@ -69,7 +92,11 @@ export function hideSiblingModuleDrawers(exceptId: ModuleDrawerId): void {
 
 /** Keep body.orbis-mobile-sheet-open in sync with any open mobile sheet. */
 export function syncMobileSheetOpenClass(): void {
-  document.body.classList.toggle('orbis-mobile-sheet-open', anyMobileSheetOpen());
+  const open = anyMobileSheetOpen();
+  document.body.classList.toggle('orbis-mobile-sheet-open', open);
+  if (!open) {
+    unlockBodyScrollIfIdle();
+  }
 }
 
 export function closeMobileSheetById(sheetId: string): void {
@@ -87,7 +114,7 @@ export function closeAllMobileSheets(): void {
     sheet.classList.remove('open');
     sheet.setAttribute('aria-hidden', 'true');
   });
-  document.body.classList.remove('orbis-mobile-sheet-open');
+  syncMobileSheetOpenClass();
 }
 
 export function openMobileSheetExclusive(sheetId: string): void {
@@ -103,6 +130,7 @@ export function openMobileSheetExclusive(sheetId: string): void {
     sheet.setAttribute('aria-hidden', 'true');
   });
   syncMobileSheetOpenClass();
+  applyBodyScrollLock();
 }
 
 export function closeAllMobileOverlays(): void {
@@ -115,19 +143,28 @@ export function closeAllMobileOverlays(): void {
     nav?.classList.remove('open');
     document.body.classList.remove('orbis-mobile-nav-drawer-open');
   }
+
+  unlockBodyScrollIfIdle();
+}
+
+function anyOverlayStillOpen(): boolean {
+  if (anyDrawerOpen()) return true;
+  if (anyMobileSheetOpen()) return true;
+  if (document.body.classList.contains('orbis-mobile-nav-drawer-open')) return true;
+  if (document.getElementById('orbisMobileNavDrawer')?.classList.contains('open')) return true;
+  if (anyModalOpen()) return true;
+  return false;
 }
 
 /** Clear body scroll lock only when no drawer / sheet / nav overlay remains open. */
 export function unlockBodyScrollIfIdle(): void {
   clearClosedDrawerGhostStyles();
 
-  if (anyDrawerOpen()) return;
-  if (anyMobileSheetOpen()) return;
-  if (document.body.classList.contains('orbis-mobile-nav-drawer-open')) return;
-  if (document.body.classList.contains('orbis-modal-open')) return;
+  if (anyOverlayStillOpen()) return;
 
-  document.body.classList.remove('orbis-drawer-open', 'orbis-mobile-employee-profile-open');
-  document.body.style.removeProperty('overflow');
+  BODY_SCROLL_LOCK_CLASSES.forEach((cls) => document.body.classList.remove(cls));
+  clearBodyScrollLock();
+  clearOrphanedScrollLockStyles();
 
   const backdrop = document.getElementById('drawerBackdrop');
   if (backdrop?.classList.contains('open')) {
@@ -140,7 +177,7 @@ export function unlockBodyScrollIfIdle(): void {
 
 export function lockBodyScrollForDrawer(): void {
   document.body.classList.add('orbis-drawer-open');
-  document.body.style.overflow = 'hidden';
+  applyBodyScrollLock();
 }
 
 /**
@@ -229,3 +266,4 @@ window.closeAllMobileOverlays = closeAllMobileOverlays;
 window.unlockBodyScrollIfIdle = unlockBodyScrollIfIdle;
 window.hideSiblingModuleDrawers = hideSiblingModuleDrawers;
 window.clearSharedDrawerInlineStyles = clearSharedDrawerInlineStyles;
+window.lockBodyScrollForDrawer = lockBodyScrollForDrawer;

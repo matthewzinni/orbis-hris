@@ -1,5 +1,6 @@
 import { switchMainView } from '../ui/navigation';
 import { isMobileLayout } from './mobileLayout';
+import { applyBodyScrollLock } from '../utils/bodyScrollLock';
 
 let drawerTriggerElement: HTMLElement | null = null;
 let focusTrapHandler: ((event: KeyboardEvent) => void) | null = null;
@@ -124,6 +125,7 @@ export function openMobileNavDrawer(trigger?: HTMLElement | null): void {
   drawer.classList.add('open');
   drawer.setAttribute('aria-hidden', 'false');
   document.body.classList.add('orbis-mobile-nav-drawer-open');
+  applyBodyScrollLock();
   setMenuButtonExpanded(true);
   bindFocusTrap(drawer);
 
@@ -142,6 +144,10 @@ export function closeMobileNavDrawer(): void {
   document.body.classList.remove('orbis-mobile-nav-drawer-open');
   setMenuButtonExpanded(false);
   unbindFocusTrap(drawer);
+
+  if (typeof window.unlockBodyScrollIfIdle === 'function') {
+    window.unlockBodyScrollIfIdle();
+  }
 
   if (drawerTriggerElement && typeof drawerTriggerElement.focus === 'function') {
     drawerTriggerElement.focus();

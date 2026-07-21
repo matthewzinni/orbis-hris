@@ -111,7 +111,11 @@ function bindDrawerFocusTrap(drawer: HTMLElement): void {
 function activateEmployeeDrawerA11y(drawer: HTMLElement, backdrop: HTMLElement | null): void {
   drawer.setAttribute('aria-hidden', 'false');
   backdrop?.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('orbis-drawer-open');
+  if (typeof window.lockBodyScrollForDrawer === 'function') {
+    window.lockBodyScrollForDrawer();
+  } else {
+    document.body.classList.add('orbis-drawer-open');
+  }
   bindDrawerFocusTrap(drawer);
 
   const closeBtn = drawer.querySelector('#employeeDrawerCloseBtn') as HTMLElement | null;
@@ -136,7 +140,9 @@ function deactivateEmployeeDrawerA11y(drawer: HTMLElement | null, backdrop: HTML
   if (typeof window.unlockBodyScrollIfIdle === 'function') {
     window.unlockBodyScrollIfIdle();
   } else {
-    document.body.classList.remove('orbis-drawer-open');
+    document.body.classList.remove('orbis-drawer-open', 'orbis-mobile-employee-profile-open');
+    document.body.style.removeProperty('overflow');
+    document.documentElement.style.removeProperty('overflow');
   }
 
   if (drawerTriggerElement && typeof drawerTriggerElement.focus === 'function') {
@@ -546,6 +552,8 @@ export function resetEmployeeDrawerShell(): void {
 
   deactivateEmployeeDrawerA11y(drawer, backdrop);
   document.body.classList.remove('orbis-drawer-open', 'orbis-mobile-employee-profile-open');
+  document.body.style.removeProperty('overflow');
+  document.documentElement.style.removeProperty('overflow');
 }
 
 export function openNewEmployeeDrawer(): void {
@@ -923,18 +931,23 @@ export function closeDrawer(): void {
     const backdrop = domGet('drawerBackdrop');
     const drawer = domGet('employeeDrawer');
 
+    // Remove open state BEFORE unlock. unlockBodyScrollIfIdle treats `.open` as
+    // still active and will no-op if called first — leaving the page unscrollable.
     backdrop?.classList.remove('open');
-    deactivateEmployeeDrawerA11y(drawer, backdrop);
+    backdrop?.setAttribute('aria-hidden', 'true');
 
     if (drawer) {
         drawer.classList.add('closing');
         drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
         clearStuckDrawerInlineStyles(drawer);
 
         setTimeout(() => {
             drawer.classList.remove('closing');
         }, 250);
     }
+
+    deactivateEmployeeDrawerA11y(drawer, backdrop);
 
     removeDrawerIdentityHeader('employeeDrawerIdentityHeader');
     document.getElementById('employeeDrawerChrome')?.replaceChildren();

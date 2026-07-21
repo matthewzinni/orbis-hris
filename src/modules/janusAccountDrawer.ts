@@ -395,8 +395,6 @@ export async function openJanusAccountDrawer(
   if (!drawer) return;
 
   applyDrawerOpenStyles(drawer, backdrop);
-  document.body.classList.add('orbis-drawer-open');
-  document.body.style.overflow = 'hidden';
 
   if (currentJanusAccountId) {
     await refreshContactsPanel();

@@ -98,8 +98,13 @@ function releaseDrawerScrollLock(): void {
     window.unlockBodyScrollIfIdle();
     return;
   }
-  document.body.classList.remove('orbis-drawer-open', 'orbis-modal-open');
+  document.body.classList.remove(
+    'orbis-drawer-open',
+    'orbis-modal-open',
+    'orbis-mobile-employee-profile-open'
+  );
   document.body.style.removeProperty('overflow');
+  document.documentElement.style.removeProperty('overflow');
 }
 
 function employeeDrawerIsOpen(drawer: HTMLElement | null): boolean {
@@ -1647,8 +1652,12 @@ export function closeCandidateDrawer(): void {
         backdrop.style.setProperty('opacity', '1', 'important');
         backdrop.style.setProperty('z-index', '140', 'important');
       }
-      document.body.classList.add('orbis-drawer-open');
-      document.body.style.overflow = 'hidden';
+      if (typeof window.lockBodyScrollForDrawer === 'function') {
+        window.lockBodyScrollForDrawer();
+      } else {
+        document.body.classList.add('orbis-drawer-open');
+        document.body.style.overflow = 'hidden';
+      }
     } else {
       hideEmployeeDrawerForCandidate();
       if (typeof window.closeEmployeeDrawer === 'function') {
@@ -1660,7 +1669,7 @@ export function closeCandidateDrawer(): void {
   }
 
   if (!shouldResumeEmployee) {
-    document.body.style.removeProperty('overflow');
+    releaseDrawerScrollLock();
   }
 
   currentCandidateId = null;

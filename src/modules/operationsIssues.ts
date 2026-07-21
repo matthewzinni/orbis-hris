@@ -645,8 +645,6 @@ export async function openOperationsIssueDrawer(issueId: string): Promise<void> 
   fillOperationsIssueDrawer(issue);
   applyDrawerOpenStyles(drawer, backdrop);
   await refreshIssueDrawerPanels(String(issue.id));
-  document.body.classList.add('orbis-drawer-open');
-  document.body.style.overflow = 'hidden';
   safeGet('operationsIssueDrawer')?.querySelector('.drawer-body')?.scrollTo(0, 0);
 }
 
@@ -683,8 +681,6 @@ export function openNewOperationsIssueForm(): void {
   applyDrawerOpenStyles(drawer, backdrop);
   renderOperationsIssueEvents(safeGet('operationsIssueActivity'), []);
   renderOperationsIssueAttachments(safeGet('operationsIssueAttachments'), []);
-  document.body.classList.add('orbis-drawer-open');
-  document.body.style.overflow = 'hidden';
   drawer.querySelector('.drawer-body')?.scrollTo(0, 0);
 }
 

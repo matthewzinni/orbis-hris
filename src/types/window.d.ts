@@ -234,6 +234,7 @@ declare global {
     closeAllMobileOverlays?: () => void;
     closeMobileNavDrawer?: () => void;
     unlockBodyScrollIfIdle?: () => void;
+    lockBodyScrollForDrawer?: () => void;
     hideSiblingModuleDrawers?: (exceptId: string) => void;
     clearSharedDrawerInlineStyles?: (drawer: HTMLElement | null) => void;
     initStayInterviewOrgInsights?: () => void;

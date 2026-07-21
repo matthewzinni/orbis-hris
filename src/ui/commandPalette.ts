@@ -2,6 +2,7 @@ import { supabaseClient } from '../services/supabaseClient';
 import { isAdminUser, isSupervisorUser, canAccessJanus } from '../services/access';
 import { employeeDisplayName, type EmployeeLike } from '../services/employeeUtils';
 import { switchMainView } from './navigation';
+import { applyBodyScrollLock } from '../utils/bodyScrollLock';
 
 type CommandKind = 'action' | 'employee' | 'candidate';
 
@@ -639,6 +640,7 @@ export function openCommandPalette(): void {
     paletteOpen = true;
     overlay.classList.remove('hidden');
     document.body.classList.add('orbis-modal-open');
+    applyBodyScrollLock();
 
     candidateRows = [];
     applyFilter('');
@@ -673,6 +675,13 @@ export function closeCommandPalette(): void {
   paletteOpen = false;
   overlay?.classList.add('hidden');
   document.body.classList.remove('orbis-modal-open');
+
+  if (typeof window.unlockBodyScrollIfIdle === 'function') {
+    window.unlockBodyScrollIfIdle();
+  } else {
+    document.body.style.removeProperty('overflow');
+    document.documentElement.style.removeProperty('overflow');
+  }
 
   if (input) {
     input.value = '';

@@ -6,6 +6,7 @@ import {
 import { formatAcknowledgmentSummaryHtml } from '../services/reviewAcknowledgmentSummary';
 import type { SignPayload } from '../types/signing';
 import { createTypedSignatureImage } from '../ui/signaturePads';
+import { applyBodyScrollLock } from '../utils/bodyScrollLock';
 
 let activeToken = '';
 
@@ -39,6 +40,10 @@ function closeErSigningModal(): void {
 
   const body = safeGet('erSigningBody');
   if (body) body.innerHTML = '';
+
+  if (typeof window.unlockBodyScrollIfIdle === 'function') {
+    window.unlockBodyScrollIfIdle();
+  }
 }
 
 async function fetchSigningContext(token: string): Promise<SignPayload> {
@@ -205,6 +210,7 @@ export async function openErSigningModal(token: string): Promise<void> {
   activeToken = normalized;
   backdrop.classList.add('open');
   document.body.classList.add('orbis-modal-open', 'orbis-mobile-signing-open');
+  applyBodyScrollLock();
   body.innerHTML = '<div class="muted">Loading document…</div>';
 
   try {

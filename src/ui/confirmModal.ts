@@ -1,3 +1,5 @@
+import { applyBodyScrollLock } from '../utils/bodyScrollLock';
+
 export type ConfirmOptions = {
   title?: string;
   confirmLabel?: string;
@@ -23,6 +25,13 @@ function closeConfirmModal(result: boolean): void {
 
   backdrop?.classList.remove('open');
   document.body.classList.remove('orbis-modal-open');
+
+  if (typeof window.unlockBodyScrollIfIdle === 'function') {
+    window.unlockBodyScrollIfIdle();
+  } else {
+    document.body.style.removeProperty('overflow');
+    document.documentElement.style.removeProperty('overflow');
+  }
 
   if (confirmBtn) confirmBtn.disabled = false;
   if (cancelBtn) cancelBtn.disabled = false;
@@ -101,6 +110,7 @@ export function showOrbisConfirm(
     pendingResolve = resolve;
     backdrop.classList.add('open');
     document.body.classList.add('orbis-modal-open');
+    applyBodyScrollLock();
     requestAnimationFrame(() => cancelBtn.focus());
   });
 }

@@ -1026,8 +1026,6 @@ export async function openInvestigationDrawer(investigationId: string): Promise<
   fillInvestigationDrawer(investigation);
   applyDrawerOpenStyles(drawer, backdrop);
   await refreshDrawerPanels(String(investigation.id));
-  document.body.classList.add('orbis-drawer-open');
-  document.body.style.overflow = 'hidden';
   drawer.querySelector('.drawer-body')?.scrollTo(0, 0);
 }
 
@@ -1059,8 +1057,6 @@ export function openNewInvestigationForm(): void {
   renderInvestigationInterviews(safeGet('investigationInterviewsList'), []);
   renderInvestigationEvidence(safeGet('investigationEvidenceList'), []);
   renderInvestigationTimeline(safeGet('investigationTimelineList'), []);
-  document.body.classList.add('orbis-drawer-open');
-  document.body.style.overflow = 'hidden';
   drawer.querySelector('.drawer-body')?.scrollTo(0, 0);
 }
 

@@ -114,12 +114,14 @@ test.describe('mobile shell chrome (unauthenticated DOM)', () => {
         page.evaluate(() => ({
           drawerOpen: document.body.classList.contains('orbis-drawer-open'),
           overflow: document.body.style.overflow,
+          htmlOverflow: document.documentElement.style.overflow,
           backdropOpen: document.getElementById('drawerBackdrop')?.classList.contains('open'),
         }))
       )
       .toEqual({
         drawerOpen: false,
         overflow: '',
+        htmlOverflow: '',
         backdropOpen: false,
       });
   });
