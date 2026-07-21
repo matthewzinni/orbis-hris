@@ -94,11 +94,15 @@ export function countsTowardAtRiskDiscipline(level: unknown): boolean {
   return isSevereDisciplineLevel(level);
 }
 
-/** Match severe discipline from level or legacy text fields when level was not stored. */
+/** Match severe discipline from stored level only — not action/description boilerplate. */
 export function disciplineRowCountsTowardAtRisk(row: DisciplineRow): boolean {
-  return [row.discipline_level, row.action_taken, row.description, row.issue_type].some((value) =>
-    isSevereDisciplineLevel(value)
-  );
+  const level = String(row.discipline_level || '').trim();
+  if (level) {
+    return isSevereDisciplineLevel(level);
+  }
+
+  // Legacy rows without discipline_level: issue_type was occasionally used as the level label.
+  return isSevereDisciplineLevel(row.issue_type);
 }
 
 export function resolveEmployeeDisciplineKeys(
