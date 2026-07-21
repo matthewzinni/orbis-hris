@@ -1,4 +1,4 @@
-import { buildMailtoUrl } from '../utils/mailto';
+import { buildMailtoUrl, openMailtoUrl } from '../utils/mailto';
 import {
   STAY_THEMES_LEADERSHIP_RECIPIENTS,
   STAY_THEMES_SENDER_EMAIL,
@@ -27,7 +27,8 @@ export type CandidateSummaryEmailInput = {
   senderEmail?: string;
 };
 
-const MAILTO_BODY_MAX = 6000;
+/** Keep encoded mailto under Chrome's practical URL length limit. */
+const MAILTO_BODY_MAX = 1600;
 
 function line(label: string, value: string | undefined | null): string | null {
   const text = String(value || '').trim();
@@ -101,8 +102,7 @@ function buildEmailBody(input: CandidateSummaryEmailInput): string {
     return full;
   }
 
-  const truncated = `${full.slice(0, MAILTO_BODY_MAX - 120)}\n\n[Truncated for email — open Orbis for the full candidate record.]`;
-  return truncated;
+  return `${full.slice(0, MAILTO_BODY_MAX - 120)}\n\n[Truncated for email — open Orbis for the full candidate record.]`;
 }
 
 export function buildCandidateSummaryLeadershipMailto(input: CandidateSummaryEmailInput): {
@@ -144,16 +144,7 @@ export function openCandidateSummaryLeadershipEmail(input: CandidateSummaryEmail
     throw new Error('No leadership email addresses configured.');
   }
 
-  try {
-    const link = document.createElement('a');
-    link.href = mailtoUrl;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-  } catch {
-    window.location.assign(mailtoUrl);
-  }
+  openMailtoUrl(mailtoUrl);
 
   return { recipients, senderEmail };
 }

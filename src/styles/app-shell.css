@@ -1835,7 +1835,8 @@ tr:hover td {
   position: fixed;
   top: 16px;
   right: 16px;
-  z-index: 120;
+  /* Above drawers/backdrops (150) so validation messages remain visible. */
+  z-index: 10060;
   display: flex;
   flex-direction: column;
   gap: 10px;

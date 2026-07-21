@@ -460,6 +460,11 @@ export async function emailCandidateSummaryToLeadership(): Promise<void> {
 
   if (!String(profileSummary || '').trim()) {
     showToast('Add a profile summary before emailing leadership.', 'error');
+    const summaryField =
+      safeGet<HTMLTextAreaElement>('candidateNotesInput') ||
+      safeGet<HTMLTextAreaElement>('candidateNotes');
+    summaryField?.focus();
+    summaryField?.scrollIntoView({ block: 'center', behavior: 'smooth' });
     return;
   }
 
@@ -2178,7 +2183,11 @@ function bindCandidateEvents(): void {
     void deleteCandidateRecord(explicitId);
   });
 
-  document.getElementById('emailCandidateSummaryBtn')?.addEventListener('click', () => {
+  document.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    const emailButton = target?.closest('#emailCandidateSummaryBtn');
+    if (!emailButton) return;
+    event.preventDefault();
     void emailCandidateSummaryToLeadership();
   });
 
