@@ -1,4 +1,9 @@
 import { isAdminUser, isSupervisorUser } from '../services/access';
+import {
+  getCachedAttentionSummary,
+  getCachedAttentionWorkspace,
+} from '../services/attention/attentionSummary';
+import { summarizeAttentionCategoryAlerts } from '../services/attention/attentionWorkspaceAlerts';
 import { summarizeHrInboxForAlerts } from '../services/hrInbox';
 import { switchMainView } from './navigation';
 
@@ -144,28 +149,56 @@ function collectWorkspaceAlertsFromDom(): WorkspaceAlert[] {
   return alerts;
 }
 
+const ATTENTION_MANAGED_ALERT_IDS = new Set([
+  'performance-reviews-due',
+  'open-discipline',
+  'meetings-attention',
+  'candidate-interviews-attention',
+  'employee-records-incomplete',
+]);
+
+function collectAttentionFallbackAlerts(): WorkspaceAlert[] {
+  const workspace = getCachedAttentionWorkspace();
+  if (!workspace?.items.length) {
+    return [];
+  }
+
+  return summarizeAttentionCategoryAlerts(workspace.items);
+}
+
+function mergeAlerts(primary: WorkspaceAlert[], secondary: WorkspaceAlert[]): WorkspaceAlert[] {
+  const seen = new Set(primary.map((alert) => alert.id));
+  const merged = [...primary];
+
+  secondary.forEach((alert) => {
+    if (seen.has(alert.id)) return;
+    seen.add(alert.id);
+    merged.push(alert);
+  });
+
+  return merged;
+}
+
 function collectWorkspaceAlerts(): WorkspaceAlert[] {
   const inboxItems =
     typeof window.getHrInboxItems === 'function' ? window.getHrInboxItems() : window.__hrInboxCache;
 
   if ((isAdminUser() || isSupervisorUser()) && inboxItems !== undefined) {
-    const inboxAlerts = summarizeHrInboxForAlerts(inboxItems).map((alert) => ({
+    return summarizeHrInboxForAlerts(inboxItems).map((alert) => ({
       id: alert.id,
       label: alert.label,
       detail: alert.detail,
       count: alert.count,
       viewId: alert.viewId,
     }));
+  }
 
-    if (isSupervisorUser() && !isAdminUser()) {
-      const supervisorKinds = new Set([
-        'leave-requests-pending',
-        'payroll-handoffs-pending',
-      ]);
-      return inboxAlerts.filter((alert) => supervisorKinds.has(alert.id));
-    }
-
-    return inboxAlerts;
+  const attentionAlerts = collectAttentionFallbackAlerts();
+  if (attentionAlerts.length || getCachedAttentionSummary()) {
+    const legacyDomAlerts = collectWorkspaceAlertsFromDom().filter(
+      (alert) => !ATTENTION_MANAGED_ALERT_IDS.has(alert.id)
+    );
+    return mergeAlerts(attentionAlerts, legacyDomAlerts);
   }
 
   return collectWorkspaceAlertsFromDom();

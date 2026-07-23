@@ -1090,6 +1090,39 @@ export function summarizeHrInboxForAlerts(items: HrInboxItem[]): HrInboxAlertSum
     });
   }
 
+  const meetings = items.filter((item) => item.kind === 'meeting').length;
+  if (meetings > 0) {
+    alerts.push({
+      id: 'meetings-attention',
+      label: 'Meetings need action',
+      detail: `${meetings} meeting${meetings === 1 ? '' : 's'} today or overdue follow-up`,
+      count: meetings,
+      viewId: 'dashboardView',
+    });
+  }
+
+  const candidateInterviews = items.filter((item) => item.kind === 'candidate_interview').length;
+  if (candidateInterviews > 0) {
+    alerts.push({
+      id: 'candidate-interviews-attention',
+      label: 'Candidate interviews',
+      detail: `${candidateInterviews} interview${candidateInterviews === 1 ? '' : 's'} need follow-up`,
+      count: candidateInterviews,
+      viewId: 'candidatesView',
+    });
+  }
+
+  const incompleteRecords = items.filter((item) => item.kind === 'employee_missing_info').length;
+  if (incompleteRecords > 0) {
+    alerts.push({
+      id: 'employee-records-incomplete',
+      label: 'Incomplete employee records',
+      detail: `${incompleteRecords} employee record${incompleteRecords === 1 ? '' : 's'} missing required fields`,
+      count: incompleteRecords,
+      viewId: 'employeesView',
+    });
+  }
+
   const discipline = canQueryDisciplineReports()
     ? items.filter((item) => item.kind === 'discipline').length
     : 0;

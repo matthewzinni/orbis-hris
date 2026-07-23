@@ -6,6 +6,11 @@ vi.mock('../access', () => ({
   isSupervisorUser: vi.fn(() => false),
 }));
 
+vi.mock('./attentionItemStates', () => ({
+  loadAttentionItemStates: vi.fn(async () => []),
+  overlayAttentionItems: vi.fn((items: AttentionItem[]) => items),
+}));
+
 vi.mock('./rules', () => ({
   ATTENTION_RULES: [
     {
@@ -73,12 +78,14 @@ import { isAdminUser, isSupervisorUser } from '../access';
 import {
   buildAttentionWorkspace,
   filterAttentionItems,
+  invalidateAttentionWorkspaceCache,
   isAttentionItemDueToday,
   isAttentionItemHighPriority,
 } from './buildAttentionWorkspace';
 
 describe('buildAttentionWorkspace', () => {
   beforeEach(() => {
+    invalidateAttentionWorkspaceCache();
     vi.mocked(isAdminUser).mockReturnValue(true);
     vi.mocked(isSupervisorUser).mockReturnValue(false);
   });

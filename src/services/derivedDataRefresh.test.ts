@@ -74,6 +74,7 @@ describe('refreshDerivedUiAfterMutation', () => {
       summary: true,
       inbox: true,
       managerHome: true,
+      attention: true,
     });
 
     await refreshDerivedUiProfile('discipline');

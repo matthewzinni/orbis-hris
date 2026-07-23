@@ -8,6 +8,8 @@ export type DerivedRefreshOptions = {
   summary?: boolean;
   /** Force-refetch HR inbox (`loadHrInbox(true)`). */
   inbox?: boolean;
+  /** Force-refetch unified attention summary/workspace. */
+  attention?: boolean;
   /** Force-refetch supervisor manager home. */
   managerHome?: boolean;
   /** Roster-only KPI cards (headcount, anniversaries, etc.). */
@@ -16,18 +18,19 @@ export type DerivedRefreshOptions = {
 
 /** Profiles used by domain mutations. */
 export const DERIVED_REFRESH_PROFILES = {
-  discipline: { summary: true, inbox: true, managerHome: true } satisfies DerivedRefreshOptions,
-  notes: { summary: true, inbox: true, managerHome: true } satisfies DerivedRefreshOptions,
-  flags: { summary: true, inbox: true, managerHome: true } satisfies DerivedRefreshOptions,
-  stay: { summary: true, inbox: true, managerHome: true } satisfies DerivedRefreshOptions,
+  discipline: { summary: true, inbox: true, managerHome: true, attention: true } satisfies DerivedRefreshOptions,
+  notes: { summary: true, inbox: true, managerHome: true, attention: true } satisfies DerivedRefreshOptions,
+  flags: { summary: true, inbox: true, managerHome: true, attention: true } satisfies DerivedRefreshOptions,
+  stay: { summary: true, inbox: true, managerHome: true, attention: true } satisfies DerivedRefreshOptions,
   reviews: {
     summary: true,
     inbox: true,
     managerHome: true,
     basicKpis: true,
+    attention: true,
   } satisfies DerivedRefreshOptions,
-  incidents: { summary: true, inbox: true, basicKpis: true } satisfies DerivedRefreshOptions,
-  meetings: { summary: true, inbox: true, basicKpis: true } satisfies DerivedRefreshOptions,
+  incidents: { summary: true, inbox: true, basicKpis: true, attention: true } satisfies DerivedRefreshOptions,
+  meetings: { summary: true, inbox: true, basicKpis: true, attention: true } satisfies DerivedRefreshOptions,
   investigations: { summary: true, inbox: true } satisfies DerivedRefreshOptions,
   operations: { summary: true, inbox: true } satisfies DerivedRefreshOptions,
   care: { inbox: true } satisfies DerivedRefreshOptions,
@@ -41,6 +44,7 @@ export const DERIVED_REFRESH_PROFILES = {
     inbox: true,
     managerHome: true,
     basicKpis: true,
+    attention: true,
   } satisfies DerivedRefreshOptions,
 } as const;
 
@@ -57,6 +61,8 @@ export async function refreshDerivedUiAfterMutation(
 
   if (options.inbox && typeof window.loadHrInbox === 'function') {
     tasks.push(Promise.resolve(window.loadHrInbox(true)));
+  } else if (options.attention && typeof window.loadAttentionSummary === 'function') {
+    tasks.push(Promise.resolve(window.loadAttentionSummary(true)));
   }
 
   if (options.managerHome && typeof window.loadManagerHome === 'function') {

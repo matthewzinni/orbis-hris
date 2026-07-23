@@ -1,4 +1,5 @@
 import { isAdminUser, isSupervisorUser } from '../services/access';
+import { isPhase3InboxKind } from '../services/attention/adapters/hrInboxAdapter';
 import {
   buildHrInboxItems,
   filterHrInboxItems,
@@ -135,22 +136,30 @@ function renderInboxList(items: HrInboxItem[]): void {
   }
 
   list.innerHTML = visible
-    .map(
-      (item) => `
-        <button
-          type="button"
-          class="hr-inbox-item severity-${escapeHtml(item.severity)}"
-          data-inbox-id="${escapeHtml(item.id)}"
-        >
-          <span class="hr-inbox-item-meta">
-            <span class="hr-inbox-severity">${escapeHtml(severityLabel(item.severity))}</span>
-            <span class="hr-inbox-kind">${escapeHtml(kindLabel(item.kind))}</span>
-          </span>
-          <span class="hr-inbox-item-title">${escapeHtml(item.title)}</span>
-          <span class="hr-inbox-item-detail">${escapeHtml(item.detail)}</span>
-        </button>
-      `
-    )
+    .map((item) => {
+      const dismissable = isPhase3InboxKind(item.kind);
+      return `
+        <div class="hr-inbox-row">
+          <button
+            type="button"
+            class="hr-inbox-item severity-${escapeHtml(item.severity)}"
+            data-inbox-id="${escapeHtml(item.id)}"
+          >
+            <span class="hr-inbox-item-meta">
+              <span class="hr-inbox-severity">${escapeHtml(severityLabel(item.severity))}</span>
+              <span class="hr-inbox-kind">${escapeHtml(kindLabel(item.kind))}</span>
+            </span>
+            <span class="hr-inbox-item-title">${escapeHtml(item.title)}</span>
+            <span class="hr-inbox-item-detail">${escapeHtml(item.detail)}</span>
+          </button>
+          ${
+            dismissable
+              ? `<button type="button" class="hr-inbox-dismiss" data-dismiss-id="${escapeHtml(item.id)}" aria-label="Dismiss ${escapeHtml(item.title)}">Dismiss</button>`
+              : ''
+          }
+        </div>
+      `;
+    })
     .join('');
 }
 
@@ -182,6 +191,19 @@ function bindHrInboxUi(): void {
 
   const list = safeGet('hrInboxList');
   list?.addEventListener('click', (event) => {
+    const dismissTarget = (event.target as Element | null)?.closest<HTMLElement>(
+      '[data-dismiss-id]'
+    );
+    if (dismissTarget) {
+      event.preventDefault();
+      event.stopPropagation();
+      const dedupeKey = dismissTarget.dataset.dismissId || '';
+      if (dedupeKey && typeof window.dismissAttentionItemByDedupeKey === 'function') {
+        void window.dismissAttentionItemByDedupeKey(dedupeKey);
+      }
+      return;
+    }
+
     const target = (event.target as Element | null)?.closest<HTMLElement>('[data-inbox-id]');
     if (!target) return;
 
@@ -237,7 +259,9 @@ export async function loadHrInbox(force = false): Promise<void> {
     window.__hrInboxCache = items;
     renderInboxList(items);
 
-    if (typeof window.updateWorkspaceAlerts === 'function') {
+    if (typeof window.loadAttentionSummary === 'function') {
+      await window.loadAttentionSummary(false);
+    } else if (typeof window.updateWorkspaceAlerts === 'function') {
       window.updateWorkspaceAlerts();
     }
 

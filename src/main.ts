@@ -60,6 +60,7 @@ import './modules/notes';
 import './ui/workspaceAlerts';
 import './ui/hrInbox';
 import './services/attention/attentionSummary';
+import './services/attention/attentionItemStates';
 import './modules/payrollHandoff';
 import './ui/departmentSummary';
 import './modules/onboarding';

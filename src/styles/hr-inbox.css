@@ -63,6 +63,29 @@
   padding-right: 2px;
 }
 
+#hrInboxCard .hr-inbox-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+#hrInboxCard .hr-inbox-dismiss {
+  align-self: center;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+#hrInboxCard .hr-inbox-dismiss:hover {
+  color: var(--text);
+  border-color: var(--text);
+}
+
 #hrInboxCard .hr-inbox-item {
   display: flex;
   flex-direction: column;

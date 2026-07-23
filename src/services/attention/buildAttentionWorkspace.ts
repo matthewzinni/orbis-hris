@@ -1,26 +1,47 @@
 import { isAdminUser, isSupervisorUser } from '../access';
 import { parseDueDate } from '../employeeUtils';
+import { loadAttentionItemStates, overlayAttentionItems } from './attentionItemStates';
 import { dedupeAttentionItems } from './dedupe';
 import { ATTENTION_RULES } from './rules';
 import { sortAttentionItems } from './sort';
 import type { AttentionFilter, AttentionItem, AttentionWorkspace } from './types';
 import { evaluationTimestamp, todayIsoDate } from './utils';
 
-export async function buildAttentionWorkspace(): Promise<AttentionWorkspace> {
+let cachedWorkspace: AttentionWorkspace | null = null;
+
+export function invalidateAttentionWorkspaceCache(): void {
+  cachedWorkspace = null;
+  delete window.__attentionWorkspaceCache;
+  delete window.__attentionSummaryCache;
+}
+
+export async function buildAttentionWorkspace(force = false): Promise<AttentionWorkspace> {
+  if (!force && cachedWorkspace) {
+    return cachedWorkspace;
+  }
+
   const evaluatedAt = evaluationTimestamp();
 
   if (!isAdminUser() && !isSupervisorUser()) {
-    return { items: [], evaluatedAt };
+    cachedWorkspace = { items: [], evaluatedAt };
+    window.__attentionWorkspaceCache = cachedWorkspace;
+    return cachedWorkspace;
   }
 
   try {
     const batches = await Promise.all(ATTENTION_RULES.map((rule) => rule.collect()));
-    const items = sortAttentionItems(dedupeAttentionItems(batches.flat()));
-    return { items, evaluatedAt };
+    const rawItems = sortAttentionItems(dedupeAttentionItems(batches.flat()));
+    const states = await loadAttentionItemStates();
+    const items = overlayAttentionItems(rawItems, states);
+    cachedWorkspace = { items, evaluatedAt };
+    window.__attentionWorkspaceCache = cachedWorkspace;
+    return cachedWorkspace;
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Could not build attention workspace.';
     console.error('[Attention] Workspace build failed:', err);
-    return { items: [], evaluatedAt, error: message };
+    cachedWorkspace = { items: [], evaluatedAt, error: message };
+    window.__attentionWorkspaceCache = cachedWorkspace;
+    return cachedWorkspace;
   }
 }
 

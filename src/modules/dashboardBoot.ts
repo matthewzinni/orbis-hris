@@ -511,11 +511,12 @@ async function loadSummaryMetricsFallback(): Promise<void> {
   try {
     if (typeof window.loadSummaryMetrics === 'function') {
       await window.loadSummaryMetrics();
-      return;
+    } else if (typeof window.renderBasicDashboardKpis === 'function') {
+      window.renderBasicDashboardKpis();
     }
 
-    if (typeof window.renderBasicDashboardKpis === 'function') {
-      window.renderBasicDashboardKpis();
+    if (typeof window.loadAttentionSummary === 'function') {
+      await window.loadAttentionSummary(true);
     }
   } catch (err) {
     console.error('[Dashboard] KPI summary load failed:', err);

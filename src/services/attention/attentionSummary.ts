@@ -1,11 +1,13 @@
 import { getCurrentAuthEmail } from '../accessScopes';
 import {
   buildAttentionWorkspace,
+  invalidateAttentionWorkspaceCache,
   isAttentionItemDueSoon,
   isAttentionItemDueToday,
   isAttentionItemHighPriority,
 } from './buildAttentionWorkspace';
-import type { AttentionItem, AttentionSummary } from './types';
+import { syncAttentionSummaryKpis } from './attentionWorkspaceAlerts';
+import type { AttentionItem, AttentionSummary, AttentionWorkspace } from './types';
 
 export function summarizeAttentionItems(items: AttentionItem[]): AttentionSummary {
   const openItems = items.filter(
@@ -31,14 +33,37 @@ function countAssignedToCurrentUser(items: AttentionItem[]): number {
     .length;
 }
 
-export async function buildAttentionSummary(): Promise<AttentionSummary> {
-  const workspace = await buildAttentionWorkspace();
+export async function buildAttentionSummary(force = false): Promise<AttentionSummary> {
+  const workspace = await buildAttentionWorkspace(force);
   return summarizeAttentionItems(workspace.items);
 }
 
-export async function loadAttentionSummary(): Promise<AttentionSummary> {
-  return buildAttentionSummary();
+export async function loadAttentionSummary(force = false): Promise<AttentionSummary> {
+  const workspace = await buildAttentionWorkspace(force);
+  const summary = summarizeAttentionItems(workspace.items);
+
+  window.__attentionWorkspaceCache = workspace;
+  window.__attentionSummaryCache = summary;
+
+  syncAttentionSummaryKpis(summary, workspace.items);
+
+  if (typeof window.updateWorkspaceAlerts === 'function') {
+    window.updateWorkspaceAlerts();
+  }
+
+  return summary;
+}
+
+export function getCachedAttentionWorkspace(): AttentionWorkspace | null {
+  return window.__attentionWorkspaceCache || null;
+}
+
+export function getCachedAttentionSummary(): AttentionSummary | null {
+  return window.__attentionSummaryCache || null;
 }
 
 window.buildAttentionSummary = buildAttentionSummary;
 window.loadAttentionSummary = loadAttentionSummary;
+window.getCachedAttentionWorkspace = getCachedAttentionWorkspace;
+window.getCachedAttentionSummary = getCachedAttentionSummary;
+window.invalidateAttentionWorkspaceCache = invalidateAttentionWorkspaceCache;

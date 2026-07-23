@@ -36,6 +36,8 @@ export type AttentionStatus =
   | 'dismissed'
   | 'overdue';
 
+export type AttentionUserOverlayStatus = 'dismissed' | 'in_progress' | 'snoozed';
+
 export type AttentionSourceType =
   | 'employee'
   | 'candidate'

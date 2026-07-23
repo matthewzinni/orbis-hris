@@ -5,7 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { HrIntelligenceContext } from '../services/hrIntelligence';
 import type { HrInboxItem } from '../services/hrInbox';
-import type { AttentionSummary } from '../services/attention/types';
+import type { AttentionItem, AttentionSummary, AttentionWorkspace } from '../services/attention/types';
 
 export {};
 
@@ -38,9 +38,20 @@ declare global {
     populateDepartmentFilter?: () => void;
     renderDepartmentSummary?: () => void;
     __hrInboxCache?: HrInboxItem[];
+    __attentionSummaryCache?: AttentionSummary;
+    __attentionWorkspaceCache?: AttentionWorkspace;
     loadHrInbox?: (force?: boolean) => Promise<void>;
-    buildAttentionSummary?: () => Promise<AttentionSummary>;
-    loadAttentionSummary?: () => Promise<AttentionSummary>;
+    buildAttentionSummary?: (force?: boolean) => Promise<AttentionSummary>;
+    loadAttentionSummary?: (force?: boolean) => Promise<AttentionSummary>;
+    getCachedAttentionSummary?: () => AttentionSummary | null;
+    getCachedAttentionWorkspace?: () => AttentionWorkspace | null;
+    invalidateAttentionWorkspaceCache?: () => void;
+    dismissAttentionItem?: (item: AttentionItem) => Promise<void>;
+    dismissAttentionItemByDedupeKey?: (dedupeKey: string, sourceFingerprint?: string | null) => Promise<void>;
+    snoozeAttentionItem?: (item: AttentionItem, snoozedUntil: string) => Promise<void>;
+    markAttentionItemInProgress?: (item: AttentionItem) => Promise<void>;
+    restoreAttentionItem?: (item: AttentionItem) => Promise<void>;
+    loadAttentionItemStates?: () => Promise<unknown>;
     applyHrInboxAccess?: () => void;
     getHrInboxItems?: () => HrInboxItem[];
     openCandidatesView?: () => void;
