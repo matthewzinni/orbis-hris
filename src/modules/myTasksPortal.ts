@@ -6,7 +6,10 @@ import {
   isSupervisorUser,
 } from '../services/access';
 import {
-  buildAdminTasksAttentionItems,
+  buildPortalAttentionInboxItems,
+  openPortalAttentionRoute,
+} from '../services/attention/portalAttention';
+import {
   kindLabel,
   type HrInboxItem,
   type HrInboxRoute,
@@ -32,69 +35,7 @@ let adminAttentionBound = false;
 let cachedAttentionItems: HrInboxItem[] = [];
 
 async function openTasksAttentionRoute(route: HrInboxRoute): Promise<void> {
-  if (route.type === 'view') {
-    if (typeof window.switchMainView === 'function') {
-      window.switchMainView(route.viewId);
-    }
-    return;
-  }
-
-  if (route.type === 'investigation') {
-    if (typeof window.switchMainView === 'function') {
-      window.switchMainView('investigationsView');
-    }
-    if (typeof window.openInvestigationDrawer === 'function') {
-      await window.openInvestigationDrawer(route.investigationId);
-    }
-    return;
-  }
-
-  if (route.type === 'operations') {
-    if (typeof window.switchMainView === 'function') {
-      window.switchMainView('operationsView');
-    }
-    if (typeof window.openOperationsIssueDrawer === 'function') {
-      await window.openOperationsIssueDrawer(route.issueId);
-    }
-    return;
-  }
-
-  if (route.type === 'internal_job') {
-    if (typeof window.openInternalJobBoardView === 'function') {
-      window.openInternalJobBoardView(route.postingId, 'pipeline');
-    } else if (typeof window.switchMainView === 'function') {
-      window.switchMainView('internalJobBoardView');
-    }
-    return;
-  }
-
-  if (route.type === 'payroll_handoff') {
-    if (typeof window.switchMainView === 'function') {
-      window.switchMainView('employeesView');
-    }
-    if (typeof window.openEmployeeDrawer === 'function') {
-      await window.openEmployeeDrawer(route.employeeId);
-    }
-    return;
-  }
-
-  if (route.type !== 'employee') return;
-
-  if (typeof window.switchMainView === 'function') {
-    window.switchMainView('employeesView');
-  }
-  if (typeof window.openEmployeeDrawer === 'function') {
-    await window.openEmployeeDrawer(route.employeeId);
-  }
-
-  const tab = route.drawerTab;
-  if (!tab) return;
-
-  if (typeof window.switchDrawerTab === 'function') {
-    window.switchDrawerTab(tab);
-  } else if (typeof window.switchTab === 'function') {
-    window.switchTab(tab);
-  }
+  await openPortalAttentionRoute(route);
 }
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
@@ -525,7 +466,7 @@ export async function loadMyTasksPortal(): Promise<void> {
 
   const adminItemsPromise =
     isAdminUser() || isSupervisorUser()
-      ? buildAdminTasksAttentionItems().catch((err) => {
+      ? buildPortalAttentionInboxItems(true).catch((err) => {
           console.warn('[MyTasksPortal] Could not load admin attention items:', err);
           return [] as HrInboxItem[];
         })

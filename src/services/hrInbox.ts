@@ -7,7 +7,6 @@ import {
   employeeMatchesPerformanceReviewScope,
   employeeMatchesSupervisorAccess,
   getSupervisorDepartmentScope,
-  hasOrgWidePerformanceReviewAccess,
   isAdminUser,
   isSupervisorUser,
   canQueryDisciplineReports,
@@ -160,11 +159,6 @@ function resolveEmployee(refId: string): EmployeeLike | undefined {
   });
 }
 
-/** Benefits + payroll handoffs on Tasks are HR-leadership only (Matthew/Trent/Brent). */
-function canSeeOrgWideAdminTaskItems(): boolean {
-  return isAdminUser() && hasOrgWidePerformanceReviewAccess();
-}
-
 function severityFromDays(days: number | null, fallback: HrInboxSeverity = 'info'): HrInboxSeverity {
   if (days === null) return fallback;
   if (days < 0) return 'overdue';
@@ -256,36 +250,8 @@ function collectPerformanceReviewDueItems(): Promise<HrInboxItem[]> {
 }
 
 export async function buildAdminTasksAttentionItems(): Promise<HrInboxItem[]> {
-  if (!isAdminUser() && !isSupervisorUser()) return [];
-
-  if (!getEmployees().length) {
-    try {
-      await loadEmployees();
-    } catch (err) {
-      console.warn('[HrInbox] Could not load employees for admin tasks:', err);
-    }
-  }
-
-  const reviewItemsPromise = collectPerformanceReviewDueItems();
-
-  if (!isAdminUser()) {
-    return sortHrInboxItems(await reviewItemsPromise);
-  }
-
-  const reviewItems = await reviewItemsPromise;
-
-  if (!canSeeOrgWideAdminTaskItems()) {
-    return sortHrInboxItems(reviewItems);
-  }
-
-  const payrollHandoffs = await loadPendingPayrollHandoffs();
-  const activeEmployees = getActiveEmployees() as EmployeeLike[];
-
-  return sortHrInboxItems([
-    ...reviewItems,
-    ...collectPayrollHandoffItems(payrollHandoffs),
-    ...collectBenefitsEligibilityItems(activeEmployees),
-  ]);
+  const { buildPortalAttentionInboxItems } = await import('./attention/portalAttention');
+  return buildPortalAttentionInboxItems(true);
 }
 
 export function isAdminTasksAttentionItem(item: HrInboxItem): boolean {

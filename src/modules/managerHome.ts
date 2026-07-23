@@ -1,6 +1,7 @@
 import { employeeMatchesSupervisorAccess, isSupervisorUser } from '../services/access';
 import { getEmployees } from './employees';
 import { renderManagerHomeCharts } from '../ui/dashboardCharts';
+import { openPortalAttentionRoute } from '../services/attention/portalAttention';
 import {
   buildManagerHomeSnapshot,
   type ManagerAttentionItem,
@@ -15,6 +16,7 @@ import { switchMainView } from '../ui/navigation';
 
 let managerHomeBound = false;
 let cachedSnapshot: ManagerHomeSnapshot | null = null;
+let cachedAttentionItems: ManagerAttentionItem[] = [];
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -73,7 +75,7 @@ function renderAttentionItem(item: ManagerAttentionItem): string {
           <button class="button soft sm" type="button" data-manager-leave-approve="${esc(item.leaveRequestId)}">Approve</button>
           <button class="button soft sm" type="button" data-manager-leave-deny="${esc(item.leaveRequestId)}">Deny</button>
         </div>`
-      : `<button class="button soft sm" type="button" data-manager-open="${esc(item.employeeId)}" data-manager-tab="${esc(item.drawerTab)}">Open</button>`;
+      : `<button class="button soft sm" type="button" data-manager-attention-id="${esc(item.id)}">Open</button>`;
 
   return `
     <article class="manager-home-attention-item" data-manager-attention-id="${esc(item.id)}">
@@ -110,9 +112,10 @@ function renderSnapshot(snapshot: ManagerHomeSnapshot): void {
 
   const attentionList = safeGet('managerHomeAttentionList');
   if (attentionList) {
+    cachedAttentionItems = snapshot.attentionItems;
     if (!snapshot.attentionItems.length) {
       attentionList.innerHTML =
-        '<div class="manager-home-empty muted">Your team is caught up — no pending leave or overdue stay interviews.</div>';
+        '<div class="manager-home-empty muted">Your team is caught up — no open action items right now.</div>';
     } else {
       attentionList.innerHTML = snapshot.attentionItems.map(renderAttentionItem).join('');
     }
@@ -206,6 +209,17 @@ function bindManagerHomeControls(): void {
           await loadManagerHome(true);
         }
       })();
+      return;
+    }
+
+    const attentionId = target.closest<HTMLElement>('[data-manager-attention-id]')?.dataset
+      .managerAttentionId;
+    if (attentionId) {
+      const item = cachedAttentionItems.find((row) => row.id === attentionId);
+      if (item?.route) {
+        event.preventDefault();
+        void openPortalAttentionRoute(item.route);
+      }
       return;
     }
 

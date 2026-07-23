@@ -6,10 +6,8 @@ import {
   compareEmployeesByLastName,
   employeeDisplayName,
   formatDueDateLabel,
-  formatEmployeeDueDateLine,
   getEmployeeNextStayInterviewDueDate,
   isActiveDashboardEmployee,
-  isStayInterviewDueSoon,
   isStayInterviewEligibleEmployee,
   isStayInterviewOverdue,
   readEmployeeNextStayInterviewDateRaw,
@@ -23,19 +21,26 @@ import {
   type LeaveRequestRecord,
 } from './leaveRequests';
 import { getEmployees } from '../modules/employees';
+import {
+  buildManagerHomeAttentionItems,
+  countActiveSupervisorTeamMembers,
+} from './attention/portalAttention';
 
-export type ManagerAttentionKind = 'leave_request' | 'stay_interview' | 'at_risk';
+import type { HrInboxKind, HrInboxRoute, HrInboxSeverity } from './hrInbox';
+
+export type ManagerAttentionKind = HrInboxKind | 'at_risk';
 
 export type ManagerAttentionItem = {
   id: string;
   kind: ManagerAttentionKind;
-  severity: 'overdue' | 'due_soon' | 'info';
+  severity: HrInboxSeverity;
   employeeId: string;
   employeeName: string;
   title: string;
   detail: string;
   drawerTab: string;
   leaveRequestId?: string;
+  route?: HrInboxRoute;
 };
 
 export type ManagerTeamMember = {
@@ -78,33 +83,6 @@ function isScopedLeave(row: LeaveRequestRecord, teamIds: Set<string>): boolean {
   return teamIds.has(String(row.employee_id || '').trim());
 }
 
-function buildAtRiskAttention(
-  employee: Record<string, unknown>,
-  riskMap: Record<string, { manualReason?: string; disciplineRisk?: boolean; lowReview?: boolean }>
-): ManagerAttentionItem | null {
-  const employeeId = String(employee.id || employee.employee_id || '').trim();
-  const risk = riskMap[employeeId] || riskMap[String(employee.dbId || '')];
-  if (!risk) return null;
-
-  const reasons: string[] = [];
-  if (risk.manualReason) reasons.push(String(risk.manualReason).trim());
-  if (risk.disciplineRisk) reasons.push('Severe discipline');
-  if (risk.lowReview) reasons.push('Low review score');
-
-  if (!reasons.length) return null;
-
-  return {
-    id: `at-risk-${employeeId}`,
-    kind: 'at_risk',
-    severity: 'info',
-    employeeId,
-    employeeName: employeeDisplayName(employee),
-    title: 'May need attention',
-    detail: reasons.join(' · '),
-    drawerTab: 'profile',
-  };
-}
-
 export async function buildManagerHomeSnapshot(): Promise<ManagerHomeSnapshot | null> {
   if (!isSupervisorUser()) return null;
 
@@ -123,86 +101,16 @@ export async function buildManagerHomeSnapshot(): Promise<ManagerHomeSnapshot | 
       compareEmployeesByLastName(left as Record<string, unknown>, right as Record<string, unknown>)
     );
 
-  const dueSoonStay = eligible
-    .filter((employee) => isStayInterviewDueSoon(employee))
-    .sort((left, right) =>
-      compareEmployeesByLastName(left as Record<string, unknown>, right as Record<string, unknown>)
-    );
-
-  const [outTodayAll, pendingAll] = await Promise.all([
+  const [outTodayAll, pendingAll, attentionItems] = await Promise.all([
     loadApprovedLeaveOutToday(),
     loadPendingLeaveRequests(),
+    buildManagerHomeAttentionItems(),
   ]);
 
   const outToday = outTodayAll.filter((row) => isScopedLeave(row, teamIds));
   const pendingLeave = pendingAll.filter(
     (row) => isScopedLeave(row, teamIds) && row.status === 'requested'
   );
-
-  const riskMap =
-    (window.currentAtRiskRosterMap as Record<
-      string,
-      { manualReason?: string; disciplineRisk?: boolean; lowReview?: boolean }
-    >) || {};
-
-  const attentionItems: ManagerAttentionItem[] = [];
-
-  pendingLeave.forEach((row) => {
-    const employeeId = String(row.employee_id || '').trim();
-    attentionItems.push({
-      id: `leave-${row.id}`,
-      kind: 'leave_request',
-      severity: 'due_soon',
-      employeeId,
-      employeeName: employeeNameForLeave(employeeId),
-      title: 'Pending time off',
-      detail: `${leaveTypeLabel(row.leave_type)} · ${formatLeaveDateRange(row)}`,
-      drawerTab: 'time-off',
-      leaveRequestId: row.id,
-    });
-  });
-
-  overdueStay.forEach((employee) => {
-    const employeeId = String(employee.id || employee.employee_id || '').trim();
-    attentionItems.push({
-      id: `stay-overdue-${employeeId}`,
-      kind: 'stay_interview',
-      severity: 'overdue',
-      employeeId,
-      employeeName: employeeDisplayName(employee),
-      title: 'Stay interview overdue',
-      detail: formatEmployeeDueDateLine(employee),
-      drawerTab: 'stay-interviews',
-    });
-  });
-
-  dueSoonStay.forEach((employee) => {
-    const employeeId = String(employee.id || employee.employee_id || '').trim();
-    if (overdueStay.some((row) => String(row.id || row.employee_id) === employeeId)) return;
-
-    attentionItems.push({
-      id: `stay-soon-${employeeId}`,
-      kind: 'stay_interview',
-      severity: 'due_soon',
-      employeeId,
-      employeeName: employeeDisplayName(employee),
-      title: 'Stay interview due soon',
-      detail: formatEmployeeDueDateLine(employee),
-      drawerTab: 'stay-interviews',
-    });
-  });
-
-  team.forEach((employee) => {
-    const item = buildAtRiskAttention(employee, riskMap);
-    if (item) attentionItems.push(item);
-  });
-
-  const severityRank = { overdue: 0, due_soon: 1, info: 2 };
-  attentionItems.sort((left, right) => {
-    const rank = severityRank[left.severity] - severityRank[right.severity];
-    if (rank !== 0) return rank;
-    return left.employeeName.localeCompare(right.employeeName);
-  });
 
   const teamRoster: ManagerTeamMember[] = team
     .map((employee) => {
@@ -222,10 +130,11 @@ export async function buildManagerHomeSnapshot(): Promise<ManagerHomeSnapshot | 
     .sort((left, right) => left.name.localeCompare(right.name));
 
   const atRiskCount = attentionItems.filter((item) => item.kind === 'at_risk').length;
+  const activeCount = countActiveSupervisorTeamMembers();
 
   return {
     teamCount: team.length,
-    activeCount: activeTeam.length,
+    activeCount,
     onLeaveStatusCount,
     outTodayCount: outToday.length,
     pendingLeaveCount: pendingLeave.length,
