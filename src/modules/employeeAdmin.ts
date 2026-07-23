@@ -502,6 +502,7 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
   setField('employeeId', values.employeeId);
   setField('empEmployeeId', values.employeeId);
   setByPlaceholder('Employee ID', values.employeeId);
+  setField('employeeStatusInput', values.status);
   setField('empStatus', values.status);
   setField('status', values.status);
   setField('empFirstName', values.firstName);
@@ -559,8 +560,10 @@ export function populateEmployeeAdminForm(employee: EmployeeRow | null | undefin
 
   const drawer = safeGet('employeeDrawer') || document.querySelector('#employeeDrawer');
   const statusSelect =
+    (safeGet('employeeStatusInput') as HTMLSelectElement | null) ||
     (safeGet('empStatus') as HTMLSelectElement | null) ||
     (safeGet('status') as HTMLSelectElement | null) ||
+    (drawer?.querySelector('select#employeeStatusInput') as HTMLSelectElement | null) ||
     (drawer?.querySelector('select#empStatus') as HTMLSelectElement | null) ||
     (drawer?.querySelector('select#status') as HTMLSelectElement | null) ||
     (Array.from(drawer?.querySelectorAll('select') || []).find((select) =>

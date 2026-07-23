@@ -187,6 +187,7 @@ function normalizeStatusForAdminInput(status: unknown): string {
 
   if (raw === 'INACTIVE') return 'INACTIVE';
   if (raw === 'LEAVE' || raw === 'ON LEAVE') return 'LEAVE';
+  if (raw === 'ABSENT') return 'ABSENT';
   if (raw === 'TERMINATED') return 'TERMINATED';
 
   return 'ACTIVE';

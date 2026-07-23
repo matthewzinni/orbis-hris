@@ -1589,7 +1589,12 @@
                         <option value="INACTIVE">Inactive</option>
                         <option value="LEAVE">Leave</option>
                         <option value="ABSENT">Absent</option>
+                        <option value="TERMINATED">Terminated</option>
                       </select>
+                      <p class="muted" style="margin: 6px 0 0; font-size: 0.82rem; line-height: 1.45">
+                        Prefer <strong>Terminate Employee</strong> below to set status, termination date,
+                        and payroll handoff in one step.
+                      </p>
                     </div>
                     <div class="field">
                       <label for="employeeFirstNameInput">First Name</label>
@@ -1803,6 +1808,14 @@
                       onclick="runDeleteEmployee()"
                     >
                       Delete Employee
+                    </button>
+                    <button
+                      class="button danger"
+                      id="terminateEmployeeBtn"
+                      type="button"
+                      onclick="runTerminateEmployee()"
+                    >
+                      Terminate Employee
                     </button>
                   </div>
                   <div
