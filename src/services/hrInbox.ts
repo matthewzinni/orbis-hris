@@ -61,6 +61,8 @@ import {
 import {
   hiringManagerMatchesScope,
 } from './internalJobBoardAccess';
+import { buildAttentionWorkspace } from './attention/buildAttentionWorkspace';
+import { attentionItemsToHrInboxItems } from './attention/adapters/hrInboxAdapter';
 
 export type HrInboxSeverity = 'overdue' | 'due_soon' | 'info';
 
@@ -78,7 +80,10 @@ export type HrInboxKind =
   | 'policy_campaign'
   | 'benefits_eligibility'
   | 'performance_review'
-  | 'internal_job_interest';
+  | 'internal_job_interest'
+  | 'meeting'
+  | 'candidate_interview'
+  | 'employee_missing_info';
 
 export type HrInboxRoute =
   | { type: 'employee'; employeeId: string; drawerTab?: string }
@@ -125,6 +130,9 @@ const KIND_LABELS: Record<HrInboxKind, string> = {
   benefits_eligibility: 'Benefits eligibility',
   performance_review: 'Performance review',
   internal_job_interest: 'Internal job interest',
+  meeting: 'Meeting',
+  candidate_interview: 'Candidate interview',
+  employee_missing_info: 'Employee record',
 };
 
 type EmployeeLike = Record<string, unknown>;
@@ -922,6 +930,9 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     return [];
   }
 
+  const workspace = await buildAttentionWorkspace();
+  const phase3Items = attentionItemsToHrInboxItems(workspace.items);
+
   if (!getEmployees().length) {
     try {
       await loadEmployees();
@@ -937,14 +948,12 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
   const pendingLeavePromise = loadPendingLeaveRequests();
 
   if (isSupervisorUser() && !isAdminUser()) {
-    const [pendingLeave, policyAssignments, reviewItems, internalJobInterestRes] =
-      await Promise.all([
+    const [pendingLeave, policyAssignments, internalJobInterestRes] = await Promise.all([
       pendingLeavePromise,
       loadPolicyCampaignInboxAssignments().catch((err) => {
         console.warn('[HrInbox] Could not load policy campaigns:', err);
         return [];
       }),
-      collectPerformanceReviewDueItems(),
       supabaseClient
         .from('internal_job_interest')
         .select(
@@ -955,19 +964,16 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     ]);
 
     return sortHrInboxItems([
-      ...reviewItems,
+      ...phase3Items,
       ...collectLeaveRequestItems(pendingLeave),
       ...collectPolicyCampaignItems(policyAssignments, true),
       ...collectInternalJobInterestItems(internalJobInterestRes.data || [], true),
     ]);
   }
 
-  const includeDiscipline = canQueryDisciplineReports();
-
   const [
     onboardingRes,
     offboardingRes,
-    disciplineRes,
     investigationsRes,
     careItemsRes,
     careFollowUpsRes,
@@ -976,17 +982,11 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     payrollHandoffs,
     pendingLeave,
     policyAssignments,
-    reviewItems,
   ] = await Promise.all([
     supabaseClient
       .from('onboarding_tasks')
       .select('id, employee_id, task_name, status, due_date, assigned_to'),
     supabaseClient.from('offboarding_tasks').select('id, employee_id, task_name, status'),
-    includeDiscipline
-      ? supabaseClient
-          .from('discipline_reports')
-          .select('id, employee_id, issue_type, report_status')
-      : Promise.resolve({ data: [], error: null }),
     supabaseClient
       .from('investigations')
       .select('id, case_number, title, status, target_completion_date, primary_employee_id, targeted_employee_id'),
@@ -1010,13 +1010,11 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
       console.warn('[HrInbox] Could not load policy campaigns:', err);
       return [];
     }),
-    collectPerformanceReviewDueItems(),
   ]);
 
   const queryErrors = [
     onboardingRes.error,
     offboardingRes.error,
-    disciplineRes.error,
     investigationsRes.error,
     careItemsRes.error,
     careFollowUpsRes.error,
@@ -1028,13 +1026,12 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     console.warn('[HrInbox] Some queries failed:', queryErrors);
   }
 
-  const merged: HrInboxItem[] = [
-    ...reviewItems,
+  return sortHrInboxItems([
+    ...phase3Items,
     ...collectStayInterviewItems(activeEmployees),
     ...collectBenefitsEligibilityItems(activeEmployees),
     ...collectOnboardingItems(onboardingRes.data || [], activeEmployees),
     ...collectOffboardingItems(offboardingRes.data || [], allEmployees),
-    ...collectDisciplineItems(disciplineRes.data || []),
     ...collectInvestigationItems((investigationsRes.data || []) as Investigation[]),
     ...collectCareFollowUpItems(careItemsRes.data || [], careFollowUpsRes.data || []),
     ...collectOperationsItems(operationsRes.data || []),
@@ -1042,9 +1039,7 @@ export async function buildHrInboxItems(): Promise<HrInboxItem[]> {
     ...collectPayrollHandoffItems(payrollHandoffs),
     ...collectLeaveRequestItems(pendingLeave),
     ...collectPolicyCampaignItems(policyAssignments),
-  ];
-
-  return sortHrInboxItems(merged);
+  ]);
 }
 
 export type HrInboxAlertSummary = {

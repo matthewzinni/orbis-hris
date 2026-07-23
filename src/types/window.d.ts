@@ -5,6 +5,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { HrIntelligenceContext } from '../services/hrIntelligence';
 import type { HrInboxItem } from '../services/hrInbox';
+import type { AttentionSummary } from '../services/attention/types';
 
 export {};
 
@@ -38,6 +39,8 @@ declare global {
     renderDepartmentSummary?: () => void;
     __hrInboxCache?: HrInboxItem[];
     loadHrInbox?: (force?: boolean) => Promise<void>;
+    buildAttentionSummary?: () => Promise<AttentionSummary>;
+    loadAttentionSummary?: () => Promise<AttentionSummary>;
     applyHrInboxAccess?: () => void;
     getHrInboxItems?: () => HrInboxItem[];
     openCandidatesView?: () => void;

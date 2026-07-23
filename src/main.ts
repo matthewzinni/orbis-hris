@@ -59,6 +59,7 @@ import './modules/drawer';
 import './modules/notes';
 import './ui/workspaceAlerts';
 import './ui/hrInbox';
+import './services/attention/attentionSummary';
 import './modules/payrollHandoff';
 import './ui/departmentSummary';
 import './modules/onboarding';
