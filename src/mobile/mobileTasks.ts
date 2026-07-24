@@ -86,7 +86,11 @@ function syncMobileAttentionDedup(): void {
   const personalRows = pendingList?.querySelectorAll(
     '.employee-portal-task-row:not(.employee-portal-task-row--admin)'
   );
-  const hideCard = dedupeAdmin && !(personalRows && personalRows.length > 0);
+  const workspaceHasItems = Boolean(
+    document.getElementById('attentionWorkspaceList')?.querySelector('.attention-workspace-card')
+  );
+  const hideCard =
+    dedupeAdmin && !(personalRows && personalRows.length > 0) && !workspaceHasItems;
   attentionCard.classList.toggle('hidden', hideCard);
 }
 

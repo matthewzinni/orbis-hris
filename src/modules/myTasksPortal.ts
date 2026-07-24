@@ -6,16 +6,6 @@ import {
   isSupervisorUser,
 } from '../services/access';
 import {
-  buildPortalAttentionInboxItems,
-  openPortalAttentionRoute,
-} from '../services/attention/portalAttention';
-import {
-  kindLabel,
-  type HrInboxItem,
-  type HrInboxRoute,
-} from '../services/hrInbox';
-import { applyPayrollHandoffAction } from './payrollHandoff';
-import {
   getHandbookDocumentUrl,
   type HandbookDocument,
 } from '../services/employeeHandbook';
@@ -30,13 +20,6 @@ import {
 let cachedPolicyDocs: HandbookDocument[] = [];
 
 let cachedHandbookDocs: HandbookDocument[] = [];
-
-let adminAttentionBound = false;
-let cachedAttentionItems: HrInboxItem[] = [];
-
-async function openTasksAttentionRoute(route: HrInboxRoute): Promise<void> {
-  await openPortalAttentionRoute(route);
-}
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -64,125 +47,20 @@ function showToast(message: string, type = 'success'): void {
   console.log(`[${type}] ${message}`);
 }
 
-function adminAttentionSeverityLabel(severity: HrInboxItem['severity']): string {
-  if (severity === 'overdue') return 'Overdue';
-  if (severity === 'due_soon') return 'Due soon';
-  return 'Open';
-}
-
-function renderAdminAttentionRow(item: HrInboxItem): string {
-  const payrollActions =
-    item.kind === 'payroll_handoff' && item.route.type === 'payroll_handoff'
-      ? `<button type="button" class="button soft sm" data-tasks-payroll-action="sent" data-tasks-payroll-id="${esc(item.route.handoffId)}">Mark sent</button>
-         <button type="button" class="button soft sm" data-tasks-payroll-action="confirmed" data-tasks-payroll-id="${esc(item.route.handoffId)}">Confirmed</button>`
-      : '';
-
-  const openLabel =
-    item.kind === 'performance_review'
-      ? 'Open review'
-      : item.kind === 'benefits_eligibility'
-        ? 'Open employee'
-        : 'Open';
-
-  const openAction = `<button type="button" class="button primary sm" data-tasks-attention-id="${esc(item.id)}">${esc(openLabel)}</button>`;
-
-  return `
-    <article class="employee-portal-task-row employee-portal-task-row--pending employee-portal-task-row--admin">
-      <div class="employee-portal-task-row-main">
-        <div class="employee-portal-task-row-top">
-          <span class="badge badge-soft">${esc(kindLabel(item.kind))}</span>
-          <span class="badge badge-soft">${esc(adminAttentionSeverityLabel(item.severity))}</span>
-          <strong>${esc(item.title)}</strong>
-        </div>
-        <p class="muted employee-portal-task-detail">${esc(item.detail)}</p>
-      </div>
-      <div class="employee-portal-task-row-actions">${payrollActions}${openAction}</div>
-    </article>
-  `;
-}
-
-function bindAdminAttentionActions(): void {
-  if (adminAttentionBound) return;
-  adminAttentionBound = true;
-
-  const root = safeGet('myTasksPage');
-  if (!root) return;
-
-  root.addEventListener('click', (event) => {
-    const attentionBtn = (event.target as Element | null)?.closest<HTMLElement>(
-      '[data-tasks-attention-id]'
-    );
-    if (attentionBtn) {
-      const itemId = attentionBtn.dataset.tasksAttentionId || '';
-      const item = cachedAttentionItems.find((row) => row.id === itemId);
-      if (!item) return;
-      event.preventDefault();
-      void openTasksAttentionRoute(item.route);
-      return;
-    }
-
-    const button = (event.target as Element | null)?.closest<HTMLElement>(
-      '[data-tasks-payroll-action]'
-    );
-    if (!button) return;
-
-    const handoffId = button.dataset.tasksPayrollId || '';
-    const action = button.dataset.tasksPayrollAction;
-    if (!handoffId || (action !== 'sent' && action !== 'confirmed')) return;
-
-    event.preventDefault();
-    void (async () => {
-      try {
-        await applyPayrollHandoffAction(handoffId, action);
-        showToast(
-          action === 'confirmed' ? 'Marked confirmed with payroll.' : 'Marked sent to payroll.'
-        );
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Could not update handoff.';
-        showToast(message, 'error');
-      }
-    })();
-  });
-}
-
-function renderAdminAttentionGroup(title: string, items: HrInboxItem[]): string {
-  if (!items.length) return '';
-
-  return `
-    <div class="employee-portal-attention-group">
-      <h3 class="employee-portal-attention-group-title">${esc(title)}</h3>
-      ${items.map(renderAdminAttentionRow).join('')}
-    </div>
-  `;
-}
-
-function renderPendingTasksList(
-  adminItems: HrInboxItem[],
-  personalItems: EmployeeTaskItem[]
-): string {
-  const performanceReviewItems = adminItems.filter((item) => item.kind === 'performance_review');
-  const benefitsItems = adminItems.filter((item) => item.kind === 'benefits_eligibility');
-  const payrollItems = adminItems.filter((item) => item.kind === 'payroll_handoff');
-  const otherAdminItems = adminItems.filter(
-    (item) =>
-      item.kind !== 'performance_review' &&
-      item.kind !== 'benefits_eligibility' &&
-      item.kind !== 'payroll_handoff'
-  );
-
-  const rows: string[] = [
-    renderAdminAttentionGroup('Performance Reviews Due', performanceReviewItems),
-    renderAdminAttentionGroup('Benefits Eligibility', benefitsItems),
-    renderAdminAttentionGroup('Payroll Handoffs', payrollItems),
-    ...otherAdminItems.map(renderAdminAttentionRow),
-    ...personalItems.map((item) => renderTaskRow(item, true)),
-  ].filter(Boolean);
-
-  if (!rows.length) {
-    return '<div class="employee-portal-task-empty">You are caught up — no pending tasks or acknowledgments.</div>';
+function renderPendingTasksList(personalItems: EmployeeTaskItem[]): string {
+  if (!personalItems.length) {
+    return '';
   }
 
-  return rows.join('');
+  return personalItems.map((item) => renderTaskRow(item, true)).join('');
+}
+
+function renderPersonalTasksSection(personalItems: EmployeeTaskItem[]): string {
+  const rows = renderPendingTasksList(personalItems);
+  if (rows) {
+    return `<h3 class="employee-portal-attention-group-title">Personal tasks</h3>${rows}`;
+  }
+  return '<div class="employee-portal-task-empty">You are caught up — no pending personal tasks.</div>';
 }
 
 function taskKindLabel(kind: EmployeeTaskItem['kind']): string {
@@ -438,7 +316,7 @@ export async function acknowledgeHandbookFromPortal(documentId: string): Promise
   }
 }
 
-function renderTasksPortalUnlinkedState(adminItems: HrInboxItem[] = []): void {
+function renderTasksPortalUnlinkedState(): void {
   const pendingEl = safeGet('myTasksPendingList');
   const handbookEl = safeGet('myTasksHandbookList');
   const isManager = isAdminUser() || isSupervisorUser();
@@ -447,9 +325,7 @@ function renderTasksPortalUnlinkedState(adminItems: HrInboxItem[] = []): void {
     : '<div class="muted">No employee record is linked to your account. Ask HR to link your BTW id in Admin → User Access.</div>';
 
   if (pendingEl) {
-    pendingEl.innerHTML = adminItems.length
-      ? renderPendingTasksList(adminItems, [])
-      : message;
+    pendingEl.innerHTML = isManager ? '' : message;
   }
   if (handbookEl) {
     handbookEl.innerHTML = isManager
@@ -462,15 +338,13 @@ function renderTasksPortalUnlinkedState(adminItems: HrInboxItem[] = []): void {
 export async function loadMyTasksPortal(): Promise<void> {
   if (!canAccessAppSection('myTasksView')) return;
 
-  bindAdminAttentionActions();
+  if (typeof window.applyAttentionWorkspaceAccess === 'function') {
+    window.applyAttentionWorkspaceAccess();
+  }
 
-  const adminItemsPromise =
-    isAdminUser() || isSupervisorUser()
-      ? buildPortalAttentionInboxItems(true).catch((err) => {
-          console.warn('[MyTasksPortal] Could not load admin attention items:', err);
-          return [] as HrInboxItem[];
-        })
-      : Promise.resolve([] as HrInboxItem[]);
+  if ((isAdminUser() || isSupervisorUser()) && typeof window.loadAttentionWorkspaceUi === 'function') {
+    void window.loadAttentionWorkspaceUi(true);
+  }
 
   if ((isAdminUser() || isSupervisorUser()) && typeof window.loadHrInbox === 'function') {
     void window.loadHrInbox(true);
@@ -491,11 +365,9 @@ export async function loadMyTasksPortal(): Promise<void> {
 
   const pendingEl = safeGet('myTasksPendingList');
   const handbookEl = safeGet('myTasksHandbookList');
-  const adminItems = await adminItemsPromise;
-  cachedAttentionItems = adminItems;
 
   if (!employeeId) {
-    renderTasksPortalUnlinkedState(adminItems);
+    renderTasksPortalUnlinkedState();
     if (typeof window.refreshMobileTasksUi === 'function') {
       void window.refreshMobileTasksUi();
     }
@@ -510,7 +382,7 @@ export async function loadMyTasksPortal(): Promise<void> {
     cachedHandbookDocs = snapshot.handbookDocuments;
 
     if (pendingEl) {
-      pendingEl.innerHTML = renderPendingTasksList(adminItems, snapshot.pending);
+      pendingEl.innerHTML = renderPersonalTasksSection(snapshot.pending);
     }
 
     if (handbookEl) {

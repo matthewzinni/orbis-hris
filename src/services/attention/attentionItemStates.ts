@@ -151,6 +151,12 @@ export async function mutateAttentionItemState(
   if (typeof window.loadHrInbox === 'function') {
     await window.loadHrInbox(true);
   }
+  if (typeof window.loadAttentionWorkspaceUi === 'function') {
+    await window.loadAttentionWorkspaceUi(true);
+  }
+  if (typeof window.loadMyTasksPortal === 'function') {
+    void window.loadMyTasksPortal();
+  }
 }
 
 export async function dismissAttentionItemAndRefresh(item: AttentionItem): Promise<void> {

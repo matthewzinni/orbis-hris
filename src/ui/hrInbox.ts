@@ -228,6 +228,10 @@ export function applyHrInboxAccess(): void {
     element.classList.toggle('hidden', !visible);
     element.setAttribute('aria-hidden', visible ? 'false' : 'true');
   });
+
+  if (typeof window.applyAttentionWorkspaceAccess === 'function') {
+    window.applyAttentionWorkspaceAccess();
+  }
 }
 
 export function getHrInboxItems(): HrInboxItem[] {

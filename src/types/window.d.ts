@@ -52,6 +52,8 @@ declare global {
     markAttentionItemInProgress?: (item: AttentionItem) => Promise<void>;
     restoreAttentionItem?: (item: AttentionItem) => Promise<void>;
     loadAttentionItemStates?: () => Promise<unknown>;
+    loadAttentionWorkspaceUi?: (force?: boolean) => Promise<void>;
+    applyAttentionWorkspaceAccess?: () => void;
     applyHrInboxAccess?: () => void;
     getHrInboxItems?: () => HrInboxItem[];
     openCandidatesView?: () => void;

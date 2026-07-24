@@ -53,9 +53,66 @@
                 <div id="mobileHrTasksList" class="orbis-mobile-hr-task-list"></div>
               </div>
             </div>
-            <div class="card" id="myTasksAttentionCard">
-              <div class="card-header">Needs your attention</div>
+            <div class="card" id="myTasksAttentionCard" data-hr-inbox-access>
+              <div class="card-header">
+                <span>Needs your attention</span>
+                <button class="button soft sm" type="button" id="attentionWorkspaceRefreshBtn">
+                  Refresh
+                </button>
+              </div>
               <div class="card-body">
+                <div id="attentionWorkspacePanel" class="attention-workspace hidden" aria-hidden="true">
+                  <div id="attentionWorkspaceSummary" class="attention-workspace-summary"></div>
+                  <div id="attentionWorkspaceToolbar" class="attention-workspace-toolbar">
+                    <input
+                      type="search"
+                      id="attentionWorkspaceSearch"
+                      class="input attention-workspace-search"
+                      placeholder="Search attention items"
+                      aria-label="Search attention items"
+                    />
+                    <div class="attention-workspace-filters">
+                      <select id="attentionWorkspaceCategoryFilter" aria-label="Filter by category">
+                        <option value="all">All categories</option>
+                        <option value="performance_review">Performance review</option>
+                        <option value="discipline">Discipline</option>
+                        <option value="meeting">Meeting</option>
+                        <option value="candidate">Candidate</option>
+                        <option value="employee_record">Employee record</option>
+                      </select>
+                      <select id="attentionWorkspaceSeverityFilter" aria-label="Filter by severity">
+                        <option value="all">All severities</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="normal">Normal</option>
+                        <option value="upcoming">Upcoming</option>
+                        <option value="informational">Info</option>
+                      </select>
+                      <select id="attentionWorkspaceStatusFilter" aria-label="Filter by status">
+                        <option value="all">All statuses</option>
+                        <option value="overdue">Overdue</option>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In progress</option>
+                        <option value="new">New</option>
+                      </select>
+                      <select id="attentionWorkspaceSortFilter" aria-label="Sort attention items">
+                        <option value="urgency">Sort: urgency</option>
+                        <option value="dueDate">Sort: due date</option>
+                        <option value="employee">Sort: employee</option>
+                        <option value="category">Sort: category</option>
+                      </select>
+                    </div>
+                    <div class="attention-workspace-quick-filters" role="group" aria-label="Quick filters">
+                      <button type="button" class="button soft sm attention-workspace-quick-filter active" data-attention-quick-filter="all">All</button>
+                      <button type="button" class="button soft sm attention-workspace-quick-filter" data-attention-quick-filter="overdue">Overdue</button>
+                      <button type="button" class="button soft sm attention-workspace-quick-filter" data-attention-quick-filter="high_priority">High priority</button>
+                      <button type="button" class="button soft sm attention-workspace-quick-filter" data-attention-quick-filter="in_progress">In progress</button>
+                    </div>
+                  </div>
+                  <div id="attentionWorkspaceList" class="attention-workspace-list">
+                    <div class="attention-workspace-empty muted">Loading attention items…</div>
+                  </div>
+                </div>
                 <div id="myTasksPendingList" class="employee-portal-task-list">
                   <div class="muted">Loading tasks…</div>
                 </div>

@@ -65,6 +65,13 @@ export async function refreshDerivedUiAfterMutation(
     tasks.push(Promise.resolve(window.loadAttentionSummary(true)));
   }
 
+  if (
+    (options.attention || options.inbox) &&
+    typeof window.loadAttentionWorkspaceUi === 'function'
+  ) {
+    tasks.push(Promise.resolve(window.loadAttentionWorkspaceUi(true)));
+  }
+
   if (options.managerHome && typeof window.loadManagerHome === 'function') {
     tasks.push(Promise.resolve(window.loadManagerHome(true)));
   }

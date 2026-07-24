@@ -1,6 +1,7 @@
 import { isAdminUser, isSupervisorUser } from '../access';
 import { employeeMatchesSupervisorAccess } from '../accessScopes';
 import { buildHrInboxItems, type HrInboxItem, type HrInboxRoute } from '../hrInbox';
+import type { AttentionRoute } from './types';
 import type { ManagerAttentionItem } from '../managerHome';
 import { employeeDisplayName, isActiveDashboardEmployee } from '../employeeUtils';
 import { getEmployees } from '../../modules/employees';
@@ -123,7 +124,7 @@ export async function buildManagerHomeAttentionItems(force = false): Promise<Man
   return sortManagerAttentionItems(merged);
 }
 
-export async function openPortalAttentionRoute(route: HrInboxRoute): Promise<void> {
+export async function openPortalAttentionRoute(route: AttentionRoute | HrInboxRoute): Promise<void> {
   if (route.type === 'view') {
     if (typeof window.switchMainView === 'function') {
       window.switchMainView(route.viewId);
@@ -161,6 +162,20 @@ export async function openPortalAttentionRoute(route: HrInboxRoute): Promise<voi
       window.openInternalJobBoardView(route.postingId, 'pipeline');
     } else if (typeof window.switchMainView === 'function') {
       window.switchMainView('internalJobBoardView');
+    }
+    return;
+  }
+
+  if (route.type === 'candidate') {
+    if (typeof window.switchMainView === 'function') {
+      window.switchMainView('candidatesView');
+    }
+    if (typeof window.openCandidateDrawer === 'function') {
+      await window.openCandidateDrawer(route.candidateId);
+    }
+    const tab = route.drawerTab;
+    if (tab && typeof window.switchDrawerTab === 'function') {
+      window.switchDrawerTab(tab);
     }
     return;
   }
