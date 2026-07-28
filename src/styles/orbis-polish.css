@@ -270,6 +270,73 @@
   color: var(--text);
 }
 
+.badge-iron-shift {
+  background: linear-gradient(180deg, #eef2f7 0%, #dbe4ee 100%);
+  color: #1e293b;
+  border: 1px solid #94a3b8;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.employee-drawer-name-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.employee-honor-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.employee-drawer-honors {
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #f8fafc 0%, #fffdf8 100%);
+}
+
+.employee-drawer-honors-inner {
+  padding: 12px 20px 14px;
+}
+
+.employee-drawer-honors-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.employee-drawer-honor-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+
+.employee-drawer-honor-card--iron-shift {
+  background: #f8fafc;
+  border-color: rgba(100, 116, 139, 0.22);
+}
+
+.employee-drawer-honor-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.history-item-iron-shift {
+  border-left: 3px solid #64748b;
+  padding-left: 10px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .orbis-fade-in,
   .orbis-app-section.active,

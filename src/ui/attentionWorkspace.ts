@@ -298,10 +298,17 @@ function bindAttentionWorkspaceUi(): void {
       .attentionDismiss;
     if (dismissKey) {
       event.preventDefault();
-      if (typeof window.dismissAttentionItemByDedupeKey === 'function') {
-        void window
-          .dismissAttentionItemByDedupeKey(dismissKey)
-          .then(() => loadAttentionWorkspaceUi(true));
+      const item = findAttentionItem(dismissKey);
+      const dismiss = item
+        ? window.dismissAttentionItem?.(item)
+        : window.dismissAttentionItemByDedupeKey?.(dismissKey);
+      if (typeof dismiss?.then === 'function') {
+        void dismiss.catch((err: unknown) => {
+          console.error('[AttentionWorkspace] Dismiss failed:', err);
+          if (typeof window.showToast === 'function') {
+            window.showToast('Could not dismiss this item. Try again.', 'error');
+          }
+        });
       }
       return;
     }

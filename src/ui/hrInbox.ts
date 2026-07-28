@@ -198,7 +198,12 @@ function bindHrInboxUi(): void {
       event.preventDefault();
       event.stopPropagation();
       const dedupeKey = dismissTarget.dataset.dismissId || '';
-      if (dedupeKey && typeof window.dismissAttentionItemByDedupeKey === 'function') {
+      const attentionItem = window.__attentionWorkspaceCache?.items.find(
+        (row) => row.dedupeKey === dedupeKey
+      );
+      if (attentionItem && typeof window.dismissAttentionItem === 'function') {
+        void window.dismissAttentionItem(attentionItem);
+      } else if (dedupeKey && typeof window.dismissAttentionItemByDedupeKey === 'function') {
         void window.dismissAttentionItemByDedupeKey(dedupeKey);
       }
       return;

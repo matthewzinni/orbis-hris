@@ -232,6 +232,11 @@ function notifySaved(mode?: CareEditorMode): void {
   }
 
   const refreshMode = mode || editorState?.mode;
+  if (refreshMode === 'recognition') {
+    void import('../services/ironShiftAwards').then(({ refreshIronShiftAwardRosterMap }) =>
+      refreshIronShiftAwardRosterMap()
+    );
+  }
   if (refreshMode === 'care-item' || refreshMode === 'employee-follow-up') {
     void import('../services/derivedDataRefresh').then(({ refreshDerivedUiProfile }) =>
       refreshDerivedUiProfile('care')
@@ -345,7 +350,8 @@ export async function openCareItemEditor(
 
 export async function openCareRecognitionEditor(
   entry: CareRecognitionEntry | null,
-  presetEmployeeId = ''
+  presetEmployeeId = '',
+  presetType: RecognitionType = 'kudos'
 ): Promise<void> {
   if (!canManageCareEngagementRecords()) {
     showToast('HR admin access is required to log or edit recognition.', 'error');
@@ -365,8 +371,8 @@ export async function openCareRecognitionEditor(
   };
 
   openEditorDrawer(
-    isNew ? 'Log Recognition' : 'Edit Recognition',
-    'Recognition panel',
+    isNew ? (presetType === 'iron_shift' ? 'Log Iron Shift Award' : 'Log Recognition') : 'Edit Recognition',
+    presetType === 'iron_shift' ? 'Iron Shift Award' : 'Recognition panel',
     'recognition',
     !isNew
   );
@@ -377,7 +383,7 @@ export async function openCareRecognitionEditor(
     'careRecDepartmentInput',
     entry?.department || (selectedEmployee ? String(selectedEmployee.department || selectedEmployee.dept || '') : '')
   );
-  setInputValue('careRecTypeInput', entry?.type || 'kudos');
+  setInputValue('careRecTypeInput', entry?.type || presetType);
   setInputValue('careRecDateInput', entry?.recognizedOn || todayIso());
   setInputValue('careRecByInput', entry?.recognizedBy || 'HR');
   setInputValue('careRecSummaryInput', entry?.summary || '');

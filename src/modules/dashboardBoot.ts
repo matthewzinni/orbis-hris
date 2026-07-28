@@ -867,6 +867,79 @@ export async function loadImpactPlayersFallback(): Promise<void> {
     .join('');
 }
 
+function formatIronShiftAwardDate(value: string): string {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const date = new Date(`${raw.slice(0, 10)}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return raw;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export async function loadIronShiftAwardsFallback(): Promise<void> {
+  const employees = getDashboardEmployees().filter((e) => isActiveDashboardEmployee(e));
+
+  const recipients = employees
+    .filter((employee) => {
+      if (typeof window.hasIronShiftAward === 'function') {
+        return window.hasIronShiftAward(employee);
+      }
+      return false;
+    })
+    .sort((left, right) => {
+      const leftDate =
+        typeof window.getEmployeeIronShiftMeta === 'function'
+          ? String(window.getEmployeeIronShiftMeta(left)?.recognizedOn || '')
+          : '';
+      const rightDate =
+        typeof window.getEmployeeIronShiftMeta === 'function'
+          ? String(window.getEmployeeIronShiftMeta(right)?.recognizedOn || '')
+          : '';
+      return rightDate.localeCompare(leftDate) || compareEmployeesByLastName(left, right);
+    });
+
+  setText('kIronShiftAwards', String(recipients.length));
+  setText(
+    'kIronShiftAwardsSub',
+    recipients.length === 0
+      ? 'No Iron Shift awards logged yet'
+      : `${recipients.length} employee${recipients.length === 1 ? '' : 's'} recognized with the Iron Shift Award`
+  );
+
+  const container =
+    resolveDashboardListContainer('ironShiftAwards', 'ironShiftAwardsDashboardList') ||
+    getOrCreateDashboardSectionBody('Iron Shift Awards', 'ironShiftAwards');
+
+  if (!container) return;
+
+  if (!recipients.length) {
+    container.innerHTML = '<div class="empty">No Iron Shift award recipients yet.</div>';
+    return;
+  }
+
+  ensureDashboardEmployeeLinkBindings();
+
+  container.innerHTML = recipients
+    .slice(0, 8)
+    .map((employee) => {
+      const awardMeta =
+        typeof window.getEmployeeIronShiftMeta === 'function'
+          ? window.getEmployeeIronShiftMeta(employee)
+          : null;
+      const awardedText = awardMeta?.recognizedOn
+        ? `Awarded ${formatIronShiftAwardDate(awardMeta.recognizedOn)}`
+        : '';
+
+      return `
+        <div class="dashboard-list-item">
+            ${renderDashboardEmployeeNameLink(employee, 'Open Iron Shift award recipient')}
+            <span>${esc(employee.department || employee.dept || '')}</span>
+            ${awardedText ? `<small>${esc(awardedText)}</small>` : ''}
+        </div>
+      `;
+    })
+    .join('');
+}
+
 async function runDashboardOverviewLoads(): Promise<DashboardSyncStatus> {
   let syncStatus: DashboardSyncStatus = 'success';
 
@@ -887,6 +960,7 @@ async function runDashboardOverviewLoads(): Promise<DashboardSyncStatus> {
     loadExecutiveInsightFallback(),
     loadRiskEmployeesFallback(),
     loadImpactPlayersFallback(),
+    loadIronShiftAwardsFallback(),
   ]);
 
   if (sectionResults.some((result) => result.status === 'rejected')) {
@@ -1027,5 +1101,6 @@ window.loadReviewDashboard = loadReviewDashboardFallback;
 window.loadExecutiveInsightFallback = loadExecutiveInsightFallback;
 window.loadRiskEmployeesFallback = loadRiskEmployeesFallback;
 window.loadImpactPlayersFallback = loadImpactPlayersFallback;
+window.loadIronShiftAwardsFallback = loadIronShiftAwardsFallback;
 window.cleanReviewDashboardLooseCount = cleanReviewDashboardLooseCount;
 window.getOrCreateDashboardSectionBody = getOrCreateDashboardSectionBody;

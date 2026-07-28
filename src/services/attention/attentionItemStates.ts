@@ -136,7 +136,7 @@ export async function dismissAttentionItemByDedupeKey(
   await upsertAttentionItemState({
     dedupeKey,
     status: 'dismissed',
-    sourceFingerprint: sourceFingerprint || dedupeKey,
+    sourceFingerprint: sourceFingerprint ?? null,
   });
 }
 

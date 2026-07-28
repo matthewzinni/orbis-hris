@@ -612,6 +612,10 @@ export function renderEmployeeDrawerIdentityHeader(
       window.clearEmployeeDrawerRiskSignals();
     }
 
+    if (typeof window.clearEmployeeDrawerHonors === 'function') {
+      window.clearEmployeeDrawerHonors();
+    }
+
     return;
   }
 
@@ -634,6 +638,10 @@ export function renderEmployeeDrawerIdentityHeader(
     meta,
     status: employeeStatus,
     initial: employeeName.charAt(0).toUpperCase() || 'E',
+    honorBadgesHtml:
+      typeof window.buildEmployeeHonorBadgesHtml === 'function'
+        ? window.buildEmployeeHonorBadgesHtml(employee as Record<string, unknown>)
+        : '',
     onClose: () => closeDrawer(),
   });
 
@@ -644,6 +652,14 @@ export function renderEmployeeDrawerIdentityHeader(
 
   if (typeof window.renderEmployeeDrawerRiskSignals === 'function') {
     window.renderEmployeeDrawerRiskSignals(employee as Record<string, unknown>);
+  }
+
+  if (typeof window.renderEmployeeDrawerHonors === 'function') {
+    window.renderEmployeeDrawerHonors(employee as Record<string, unknown>);
+  }
+
+  if (typeof window.renderEmployeeIronShiftAdminSection === 'function') {
+    window.renderEmployeeIronShiftAdminSection(employee as Record<string, unknown>);
   }
 }
 

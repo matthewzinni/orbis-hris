@@ -86,6 +86,8 @@ import './modules/internalJobBoard';
 import './ui/executiveInsight';
 import './ui/dashboardDisclosure';
 import './ui/employeeDrawerRiskSignals';
+import './ui/employeeDrawerHonors';
+import './modules/employeeIronShift';
 import './modules/reports';
 import './modules/settingsAdmin';
 import { initAppShell, showAuthenticatedOrbisView, showAuthView } from './app/appShell';

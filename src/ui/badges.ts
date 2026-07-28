@@ -1,4 +1,11 @@
-// At-risk / impact player roster badges
+// At-risk / impact player / iron shift roster badges
+
+type IronShiftAwardMeta = {
+  summary: string;
+  recognizedOn: string;
+  recognizedBy: string;
+  awardCount: number;
+};
 
 type EmployeeRow = Record<string, unknown>;
 
@@ -149,6 +156,38 @@ export function buildRiskBadgeHtml(riskMeta: FlagMeta | null): string {
   return `<span class="badge badge-leave" style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca; font-weight:700;" title="${esc(lines.join('\n'))}">At-Risk</span>`;
 }
 
+export function buildIronShiftBadgeHtml(meta: IronShiftAwardMeta | null): string {
+  if (!meta) return '';
+
+  const lines = ['Iron Shift Award'];
+  if (meta.summary) lines.push('', meta.summary);
+  if (meta.recognizedOn) {
+    const date = new Date(`${meta.recognizedOn.slice(0, 10)}T12:00:00`);
+    const label = Number.isNaN(date.getTime())
+      ? meta.recognizedOn
+      : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    lines.push('', `Awarded: ${label}`);
+  }
+  if (meta.recognizedBy) lines.push('', `By: ${meta.recognizedBy}`);
+  if (meta.awardCount > 1) lines.push('', `${meta.awardCount} total awards`);
+
+  return `<span class="badge badge-iron-shift" title="${esc(lines.join('\n'))}">Iron Shift</span>`;
+}
+
+export function getEmployeeIronShiftMetaFromBadges(
+  employee: EmployeeRow | null | undefined
+): IronShiftAwardMeta | null {
+  if (!employee) return null;
+
+  const map = (window.currentIronShiftRosterMap || {}) as Record<string, IronShiftAwardMeta>;
+  for (const key of getEmployeeMapKeys(employee)) {
+    const meta = map[key];
+    if (meta) return meta;
+  }
+
+  return null;
+}
+
 export function buildImpactBadgeHtml(impactMeta: FlagMeta | null): string {
   if (!hasActiveImpactMeta(impactMeta)) return '';
 
@@ -214,8 +253,9 @@ export function updateEmployeeRowBadges(): void {
 
     const riskHtml = buildRiskBadgeHtml(getEmployeeRiskMeta(employee));
     const impactHtml = buildImpactBadgeHtml(getEmployeeImpactMeta(employee));
+    const ironShiftHtml = buildIronShiftBadgeHtml(getEmployeeIronShiftMetaFromBadges(employee));
 
-    badgeContainer.innerHTML = `${impactHtml}${riskHtml}`;
+    badgeContainer.innerHTML = `${impactHtml}${ironShiftHtml}${riskHtml}`;
   });
 }
 
@@ -228,4 +268,5 @@ window.hasActiveRiskMeta = hasActiveRiskMeta;
 window.hasActiveImpactMeta = hasActiveImpactMeta;
 window.buildRiskBadgeHtml = buildRiskBadgeHtml;
 window.buildImpactBadgeHtml = buildImpactBadgeHtml;
+window.buildIronShiftBadgeHtml = buildIronShiftBadgeHtml;
 window.updateEmployeeRowBadges = updateEmployeeRowBadges;

@@ -126,6 +126,17 @@ declare global {
     renderEmployeeDrawerRiskSignals?: typeof renderEmployeeDrawerRiskSignals;
     refreshEmployeeDrawerRiskSignalsIfOpen?: typeof refreshEmployeeDrawerRiskSignalsIfOpen;
     clearEmployeeDrawerRiskSignals?: typeof clearEmployeeDrawerRiskSignals;
+    renderEmployeeDrawerHonors?: (employee: Record<string, unknown> | null | undefined) => void;
+    refreshEmployeeDrawerHonorsIfOpen?: () => void;
+    clearEmployeeDrawerHonors?: () => void;
+    buildEmployeeHonorBadgesHtml?: (employee: Record<string, unknown> | null | undefined) => string;
+    buildIronShiftBadgeHtml?: (meta: import('../services/ironShiftAwards').IronShiftAwardMeta | null) => string;
+    getEmployeeIronShiftMeta?: (employee: Record<string, unknown> | null | undefined) => import('../services/ironShiftAwards').IronShiftAwardMeta | null;
+    hasIronShiftAward?: (employee: Record<string, unknown> | null | undefined) => boolean;
+    loadIronShiftAwardRosterMap?: () => Promise<Record<string, import('../services/ironShiftAwards').IronShiftAwardMeta>>;
+    refreshIronShiftAwardRosterMap?: () => Promise<void>;
+    loadIronShiftAwardsFallback?: () => Promise<void>;
+    renderEmployeeIronShiftAdminSection?: (employee: Record<string, unknown> | null | undefined) => void;
     ALL_EMPLOYEES?: Record<string, unknown>[];
     currentEmployeeRoster?: Record<string, unknown>[];
     renderBasicDashboardKpis?: (employees?: Record<string, unknown>[]) => void;
@@ -138,6 +149,7 @@ declare global {
     syncKpiCardTooltip?: (card: Element | null, text: string) => void;
     updateTurnoverRiskKpi?: (rate: number, subtext: string) => void;
     currentImpactPlayerRosterMap?: Record<string, unknown>;
+    currentIronShiftRosterMap?: Record<string, unknown>;
     currentAtRiskRosterMap?: Record<string, unknown>;
     loadSummaryMetrics?: () => Promise<void>;
     compareText?: (a: unknown, b: unknown) => number;

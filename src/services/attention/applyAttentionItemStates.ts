@@ -25,7 +25,11 @@ export function applyAttentionItemStates(
     const fingerprint = buildAttentionSourceFingerprint(item);
 
     if (state.status === 'dismissed') {
-      if (state.source_fingerprint && state.source_fingerprint !== fingerprint) {
+      const storedFingerprint = String(state.source_fingerprint || '').trim();
+      if (!storedFingerprint || storedFingerprint === item.dedupeKey) {
+        return false;
+      }
+      if (storedFingerprint !== fingerprint) {
         return true;
       }
       return false;

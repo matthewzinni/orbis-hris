@@ -17,6 +17,7 @@ import { showOrbisConfirm } from '../ui/confirmModal';
 import {
   bindCareEngagementEditorEvents,
   openCareItemEditor,
+  openCareRecognitionEditor,
   openEmployeeCareNoteEditor,
   openEmployeeFollowUpEditor,
   openEmployeeResourceEditor,
@@ -193,6 +194,10 @@ async function handleCareSupportPanelClick(event: Event): Promise<void> {
     }
     if (target.closest('[data-add-care-wellness]')) {
       openEmployeeWellnessEditor(recordId, null);
+      return;
+    }
+    if (target.closest('[data-log-iron-shift]')) {
+      void openCareRecognitionEditor(null, recordId, 'iron_shift');
       return;
     }
 
@@ -420,17 +425,17 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
 
     renderList(
       'employeeCareRecognitionList',
-      recognition
+      `${canManage ? `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><strong>Recognition History</strong><button type="button" class="button soft sm" data-log-iron-shift="1">Log Iron Shift</button></div>` : '<strong>Recognition History</strong>'}${recognition
         .map(
           (entry) => `
-        <div class="history-item">
+        <div class="history-item${entry.type === 'iron_shift' ? ' history-item-iron-shift' : ''}">
           <div class="history-title">${esc(RECOGNITION_LABELS[entry.type] || entry.type)}</div>
           <div class="history-body">${esc(entry.summary)}</div>
           <small class="muted">${esc(formatDate(entry.recognizedOn))} · ${esc(entry.recognizedBy)}</small>
         </div>
       `
         )
-        .join(''),
+        .join('')}`,
       'No recognition history logged.'
     );
 

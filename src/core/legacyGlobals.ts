@@ -3,6 +3,7 @@ export {};
 
 window.currentAtRiskRosterMap = window.currentAtRiskRosterMap || {};
 window.currentImpactPlayerRosterMap = window.currentImpactPlayerRosterMap || {};
+window.currentIronShiftRosterMap = window.currentIronShiftRosterMap || {};
 window.currentManualAtRiskState = window.currentManualAtRiskState || {
   flagged: false,
   reason: '',

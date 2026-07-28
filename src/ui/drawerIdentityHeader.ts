@@ -10,6 +10,7 @@ export type DrawerIdentityHeaderConfig = {
   meta: string;
   status: string;
   initial: string;
+  honorBadgesHtml?: string;
   onClose: () => void;
 };
 
@@ -105,7 +106,10 @@ export function mountDrawerIdentityHeader(config: DrawerIdentityHeaderConfig): v
   header.innerHTML = `
     <div class="employee-drawer-avatar">${escapeHtml(config.initial)}</div>
     <div class="employee-drawer-title-block">
-      <div class="employee-drawer-name">${escapeHtml(config.name)}</div>
+      <div class="employee-drawer-name-row">
+        <div class="employee-drawer-name">${escapeHtml(config.name)}</div>
+        ${config.honorBadgesHtml || ''}
+      </div>
       <div class="employee-drawer-meta">${escapeHtml(config.meta)}</div>
     </div>
     <div class="employee-drawer-header-actions">

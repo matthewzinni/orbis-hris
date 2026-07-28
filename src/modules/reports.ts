@@ -95,6 +95,7 @@ function renderReportsMetricSnapshots(): void {
     ['reportsKpiReviewsDue', 'kReviewsDue'],
     ['reportsKpiPerformanceReviewsDue', 'kPerformanceReviewsDue'],
     ['reportsKpiImpactPlayers', 'kImpactPlayers'],
+    ['reportsKpiIronShiftAwards', 'kIronShiftAwards'],
   ];
 
   pairs.forEach(([targetId, sourceId]) => {

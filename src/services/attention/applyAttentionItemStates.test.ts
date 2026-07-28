@@ -53,6 +53,38 @@ describe('applyAttentionItemStates', () => {
     expect(result).toHaveLength(1);
   });
 
+  it('hides dismissed items when legacy dismiss stored dedupe key as fingerprint', () => {
+    const result = applyAttentionItemStates(
+      [baseItem],
+      [
+        {
+          dedupe_key: baseItem.dedupeKey,
+          status: 'dismissed',
+          snoozed_until: null,
+          source_fingerprint: baseItem.dedupeKey,
+        },
+      ]
+    );
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('hides dismissed items when no source fingerprint was stored', () => {
+    const result = applyAttentionItemStates(
+      [baseItem],
+      [
+        {
+          dedupe_key: baseItem.dedupeKey,
+          status: 'dismissed',
+          snoozed_until: null,
+          source_fingerprint: null,
+        },
+      ]
+    );
+
+    expect(result).toHaveLength(0);
+  });
+
   it('hides snoozed items until snooze date passes', () => {
     const snoozed = applyAttentionItemStates(
       [baseItem],

@@ -24,6 +24,7 @@ import {
   parseDueDate,
 } from '../services/employeeUtils';
 import { getEmployeeTenureMonths } from '../services/employeeTenure';
+import { loadIronShiftAwardRosterMap } from '../services/ironShiftAwards';
 import { getEmployeeMapKeys, hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
 import {
   buildHrIntelligenceContext,
@@ -164,6 +165,15 @@ function isImpactPlayer(employee: KpiEmployeeRecord): boolean {
   );
 }
 
+function isIronShiftRecipient(employee: KpiEmployeeRecord): boolean {
+  if (typeof window.hasIronShiftAward === 'function') {
+    return window.hasIronShiftAward(employee);
+  }
+
+  const map = window.currentIronShiftRosterMap || {};
+  return getEmployeeMapKeys(employee).some((key) => Boolean(map[key]));
+}
+
 function isAtRisk(employee: KpiEmployeeRecord): boolean {
   if (typeof window.isEmployeeAtRisk === 'function') {
     return window.isEmployeeAtRisk(employee);
@@ -262,6 +272,7 @@ function buildKpiMetrics(employees: KpiEmployeeRecord[]): KpiMetric[] {
   const inHouseFteCount = activeEmployees.filter(isInHouseFteEmployee).length;
   const atRiskEmployees = activeEmployees.filter(isAtRisk);
   const impactPlayers = activeEmployees.filter(isImpactPlayer);
+  const ironShiftRecipients = activeEmployees.filter(isIronShiftRecipient);
   const anniversaries = getAnniversariesNext30Days(activeEmployees);
 
   return [
@@ -306,6 +317,14 @@ function buildKpiMetrics(employees: KpiEmployeeRecord[]): KpiMetric[] {
       label: 'Impact Players',
       value: impactPlayers.length,
       helper: impactPlayers.map(employeeDisplayName).join(', ') || 'No current impact players',
+    },
+    {
+      id: 'kIronShiftAwards',
+      label: 'Iron Shift Awards',
+      value: ironShiftRecipients.length,
+      helper:
+        ironShiftRecipients.map(employeeDisplayName).join(', ') ||
+        'No Iron Shift award recipients yet',
     },
   ];
 }
@@ -947,6 +966,14 @@ export function buildKpiHoverDetails(): void {
 
   setKpiCardTooltip('cardImpactPlayers', impactPlayerNames, 'No impact players');
 
+  const ironShiftNames = activeEmployees
+    .filter(isIronShiftRecipient)
+    .map(employeeDisplayName)
+    .filter(Boolean)
+    .sort(compareKpiText);
+
+  setKpiCardTooltip('cardIronShiftAwards', ironShiftNames, 'No Iron Shift award recipients');
+
   setKpiCardTooltip(
     'cardOnLeave',
     leaveEmployees.map(employeeDisplayName),
@@ -1466,7 +1493,21 @@ export async function loadSummaryMetrics(): Promise<void> {
           : `${impactPlayers} high-impact employee${impactPlayers === 1 ? '' : 's'} based on reviews or recognition`;
     }
 
+    const ironShiftRecipients = (Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : []).filter(
+      (employee) => isIronShiftRecipient(employee as KpiEmployeeRecord)
+    ).length;
+
+    setKpiText('kIronShiftAwards', ironShiftRecipients);
+    const ironShiftSubEl = safeGet('kIronShiftAwardsSub');
+    if (ironShiftSubEl) {
+      ironShiftSubEl.textContent =
+        ironShiftRecipients === 0
+          ? 'No Iron Shift awards logged yet'
+          : `${ironShiftRecipients} employee${ironShiftRecipients === 1 ? '' : 's'} recognized with the Iron Shift Award`;
+    }
+
     if (Array.isArray(window.EMPLOYEES) && window.EMPLOYEES.length) {
+      await loadIronShiftAwardRosterMap();
       if (typeof window.renderRoster === 'function') {
         window.renderRoster();
       }
@@ -1484,12 +1525,20 @@ export async function loadSummaryMetrics(): Promise<void> {
       window.refreshEmployeeDrawerRiskSignalsIfOpen();
     }
 
+    if (typeof window.refreshEmployeeDrawerHonorsIfOpen === 'function') {
+      window.refreshEmployeeDrawerHonorsIfOpen();
+    }
+
     if (typeof window.loadRiskEmployeesFallback === 'function') {
       await window.loadRiskEmployeesFallback();
     }
 
     if (typeof window.loadImpactPlayersFallback === 'function') {
       await window.loadImpactPlayersFallback();
+    }
+
+    if (typeof window.loadIronShiftAwardsFallback === 'function') {
+      await window.loadIronShiftAwardsFallback();
     }
 
     const uniqueFailures = [...new Set(failedMetrics)];
@@ -1517,6 +1566,13 @@ export async function loadSummaryMetrics(): Promise<void> {
     const impactSubEl = safeGet('kImpactPlayersSub');
     if (impactSubEl) {
       impactSubEl.textContent = 'Could not load impact player data';
+    }
+
+    setKpiText('kIronShiftAwards', '—');
+
+    const ironShiftSubEl = safeGet('kIronShiftAwardsSub');
+    if (ironShiftSubEl) {
+      ironShiftSubEl.textContent = 'Could not load Iron Shift award data';
     }
 
     if (typeof window.renderKpiEmployeeMetrics === 'function') {

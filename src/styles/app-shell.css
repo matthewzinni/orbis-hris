@@ -1102,6 +1102,10 @@ body.authenticated #appView {
   border-left-color: var(--accent-success);
 }
 
+#cardIronShiftAwards {
+  border-left-color: #64748b;
+}
+
 #cardOpsOpenIssues,
 #cardOpsCritical {
   border-left-color: var(--accent-ops);
