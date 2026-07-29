@@ -61,6 +61,7 @@ const SECTION_LABELS: Record<string, string> = {
   myDirectoryView: 'Directory',
   myTimeOffView: 'My Time Off',
   internalJobBoardView: 'Internal Job Board',
+  leadershipAcademyView: 'Leadership Academy',
   activityView: 'Activity',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
@@ -220,6 +221,19 @@ const APP_SECTIONS: AppSection[] = [
         window.ensureInternalJobBoardLoaded(true);
       } else if (typeof window.loadInternalJobBoard === 'function') {
         void window.loadInternalJobBoard(true);
+      }
+    },
+  },
+  {
+    id: 'leadershipAcademyView',
+    rootId: 'orbisSectionLeadershipAcademy',
+    targetId: 'leadershipAcademyTop',
+    aliases: ['leadership-academy', 'academy', 'leadership'],
+    onEnter: () => {
+      if (typeof window.ensureLeadershipAcademyLoaded === 'function') {
+        window.ensureLeadershipAcademyLoaded(true);
+      } else if (typeof window.loadLeadershipAcademy === 'function') {
+        void window.loadLeadershipAcademy(true);
       }
     },
   },

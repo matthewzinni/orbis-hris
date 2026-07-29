@@ -19,6 +19,7 @@ import './styles/payroll-handoff.css';
 import './styles/leave-requests.css';
 import './styles/employee-portal.css';
 import './styles/internal-job-board.css';
+import './styles/leadership-academy.css';
 import './styles/manager-home.css';
 import './styles/onboarding.css';
 import './styles/policy-campaigns.css';
@@ -162,6 +163,9 @@ import './modules/employeeCareSupport';
 import {
   applyCareEngagementCenterAccess,
 } from './modules/lazyCareEngagement';
+import {
+  applyLeadershipAcademyAccess,
+} from './modules/lazyLeadershipAcademy';
 import {
   applyInvestigationsCenterAccess,
 } from './modules/lazyInvestigations';
@@ -377,6 +381,7 @@ async function initializeProtectedModules(): Promise<boolean> {
 
     applyOperationsCenterAccess();
     applyCareEngagementCenterAccess();
+    applyLeadershipAcademyAccess();
     applyInvestigationsCenterAccess();
     if (typeof bridge.applyJanusAccess === 'function') {
       bridge.applyJanusAccess();

@@ -1,0 +1,277 @@
+          id="orbisSectionLeadershipAcademy"
+          class="orbis-app-section hidden"
+          data-section="leadershipAcademyView"
+          aria-hidden="true"
+        >
+          <section id="leadershipAcademyTop" class="page leadership-academy-page">
+            <div class="page-header">
+              <div>
+                <h1>BTW Leadership Academy</h1>
+                <p id="leadershipAcademySubtitle">
+                  Develop leaders across BTW Global with structured programs, competencies, and coaching.
+                </p>
+                <p class="muted leadership-academy-version" id="leadershipAcademyModuleVersion"></p>
+              </div>
+              <div class="page-header-actions">
+                <button class="button soft" id="refreshLeadershipAcademyBtn" type="button">
+                  Refresh
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="alert info hidden"
+              id="leadershipAcademyReadOnlyBanner"
+              data-leadership-academy-org
+            >
+              You can view organization progress. Program configuration requires HR admin access.
+            </div>
+
+            <div class="leadership-academy-tabs">
+              <button
+                class="tab-btn active"
+                type="button"
+                data-leadership-academy-tab="dashboard"
+                id="leadershipAcademyTabDashboard"
+              >
+                Dashboard
+              </button>
+              <button
+                class="tab-btn"
+                type="button"
+                data-leadership-academy-tab="my-development"
+                id="leadershipAcademyTabMyDevelopment"
+              >
+                My Development
+              </button>
+              <button
+                class="tab-btn hidden"
+                type="button"
+                data-leadership-academy-tab="programs"
+                id="leadershipAcademyTabPrograms"
+                data-leadership-academy-manage
+              >
+                Programs
+              </button>
+              <button
+                class="tab-btn hidden"
+                type="button"
+                data-leadership-academy-tab="participants"
+                id="leadershipAcademyTabParticipants"
+                data-leadership-academy-org
+              >
+                Participants
+              </button>
+              <button
+                class="tab-btn hidden"
+                type="button"
+                data-leadership-academy-tab="workshops"
+                id="leadershipAcademyTabWorkshops"
+                data-leadership-academy-org
+              >
+                Workshops
+              </button>
+              <button
+                class="tab-btn hidden"
+                type="button"
+                data-leadership-academy-tab="coaching"
+                id="leadershipAcademyTabCoaching"
+                data-leadership-academy-org
+              >
+                Coaching
+              </button>
+              <button
+                class="tab-btn hidden"
+                type="button"
+                data-leadership-academy-tab="goals"
+                id="leadershipAcademyTabGoals"
+                data-leadership-academy-org
+              >
+                Goals
+              </button>
+              <button
+                class="tab-btn hidden"
+                type="button"
+                data-leadership-academy-tab="competencies"
+                id="leadershipAcademyTabCompetencies"
+                data-leadership-academy-manage
+              >
+                Competencies
+              </button>
+              <button
+                class="tab-btn hidden"
+                type="button"
+                data-leadership-academy-tab="philosophy"
+                id="leadershipAcademyTabPhilosophy"
+                data-leadership-academy-manage
+              >
+                Philosophy
+              </button>
+              <button
+                class="tab-btn hidden"
+                type="button"
+                data-leadership-academy-tab="reports"
+                id="leadershipAcademyTabReports"
+                data-leadership-academy-org
+              >
+                Reports
+              </button>
+            </div>
+
+            <div class="card" data-leadership-academy-panel="dashboard" id="leadershipAcademyDashboardPanel">
+              <div class="card-header">
+                <span>Academy Overview</span>
+              </div>
+              <div class="card-body">
+                <div id="leadershipAcademyFoundationStatus" class="leadership-academy-status">
+                  <div class="muted">Loading Leadership Academy…</div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card hidden"
+              data-leadership-academy-panel="my-development"
+              id="leadershipAcademyMyDevelopmentPanel"
+            >
+              <div class="card-header">
+                <span>My Development</span>
+              </div>
+              <div class="card-body">
+                <div class="leadership-academy-empty-state">
+                  <p class="muted">Assigned courses and progress will appear here in a future slice.</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card hidden"
+              data-leadership-academy-panel="programs"
+              id="leadershipAcademyProgramsPanel"
+              data-leadership-academy-manage
+            >
+              <div class="card-header">
+                <span>Programs &amp; Courses</span>
+              </div>
+              <div class="card-body">
+                <div class="leadership-academy-empty-state">
+                  <p class="muted">Catalog authoring arrives in Slice 2.</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card hidden"
+              data-leadership-academy-panel="participants"
+              id="leadershipAcademyParticipantsPanel"
+              data-leadership-academy-org
+            >
+              <div class="card-header">
+                <span>Participants</span>
+              </div>
+              <div class="card-body">
+                <div class="leadership-academy-empty-state">
+                  <p class="muted">Enrollment and participant tracking arrives in Slice 3.</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card hidden"
+              data-leadership-academy-panel="workshops"
+              id="leadershipAcademyWorkshopsPanel"
+              data-leadership-academy-org
+            >
+              <div class="card-header">
+                <span>Workshops</span>
+              </div>
+              <div class="card-body">
+                <div class="leadership-academy-empty-state">
+                  <p class="muted">Workshop scheduling arrives in a later slice.</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card hidden"
+              data-leadership-academy-panel="coaching"
+              id="leadershipAcademyCoachingPanel"
+              data-leadership-academy-org
+            >
+              <div class="card-header">
+                <span>Coaching</span>
+              </div>
+              <div class="card-body">
+                <div class="leadership-academy-empty-state">
+                  <p class="muted">Coaching logs arrive in a later slice.</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card hidden"
+              data-leadership-academy-panel="goals"
+              id="leadershipAcademyGoalsPanel"
+              data-leadership-academy-org
+            >
+              <div class="card-header">
+                <span>Development Goals</span>
+              </div>
+              <div class="card-body">
+                <div class="leadership-academy-empty-state">
+                  <p class="muted">Goal tracking arrives in a later slice.</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card hidden"
+              data-leadership-academy-panel="competencies"
+              id="leadershipAcademyCompetenciesPanel"
+              data-leadership-academy-manage
+            >
+              <div class="card-header">
+                <span>Competencies</span>
+              </div>
+              <div class="card-body">
+                <div class="leadership-academy-empty-state">
+                  <p class="muted">Competency library editing arrives in Slice 2.</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card hidden"
+              data-leadership-academy-panel="philosophy"
+              id="leadershipAcademyPhilosophyPanel"
+              data-leadership-academy-manage
+            >
+              <div class="card-header">
+                <span>Leadership Philosophy</span>
+              </div>
+              <div class="card-body">
+                <div class="leadership-academy-empty-state">
+                  <p class="muted">Philosophy content editor arrives in a later slice.</p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              class="card hidden"
+              data-leadership-academy-panel="reports"
+              id="leadershipAcademyReportsPanel"
+              data-leadership-academy-org
+            >
+              <div class="card-header">
+                <span>Reports</span>
+              </div>
+              <div class="card-body">
+                <div class="leadership-academy-empty-state">
+                  <p class="muted">Academy reporting arrives in a later slice.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </section>
+
+        <section

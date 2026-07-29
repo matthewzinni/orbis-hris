@@ -1,0 +1,67 @@
+.leadership-academy-page .page-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.leadership-academy-version {
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+
+.leadership-academy-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.leadership-academy-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.leadership-academy-summary-card {
+  border: 1px solid var(--border, rgba(148, 163, 184, 0.25));
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--card, rgba(15, 23, 42, 0.35));
+}
+
+.leadership-academy-summary-card .label {
+  font-size: 0.85rem;
+  color: var(--muted, rgba(148, 163, 184, 0.9));
+  margin-bottom: 6px;
+}
+
+.leadership-academy-summary-card .value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.leadership-academy-empty-state {
+  padding: 8px 0;
+}
+
+.leadership-academy-phase-note {
+  margin-top: 8px;
+}
+
+.leadership-academy-status .muted {
+  padding: 4px 0;
+}
+
+@media (max-width: 768px) {
+  .leadership-academy-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+
+  .leadership-academy-tabs .tab-btn {
+    white-space: nowrap;
+  }
+}

@@ -178,6 +178,13 @@ declare global {
     loadInternalJobBoard?: (force?: boolean) => Promise<void>;
     ensureInternalJobBoardLoaded?: (force?: boolean) => void;
     openInternalJobBoardView?: (postingId?: string, tab?: 'openings' | 'manage' | 'pipeline') => void;
+    loadLeadershipAcademy?: (force?: boolean) => Promise<void>;
+    ensureLeadershipAcademyLoaded?: (force?: boolean) => void;
+    openLeadershipAcademyView?: (
+      tab?: import('./leadershipAcademyTypes').LeadershipAcademyTab
+    ) => void;
+    applyLeadershipAcademyAccess?: () => void;
+    applyLeadershipAcademyAccessUi?: () => void;
     loadEmployeeInternalJobInterests?: (employeeId: string) => Promise<void>;
     loadMobileActivityFeed?: (force?: boolean) => Promise<void>;
     loadJanus?: (force?: boolean) => Promise<void>;
