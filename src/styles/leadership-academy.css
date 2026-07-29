@@ -54,6 +54,87 @@
   padding: 4px 0;
 }
 
+.leadership-catalog-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.leadership-catalog-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.leadership-catalog-card .actions,
+.leadership-catalog-card td.actions {
+  white-space: nowrap;
+}
+
+.leadership-catalog-card tr.selected-row {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.leadership-status-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.leadership-status-chip.good {
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.leadership-status-chip.warn {
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.leadership-status-chip.muted {
+  color: rgba(148, 163, 184, 0.95);
+}
+
+.leadership-tier-check-list {
+  display: grid;
+  gap: 8px;
+}
+
+.leadership-tier-check,
+.leadership-inline-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leadership-philosophy-view h3 {
+  margin: 12px 0 8px;
+}
+
+.leadership-philosophy-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.leadership-philosophy-body {
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 1100px) {
+  .leadership-catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .leadership-catalog-grid .leadership-catalog-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (max-width: 768px) {
   .leadership-academy-tabs {
     overflow-x: auto;

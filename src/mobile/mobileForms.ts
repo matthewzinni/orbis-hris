@@ -6,6 +6,7 @@ const DRAWER_IDS = [
   'investigationDrawer',
   'operationsIssueDrawer',
   'careEngagementDrawer',
+  'leadershipAcademyDrawer',
   'janusAccountDrawer',
 ] as const;
 
@@ -37,6 +38,7 @@ const DRAWER_LEVEL_FOOTERS: Record<string, string> = {
   investigationDrawer: 'saveInvestigationBtn',
   operationsIssueDrawer: 'saveOperationsIssueBtn',
   careEngagementDrawer: 'saveCareEngagementBtn',
+  leadershipAcademyDrawer: 'saveLeadershipAcademyBtn',
 };
 
 function escAttr(value: string): string {

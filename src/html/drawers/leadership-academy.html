@@ -1,0 +1,208 @@
+        <aside class="drawer hidden" id="leadershipAcademyDrawer" aria-hidden="true">
+          <div class="drawer-header">
+            <div>
+              <h2 class="drawer-title" id="leadershipAcademyDrawerTitle">Leadership Academy</h2>
+              <div class="drawer-sub" id="leadershipAcademyDrawerSub">Catalog editor</div>
+            </div>
+            <button class="drawer-close" type="button" id="leadershipAcademyDrawerClose">Close</button>
+          </div>
+          <div class="drawer-body">
+            <div class="card">
+              <div class="card-header" id="leadershipEditorCardTitle">Edit</div>
+              <div class="card-body">
+                <div id="leadershipEditorTierFields" class="hidden">
+                  <div class="field">
+                    <label for="leadershipTierNameInput">Tier name</label>
+                    <input id="leadershipTierNameInput" type="text" />
+                  </div>
+                  <div class="field">
+                    <label for="leadershipTierAudienceInput">Intended audience</label>
+                    <input id="leadershipTierAudienceInput" type="text" />
+                  </div>
+                  <div class="field">
+                    <label for="leadershipTierDescriptionInput">Description</label>
+                    <textarea id="leadershipTierDescriptionInput" rows="3"></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="leadershipTierRequirementsInput">Completion requirements</label>
+                    <textarea id="leadershipTierRequirementsInput" rows="2"></textarea>
+                  </div>
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="leadershipTierHoursInput">Estimated hours</label>
+                      <input id="leadershipTierHoursInput" type="number" min="0" step="0.5" />
+                    </div>
+                    <div class="field">
+                      <label for="leadershipTierOrderInput">Display order</label>
+                      <input id="leadershipTierOrderInput" type="number" min="0" step="1" />
+                    </div>
+                    <div class="field">
+                      <label for="leadershipTierStatusInput">Status</label>
+                      <select id="leadershipTierStatusInput">
+                        <option value="active">Active</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="leadershipEditorCourseFields" class="hidden">
+                  <div class="field">
+                    <label for="leadershipCourseTitleInput">Course title</label>
+                    <input id="leadershipCourseTitleInput" type="text" />
+                  </div>
+                  <div class="field">
+                    <label for="leadershipCourseTierInput">Program tier</label>
+                    <select id="leadershipCourseTierInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="leadershipCourseDescriptionInput">Description</label>
+                    <textarea id="leadershipCourseDescriptionInput" rows="3"></textarea>
+                  </div>
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="leadershipCourseStatusInput">Status</label>
+                      <select id="leadershipCourseStatusInput">
+                        <option value="draft">Draft</option>
+                        <option value="active">Active</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="leadershipCourseMinutesInput">Estimated minutes</label>
+                      <input id="leadershipCourseMinutesInput" type="number" min="0" step="1" />
+                    </div>
+                    <div class="field">
+                      <label for="leadershipCourseOrderInput">Display order</label>
+                      <input id="leadershipCourseOrderInput" type="number" min="0" step="1" />
+                    </div>
+                    <div class="field">
+                      <label for="leadershipCoursePassingInput">Passing score %</label>
+                      <input id="leadershipCoursePassingInput" type="number" min="0" max="100" step="1" />
+                    </div>
+                    <div class="field">
+                      <label for="leadershipCourseDueDaysInput">Due rule (days)</label>
+                      <input id="leadershipCourseDueDaysInput" type="number" min="0" step="1" />
+                    </div>
+                    <div class="field">
+                      <label for="leadershipCourseIconInput">Cover icon</label>
+                      <input id="leadershipCourseIconInput" type="text" placeholder="Optional emoji or icon label" />
+                    </div>
+                  </div>
+                  <label class="leadership-inline-check">
+                    <input id="leadershipCourseRequiredInput" type="checkbox" checked />
+                    Required course
+                  </label>
+                </div>
+
+                <div id="leadershipEditorModuleFields" class="hidden">
+                  <div class="field">
+                    <label for="leadershipModuleCourseInput">Course</label>
+                    <select id="leadershipModuleCourseInput"></select>
+                  </div>
+                  <div class="field">
+                    <label for="leadershipModuleTitleInput">Module title</label>
+                    <input id="leadershipModuleTitleInput" type="text" />
+                  </div>
+                  <div class="field">
+                    <label for="leadershipModuleInstructionsInput">Instructions</label>
+                    <textarea id="leadershipModuleInstructionsInput" rows="4"></textarea>
+                  </div>
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="leadershipModuleTypeInput">Module type</label>
+                      <select id="leadershipModuleTypeInput">
+                        <option value="written">Written</option>
+                        <option value="video">Video</option>
+                        <option value="document">Document</option>
+                        <option value="quiz">Quiz</option>
+                        <option value="reflection">Reflection</option>
+                        <option value="assignment">Assignment</option>
+                        <option value="acknowledgment">Acknowledgment</option>
+                      </select>
+                    </div>
+                    <div class="field">
+                      <label for="leadershipModuleMinutesInput">Estimated minutes</label>
+                      <input id="leadershipModuleMinutesInput" type="number" min="0" step="1" />
+                    </div>
+                    <div class="field">
+                      <label for="leadershipModuleOrderInput">Display order</label>
+                      <input id="leadershipModuleOrderInput" type="number" min="0" step="1" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="leadershipModuleResourceInput">Resource URL</label>
+                    <input id="leadershipModuleResourceInput" type="url" placeholder="https://…" />
+                  </div>
+                  <label class="leadership-inline-check">
+                    <input id="leadershipModuleRequiredInput" type="checkbox" checked />
+                    Required module
+                  </label>
+                  <label class="leadership-inline-check">
+                    <input id="leadershipModuleRetakesInput" type="checkbox" />
+                    Allow retakes (for quizzes)
+                  </label>
+                </div>
+
+                <div id="leadershipEditorCompetencyFields" class="hidden">
+                  <div class="field">
+                    <label for="leadershipCompetencyNameInput">Competency name</label>
+                    <input id="leadershipCompetencyNameInput" type="text" />
+                  </div>
+                  <div class="field">
+                    <label for="leadershipCompetencyDefinitionInput">Definition</label>
+                    <textarea id="leadershipCompetencyDefinitionInput" rows="3"></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="leadershipCompetencyExpectedInput">Expected behaviors</label>
+                    <textarea id="leadershipCompetencyExpectedInput" rows="3"></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="leadershipCompetencyUnacceptableInput">Unacceptable behaviors</label>
+                    <textarea id="leadershipCompetencyUnacceptableInput" rows="3"></textarea>
+                  </div>
+                  <div class="field">
+                    <label>Applicable program tiers</label>
+                    <div id="leadershipCompetencyTierChecks" class="leadership-tier-check-list"></div>
+                  </div>
+                  <div class="two-col">
+                    <div class="field">
+                      <label for="leadershipCompetencyOrderInput">Display order</label>
+                      <input id="leadershipCompetencyOrderInput" type="number" min="0" step="1" />
+                    </div>
+                    <div class="field">
+                      <label for="leadershipCompetencyStatusInput">Status</label>
+                      <select id="leadershipCompetencyStatusInput">
+                        <option value="active">Active</option>
+                        <option value="archived">Archived</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div id="leadershipEditorPhilosophyFields" class="hidden">
+                  <div class="field">
+                    <label for="leadershipPhilosophyTitleInput">Title</label>
+                    <input id="leadershipPhilosophyTitleInput" type="text" />
+                  </div>
+                  <div class="field">
+                    <label for="leadershipPhilosophyStatusInput">Status</label>
+                    <select id="leadershipPhilosophyStatusInput">
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label for="leadershipPhilosophyBodyInput">Content</label>
+                    <textarea id="leadershipPhilosophyBodyInput" rows="12"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="drawer-footer orbis-mobile-drawer-footer">
+            <button class="button danger hidden" type="button" id="deleteLeadershipAcademyBtn">Delete</button>
+            <button class="button soft" type="button" id="cancelLeadershipAcademyBtn">Cancel</button>
+            <button class="button primary" type="button" id="saveLeadershipAcademyBtn">Save</button>
+          </div>
+        </aside>

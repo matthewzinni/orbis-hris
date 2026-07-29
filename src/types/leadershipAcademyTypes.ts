@@ -142,4 +142,4 @@ export const LEADERSHIP_PROGRAM_TIER_LABELS = [
   'Executive Leadership',
 ] as const;
 
-export const LEADERSHIP_ACADEMY_MODULE_VERSION = 'phase-1-slice-1';
+export const LEADERSHIP_ACADEMY_MODULE_VERSION = 'phase-1-slice-2';

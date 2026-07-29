@@ -10,10 +10,15 @@ let wired = false;
 
 function ensureLeadershipAcademyModule(): Promise<LeadershipAcademyModule> {
   if (!modulePromise) {
-    modulePromise = import('./leadershipAcademy').catch((err) => {
-      modulePromise = null;
-      throw err;
-    });
+    modulePromise = Promise.all([
+      import('./leadershipAcademy'),
+      import('./leadershipAcademyEditor'),
+    ])
+      .then(([mod]) => mod)
+      .catch((err) => {
+        modulePromise = null;
+        throw err;
+      });
   }
   return modulePromise;
 }

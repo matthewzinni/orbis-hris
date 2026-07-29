@@ -17,6 +17,7 @@ const MODULE_DRAWER_IDS = [
   'investigationDrawer',
   'operationsIssueDrawer',
   'careEngagementDrawer',
+  'leadershipAcademyDrawer',
   'janusAccountDrawer',
 ] as const;
 
