@@ -113,6 +113,50 @@ export type LeadershipEnrollment = {
   notes: string;
 };
 
+export type LeadershipModuleProgress = {
+  id: string;
+  enrollmentId: string;
+  moduleId: string;
+  status: LeadershipModuleProgressStatus;
+  startedAt: string | null;
+  completedAt: string | null;
+  lastActivityAt: string | null;
+};
+
+export type LeadershipModuleSubmission = {
+  id: string;
+  enrollmentId: string;
+  moduleId: string;
+  submissionType: 'reflection' | 'acknowledgment';
+  response: Record<string, unknown>;
+  acknowledgedAt: string | null;
+  updatedAt: string;
+};
+
+export type LeadershipQuizOption = {
+  id: string;
+  text: string;
+  displayOrder: number;
+};
+
+export type LeadershipQuizQuestion = {
+  id: string;
+  type: LeadershipQuizQuestionType;
+  prompt: string;
+  displayOrder: number;
+  options: LeadershipQuizOption[];
+};
+
+export type LeadershipQuizAttempt = {
+  id: string;
+  enrollmentId: string;
+  moduleId: string;
+  attemptNumber: number;
+  scorePercent: number | null;
+  passed: boolean | null;
+  submittedAt: string;
+};
+
 export type LeadershipAcademyFoundationSnapshot = {
   tablesReady: boolean;
   tiers: LeadershipProgramTier[];
@@ -121,6 +165,9 @@ export type LeadershipAcademyFoundationSnapshot = {
   modules: LeadershipModule[];
   philosophy: LeadershipPhilosophyContent | null;
   enrollments: LeadershipEnrollment[];
+  moduleProgress: LeadershipModuleProgress[];
+  moduleSubmissions: LeadershipModuleSubmission[];
+  quizAttempts: LeadershipQuizAttempt[];
 };
 
 export type LeadershipAcademyTab =
@@ -142,4 +189,4 @@ export const LEADERSHIP_PROGRAM_TIER_LABELS = [
   'Executive Leadership',
 ] as const;
 
-export const LEADERSHIP_ACADEMY_MODULE_VERSION = 'phase-1-slice-2';
+export const LEADERSHIP_ACADEMY_MODULE_VERSION = 'phase-1-slice-4-interactive-module-1';

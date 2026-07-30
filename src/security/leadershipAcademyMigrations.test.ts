@@ -44,4 +44,28 @@ describe('leadership academy migrations', () => {
     expect(sql).toContain('orbis_linked_employee_id()');
     expect(sql).toContain('orbis_has_personal_portal()');
   });
+
+  it('protects interactive Module 1 submissions and quiz answers', () => {
+    const sql = readMigration('20260730110000_leadership_module_one_interactive.sql');
+    const quizPayloadFunction = sql.slice(
+      sql.indexOf('create or replace function public.get_leadership_quiz'),
+      sql.indexOf('create or replace function public.submit_leadership_quiz')
+    );
+
+    expect(sql).toContain('create table if not exists public.leadership_module_submissions');
+    expect(sql).toContain('if not public.leadership_enrollment_is_writable(p_enrollment_id)');
+    expect(sql).toContain(
+      'revoke all on function public.submit_leadership_quiz(uuid, uuid, jsonb) from public, anon;'
+    );
+    expect(quizPayloadFunction).not.toContain("'isCorrect'");
+    expect(quizPayloadFunction).not.toContain("'is_correct'");
+  });
+
+  it('supports the shared updated-at trigger on course assignments', () => {
+    const sql = readMigration(
+      '20260730124500_leadership_course_assignment_updated_at.sql'
+    );
+    expect(sql).toContain('alter table public.leadership_course_assignments');
+    expect(sql).toContain('add column if not exists updated_at');
+  });
 });

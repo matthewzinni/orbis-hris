@@ -59,6 +59,7 @@ export function renderLeadershipProgramsCatalog(
             <td>${statusChip(course.status, course.status === 'active' ? 'good' : course.status === 'draft' ? 'warn' : 'muted')}</td>
             <td>${esc(moduleCount)}</td>
             <td class="actions">
+              <button class="button primary sm" type="button" data-leadership-preview-course="${esc(course.id)}">Preview</button>
               <button class="button soft sm" type="button" data-leadership-select-course="${esc(course.id)}">Modules</button>
               <button class="button soft sm" type="button" data-leadership-edit-course="${esc(course.id)}">Edit</button>
               <button class="button soft sm" type="button" data-leadership-add-module="${esc(course.id)}">Add module</button>

@@ -14,6 +14,9 @@ const emptySnapshot: LeadershipAcademyFoundationSnapshot = {
   modules: [],
   philosophy: null,
   enrollments: [],
+  moduleProgress: [],
+  moduleSubmissions: [],
+  quizAttempts: [],
 };
 
 describe('leadershipAcademyCatalog', () => {

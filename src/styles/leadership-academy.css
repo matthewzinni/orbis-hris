@@ -146,3 +146,238 @@
     white-space: nowrap;
   }
 }
+.leadership-player {
+  display: grid;
+  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.leadership-player-sidebar {
+  border-right: 1px solid var(--border, #d8dee8);
+  padding-right: 20px;
+}
+
+.leadership-player-course-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.leadership-player-course-heading h3,
+.leadership-player-course-heading p {
+  margin: 0;
+}
+
+.leadership-player-course-heading p,
+.leadership-player-module small {
+  color: var(--muted, #667085);
+}
+
+.leadership-player-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #eef4ff;
+  font-size: 22px;
+}
+
+.leadership-player-module-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.leadership-player-module {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  padding: 11px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.leadership-player-module:hover,
+.leadership-player-module.active {
+  border-color: #b9ccf7;
+  background: #f4f7ff;
+}
+
+.leadership-player-module-order {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e4ebf8;
+  font-weight: 700;
+}
+
+.leadership-player-module-order.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.leadership-player-module small {
+  display: block;
+  margin-top: 3px;
+}
+
+.leadership-course-progress {
+  margin: 14px 0 18px;
+}
+
+.leadership-course-progress > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+  font-size: 13px;
+}
+
+.leadership-progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e4ebf8;
+}
+
+.leadership-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #2f6fed;
+  transition: width 180ms ease;
+}
+
+.leadership-player-lesson {
+  min-width: 0;
+  max-width: 820px;
+}
+
+.leadership-player-lesson-meta {
+  display: flex;
+  gap: 14px;
+  color: var(--muted, #667085);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.leadership-player-content {
+  line-height: 1.7;
+}
+
+.leadership-player-content h3,
+.leadership-player-content h4 {
+  margin-top: 24px;
+}
+
+.leadership-player-content blockquote {
+  margin: 18px 0;
+  padding: 14px 18px;
+  border-left: 4px solid #4069c8;
+  background: #f4f7ff;
+}
+
+.leadership-complete-banner {
+  display: inline-flex;
+  margin: 4px 0 12px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.leadership-interactive-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.leadership-form-question {
+  display: grid;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.leadership-form-question textarea,
+.leadership-quiz-question textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid var(--border, #d8dee8);
+  border-radius: 8px;
+  color: inherit;
+  background: var(--surface, #fff);
+  font: inherit;
+  resize: vertical;
+}
+
+.leadership-quiz-question {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border, #d8dee8);
+  border-radius: 10px;
+}
+
+.leadership-quiz-question legend {
+  padding: 0 6px;
+  font-weight: 700;
+}
+
+.leadership-quiz-option,
+.leadership-acknowledgment {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.leadership-quiz-option input,
+.leadership-acknowledgment input {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex: 0 0 auto;
+}
+
+.leadership-acknowledgment {
+  padding: 18px;
+  border: 1px solid #b9ccf7;
+  border-radius: 10px;
+  background: #f4f7ff;
+  line-height: 1.55;
+}
+
+.leadership-player-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border, #d8dee8);
+}
+
+@media (max-width: 800px) {
+  .leadership-player {
+    grid-template-columns: 1fr;
+  }
+
+  .leadership-player-sidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--border, #d8dee8);
+    padding-right: 0;
+    padding-bottom: 18px;
+  }
+}

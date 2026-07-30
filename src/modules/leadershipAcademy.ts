@@ -2,11 +2,21 @@ import {
   canManageLeadershipAcademy,
   canViewLeadershipAcademyOrg,
 } from '../services/leadershipAcademyAccess';
-import { fetchLeadershipAcademyFoundation } from '../data/leadershipAcademyStore';
+import {
+  fetchLeadershipAcademyFoundation,
+  fetchLeadershipQuiz,
+  markLeadershipLessonComplete,
+  saveLeadershipAcknowledgment,
+  saveLeadershipReflection,
+  submitLeadershipQuiz,
+} from '../data/leadershipAcademyStore';
 import { switchMainView } from '../ui/navigation';
 import type {
   LeadershipAcademyFoundationSnapshot,
   LeadershipAcademyTab,
+  LeadershipEnrollment,
+  LeadershipModule,
+  LeadershipQuizQuestion,
 } from '../types/leadershipAcademyTypes';
 import { LEADERSHIP_ACADEMY_MODULE_VERSION } from '../types/leadershipAcademyTypes';
 import {
@@ -28,13 +38,17 @@ import {
   setLeadershipEditorCatalog,
   setLeadershipEditorOnSaved,
 } from './leadershipAcademyEditor';
+import { renderLeadershipCoursePlayer } from './leadershipAcademyPlayer';
 
 let activeTab: LeadershipAcademyTab = 'dashboard';
 let moduleHydrated = false;
 let bindingsReady = false;
 let catalogBindingsReady = false;
 let selectedCourseId: string | null = null;
+let selectedPlayerModuleId: string | null = null;
 let cachedFoundation: LeadershipAcademyFoundationSnapshot | null = null;
+const quizQuestionsByModule = new Map<string, LeadershipQuizQuestion[]>();
+const loadingQuizModules = new Set<string>();
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -90,6 +104,9 @@ export function applyLeadershipAcademyAccessUi(): void {
 
   const readOnlyBanner = document.getElementById('leadershipAcademyReadOnlyBanner');
   if (readOnlyBanner) {
+    readOnlyBanner.textContent = canViewOrg
+      ? 'You can view organization progress. Program configuration requires HR admin access.'
+      : 'Your assigned leadership courses and progress appear under My Development.';
     readOnlyBanner.classList.toggle('hidden', canManage);
   }
 
@@ -155,7 +172,7 @@ function renderFoundationSummary(input: {
     `<div class="leadership-academy-summary-card"><div class="label">Competencies</div><div class="value">${esc(input.competencyCount)}</div></div>` +
     `<div class="leadership-academy-summary-card"><div class="label">Enrollments</div><div class="value">${esc(input.enrollmentCount)}</div></div>` +
     '</div>' +
-    '<p class="muted leadership-academy-phase-note">Catalog authoring is live for HR admins. Enrollment and participant flows arrive in Slice 3.</p>';
+    '<p class="muted leadership-academy-phase-note">Catalog authoring and the interactive Module 1 participant experience are ready for review.</p>';
 }
 
 function renderCatalogPanels(snapshot: LeadershipAcademyFoundationSnapshot): void {
@@ -166,6 +183,81 @@ function renderCatalogPanels(snapshot: LeadershipAcademyFoundationSnapshot): voi
   setHtml('leadershipAcademyPhilosophyBody', renderLeadershipPhilosophyPanel(snapshot.philosophy));
 }
 
+function renderMyDevelopment(snapshot: LeadershipAcademyFoundationSnapshot): void {
+  const previewMode = canManageLeadershipAcademy();
+  const enrolledTierIds = new Set(snapshot.enrollments.map((enrollment) => enrollment.tierId).filter(Boolean));
+  const availableCourses = previewMode
+    ? snapshot.courses
+    : snapshot.courses.filter((item) => item.tierId && enrolledTierIds.has(item.tierId));
+  const course =
+    availableCourses.find((item) => item.id === selectedCourseId) ||
+    availableCourses.find((item) => item.title === 'What It Means to Lead at BTW') ||
+    availableCourses[0] ||
+    null;
+  const activeModule =
+    snapshot.modules.find((module) => module.id === selectedPlayerModuleId) ||
+    snapshot.modules
+      .filter((module) => module.courseId === course?.id)
+      .sort((a, b) => a.displayOrder - b.displayOrder)[0] ||
+    null;
+  if (course) selectedCourseId = course.id;
+  if (activeModule) selectedPlayerModuleId = activeModule.id;
+  const enrollment =
+    (course
+      ? snapshot.enrollments.find(
+          (item) =>
+            item.tierId === course.tierId &&
+            !['paused', 'withdrawn'].includes(item.status)
+        )
+      : null) || null;
+  setHtml(
+    'leadershipAcademyMyDevelopmentBody',
+    renderLeadershipCoursePlayer(snapshot, course, activeModule, previewMode, {
+      enrollment,
+      quizQuestions: activeModule ? quizQuestionsByModule.get(activeModule.id) : undefined,
+    })
+  );
+
+  if (
+    activeModule?.moduleType === 'quiz' &&
+    !quizQuestionsByModule.has(activeModule.id) &&
+    !loadingQuizModules.has(activeModule.id)
+  ) {
+    loadingQuizModules.add(activeModule.id);
+    void fetchLeadershipQuiz(activeModule.id)
+      .then((questions) => {
+        quizQuestionsByModule.set(activeModule.id, questions);
+        if (cachedFoundation) renderMyDevelopment(cachedFoundation);
+      })
+      .catch((error) => {
+        console.error('[LeadershipAcademy] Quiz load failed:', error);
+        showToast('Could not load the knowledge check.', 'error');
+      })
+      .finally(() => loadingQuizModules.delete(activeModule.id));
+  }
+}
+
+function getActiveParticipantContext(): {
+  enrollment: LeadershipEnrollment;
+  module: LeadershipModule;
+} | null {
+  if (!cachedFoundation || canManageLeadershipAcademy()) return null;
+  const module = cachedFoundation.modules.find((item) => item.id === selectedPlayerModuleId);
+  if (!module) return null;
+  const course = cachedFoundation.courses.find((item) => item.id === module.courseId);
+  const enrollment = cachedFoundation.enrollments.find(
+    (item) =>
+      item.tierId === course?.tierId &&
+      !['paused', 'withdrawn'].includes(item.status)
+  );
+  return enrollment ? { enrollment, module } : null;
+}
+
+async function refreshParticipantExperience(message: string): Promise<void> {
+  showToast(message);
+  await loadLeadershipAcademy(true);
+}
+
 function bindCatalogActionEvents(): void {
   if (catalogBindingsReady) return;
   catalogBindingsReady = true;
@@ -174,9 +266,47 @@ function bindCatalogActionEvents(): void {
   if (!root) return;
 
   root.addEventListener('click', (event) => {
-    if (!cachedFoundation || !canManageLeadershipAcademy()) return;
+    if (!cachedFoundation) return;
     const target = event.target as HTMLElement | null;
     if (!target) return;
+
+    const openModule = target.closest('[data-leadership-open-module]') as HTMLElement | null;
+    if (openModule) {
+      selectedPlayerModuleId = String(openModule.dataset.leadershipOpenModule || '') || null;
+      renderMyDevelopment(cachedFoundation);
+      return;
+    }
+
+    const completeLesson = target.closest('[data-leadership-complete-lesson]');
+    if (completeLesson) {
+      const context = getActiveParticipantContext();
+      if (!context) return;
+      (completeLesson as HTMLButtonElement).disabled = true;
+      void markLeadershipLessonComplete(context.enrollment.id, context.module.id)
+        .then(() => refreshParticipantExperience('Lesson completed.'))
+        .catch((error) => {
+          console.error(
+            `[LeadershipAcademy] Lesson completion failed: ${
+              error instanceof Error ? error.message : JSON.stringify(error)
+            }`
+          );
+          (completeLesson as HTMLButtonElement).disabled = false;
+          showToast('Could not save lesson completion.', 'error');
+        });
+      return;
+    }
+
+    if (!canManageLeadershipAcademy()) return;
+
+    const previewCourse = target.closest('[data-leadership-preview-course]') as HTMLElement | null;
+    if (previewCourse) {
+      selectedCourseId = String(previewCourse.dataset.leadershipPreviewCourse || '') || null;
+      selectedPlayerModuleId = null;
+      activeTab = 'my-development';
+      renderMyDevelopment(cachedFoundation);
+      renderActiveTabPanel();
+      return;
+    }
 
     const tierEdit = target.closest('[data-leadership-edit-tier]') as HTMLElement | null;
     if (tierEdit) {
@@ -249,6 +379,88 @@ function bindCatalogActionEvents(): void {
       openLeadershipPhilosophyEditor(cachedFoundation.philosophy);
     }
   });
+
+  root.addEventListener('submit', (event) => {
+    const form = event.target as HTMLFormElement | null;
+    if (!form) return;
+    const context = getActiveParticipantContext();
+    if (!context) return;
+
+    if (form.matches('[data-leadership-reflection-form]')) {
+      event.preventDefault();
+      const questions = Array.isArray(context.module.completionRequirements.questions)
+        ? context.module.completionRequirements.questions
+        : [];
+      const data = new FormData(form);
+      const answers = questions.map((_, index) =>
+        String(data.get(`reflection-${index}`) || '').trim()
+      );
+      if (answers.some((answer) => !answer)) {
+        showToast('Please answer every reflection question.', 'error');
+        return;
+      }
+      const button = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (button) button.disabled = true;
+      void saveLeadershipReflection(context.enrollment.id, context.module.id, answers)
+        .then(() => refreshParticipantExperience('Reflection saved.'))
+        .catch((error) => {
+          console.error('[LeadershipAcademy] Reflection save failed:', error);
+          if (button) button.disabled = false;
+          showToast('Could not save the reflection.', 'error');
+        });
+      return;
+    }
+
+    if (form.matches('[data-leadership-acknowledgment-form]')) {
+      event.preventDefault();
+      const data = new FormData(form);
+      if (data.get('acknowledged') !== 'on') {
+        showToast('Please select the acknowledgment checkbox.', 'error');
+        return;
+      }
+      const button = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (button) button.disabled = true;
+      void saveLeadershipAcknowledgment(context.enrollment.id, context.module.id)
+        .then(() => refreshParticipantExperience('Acknowledgment completed.'))
+        .catch((error) => {
+          console.error('[LeadershipAcademy] Acknowledgment save failed:', error);
+          if (button) button.disabled = false;
+          showToast('Could not save the acknowledgment.', 'error');
+        });
+      return;
+    }
+
+    if (form.matches('[data-leadership-quiz-form]')) {
+      event.preventDefault();
+      const questions = quizQuestionsByModule.get(context.module.id) || [];
+      const data = new FormData(form);
+      const responses = questions.map((question) => {
+        const value = String(data.get(`quiz-${question.id}`) || '').trim();
+        return question.type === 'short_answer'
+          ? { questionId: question.id, text: value }
+          : { questionId: question.id, optionId: value };
+      });
+      if (responses.some((response) => !response.optionId && !response.text)) {
+        showToast('Please answer every knowledge-check question.', 'error');
+        return;
+      }
+      const button = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (button) button.disabled = true;
+      void submitLeadershipQuiz(context.enrollment.id, context.module.id, responses)
+        .then((result) =>
+          refreshParticipantExperience(
+            result.passed
+              ? `Knowledge check passed with ${result.scorePercent}%.`
+              : `Score: ${result.scorePercent}%. An 80% score is required...please try again.`
+          )
+        )
+        .catch((error) => {
+          console.error('[LeadershipAcademy] Quiz submission failed:', error);
+          if (button) button.disabled = false;
+          showToast('Could not submit the knowledge check.', 'error');
+        });
+    }
+  });
 }
 
 function bindLeadershipAcademyEvents(): void {
@@ -298,6 +510,7 @@ export async function loadLeadershipAcademy(force = false): Promise<void> {
       enrollmentCount: foundation.enrollments.length,
     });
     renderCatalogPanels(foundation);
+    renderMyDevelopment(foundation);
 
     setText(
       'leadershipAcademyModuleVersion',

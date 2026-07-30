@@ -6,8 +6,12 @@ import type {
   LeadershipCourse,
   LeadershipEnrollment,
   LeadershipModule,
+  LeadershipModuleProgress,
+  LeadershipModuleSubmission,
   LeadershipPhilosophyContent,
   LeadershipProgramTier,
+  LeadershipQuizAttempt,
+  LeadershipQuizQuestion,
 } from '../types/leadershipAcademyTypes';
 
 const UUID_RE =
@@ -148,6 +152,49 @@ function mapEnrollment(row: Record<string, unknown>): LeadershipEnrollment {
   };
 }
 
+function mapModuleProgress(row: Record<string, unknown>): LeadershipModuleProgress {
+  return {
+    id: String(row.id),
+    enrollmentId: String(row.enrollment_id || ''),
+    moduleId: String(row.module_id || ''),
+    status: String(row.status || 'not_started') as LeadershipModuleProgress['status'],
+    startedAt: row.started_at ? String(row.started_at) : null,
+    completedAt: row.completed_at ? String(row.completed_at) : null,
+    lastActivityAt: row.last_activity_at ? String(row.last_activity_at) : null,
+  };
+}
+
+function mapModuleSubmission(row: Record<string, unknown>): LeadershipModuleSubmission {
+  const response = row.response;
+  return {
+    id: String(row.id),
+    enrollmentId: String(row.enrollment_id || ''),
+    moduleId: String(row.module_id || ''),
+    submissionType: String(row.submission_type) as LeadershipModuleSubmission['submissionType'],
+    response:
+      response && typeof response === 'object' && !Array.isArray(response)
+        ? (response as Record<string, unknown>)
+        : {},
+    acknowledgedAt: row.acknowledged_at ? String(row.acknowledged_at) : null,
+    updatedAt: String(row.updated_at || ''),
+  };
+}
+
+function mapQuizAttempt(row: Record<string, unknown>): LeadershipQuizAttempt {
+  return {
+    id: String(row.id),
+    enrollmentId: String(row.enrollment_id || ''),
+    moduleId: String(row.module_id || ''),
+    attemptNumber: Number(row.attempt_number || 1),
+    scorePercent:
+      row.score_percent === null || row.score_percent === undefined
+        ? null
+        : Number(row.score_percent),
+    passed: row.passed === null || row.passed === undefined ? null : Boolean(row.passed),
+    submittedAt: String(row.submitted_at || ''),
+  };
+}
+
 export function invalidateLeadershipAcademyCache(): void {
   cachedFoundation = null;
 }
@@ -167,6 +214,9 @@ export async function fetchLeadershipAcademyFoundation(
     modules: [],
     philosophy: null,
     enrollments: [],
+    moduleProgress: [],
+    moduleSubmissions: [],
+    quizAttempts: [],
   };
 
   const probe = await supabaseClient.from('leadership_program_tiers').select('id').limit(1);
@@ -178,7 +228,17 @@ export async function fetchLeadershipAcademyFoundation(
     throw probe.error;
   }
 
-  const [tiersRes, competenciesRes, coursesRes, modulesRes, philosophyRes, enrollmentsRes] =
+  const [
+    tiersRes,
+    competenciesRes,
+    coursesRes,
+    modulesRes,
+    philosophyRes,
+    enrollmentsRes,
+    progressRes,
+    submissionsRes,
+    attemptsRes,
+  ] =
     await Promise.all([
       supabaseClient
         .from('leadership_program_tiers')
@@ -205,9 +265,25 @@ export async function fetchLeadershipAcademyFoundation(
         .from('leadership_enrollments')
         .select('*')
         .order('assigned_at', { ascending: false }),
+      supabaseClient.from('leadership_module_progress').select('*'),
+      supabaseClient.from('leadership_module_submissions').select('*'),
+      supabaseClient
+        .from('leadership_quiz_attempts')
+        .select('*')
+        .order('submitted_at', { ascending: false }),
     ]);
 
-  const responses = [tiersRes, competenciesRes, coursesRes, modulesRes, philosophyRes, enrollmentsRes];
+  const responses = [
+    tiersRes,
+    competenciesRes,
+    coursesRes,
+    modulesRes,
+    philosophyRes,
+    enrollmentsRes,
+    progressRes,
+    submissionsRes,
+    attemptsRes,
+  ];
   const failed = responses.find((res) => res.error);
   if (failed?.error) {
     throw failed.error;
@@ -227,9 +303,117 @@ export async function fetchLeadershipAcademyFoundation(
     enrollments: (enrollmentsRes.data || []).map((row) =>
       mapEnrollment(row as Record<string, unknown>)
     ),
+    moduleProgress: (progressRes.data || []).map((row) =>
+      mapModuleProgress(row as Record<string, unknown>)
+    ),
+    moduleSubmissions: (submissionsRes.data || []).map((row) =>
+      mapModuleSubmission(row as Record<string, unknown>)
+    ),
+    quizAttempts: (attemptsRes.data || []).map((row) =>
+      mapQuizAttempt(row as Record<string, unknown>)
+    ),
   };
 
   return cachedFoundation;
+}
+
+export async function fetchLeadershipQuiz(moduleId: string): Promise<LeadershipQuizQuestion[]> {
+  const { data, error } = await supabaseClient.rpc('get_leadership_quiz', {
+    p_module_id: moduleId,
+  });
+  if (error) throw error;
+  const rows = Array.isArray(data) ? data : [];
+  return rows.map((row) => {
+    const item = row as Record<string, unknown>;
+    const options = Array.isArray(item.options) ? item.options : [];
+    return {
+      id: String(item.id),
+      type: String(item.type || 'multiple_choice') as LeadershipQuizQuestion['type'],
+      prompt: String(item.prompt || ''),
+      displayOrder: Number(item.displayOrder || 0),
+      options: options.map((option) => {
+        const mapped = option as Record<string, unknown>;
+        return {
+          id: String(mapped.id),
+          text: String(mapped.text || ''),
+          displayOrder: Number(mapped.displayOrder || 0),
+        };
+      }),
+    };
+  });
+}
+
+async function completeInteractiveModule(input: {
+  enrollmentId: string;
+  moduleId: string;
+  submissionType: 'reflection' | 'acknowledgment';
+  response: Record<string, unknown>;
+}): Promise<void> {
+  const { error } = await supabaseClient.rpc('complete_leadership_module', {
+    p_enrollment_id: input.enrollmentId,
+    p_module_id: input.moduleId,
+    p_submission_type: input.submissionType,
+    p_response: input.response,
+  });
+  if (error) throw error;
+  invalidateLeadershipAcademyCache();
+}
+
+export async function saveLeadershipReflection(
+  enrollmentId: string,
+  moduleId: string,
+  answers: string[]
+): Promise<void> {
+  await completeInteractiveModule({
+    enrollmentId,
+    moduleId,
+    submissionType: 'reflection',
+    response: { answers },
+  });
+}
+
+export async function saveLeadershipAcknowledgment(
+  enrollmentId: string,
+  moduleId: string
+): Promise<void> {
+  await completeInteractiveModule({
+    enrollmentId,
+    moduleId,
+    submissionType: 'acknowledgment',
+    response: { acknowledged: true },
+  });
+}
+
+export async function markLeadershipLessonComplete(
+  enrollmentId: string,
+  moduleId: string
+): Promise<void> {
+  const { error } = await supabaseClient.rpc('complete_leadership_lesson', {
+    p_enrollment_id: enrollmentId,
+    p_module_id: moduleId,
+  });
+  if (error) throw error;
+  invalidateLeadershipAcademyCache();
+}
+
+export async function submitLeadershipQuiz(
+  enrollmentId: string,
+  moduleId: string,
+  responses: Array<{ questionId: string; optionId?: string; text?: string }>
+): Promise<{ scorePercent: number; passed: boolean; attemptNumber: number }> {
+  const { data, error } = await supabaseClient.rpc('submit_leadership_quiz', {
+    p_enrollment_id: enrollmentId,
+    p_module_id: moduleId,
+    p_responses: responses,
+  });
+  if (error) throw error;
+  invalidateLeadershipAcademyCache();
+  const result = (data || {}) as Record<string, unknown>;
+  return {
+    scorePercent: Number(result.scorePercent || 0),
+    passed: Boolean(result.passed),
+    attemptNumber: Number(result.attemptNumber || 1),
+  };
 }
 
 export async function recordLeadershipAcademyAuditEvent(input: {
