@@ -180,7 +180,8 @@
   width: 42px;
   height: 42px;
   border-radius: 12px;
-  background: #eef4ff;
+  background: var(--accent-blue-soft, #eef4ff);
+  color: var(--text, #1f2937);
   font-size: 22px;
 }
 
@@ -206,8 +207,14 @@
 
 .leadership-player-module:hover,
 .leadership-player-module.active {
-  border-color: #b9ccf7;
-  background: #f4f7ff;
+  border-color: rgba(79, 140, 255, 0.55);
+  background: var(--accent-blue-soft, #eef4ff);
+  color: var(--text, #1f2937);
+}
+
+.leadership-player-module:hover small,
+.leadership-player-module.active small {
+  color: var(--muted, #667085);
 }
 
 .leadership-player-module-order {
@@ -216,7 +223,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: #e4ebf8;
+  background: var(--surface-muted, #e4ebf8);
+  color: var(--text, #1f2937);
   font-weight: 700;
 }
 
@@ -246,7 +254,7 @@
   height: 8px;
   overflow: hidden;
   border-radius: 999px;
-  background: #e4ebf8;
+  background: var(--surface-muted, #e4ebf8);
 }
 
 .leadership-progress-track span {
@@ -284,7 +292,8 @@
   margin: 18px 0;
   padding: 14px 18px;
   border-left: 4px solid #4069c8;
-  background: #f4f7ff;
+  background: var(--accent-blue-soft, #f4f7ff);
+  color: var(--text, #1f2937);
 }
 
 .leadership-complete-banner {
@@ -317,10 +326,33 @@
   padding: 10px 12px;
   border: 1px solid var(--border, #d8dee8);
   border-radius: 8px;
-  color: inherit;
-  background: var(--surface, #fff);
+  color: var(--text, #1f2937);
+  -webkit-text-fill-color: var(--text, #1f2937);
+  caret-color: var(--text, #1f2937);
+  background: var(--space-input-bg, #fff);
   font: inherit;
   resize: vertical;
+}
+
+.leadership-form-question textarea::placeholder,
+.leadership-quiz-question textarea::placeholder {
+  color: var(--muted, #667085);
+  -webkit-text-fill-color: var(--muted, #667085);
+  opacity: 1;
+}
+
+.leadership-form-question textarea:focus,
+.leadership-quiz-question textarea:focus {
+  border-color: #4f8cff;
+  outline: 2px solid rgba(79, 140, 255, 0.24);
+  outline-offset: 1px;
+}
+
+.leadership-form-question textarea::selection,
+.leadership-quiz-question textarea::selection {
+  background: #8bb4ff;
+  color: #08111f;
+  -webkit-text-fill-color: #08111f;
 }
 
 .leadership-quiz-question {
@@ -355,9 +387,10 @@
 
 .leadership-acknowledgment {
   padding: 18px;
-  border: 1px solid #b9ccf7;
+  border: 1px solid rgba(79, 140, 255, 0.55);
   border-radius: 10px;
-  background: #f4f7ff;
+  background: var(--accent-blue-soft, #f4f7ff);
+  color: var(--text, #1f2937);
   line-height: 1.55;
 }
 
