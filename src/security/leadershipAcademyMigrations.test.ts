@@ -68,4 +68,13 @@ describe('leadership academy migrations', () => {
     expect(sql).toContain('alter table public.leadership_course_assignments');
     expect(sql).toContain('add column if not exists updated_at');
   });
+
+  it('secures enrollment creation and progress reset for administrators', () => {
+    const sql = readMigration('20260730150000_leadership_enrollment_management.sql');
+    expect(sql).toContain('create_leadership_enrollment');
+    expect(sql).toContain('reset_leadership_enrollment_progress');
+    expect(sql).toContain('if not public.orbis_can_manage_leadership_academy()');
+    expect(sql).toContain('delete from public.leadership_quiz_attempts');
+    expect(sql).toContain('from public, anon');
+  });
 });

@@ -113,6 +113,28 @@ export type LeadershipEnrollment = {
   notes: string;
 };
 
+export type LeadershipCourseAssignment = {
+  id: string;
+  enrollmentId: string;
+  courseId: string;
+  assignedByEmail: string;
+  assignedAt: string;
+  dueDate: string;
+  status: LeadershipEnrollmentStatus;
+  completionPercent: number;
+  completedAt: string | null;
+};
+
+export type LeadershipEmployeeSummary = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  department: string;
+  position: string;
+  status: string;
+  workEmail: string;
+};
+
 export type LeadershipModuleProgress = {
   id: string;
   enrollmentId: string;
@@ -164,7 +186,9 @@ export type LeadershipAcademyFoundationSnapshot = {
   courses: LeadershipCourse[];
   modules: LeadershipModule[];
   philosophy: LeadershipPhilosophyContent | null;
+  employees: LeadershipEmployeeSummary[];
   enrollments: LeadershipEnrollment[];
+  courseAssignments: LeadershipCourseAssignment[];
   moduleProgress: LeadershipModuleProgress[];
   moduleSubmissions: LeadershipModuleSubmission[];
   quizAttempts: LeadershipQuizAttempt[];
@@ -189,4 +213,4 @@ export const LEADERSHIP_PROGRAM_TIER_LABELS = [
   'Executive Leadership',
 ] as const;
 
-export const LEADERSHIP_ACADEMY_MODULE_VERSION = 'phase-1-slice-4-interactive-module-1';
+export const LEADERSHIP_ACADEMY_MODULE_VERSION = 'phase-1-slice-5-enrollment-management';

@@ -3,22 +3,25 @@ import {
   canViewLeadershipAcademyOrg,
 } from '../services/leadershipAcademyAccess';
 import {
+  createLeadershipEnrollment,
   fetchLeadershipAcademyFoundation,
   fetchLeadershipQuiz,
   markLeadershipLessonComplete,
   saveLeadershipAcknowledgment,
   saveLeadershipReflection,
   submitLeadershipQuiz,
+  resetLeadershipEnrollmentProgress,
+  updateLeadershipEnrollment,
 } from '../data/leadershipAcademyStore';
 import { switchMainView } from '../ui/navigation';
-import type {
-  LeadershipAcademyFoundationSnapshot,
-  LeadershipAcademyTab,
-  LeadershipEnrollment,
-  LeadershipModule,
-  LeadershipQuizQuestion,
+import {
+  LEADERSHIP_ACADEMY_MODULE_VERSION,
+  type LeadershipAcademyFoundationSnapshot,
+  type LeadershipAcademyTab,
+  type LeadershipEnrollment,
+  type LeadershipModule,
+  type LeadershipQuizQuestion,
 } from '../types/leadershipAcademyTypes';
-import { LEADERSHIP_ACADEMY_MODULE_VERSION } from '../types/leadershipAcademyTypes';
 import {
   findLeadershipCompetency,
   findLeadershipCourse,
@@ -39,6 +42,10 @@ import {
   setLeadershipEditorOnSaved,
 } from './leadershipAcademyEditor';
 import { renderLeadershipCoursePlayer } from './leadershipAcademyPlayer';
+import {
+  renderLeadershipParticipants,
+  type LeadershipParticipantFilters,
+} from './leadershipAcademyParticipants';
 
 let activeTab: LeadershipAcademyTab = 'dashboard';
 let moduleHydrated = false;
@@ -46,6 +53,9 @@ let bindingsReady = false;
 let catalogBindingsReady = false;
 let selectedCourseId: string | null = null;
 let selectedPlayerModuleId: string | null = null;
+let selectedParticipantEnrollmentId: string | null = null;
+let showParticipantEnrollmentForm = false;
+let participantFilters: LeadershipParticipantFilters = { search: '', status: '' };
 let cachedFoundation: LeadershipAcademyFoundationSnapshot | null = null;
 const quizQuestionsByModule = new Map<string, LeadershipQuizQuestion[]>();
 const loadingQuizModules = new Set<string>();
@@ -183,12 +193,39 @@ function renderCatalogPanels(snapshot: LeadershipAcademyFoundationSnapshot): voi
   setHtml('leadershipAcademyPhilosophyBody', renderLeadershipPhilosophyPanel(snapshot.philosophy));
 }
 
+function renderParticipantPanel(snapshot: LeadershipAcademyFoundationSnapshot): void {
+  setHtml(
+    'leadershipAcademyParticipantsBody',
+    renderLeadershipParticipants(snapshot, {
+      canManage: canManageLeadershipAcademy(),
+      showEnrollmentForm: showParticipantEnrollmentForm,
+      selectedEnrollmentId: selectedParticipantEnrollmentId,
+      filters: participantFilters,
+    })
+  );
+}
+
 function renderMyDevelopment(snapshot: LeadershipAcademyFoundationSnapshot): void {
   const previewMode = canManageLeadershipAcademy();
-  const enrolledTierIds = new Set(snapshot.enrollments.map((enrollment) => enrollment.tierId).filter(Boolean));
+  const activeEnrollments = snapshot.enrollments.filter(
+    (enrollment) => !['paused', 'withdrawn'].includes(enrollment.status)
+  );
+  const enrolledTierIds = new Set(
+    activeEnrollments.map((enrollment) => enrollment.tierId).filter(Boolean)
+  );
+  const activeEnrollmentIds = new Set(activeEnrollments.map((enrollment) => enrollment.id));
+  const assignedCourseIds = new Set(
+    snapshot.courseAssignments
+      .filter((assignment) => activeEnrollmentIds.has(assignment.enrollmentId))
+      .map((assignment) => assignment.courseId)
+  );
   const availableCourses = previewMode
     ? snapshot.courses
-    : snapshot.courses.filter((item) => item.tierId && enrolledTierIds.has(item.tierId));
+    : snapshot.courses.filter(
+        (item) =>
+          assignedCourseIds.has(item.id) ||
+          Boolean(item.tierId && enrolledTierIds.has(item.tierId))
+      );
   const course =
     availableCourses.find((item) => item.id === selectedCourseId) ||
     availableCourses.find((item) => item.title === 'What It Means to Lead at BTW') ||
@@ -202,14 +239,19 @@ function renderMyDevelopment(snapshot: LeadershipAcademyFoundationSnapshot): voi
     null;
   if (course) selectedCourseId = course.id;
   if (activeModule) selectedPlayerModuleId = activeModule.id;
+  const assignedEnrollmentId = course
+    ? snapshot.courseAssignments.find(
+        (assignment) =>
+          assignment.courseId === course.id &&
+          activeEnrollmentIds.has(assignment.enrollmentId)
+      )?.enrollmentId
+    : null;
   const enrollment =
-    (course
-      ? snapshot.enrollments.find(
-          (item) =>
-            item.tierId === course.tierId &&
-            !['paused', 'withdrawn'].includes(item.status)
-        )
-      : null) || null;
+    (assignedEnrollmentId
+      ? activeEnrollments.find((item) => item.id === assignedEnrollmentId)
+      : course
+        ? activeEnrollments.find((item) => item.tierId === course.tierId)
+        : null) || null;
   setHtml(
     'leadershipAcademyMyDevelopmentBody',
     renderLeadershipCoursePlayer(snapshot, course, activeModule, previewMode, {
@@ -292,6 +334,62 @@ function bindCatalogActionEvents(): void {
           );
           (completeLesson as HTMLButtonElement).disabled = false;
           showToast('Could not save lesson completion.', 'error');
+        });
+      return;
+    }
+
+    if (target.closest('[data-leadership-open-enrollment-form]')) {
+      showParticipantEnrollmentForm = true;
+      renderParticipantPanel(cachedFoundation);
+      return;
+    }
+
+    if (target.closest('[data-leadership-close-enrollment-form]')) {
+      showParticipantEnrollmentForm = false;
+      renderParticipantPanel(cachedFoundation);
+      return;
+    }
+
+    const viewParticipant = target.closest(
+      '[data-leadership-view-participant]'
+    ) as HTMLElement | null;
+    if (viewParticipant) {
+      selectedParticipantEnrollmentId =
+        String(viewParticipant.dataset.leadershipViewParticipant || '') || null;
+      renderParticipantPanel(cachedFoundation);
+      return;
+    }
+
+    if (target.closest('[data-leadership-close-participant]')) {
+      selectedParticipantEnrollmentId = null;
+      renderParticipantPanel(cachedFoundation);
+      return;
+    }
+
+    const resetProgress = target.closest(
+      '[data-leadership-reset-progress]'
+    ) as HTMLButtonElement | null;
+    if (resetProgress) {
+      if (!canManageLeadershipAcademy()) return;
+      const enrollmentId = String(resetProgress.dataset.leadershipResetProgress || '');
+      if (!enrollmentId) return;
+      if (
+        !window.confirm(
+          'Reset all module progress, reflection responses, acknowledgments, and quiz attempts for this enrollment?'
+        )
+      ) {
+        return;
+      }
+      resetProgress.disabled = true;
+      void resetLeadershipEnrollmentProgress(enrollmentId)
+        .then(async () => {
+          showToast('Participant progress reset.');
+          await loadLeadershipAcademy(true);
+        })
+        .catch((error) => {
+          console.error('[LeadershipAcademy] Progress reset failed:', error);
+          resetProgress.disabled = false;
+          showToast('Could not reset participant progress.', 'error');
         });
       return;
     }
@@ -384,6 +482,74 @@ function bindCatalogActionEvents(): void {
     const form = event.target as HTMLFormElement | null;
     if (!form) return;
     const context = getActiveParticipantContext();
+
+    if (form.matches('[data-leadership-enrollment-form]')) {
+      event.preventDefault();
+      if (!canManageLeadershipAcademy()) return;
+      const data = new FormData(form);
+      const employeeId = String(data.get('employeeId') || '').trim();
+      const assignment = String(data.get('assignment') || '').trim();
+      const dueDate = String(data.get('dueDate') || '').trim();
+      const notes = String(data.get('notes') || '').trim();
+      const [assignmentType, assignmentId] = assignment.split(':', 2);
+      if (!employeeId || !assignmentId || !['tier', 'course'].includes(assignmentType)) {
+        showToast('Select an employee and assignment.', 'error');
+        return;
+      }
+      const button = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (button) button.disabled = true;
+      void createLeadershipEnrollment({
+        employeeId,
+        tierId: assignmentType === 'tier' ? assignmentId : null,
+        courseId: assignmentType === 'course' ? assignmentId : null,
+        dueDate: dueDate || null,
+        notes,
+      })
+        .then(async (enrollmentId) => {
+          selectedParticipantEnrollmentId = enrollmentId;
+          showParticipantEnrollmentForm = false;
+          showToast('Participant enrolled.');
+          await loadLeadershipAcademy(true);
+        })
+        .catch((error) => {
+          console.error('[LeadershipAcademy] Enrollment failed:', error);
+          if (button) button.disabled = false;
+          showToast(error?.message || 'Could not enroll participant.', 'error');
+        });
+      return;
+    }
+
+    const enrollmentEdit = form.matches('[data-leadership-enrollment-edit]')
+      ? form
+      : null;
+    if (enrollmentEdit) {
+      event.preventDefault();
+      if (!canManageLeadershipAcademy()) return;
+      const enrollmentId = String(enrollmentEdit.dataset.leadershipEnrollmentEdit || '');
+      const data = new FormData(form);
+      const status = String(data.get('status') || '') as LeadershipEnrollment['status'];
+      const dueDate = String(data.get('dueDate') || '').trim();
+      const notes = String(data.get('notes') || '').trim();
+      const button = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+      if (button) button.disabled = true;
+      void updateLeadershipEnrollment({
+        enrollmentId,
+        status,
+        dueDate: dueDate || null,
+        notes,
+      })
+        .then(async () => {
+          showToast('Enrollment updated.');
+          await loadLeadershipAcademy(true);
+        })
+        .catch((error) => {
+          console.error('[LeadershipAcademy] Enrollment update failed:', error);
+          if (button) button.disabled = false;
+          showToast('Could not update enrollment.', 'error');
+        });
+      return;
+    }
+
     if (!context) return;
 
     if (form.matches('[data-leadership-reflection-form]')) {
@@ -461,6 +627,27 @@ function bindCatalogActionEvents(): void {
         });
     }
   });
+
+  root.addEventListener('input', (event) => {
+    if (!cachedFoundation) return;
+    const target = event.target as HTMLInputElement | null;
+    if (!target?.matches('[data-leadership-participant-search]')) return;
+    participantFilters = { ...participantFilters, search: target.value };
+    renderParticipantPanel(cachedFoundation);
+    const replacement = root.querySelector(
+      '[data-leadership-participant-search]'
+    ) as HTMLInputElement | null;
+    replacement?.focus();
+    replacement?.setSelectionRange(replacement.value.length, replacement.value.length);
+  });
+
+  root.addEventListener('change', (event) => {
+    if (!cachedFoundation) return;
+    const target = event.target as HTMLSelectElement | null;
+    if (!target?.matches('[data-leadership-participant-status]')) return;
+    participantFilters = { ...participantFilters, status: target.value };
+    renderParticipantPanel(cachedFoundation);
+  });
 }
 
 function bindLeadershipAcademyEvents(): void {
@@ -510,6 +697,7 @@ export async function loadLeadershipAcademy(force = false): Promise<void> {
       enrollmentCount: foundation.enrollments.length,
     });
     renderCatalogPanels(foundation);
+    renderParticipantPanel(foundation);
     renderMyDevelopment(foundation);
 
     setText(

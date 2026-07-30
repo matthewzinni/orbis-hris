@@ -4,7 +4,10 @@ import type {
   LeadershipAcademyFoundationSnapshot,
   LeadershipCompetency,
   LeadershipCourse,
+  LeadershipCourseAssignment,
+  LeadershipEmployeeSummary,
   LeadershipEnrollment,
+  LeadershipEnrollmentStatus,
   LeadershipModule,
   LeadershipModuleProgress,
   LeadershipModuleSubmission,
@@ -152,6 +155,32 @@ function mapEnrollment(row: Record<string, unknown>): LeadershipEnrollment {
   };
 }
 
+function mapCourseAssignment(row: Record<string, unknown>): LeadershipCourseAssignment {
+  return {
+    id: String(row.id),
+    enrollmentId: String(row.enrollment_id || ''),
+    courseId: String(row.course_id || ''),
+    assignedByEmail: String(row.assigned_by_email || ''),
+    assignedAt: String(row.assigned_at || ''),
+    dueDate: row.due_date ? String(row.due_date) : '',
+    status: String(row.status || 'not_started') as LeadershipCourseAssignment['status'],
+    completionPercent: Number(row.completion_percent ?? 0),
+    completedAt: row.completed_at ? String(row.completed_at) : null,
+  };
+}
+
+function mapEmployeeSummary(row: Record<string, unknown>): LeadershipEmployeeSummary {
+  return {
+    id: String(row.id || ''),
+    firstName: String(row.first_name || ''),
+    lastName: String(row.last_name || ''),
+    department: String(row.department || ''),
+    position: String(row.position || ''),
+    status: String(row.status || ''),
+    workEmail: String(row.work_email || ''),
+  };
+}
+
 function mapModuleProgress(row: Record<string, unknown>): LeadershipModuleProgress {
   return {
     id: String(row.id),
@@ -213,7 +242,9 @@ export async function fetchLeadershipAcademyFoundation(
     courses: [],
     modules: [],
     philosophy: null,
+    employees: [],
     enrollments: [],
+    courseAssignments: [],
     moduleProgress: [],
     moduleSubmissions: [],
     quizAttempts: [],
@@ -234,7 +265,9 @@ export async function fetchLeadershipAcademyFoundation(
     coursesRes,
     modulesRes,
     philosophyRes,
+    employeesRes,
     enrollmentsRes,
+    assignmentsRes,
     progressRes,
     submissionsRes,
     attemptsRes,
@@ -262,7 +295,15 @@ export async function fetchLeadershipAcademyFoundation(
         .order('updated_at', { ascending: false })
         .limit(1),
       supabaseClient
+        .from('employees')
+        .select('id, first_name, last_name, department, position, status, work_email')
+        .order('last_name', { ascending: true }),
+      supabaseClient
         .from('leadership_enrollments')
+        .select('*')
+        .order('assigned_at', { ascending: false }),
+      supabaseClient
+        .from('leadership_course_assignments')
         .select('*')
         .order('assigned_at', { ascending: false }),
       supabaseClient.from('leadership_module_progress').select('*'),
@@ -279,7 +320,9 @@ export async function fetchLeadershipAcademyFoundation(
     coursesRes,
     modulesRes,
     philosophyRes,
+    employeesRes,
     enrollmentsRes,
+    assignmentsRes,
     progressRes,
     submissionsRes,
     attemptsRes,
@@ -300,8 +343,14 @@ export async function fetchLeadershipAcademyFoundation(
     philosophy: philosophyRes.data?.[0]
       ? mapPhilosophy(philosophyRes.data[0] as Record<string, unknown>)
       : null,
+    employees: (employeesRes.data || []).map((row) =>
+      mapEmployeeSummary(row as Record<string, unknown>)
+    ),
     enrollments: (enrollmentsRes.data || []).map((row) =>
       mapEnrollment(row as Record<string, unknown>)
+    ),
+    courseAssignments: (assignmentsRes.data || []).map((row) =>
+      mapCourseAssignment(row as Record<string, unknown>)
     ),
     moduleProgress: (progressRes.data || []).map((row) =>
       mapModuleProgress(row as Record<string, unknown>)
@@ -315,6 +364,49 @@ export async function fetchLeadershipAcademyFoundation(
   };
 
   return cachedFoundation;
+}
+
+export async function createLeadershipEnrollment(input: {
+  employeeId: string;
+  tierId?: string | null;
+  courseId?: string | null;
+  dueDate?: string | null;
+  notes?: string;
+}): Promise<string> {
+  const { data, error } = await supabaseClient.rpc('create_leadership_enrollment', {
+    p_employee_id: input.employeeId,
+    p_tier_id: input.tierId || null,
+    p_course_id: input.courseId || null,
+    p_due_date: input.dueDate || null,
+    p_notes: input.notes || '',
+  });
+  if (error) throw error;
+  invalidateLeadershipAcademyCache();
+  return String(data || '');
+}
+
+export async function updateLeadershipEnrollment(input: {
+  enrollmentId: string;
+  status: LeadershipEnrollmentStatus;
+  dueDate?: string | null;
+  notes?: string;
+}): Promise<void> {
+  const { error } = await supabaseClient.rpc('update_leadership_enrollment_admin', {
+    p_enrollment_id: input.enrollmentId,
+    p_status: input.status,
+    p_due_date: input.dueDate || null,
+    p_notes: input.notes || '',
+  });
+  if (error) throw error;
+  invalidateLeadershipAcademyCache();
+}
+
+export async function resetLeadershipEnrollmentProgress(enrollmentId: string): Promise<void> {
+  const { error } = await supabaseClient.rpc('reset_leadership_enrollment_progress', {
+    p_enrollment_id: enrollmentId,
+  });
+  if (error) throw error;
+  invalidateLeadershipAcademyCache();
 }
 
 export async function fetchLeadershipQuiz(moduleId: string): Promise<LeadershipQuizQuestion[]> {
