@@ -10,7 +10,7 @@ function readMigration(filename: string): string {
 
 describe('security migrations', () => {
   it('restricts employee_notes to HR staff on direct reports', () => {
-    const sql = readMigration('20260706170000_employee_notes_hr_only.sql');
+    const sql = readMigration('20260706191030_employee_notes_hr_only.sql');
 
     expect(sql).toContain('orbis_hr_staff_child_accessible');
     expect(sql).toContain('orbis_employee_notes_select');
@@ -22,7 +22,7 @@ describe('security migrations', () => {
   });
 
   it('revokes portal access when an employee is terminated', () => {
-    const sql = readMigration('20260706180000_revoke_access_on_termination.sql');
+    const sql = readMigration('20260706192510_revoke_access_on_termination.sql');
 
     expect(sql).toContain("approval_status = 'rejected'");
     expect(sql).toContain('orbis_revoke_portal_access_for_employee_internal');
@@ -31,7 +31,7 @@ describe('security migrations', () => {
   });
 
   it('blocks supervisors from changing payroll and termination fields', () => {
-    const sql = readMigration('20260706190000_supervisor_employee_update_guard.sql');
+    const sql = readMigration('20260706202505_supervisor_employee_update_guard.sql');
 
     expect(sql).toContain('orbis_guard_supervisor_employee_update');
     expect(sql).toContain('NEW.status is distinct from OLD.status');
@@ -49,7 +49,7 @@ describe('security migrations', () => {
   });
 
   it('documents admin and supervisor access to candidate resume storage folders', () => {
-    const sql = readMigration('20260707140000_candidate_resume_admin_storage.sql');
+    const sql = readMigration('20260707180437_candidate_resume_admin_storage.sql');
 
     expect(sql).toContain('orbis_can_access_candidate_resume_storage');
     expect(sql).toContain('orbis_is_admin()');
@@ -58,7 +58,7 @@ describe('security migrations', () => {
   });
 
   it('restricts banked PTO baseline edits to Matthew only', () => {
-    const sql = readMigration('20260708120000_pto_balance_matthew_only.sql');
+    const sql = readMigration('20260708145158_pto_balance_matthew_only.sql');
 
     expect(sql).toContain('orbis_can_adjust_pto_balance');
     expect(sql).toContain('matthew.zinni@btwglobal.com');

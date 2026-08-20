@@ -1,4 +1,5 @@
 -- Allow employees to cancel their own pending leave requests.
+-- Filename matches the version recorded in production migration history.
 
 drop policy if exists leave_requests_update on public.leave_requests;
 create policy leave_requests_update on public.leave_requests

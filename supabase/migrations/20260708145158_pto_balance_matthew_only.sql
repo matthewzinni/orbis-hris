@@ -1,4 +1,5 @@
 -- Only Matthew may manually change banked PTO baseline fields on employees.
+-- Filename matches the version recorded in production migration history.
 
 create or replace function public.orbis_can_adjust_pto_balance()
 returns boolean

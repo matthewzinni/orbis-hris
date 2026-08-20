@@ -1,4 +1,5 @@
 -- HR notes (employee_notes) are for admins and supervisors only — not employee self-service.
+-- Filename matches the version recorded in production migration history.
 
 create or replace function public.orbis_hr_staff_child_accessible(emp_key text)
 returns boolean

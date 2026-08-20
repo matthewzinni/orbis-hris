@@ -1,4 +1,5 @@
 -- Supervisors may update direct reports but not payroll, status, or termination fields.
+-- Filename matches the version recorded in production migration history.
 
 create or replace function public.orbis_guard_supervisor_employee_update()
 returns trigger

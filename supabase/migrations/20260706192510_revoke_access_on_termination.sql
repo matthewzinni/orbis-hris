@@ -1,4 +1,5 @@
 -- Terminated roster employees lose Orbis access: revoke user_access and block RLS at the gate.
+-- Filename matches the version recorded in production migration history.
 
 -- ---------------------------------------------------------------------------
 -- Revoke matching user_access rows (linked id + roster work/personal emails)

@@ -1,4 +1,5 @@
 -- Ensure admins and supervisors can read candidate resume folders in storage.
+-- Filename matches the version recorded in production migration history.
 
 create or replace function public.orbis_can_access_candidate_resume_storage()
 returns boolean
