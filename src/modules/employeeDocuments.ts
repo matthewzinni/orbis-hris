@@ -16,7 +16,6 @@ interface EmployeeDocumentRecord {
   file_ext?: string | null;
   uploaded_by?: string | null;
   uploaded_at?: string;
-  signedUrl?: string | null;
   [key: string]: unknown;
 }
 
@@ -146,6 +145,45 @@ export async function deleteEmployeeDocument(docId: string): Promise<void> {
   }
 }
 
+export async function openEmployeeDocument(filePath: string): Promise<void> {
+  if (!filePath) return;
+
+  // Open the tab during the user gesture so browsers do not block it while
+  // Supabase generates a fresh, short-lived URL.
+  const viewer = window.open('about:blank', '_blank');
+  if (viewer) {
+    viewer.opener = null;
+    viewer.document.title = 'Opening document...';
+    viewer.document.body.textContent = 'Opening document...';
+  }
+
+  let signedUrl = '';
+
+  try {
+    const { data, error } = await supabaseClient.storage
+      .from(EMPLOYEE_DOCUMENTS_BUCKET)
+      .createSignedUrl(filePath, 3600);
+
+    if (error || !data?.signedUrl) {
+      throw error || new Error('Signed document URL was not returned.');
+    }
+
+    signedUrl = data.signedUrl;
+  } catch (error) {
+    viewer?.close();
+    console.error('[EmployeeDocuments] Could not create document link:', error);
+    showToast('Could not open document. Please try again.', 'error');
+    return;
+  }
+
+  if (viewer) {
+    viewer.location.replace(signedUrl);
+    return;
+  }
+
+  window.location.assign(signedUrl);
+}
+
 export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
   const target = safeGet('docHistory');
 
@@ -188,24 +226,7 @@ export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
       return;
     }
 
-    const docsWithUrls = await Promise.all(
-      rows.map(async (row) => {
-        if (!row.file_path) {
-          return { ...row, signedUrl: null };
-        }
-
-        const { data: signedData, error: signedError } = await supabaseClient.storage
-          .from(EMPLOYEE_DOCUMENTS_BUCKET)
-          .createSignedUrl(String(row.file_path), 3600);
-
-        return {
-          ...row,
-          signedUrl: signedError ? null : signedData?.signedUrl || null,
-        };
-      })
-    );
-
-    target.innerHTML = docsWithUrls
+    target.innerHTML = rows
       .map(
         (row) => `
       <div class="history-item">
@@ -217,8 +238,8 @@ export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="button danger" type="button" data-delete-doc-id="${escapeHtml(row.id || '')}">Delete</button>
             ${
-              row.signedUrl
-                ? `<a href="${escapeHtml(row.signedUrl)}" target="_blank" rel="noopener noreferrer" class="button soft">View</a>`
+              row.file_path
+                ? `<button class="button soft" type="button" data-view-doc-path="${escapeHtml(row.file_path)}">View</button>`
                 : ''
             }
             <span class="badge badge-soft">Document</span>
@@ -235,6 +256,16 @@ export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
 
         if (docId) {
           void deleteEmployeeDocument(docId);
+        }
+      });
+    });
+
+    target.querySelectorAll<HTMLButtonElement>('[data-view-doc-path]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const filePath = button.dataset.viewDocPath;
+
+        if (filePath) {
+          void openEmployeeDocument(filePath);
         }
       });
     });
@@ -366,24 +397,7 @@ export async function loadPerformanceReviewAttachments(employeeId: string): Prom
     return;
   }
 
-  const docsWithUrls = await Promise.all(
-    rows.map(async (row) => {
-      if (!row.file_path) {
-        return { ...row, signedUrl: null };
-      }
-
-      const { data: signedData, error: signedError } = await supabaseClient.storage
-        .from(EMPLOYEE_DOCUMENTS_BUCKET)
-        .createSignedUrl(String(row.file_path), 3600);
-
-      return {
-        ...row,
-        signedUrl: signedError ? null : signedData?.signedUrl || null,
-      };
-    })
-  );
-
-  target.innerHTML = docsWithUrls
+  target.innerHTML = rows
     .map(
       (row) => `
       <div class="history-item">
@@ -395,8 +409,8 @@ export async function loadPerformanceReviewAttachments(employeeId: string): Prom
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="button danger sm review-doc-delete" type="button" data-delete-review-doc-id="${escapeHtml(row.id || '')}">Delete</button>
             ${
-              row.signedUrl
-                ? `<a href="${escapeHtml(row.signedUrl)}" target="_blank" rel="noopener noreferrer" class="button soft sm">View</a>`
+              row.file_path
+                ? `<button class="button soft sm" type="button" data-view-review-doc-path="${escapeHtml(row.file_path)}">View</button>`
                 : ''
             }
           </div>
@@ -410,6 +424,13 @@ export async function loadPerformanceReviewAttachments(employeeId: string): Prom
     button.addEventListener('click', () => {
       const docId = button.dataset.deleteReviewDocId;
       if (docId) void deleteEmployeeDocument(docId);
+    });
+  });
+
+  target.querySelectorAll<HTMLButtonElement>('[data-view-review-doc-path]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const filePath = button.dataset.viewReviewDocPath;
+      if (filePath) void openEmployeeDocument(filePath);
     });
   });
 }
