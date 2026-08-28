@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { validateSignatureDataUrl } from './signatureValidation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -257,8 +258,13 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Enter your full name to sign.' }, 400);
     }
 
-    if (!signature.startsWith('data:image/')) {
+    const signatureValidation = validateSignatureDataUrl(signature);
+    if (signatureValidation === 'invalid') {
       return jsonResponse({ error: 'Signature is required.' }, 400);
+    }
+
+    if (signatureValidation === 'too_large') {
+      return jsonResponse({ error: 'Signature image is too large.' }, 413);
     }
 
     const table = TABLE_BY_FORM[formType];

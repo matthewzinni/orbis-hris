@@ -25,10 +25,24 @@ async function assertNoHorizontalOverflow(page: import('@playwright/test').Page)
   expect(overflow.bodyScrollWidth).toBeLessThanOrEqual(overflow.clientWidth + 1);
 }
 
+async function waitForMobileShellReady(page: import('@playwright/test').Page) {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          typeof window.refreshMobileDrawerForms === 'function' &&
+          typeof window.unlockBodyScrollIfIdle === 'function'
+      )
+    )
+    .toBe(true);
+}
+
 async function openDrawerFixture(
   page: import('@playwright/test').Page,
   drawerId: (typeof MODULE_DRAWERS)[number]
 ) {
+  await waitForMobileShellReady(page);
+
   await page.evaluate((id) => {
     document.body.classList.remove('auth-only');
     document.body.classList.add('authenticated');
@@ -96,6 +110,7 @@ test.describe('mobile shell chrome (unauthenticated DOM)', () => {
   test('closeActiveDrawer helper clears idle scroll lock', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
+    await waitForMobileShellReady(page);
 
     await page.evaluate(() => {
       document.body.classList.add('orbis-drawer-open');
