@@ -403,6 +403,7 @@ export async function uploadDocument(payload: UploadDocumentPayload): Promise<vo
     }
 
     await loadDocuments();
+    showOrbisToast(`Uploaded "${payload.title || payload.file.name}" successfully.`);
   } catch (err) {
     console.error('Unexpected upload error:', err);
     showOrbisToast(
@@ -422,8 +423,7 @@ function bindDocumentEvents(): void {
     'documentsCategoryFilter'
   ) as HTMLSelectElement | null;
   const searchButton = document.getElementById('documentsSearchBtn') as HTMLButtonElement | null;
-  const uploadButton = document.getElementById('uploadDocumentBtn') as HTMLButtonElement | null;
-  const uploadInput = ensureDocumentUploadInput();
+  ensureDocumentUploadInput();
 
   searchInput?.addEventListener('input', () => {
     setDocumentFilters({ search: searchInput.value });
@@ -438,14 +438,31 @@ function bindDocumentEvents(): void {
     setDocumentFilters({ category: categoryFilter.value || 'All' });
   });
 
-  uploadButton?.addEventListener('click', () => {
-    uploadInput.click();
+  document.addEventListener('click', (event) => {
+    const target = event.target as Element | null;
+    if (!target?.closest('#uploadDocumentBtn')) return;
+
+    ensureDocumentUploadInput().click();
   });
 
-  uploadInput.addEventListener('change', async () => {
+  document.addEventListener('change', (event) => {
+    const uploadInput = event.target as HTMLInputElement | null;
+    if (uploadInput?.id !== 'documentUploadInput') return;
+
+    void handleDocumentUploadSelection(uploadInput);
+  });
+
+  documentEventsBound = true;
+}
+
+async function handleDocumentUploadSelection(uploadInput: HTMLInputElement): Promise<void> {
     const file = uploadInput.files?.[0];
 
     if (!file) return;
+
+    const categoryFilter = document.getElementById(
+      'documentsCategoryFilter'
+    ) as HTMLSelectElement | null;
 
     const uploadDetails = await collectDocumentUploadDetails(file, categoryFilter);
 
@@ -465,9 +482,6 @@ function bindDocumentEvents(): void {
     });
 
     uploadInput.value = '';
-  });
-
-  documentEventsBound = true;
 }
 
 function bindDocumentActionButtons(): void {

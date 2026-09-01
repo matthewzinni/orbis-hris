@@ -15,12 +15,6 @@ const TABLE_BY_FORM: Record<FormType, string> = {
   review: 'employee_reviews',
 };
 
-const COLUMN_BY_ROLE: Record<SignerRole, string> = {
-  employee: 'employee_signature',
-  manager: 'manager_signature',
-  witness: 'witness_signature',
-};
-
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -267,40 +261,35 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Signature image is too large.' }, 413);
     }
 
-    const table = TABLE_BY_FORM[formType];
-    const column = COLUMN_BY_ROLE[signerRole];
+    const { data: completion, error: completionError } = await client.rpc(
+      'orbis_complete_signature_request',
+      {
+        p_token: token,
+        p_signature: signature,
+        p_signer_name: signerName,
+      }
+    );
 
-    const formUpdate: Record<string, unknown> = {
-      [column]: signature,
-    };
-
-    if (signerRole === 'employee') {
-      formUpdate.refused_to_sign = false;
+    if (completionError) {
+      console.error('[form-signature] atomic completion failed', completionError);
+      return jsonResponse({ error: 'Could not finalize signing request.' }, 500);
     }
 
-    const { error: formUpdateError } = await client
-      .from(table)
-      .update(formUpdate)
-      .eq('id', recordId);
-
-    if (formUpdateError) {
-      console.error('[form-signature] form update failed', formUpdateError);
-      return jsonResponse({ error: 'Could not save signature on the form.' }, 500);
+    const completionStatus = String(completion?.status || '');
+    if (completionStatus === 'already_signed') {
+      return jsonResponse({ error: 'This document has already been signed.', status: 'signed' }, 410);
     }
-
-    const { error: requestUpdateError } = await client
-      .from('signature_requests')
-      .update({
-        status: 'signed',
-        signature_data: signature,
-        signer_name: signerName,
-        signed_at: new Date().toISOString(),
-      })
-      .eq('id', requestRow.id)
-      .eq('status', 'pending');
-
-    if (requestUpdateError) {
-      console.error('[form-signature] request update failed', requestUpdateError);
+    if (completionStatus === 'expired') {
+      return jsonResponse({ error: 'This signing link has expired.', status: 'expired' }, 410);
+    }
+    if (completionStatus === 'invalid') {
+      return jsonResponse({ error: 'Signing link is invalid.' }, 404);
+    }
+    if (completionStatus === 'form_not_found') {
+      return jsonResponse({ error: 'The related form could not be found.' }, 404);
+    }
+    if (completionStatus !== 'signed') {
+      console.error('[form-signature] unexpected completion status', completionStatus);
       return jsonResponse({ error: 'Could not finalize signing request.' }, 500);
     }
 
