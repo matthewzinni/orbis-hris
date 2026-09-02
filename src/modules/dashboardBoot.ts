@@ -4,7 +4,7 @@
 
 import { supabaseClient } from '../services/supabaseClient';
 import { loadEmployees } from './employees';
-import { loadCandidates } from './candidates';
+import { loadCandidates } from './lazyCandidates';
 import {
   compareEmployeesByLastName,
   daysUntilDate,

@@ -5,7 +5,6 @@
 import '../styles/signature-field.css';
 import { type SignatureFormType } from '../services/signatureRequests';
 import { requestAndCopyEmployeeSigningLink } from '../services/employeeAcknowledgmentSigning';
-import { openErAcknowledgmentPdf } from '../services/erAcknowledgmentPdf';
 
 const initializedPads = new Set<string>();
 
@@ -388,6 +387,7 @@ async function handleGenerateAcknowledgmentPdf(): Promise<void> {
   }
 
   try {
+    const { openErAcknowledgmentPdf } = await import('../services/erAcknowledgmentPdf');
     await openErAcknowledgmentPdf(context.formType, context.recordId);
     window.showToast?.('PDF downloaded.', 'success');
   } catch (err) {

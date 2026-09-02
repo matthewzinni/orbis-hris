@@ -83,14 +83,14 @@ import './modules/lazyJanus';
 import './modules/dashboardBoot';
 import './modules/dashboard';
 import './modules/managerHome';
-import './modules/internalJobBoard';
+import './modules/lazyInternalJobBoard';
 import './ui/executiveInsight';
 import './ui/dashboardDisclosure';
 import './ui/employeeDrawerRiskSignals';
 import './ui/employeeDrawerHonors';
 import './modules/employeeIronShift';
-import './modules/reports';
-import './modules/settingsAdmin';
+import './modules/lazyReports';
+import './modules/lazySettingsAdmin';
 import { initAppShell, showAuthenticatedOrbisView, showAuthView } from './app/appShell';
 import { initAppSections, showAppSection } from './ui/appSections';
 import { switchMainView } from './ui/navigation';
@@ -142,7 +142,7 @@ import {
   deleteCandidateRecord,
   moveCandidateToStage,
   convertCandidateToEmployee,
-} from './modules/candidates';
+} from './modules/lazyCandidates';
 import './modules/candidateNotes';
 import {
   applyOperationsCenterAccess,
@@ -158,7 +158,7 @@ import {
   openOperationsIssueDrawer,
   openOperationsView,
   saveOperationsIssueRecord,
-} from './modules/operationsIssues';
+} from './modules/lazyOperationsIssues';
 import './modules/employeeCareSupport';
 import {
   applyCareEngagementCenterAccess,
