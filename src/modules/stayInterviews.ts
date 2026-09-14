@@ -17,6 +17,12 @@ import {
 } from '../services/stayInterviewSummary';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { stopAllDictation } from './dictation';
+import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
 
 interface StayInterviewRecord {
   id?: string;
@@ -334,7 +340,11 @@ function resetStayInterviewForm(): void {
   safeGet('cancelStayInterviewEditBtn')?.classList.add('hidden');
 }
 
-export async function loadStayInterviews(employeeId: string): Promise<void> {
+export async function loadStayInterviews(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
   const target = safeGet('stayInterviewHistory');
 
   if (!target) {
@@ -342,7 +352,13 @@ export async function loadStayInterviews(employeeId: string): Promise<void> {
     return;
   }
 
-  target.innerHTML = '<div class="empty">Loading stay interviews...</div>';
+  if (!render.isCurrent()) {
+    return;
+  }
+
+  if (!render.write(target, '<div class="empty">Loading stay interviews...</div>')) {
+    return;
+  }
 
   try {
     const activeEmployee = getCurrentEmployee();
@@ -350,32 +366,41 @@ export async function loadStayInterviews(employeeId: string): Promise<void> {
     const employeeIds = getEmployeeLookupIds(activeEmployee, primaryEmployeeId);
 
     if (!employeeIds.length) {
-      target.innerHTML = '<div class="empty">Open an employee to view stay interviews.</div>';
+      render.write(target, '<div class="empty">Open an employee to view stay interviews.</div>');
       return;
     }
 
-    const { data, error } = await supabaseClient
-      .from('stay_interviews')
-      .select('*')
-      .in('employee_id', employeeIds)
-      .order('interview_date', { ascending: false })
-      .order('created_at', { ascending: false });
+    const { data, error } = await applyEmployeeDrawerAbortSignal(
+      supabaseClient
+        .from('stay_interviews')
+        .select('*')
+        .in('employee_id', employeeIds)
+        .order('interview_date', { ascending: false })
+        .order('created_at', { ascending: false }),
+      context?.signal
+    );
+
+    if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) {
+      return;
+    }
 
     if (error) {
       console.error('[StayInterviews] Could not load stay interviews:', error);
-      target.innerHTML = '<div class="empty">Error loading stay interviews.</div>';
+      render.write(target, '<div class="empty">Error loading stay interviews.</div>');
       return;
     }
 
     const rows = (data || []) as StayInterviewRecord[];
 
     if (!rows.length) {
-      target.innerHTML = '<div class="empty">No stay interviews yet.</div>';
+      render.write(target, '<div class="empty">No stay interviews yet.</div>');
       return;
     }
 
-    target.innerHTML = rows
-      .map((row) => {
+    if (!render.write(
+      target,
+      rows
+        .map((row) => {
         const interviewDate = row.interview_date ? fmtDate(row.interview_date) : 'No date';
 
         return `
@@ -411,7 +436,10 @@ export async function loadStayInterviews(employeeId: string): Promise<void> {
           </div>
         `;
       })
-      .join('');
+      .join('')
+    )) {
+      return;
+    }
 
     target.querySelectorAll<HTMLButtonElement>('[data-edit-stay-id]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -433,8 +461,9 @@ export async function loadStayInterviews(employeeId: string): Promise<void> {
       });
     });
   } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
     console.error('[StayInterviews] Unexpected stay interview load failure:', err);
-    target.innerHTML = '<div class="empty">Could not load stay interviews.</div>';
+    render.write(target, '<div class="empty">Could not load stay interviews.</div>');
   }
 }
 

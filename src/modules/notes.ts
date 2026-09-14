@@ -2,6 +2,12 @@ import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
 import { getEmployeeLookupIds } from '../services/employeeRecordCrud';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
 import { stopAllDictation } from './dictation';
 import { resetDrawerForms } from './drawerForms';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
@@ -186,10 +192,14 @@ export async function deleteNote(noteId: string): Promise<void> {
   await refreshDashboardAfterNoteChange();
 }
 
-export async function loadEmployeeNotes(employeeId: string): Promise<void> {
+export async function loadEmployeeNotes(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
   const actualEmployeeId = getResolvedNoteEmployeeId(employeeId);
 
-  if (!actualEmployeeId) {
+  if (!actualEmployeeId || !render.isCurrent()) {
     return;
   }
 
@@ -199,41 +209,53 @@ export async function loadEmployeeNotes(employeeId: string): Promise<void> {
     return;
   }
 
-  target.innerHTML = '<div class="muted">Loading notes…</div>';
+  if (!render.write(target, '<div class="muted">Loading notes…</div>')) {
+    return;
+  }
 
   const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
   const lookupIds = getEmployeeLookupIds(employee, actualEmployeeId);
 
-  const { data, error } = await supabaseClient
-    .from('employee_notes')
-    .select('*')
-    .in('employee_id', lookupIds)
-    .order('note_date', { ascending: false });
+  try {
+    const { data, error } = await applyEmployeeDrawerAbortSignal(
+      supabaseClient
+        .from('employee_notes')
+        .select('*')
+        .in('employee_id', lookupIds)
+        .order('note_date', { ascending: false }),
+      context?.signal
+    );
 
-  if (error) {
-    console.error('[Notes] Load failed:', error);
-    target.innerHTML = '<div class="empty">Could not load notes.</div>';
-    showToast('Could not load notes.', 'error');
-    return;
-  }
+    if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) {
+      return;
+    }
 
-  if (!data?.length) {
-    target.innerHTML = '<div class="empty">No notes for this employee</div>';
-    return;
-  }
+    if (error) {
+      console.error('[Notes] Load failed:', error);
+      render.write(target, '<div class="empty">Could not load notes.</div>');
+      if (render.isCurrent()) showToast('Could not load notes.', 'error');
+      return;
+    }
 
-  const rows = (data as EmployeeNote[]).filter(
-    (row) => !isSystemEmployeeNoteType(row.note_type)
-  );
+    if (!data?.length) {
+      render.write(target, '<div class="empty">No notes for this employee</div>');
+      return;
+    }
 
-  if (!rows.length) {
-    target.innerHTML = '<div class="empty">No notes for this employee</div>';
-    return;
-  }
+    const rows = (data as EmployeeNote[]).filter(
+      (row) => !isSystemEmployeeNoteType(row.note_type)
+    );
 
-  target.innerHTML = rows
-    .map(
-      (row) => `
+    if (!rows.length) {
+      render.write(target, '<div class="empty">No notes for this employee</div>');
+      return;
+    }
+
+    if (!render.write(
+      target,
+      rows
+        .map(
+          (row) => `
         <div class="history-item">
           <div class="history-top">
             <div>
@@ -249,28 +271,37 @@ export async function loadEmployeeNotes(employeeId: string): Promise<void> {
           <div class="history-body">${nl2br(row.note_text || '')}</div>
         </div>
       `
-    )
-    .join('');
+        )
+        .join('')
+    )) {
+      return;
+    }
 
-  target.querySelectorAll<HTMLButtonElement>('[data-edit-note-id]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const note = rows.find((row) => String(row.id) === String(button.dataset.editNoteId));
+    target.querySelectorAll<HTMLButtonElement>('[data-edit-note-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const note = rows.find((row) => String(row.id) === String(button.dataset.editNoteId));
 
-      if (note) {
-        startNoteEdit(note);
-      }
+        if (note) {
+          startNoteEdit(note);
+        }
+      });
     });
-  });
 
-  target.querySelectorAll<HTMLButtonElement>('[data-delete-note-id]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const noteId = button.dataset.deleteNoteId;
+    target.querySelectorAll<HTMLButtonElement>('[data-delete-note-id]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const noteId = button.dataset.deleteNoteId;
 
-      if (noteId) {
-        void deleteNote(noteId);
-      }
+        if (noteId) {
+          void deleteNote(noteId);
+        }
+      });
     });
-  });
+  } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
+    console.error('[Notes] Load failed:', err);
+    render.write(target, '<div class="empty">Could not load notes.</div>');
+    showToast('Could not load notes.', 'error');
+  }
 }
 
 window.getResolvedNoteEmployeeId = getResolvedNoteEmployeeId;

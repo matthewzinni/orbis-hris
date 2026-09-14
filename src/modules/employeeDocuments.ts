@@ -1,4 +1,10 @@
 import { loadHandbookAcknowledgments } from './handbookAcknowledgments';
+import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
 import { canAccessPerformanceReviews } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
@@ -185,7 +191,12 @@ export async function openEmployeeDocument(filePath: string): Promise<void> {
   window.location.assign(signedUrl);
 }
 
-export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
+export async function loadEmployeeDocuments(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
+  if (!render.isCurrent()) return;
   void loadHandbookAcknowledgments(employeeId);
   const target = safeGet('docHistory');
 
@@ -199,38 +210,45 @@ export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
   const employeeIds = getEmployeeLookupIds(activeEmployee, primaryEmployeeId);
 
   if (!primaryEmployeeId && !employeeIds.length) {
-    target.innerHTML = '<div class="empty">Open an employee to view documents.</div>';
+    render.write(target, '<div class="empty">Open an employee to view documents.</div>');
     return;
   }
 
   const idsToSearch = employeeIds.length ? employeeIds : [primaryEmployeeId];
 
-  target.innerHTML = '<div class="empty">Loading documents...</div>';
+  if (!render.write(target, '<div class="empty">Loading documents...</div>')) return;
 
   try {
-    const { data, error } = await supabaseClient
-      .from('employee_documents')
-      .select('*')
-      .in('employee_id', idsToSearch)
-      .order('uploaded_at', { ascending: false });
+    const { data, error } = await applyEmployeeDrawerAbortSignal(
+      supabaseClient
+        .from('employee_documents')
+        .select('*')
+        .in('employee_id', idsToSearch)
+        .order('uploaded_at', { ascending: false }),
+      context?.signal
+    );
+
+    if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) return;
 
     if (error) {
       console.error('[EmployeeDocuments] Load failed:', error);
-      target.innerHTML = '<div class="empty">Could not load documents.</div>';
-      showToast('Could not load documents.', 'error');
+      render.write(target, '<div class="empty">Could not load documents.</div>');
+      if (render.isCurrent()) showToast('Could not load documents.', 'error');
       return;
     }
 
     const rows = (data || []) as EmployeeDocumentRecord[];
 
     if (!rows.length) {
-      target.innerHTML = '<div class="empty">No documents for this employee.</div>';
+      render.write(target, '<div class="empty">No documents for this employee.</div>');
       return;
     }
 
-    target.innerHTML = rows
-      .map(
-        (row) => `
+    if (!render.write(
+      target,
+      rows
+        .map(
+          (row) => `
       <div class="history-item">
         <div class="history-top">
           <div>
@@ -249,8 +267,11 @@ export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
         </div>
       </div>
     `
-      )
-      .join('');
+        )
+        .join('')
+    )) {
+      return;
+    }
 
     target.querySelectorAll<HTMLButtonElement>('[data-delete-doc-id]').forEach((button) => {
       button.addEventListener('click', () => {
@@ -272,8 +293,9 @@ export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
       });
     });
   } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
     console.error('[EmployeeDocuments] Unexpected load failure:', err);
-    target.innerHTML = '<div class="empty">Could not load documents.</div>';
+    render.write(target, '<div class="empty">Could not load documents.</div>');
   }
 }
 

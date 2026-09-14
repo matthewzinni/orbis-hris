@@ -10,6 +10,12 @@ import {
 } from '../services/emergencyContactPriority';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
 
 interface EmergencyContactRecord extends EmergencyContactPriorityRow {
   employee_id?: string;
@@ -130,40 +136,51 @@ function populateEmergencyContactForm(record: EmergencyContactRecord): void {
   }
 }
 
-export async function loadEmergencyContacts(employeeId: string): Promise<void> {
+export async function loadEmergencyContacts(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
   const target = safeGet('ecHistory');
 
   if (!target) {
     console.warn('[EmergencyContacts] ecHistory container not found.');
     return;
   }
+  if (!render.isCurrent()) return;
 
   const activeEmployee = getCurrentEmployee();
   const primaryEmployeeId = String(employeeId || getResolvedEmployeeId() || '').trim();
   const employeeIds = getEmployeeLookupIds(activeEmployee, primaryEmployeeId);
 
   if (!primaryEmployeeId && !employeeIds.length) {
+    if (!render.isCurrent()) return;
     resetEmergencyContactForm();
-    target.innerHTML = '<div class="empty">No employee selected.</div>';
+    render.write(target, '<div class="empty">No employee selected.</div>');
     return;
   }
 
   const idsToSearch = employeeIds.length ? employeeIds : [primaryEmployeeId];
   const saveEmployeeId = getResolvedEmployeeId(primaryEmployeeId);
 
-  target.innerHTML = '<div class="empty">Loading emergency contacts...</div>';
+  if (!render.write(target, '<div class="empty">Loading emergency contacts...</div>')) return;
 
   try {
-    const { data, error } = await supabaseClient
-      .from('emergency_contacts')
-      .select('*')
-      .in('employee_id', idsToSearch)
-      .order('priority_order', { ascending: true })
-      .order('created_at', { ascending: true });
+    const { data, error } = await applyEmployeeDrawerAbortSignal(
+      supabaseClient
+        .from('emergency_contacts')
+        .select('*')
+        .in('employee_id', idsToSearch)
+        .order('priority_order', { ascending: true })
+        .order('created_at', { ascending: true }),
+      context?.signal
+    );
+
+    if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) return;
 
     if (error) {
       console.error('[EmergencyContacts] Load failed:', error);
-      target.innerHTML = '<div class="empty">Could not load emergency contacts.</div>';
+      render.write(target, '<div class="empty">Could not load emergency contacts.</div>');
       return;
     }
 
@@ -171,13 +188,18 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
 
     if (!rows.length) {
       resetEmergencyContactForm();
-      target.innerHTML = `
+      if (!render.write(
+        target,
+        `
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
           <div style="font-weight:600;">Emergency Contacts</div>
           <button class="button soft" id="addEmergencyContactBtn" type="button">+ Add New</button>
         </div>
         <div class="empty">No emergency contacts on file</div>
-      `;
+      `
+      )) {
+        return;
+      }
       bindAddEmergencyContactButton();
       return;
     }
@@ -188,13 +210,17 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
         ? rows.find((row) => String(row.id) === String(selectedId))
         : rows[0];
 
+    if (!render.isCurrent()) return;
+
     if (!selectedRow) {
       resetEmergencyContactForm();
     } else {
       populateEmergencyContactForm(selectedRow);
     }
 
-    target.innerHTML = `
+    if (!render.write(
+      target,
+      `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
         <div style="font-weight:600;">Emergency Contacts</div>
         <button class="button soft" id="addEmergencyContactBtn" type="button">+ Add New</button>
@@ -226,7 +252,10 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
       `;
         })
         .join('')}
-    `;
+    `
+    )) {
+      return;
+    }
 
     bindAddEmergencyContactButton();
 
@@ -262,8 +291,9 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
     });
 
   } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
     console.error('[EmergencyContacts] Unexpected load failure:', err);
-    target.innerHTML = '<div class="empty">Could not load emergency contacts.</div>';
+    render.write(target, '<div class="empty">Could not load emergency contacts.</div>');
   }
 }
 

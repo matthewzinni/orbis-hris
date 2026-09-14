@@ -4,6 +4,7 @@
 
 import type { EmployeeLike } from '../services/access';
 import { stopAllDictation } from '../modules/dictation';
+import { loadEmployeeDrawerTab } from '../modules/employeeDrawerTabLoads';
 
 function getEmployeeForDrawerTabAccess(): EmployeeLike | null | undefined {
   if (typeof window.getCurrentEmployeeForOrbis === 'function') {
@@ -71,9 +72,7 @@ function shouldResetEntryTabForm(
 }
 
 function runEmployeeTabSideEffects(tabName: string): void {
-  if (typeof window.loadEmployeeDrawerTab === 'function') {
-    window.loadEmployeeDrawerTab(tabName);
-  }
+  void loadEmployeeDrawerTab(tabName);
 
   stopAllDictation();
 
@@ -364,8 +363,4 @@ export function initAccessibleDrawerTabs(): void {
 window.initAccessibleDrawerTabs = initAccessibleDrawerTabs;
 window.activateDrawerTab = activateDrawerTab;
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initAccessibleDrawerTabs);
-} else {
-  initAccessibleDrawerTabs();
-}
+// Initialized by the application after its drawer loaders are connected.

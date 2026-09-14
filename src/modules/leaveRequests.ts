@@ -30,6 +30,11 @@ import {
   isSupervisorUser,
 } from '../services/access';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import {
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
 
 function esc(value: unknown): string {
   if (typeof window.esc === 'function') {
@@ -306,36 +311,43 @@ async function refreshLeavePanelHeader(
   }
 }
 
-export async function loadEmployeeLeaveRequests(employeeId: string): Promise<void> {
+export async function loadEmployeeLeaveRequests(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
   const list = safeGet('leaveRequestList');
   const form = safeGet('leaveRequestForm');
-  if (!list) return;
+  if (!list || !render.isCurrent()) return;
 
   applyLeaveAccess();
 
   if (!canManageLeaveRequests()) {
     if (form) form.classList.add('hidden');
-    list.innerHTML = '<div class="muted">Time off is not available for your role.</div>';
+    render.write(list, '<div class="muted">Time off is not available for your role.</div>');
     return;
   }
 
-  if (form) form.classList.remove('hidden');
+  if (form && render.isCurrent()) form.classList.remove('hidden');
 
   const rosterId = employeeId || getCurrentEmployeeRosterId();
-  list.innerHTML = '<div class="muted">Loading time off…</div>';
+  if (!render.write(list, '<div class="muted">Loading time off…</div>')) return;
 
   try {
     const rows = await loadLeaveRequestsForEmployee(rosterId);
+    if (!render.isCurrent()) return;
     await refreshLeavePanelHeader(rosterId, rows);
+    if (!render.isCurrent()) return;
 
     if (!rows.length) {
-      list.innerHTML = '<div class="muted">No leave requests for this employee.</div>';
+      render.write(list, '<div class="muted">No leave requests for this employee.</div>');
       return;
     }
 
-    list.innerHTML = rows.map(renderLeaveRow).join('');
+    render.write(list, rows.map(renderLeaveRow).join(''));
   } catch (err) {
-    list.innerHTML = '<div class="muted">Could not load leave requests.</div>';
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
+    render.write(list, '<div class="muted">Could not load leave requests.</div>');
     console.error('[LeaveRequests]', err);
     showToast('Could not load leave requests.', 'error');
   }

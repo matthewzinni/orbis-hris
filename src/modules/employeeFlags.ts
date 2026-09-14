@@ -3,6 +3,12 @@
 import { canEditEmployeeAdmin } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { recordAuditEvent } from '../services/auditTrail';
+import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
 
 type EmployeeRow = Record<string, unknown>;
 
@@ -139,70 +145,102 @@ async function refreshAfterFlagChange(employee: EmployeeRow): Promise<void> {
   }
 }
 
-export async function loadEmployeeManualAtRisk(employeeId: string): Promise<void> {
+export async function loadEmployeeManualAtRisk(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
+  if (!render.isCurrent()) return;
   const currentEmployee = getCurrentEmployee();
   const actualEmployeeId = String(currentEmployee?.dbId || employeeId || '').trim();
 
   if (!actualEmployeeId) {
-    setManualAtRiskUi(false, '');
+    if (render.isCurrent()) setManualAtRiskUi(false, '');
     return;
   }
 
-  const { data, error } = await supabaseClient
-    .from('employee_notes')
-    .select('id, note_type, note_text, note_date, created_at')
-    .eq('employee_id', actualEmployeeId)
-    .in('note_type', ['At-Risk Flag', 'At-Risk Cleared'])
-    .order('created_at', { ascending: false })
-    .limit(1);
+  try {
+    const { data, error } = await applyEmployeeDrawerAbortSignal(
+      supabaseClient
+        .from('employee_notes')
+        .select('id, note_type, note_text, note_date, created_at')
+        .eq('employee_id', actualEmployeeId)
+        .in('note_type', ['At-Risk Flag', 'At-Risk Cleared'])
+        .order('created_at', { ascending: false })
+        .limit(1),
+      context?.signal
+    );
 
-  if (error) {
-    console.error(error);
+    if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) return;
+
+    if (error) {
+      console.error(error);
+      setManualAtRiskUi(false, '');
+      return;
+    }
+
+    const latest = data?.[0] as { note_type?: string; note_text?: string } | undefined;
+
+    if (!latest || latest.note_type !== 'At-Risk Flag') {
+      setManualAtRiskUi(false, '');
+      return;
+    }
+
+    setManualAtRiskUi(true, latest.note_text || '');
+  } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
+    console.error(err);
     setManualAtRiskUi(false, '');
-    return;
   }
-
-  const latest = data?.[0] as { note_type?: string; note_text?: string } | undefined;
-
-  if (!latest || latest.note_type !== 'At-Risk Flag') {
-    setManualAtRiskUi(false, '');
-    return;
-  }
-
-  setManualAtRiskUi(true, latest.note_text || '');
 }
 
-export async function loadEmployeeManualImpactPlayer(employeeId: string): Promise<void> {
+export async function loadEmployeeManualImpactPlayer(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
+  if (!render.isCurrent()) return;
   const currentEmployee = getCurrentEmployee();
   const actualEmployeeId = String(currentEmployee?.dbId || employeeId || '').trim();
 
   if (!actualEmployeeId) {
-    setManualImpactPlayerUi(false, '');
+    if (render.isCurrent()) setManualImpactPlayerUi(false, '');
     return;
   }
 
-  const { data, error } = await supabaseClient
-    .from('employee_notes')
-    .select('id, note_type, note_text, note_date, created_at')
-    .eq('employee_id', actualEmployeeId)
-    .in('note_type', ['Impact Player Flag', 'Impact Player Cleared'])
-    .order('created_at', { ascending: false })
-    .limit(1);
+  try {
+    const { data, error } = await applyEmployeeDrawerAbortSignal(
+      supabaseClient
+        .from('employee_notes')
+        .select('id, note_type, note_text, note_date, created_at')
+        .eq('employee_id', actualEmployeeId)
+        .in('note_type', ['Impact Player Flag', 'Impact Player Cleared'])
+        .order('created_at', { ascending: false })
+        .limit(1),
+      context?.signal
+    );
 
-  if (error) {
-    console.error(error);
+    if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) return;
+
+    if (error) {
+      console.error(error);
+      setManualImpactPlayerUi(false, '');
+      return;
+    }
+
+    const latest = data?.[0] as { note_type?: string; note_text?: string } | undefined;
+
+    if (!latest || latest.note_type !== 'Impact Player Flag') {
+      setManualImpactPlayerUi(false, '');
+      return;
+    }
+
+    setManualImpactPlayerUi(true, latest.note_text || '');
+  } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
+    console.error(err);
     setManualImpactPlayerUi(false, '');
-    return;
   }
-
-  const latest = data?.[0] as { note_type?: string; note_text?: string } | undefined;
-
-  if (!latest || latest.note_type !== 'Impact Player Flag') {
-    setManualImpactPlayerUi(false, '');
-    return;
-  }
-
-  setManualImpactPlayerUi(true, latest.note_text || '');
 }
 
 export async function markEmployeeAtRisk(): Promise<void> {

@@ -4,6 +4,12 @@
 
 import { supabaseClient } from '../services/supabaseClient';
 import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
+import {
   STANDARD_OFFBOARDING_TASKS,
   sortOffboardingTasksByStandard,
   syncStandardOffboardingTasks,
@@ -37,50 +43,72 @@ export async function createDefaultOffboardingTasks(employeeId: string): Promise
   await syncStandardOffboardingTasks(employeeId);
 }
 
-export async function loadOffboardingTasks(employeeId: string): Promise<void> {
+export async function loadOffboardingTasks(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
   if (!employeeId) return;
+  const render = createEmployeeDrawerRenderer(context, employeeId);
+  if (!render.isCurrent()) return;
 
   const container = document.getElementById('offboardingChecklist');
   const summary = document.getElementById('offboardingSummary');
   const bar = document.getElementById('offboardingProgressBar');
 
-  if (container) {
-    container.innerHTML = '<div class="empty">Loading offboarding checklist…</div>';
+  if (container && !render.write(container, '<div class="empty">Loading offboarding checklist…</div>')) {
+    return;
   }
 
   try {
     await syncStandardOffboardingTasks(employeeId);
   } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
     console.error('Could not sync offboarding checklist:', err);
     showToast('Could not sync offboarding checklist.', 'error');
   }
 
-  const { data, error } = await supabaseClient
-    .from('offboarding_tasks')
-    .select('*')
-    .eq('employee_id', employeeId);
+  if (!render.isCurrent()) return;
+
+  const { data, error } = await applyEmployeeDrawerAbortSignal(
+    supabaseClient.from('offboarding_tasks').select('*').eq('employee_id', employeeId),
+    context?.signal
+  );
+
+  if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) return;
 
   if (error) {
     console.error('Could not load offboarding tasks:', error);
     showToast('Could not load offboarding tasks.', 'error');
     if (container) {
-      container.innerHTML =
-        '<div class="empty">Could not load offboarding checklist. Try again or contact HR.</div>';
+      render.write(
+        container,
+        '<div class="empty">Could not load offboarding checklist. Try again or contact HR.</div>'
+      );
     }
-    if (summary) summary.textContent = 'Load failed';
-    if (bar) bar.style.width = '0%';
+    render.mutate(summary, (el) => {
+      el.textContent = 'Load failed';
+    });
+    render.mutate(bar, (el) => {
+      el.style.width = '0%';
+    });
     return;
   }
 
   const tasks = sortOffboardingTasksByStandard(data || []);
 
-  if (!container) return;
+  if (!container || !render.isCurrent()) return;
 
   if (!tasks.length) {
-    container.innerHTML =
-      '<div class="empty">No offboarding checklist yet. Mark the employee terminated to generate tasks.</div>';
-    if (summary) summary.textContent = '0 of 0 complete';
-    if (bar) bar.style.width = '0%';
+    render.write(
+      container,
+      '<div class="empty">No offboarding checklist yet. Mark the employee terminated to generate tasks.</div>'
+    );
+    render.mutate(summary, (el) => {
+      el.textContent = '0 of 0 complete';
+    });
+    render.mutate(bar, (el) => {
+      el.style.width = '0%';
+    });
     return;
   }
 
@@ -89,9 +117,11 @@ export async function loadOffboardingTasks(employeeId: string): Promise<void> {
   ).length;
   const percent = Math.round((completed / tasks.length) * 100);
 
-  container.innerHTML = tasks
-    .map(
-      (task: { id: string; task_name?: string; status?: string }) => `
+  if (!render.write(
+    container,
+    tasks
+      .map(
+        (task: { id: string; task_name?: string; status?: string }) => `
         <div class="onboarding-task" style="display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid #e5e7eb;">
             <input type="checkbox"
                 ${String(task.status || '').toLowerCase() === 'completed' ? 'checked' : ''}
@@ -99,13 +129,18 @@ export async function loadOffboardingTasks(employeeId: string): Promise<void> {
             <span>${esc(task.task_name || 'Offboarding task')}</span>
         </div>
     `
-    )
-    .join('');
+      )
+      .join('')
+  )) {
+    return;
+  }
 
-  if (summary) {
+  if (summary && render.isCurrent()) {
     summary.textContent = `${completed} of ${STANDARD_OFFBOARDING_TASKS.length} complete`;
   }
-  if (bar) bar.style.width = `${percent}%`;
+  render.mutate(bar, (el) => {
+    el.style.width = `${percent}%`;
+  });
 }
 
 export async function toggleOffboardingTask(taskId: string, isComplete: boolean): Promise<void> {

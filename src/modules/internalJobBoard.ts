@@ -12,6 +12,12 @@ import { isMobileLayout } from '../mobile/mobileLayout';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import { recordInternalJobPostingEvent } from './internalJobBoardEvents';
 import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
+import {
   formatInternalJobStatus,
   INTERNAL_JOB_EMPLOYMENT_TYPES,
   INTERNAL_JOB_INTEREST_STATUSES,
@@ -970,10 +976,14 @@ async function showPostingDetails(postingId: string): Promise<void> {
   });
 }
 
-export async function loadEmployeeInternalJobInterests(employeeId: string): Promise<void> {
+export async function loadEmployeeInternalJobInterests(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
   const container = safeGet('employeeInternalJobInterestsList');
   const card = safeGet('employeeInternalJobInterestsCard');
-  if (!container || !card) return;
+  if (!container || !card || !render.isCurrent()) return;
 
   if (isEmployeeUser() || (!isAdminUser() && !isSupervisorUser())) {
     card.classList.add('hidden');
@@ -981,31 +991,41 @@ export async function loadEmployeeInternalJobInterests(employeeId: string): Prom
   }
 
   card.classList.remove('hidden');
-  container.innerHTML = '<div class="muted">Loading internal job interest…</div>';
+  if (!render.write(container, '<div class="muted">Loading internal job interest…</div>')) return;
 
-  const { data, error } = await supabaseClient
-    .from('internal_job_interest')
-    .select('*, internal_job_postings(title, status)')
-    .eq('employee_id', employeeId)
-    .order('submitted_at', { ascending: false });
+  try {
+    const { data, error } = await applyEmployeeDrawerAbortSignal(
+      supabaseClient
+        .from('internal_job_interest')
+        .select('*, internal_job_postings(title, status)')
+        .eq('employee_id', employeeId)
+        .order('submitted_at', { ascending: false }),
+      context?.signal
+    );
 
-  if (error) {
-    console.warn('[InternalJobBoard] Employee interest load failed:', error);
-    container.innerHTML = '<div class="empty">Could not load internal job interest.</div>';
-    return;
-  }
+    if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) return;
 
-  const rows = (data || []) as InternalJobInterest[];
-  if (!rows.length) {
-    container.innerHTML =
-      '<div class="empty">No internal job interest recorded for this employee.</div>';
-    return;
-  }
+    if (error) {
+      console.warn('[InternalJobBoard] Employee interest load failed:', error);
+      render.write(container, '<div class="empty">Could not load internal job interest.</div>');
+      return;
+    }
 
-  container.innerHTML = rows
-    .map((row) => {
-      const title = row.internal_job_postings?.title || 'Opening';
-      return `
+    const rows = (data || []) as InternalJobInterest[];
+    if (!rows.length) {
+      render.write(
+        container,
+        '<div class="empty">No internal job interest recorded for this employee.</div>'
+      );
+      return;
+    }
+
+    render.write(
+      container,
+      rows
+        .map((row) => {
+          const title = row.internal_job_postings?.title || 'Opening';
+          return `
         <div class="internal-job-drawer-item">
           <strong>${esc(title)}</strong>
           <div class="muted">${esc(formatDateTimeLabel(row.submitted_at))}</div>
@@ -1013,8 +1033,14 @@ export async function loadEmployeeInternalJobInterests(employeeId: string): Prom
           ${row.interest_note ? `<div class="muted" style="margin-top:6px">"${esc(row.interest_note)}"</div>` : ''}
         </div>
       `;
-    })
-    .join('');
+        })
+        .join('')
+    );
+  } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
+    console.warn('[InternalJobBoard] Employee interest load failed:', err);
+    render.write(container, '<div class="empty">Could not load internal job interest.</div>');
+  }
 }
 
 export function openInternalJobBoardView(postingId?: string, tab: InternalJobTab = 'openings'): void {

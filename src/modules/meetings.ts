@@ -11,6 +11,7 @@ import {
   bindHistoryItemActions,
   type EmployeeRecordRow,
 } from '../services/employeeRecordCrud';
+import type { EmployeeDrawerLoadContext } from './employeeDrawerRenderGuard';
 import { refreshDerivedUiProfile } from '../services/derivedDataRefresh';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 
@@ -98,11 +99,15 @@ async function refreshMeetingDependentUi(employeeId: string): Promise<void> {
   await refreshDerivedUiProfile('meetings');
 }
 
-export async function loadEmployeeMeetings(employeeId: string): Promise<void> {
+export async function loadEmployeeMeetings(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
   await loadEmployeeRecordHistory<MeetingRecord>({
     historyContainerId: 'meetingsHistory',
     table: TABLE,
     employeeId,
+    loadContext: context,
     logPrefix: 'Meetings',
     loadingMessage: 'Loading meetings...',
     noEmployeeMessage: 'Open an employee to view meetings.',

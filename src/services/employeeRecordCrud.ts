@@ -1,3 +1,9 @@
+import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from '../modules/employeeDrawerRenderGuard';
 import { supabaseClient } from './supabaseClient';
 import { showOrbisConfirm, type ConfirmOptions } from '../ui/confirmModal';
 import { safeGet, showToast } from '../utils/helpers';
@@ -70,7 +76,8 @@ export function sortRecordsByDate<T extends EmployeeRecordRow>(
 export async function fetchEmployeeRecords<T extends EmployeeRecordRow>(
   table: string,
   employeeIds: string[],
-  order?: OrderSpec[]
+  order?: OrderSpec[],
+  signal?: AbortSignal
 ): Promise<{ data: T[]; error: { message?: string } | null }> {
   let query = supabaseClient.from(table).select('*').in('employee_id', employeeIds);
 
@@ -78,7 +85,7 @@ export async function fetchEmployeeRecords<T extends EmployeeRecordRow>(
     query = query.order(spec.column, { ascending: spec.ascending ?? false });
   }
 
-  const { data, error } = await query;
+  const { data, error } = await applyEmployeeDrawerAbortSignal(query, signal);
   return { data: (data || []) as T[], error };
 }
 
@@ -241,16 +248,20 @@ export async function loadEmployeeRecordHistory<T extends EmployeeRecordRow>(opt
   renderRows: (rows: T[]) => string;
   bindActions: (container: HTMLElement, rows: T[], reloadEmployeeId: string) => void;
   beforeLoad?: () => boolean | void;
+  loadContext?: EmployeeDrawerLoadContext;
 }): Promise<string | null> {
+  const render = createEmployeeDrawerRenderer(options.loadContext, options.employeeId);
   const target = safeGet(options.historyContainerId);
-  if (!target) return null;
+  if (!target || !render.isCurrent()) return null;
 
   if (options.beforeLoad?.() === false) {
-    target.innerHTML = `<div class="empty">${options.noEmployeeMessage || 'Records are not available.'}</div>`;
+    render.write(target, `<div class="empty">${options.noEmployeeMessage || 'Records are not available.'}</div>`);
     return null;
   }
 
-  target.innerHTML = `<div class="empty">${options.loadingMessage || 'Loading...'}</div>`;
+  if (!render.write(target, `<div class="empty">${options.loadingMessage || 'Loading...'}</div>`)) {
+    return null;
+  }
 
   try {
     const activeEmployee = getDrawerEmployee();
@@ -258,17 +269,26 @@ export async function loadEmployeeRecordHistory<T extends EmployeeRecordRow>(opt
     const employeeIds = getEmployeeLookupIds(activeEmployee, primaryEmployeeId);
 
     if (!primaryEmployeeId && !employeeIds.length) {
-      target.innerHTML = `<div class="empty">${options.noEmployeeMessage || 'Open an employee to view records.'}</div>`;
+      render.write(target, `<div class="empty">${options.noEmployeeMessage || 'Open an employee to view records.'}</div>`);
       return null;
     }
 
     const idsToSearch = employeeIds.length ? employeeIds : [primaryEmployeeId];
-    const { data, error } = await fetchEmployeeRecords<T>(options.table, idsToSearch, options.order);
+    const { data, error } = await fetchEmployeeRecords<T>(
+      options.table,
+      idsToSearch,
+      options.order,
+      options.loadContext?.signal
+    );
+
+    if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) return null;
 
     if (error) {
       console.error(`[${options.logPrefix}] Could not load records:`, error);
-      target.innerHTML = `<div class="empty">${options.errorMessage || 'Could not load records.'}</div>`;
-      showToast(options.errorMessage || 'Could not load records.', 'error');
+      render.write(target, `<div class="empty">${options.errorMessage || 'Could not load records.'}</div>`);
+      if (render.isCurrent()) {
+        showToast(options.errorMessage || 'Could not load records.', 'error');
+      }
       return null;
     }
 
@@ -278,16 +298,17 @@ export async function loadEmployeeRecordHistory<T extends EmployeeRecordRow>(opt
     );
 
     if (!rows.length) {
-      target.innerHTML = `<div class="empty">${options.emptyMessage || 'No records found.'}</div>`;
+      render.write(target, `<div class="empty">${options.emptyMessage || 'No records found.'}</div>`);
       return primaryEmployeeId || idsToSearch[0] || null;
     }
 
-    target.innerHTML = options.renderRows(rows);
+    if (!render.write(target, options.renderRows(rows))) return null;
     options.bindActions(target, rows, primaryEmployeeId || idsToSearch[0] || '');
     return primaryEmployeeId || idsToSearch[0] || null;
   } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return null;
     console.error(`[${options.logPrefix}] Unexpected history failure:`, err);
-    target.innerHTML = `<div class="empty">${options.errorMessage || 'Could not load records.'}</div>`;
+    render.write(target, `<div class="empty">${options.errorMessage || 'Could not load records.'}</div>`);
     showToast(options.errorMessage || 'Could not load records.', 'error');
     return null;
   }

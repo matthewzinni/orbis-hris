@@ -1,3 +1,5 @@
+import type { EmployeeDrawerLoadContext } from './employeeDrawerRenderGuard';
+
 type InternalJobBoardModule = typeof import('./internalJobBoard');
 
 let modulePromise: Promise<InternalJobBoardModule> | null = null;
@@ -28,9 +30,14 @@ export function openInternalJobBoardView(
   void ensureModule().then((mod) => mod.openInternalJobBoardView(postingId, tab));
 }
 
-export async function loadEmployeeInternalJobInterests(employeeId: string): Promise<void> {
+export async function loadEmployeeInternalJobInterests(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  if (context && !context.isCurrent()) return;
   const mod = await ensureModule();
-  await mod.loadEmployeeInternalJobInterests(employeeId);
+  if (context && !context.isCurrent()) return;
+  await mod.loadEmployeeInternalJobInterests(employeeId, context);
 }
 
 window.loadInternalJobBoard = loadInternalJobBoard;

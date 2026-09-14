@@ -10,6 +10,11 @@ import {
   type PayrollChangeType,
   type PayrollHandoffRecord,
 } from '../services/payrollHandoff';
+import {
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -160,10 +165,14 @@ export async function applyPayrollHandoffAction(
   }
 }
 
-export async function loadEmployeePayrollHandoffs(employeeId: string): Promise<void> {
+export async function loadEmployeePayrollHandoffs(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
   const list = safeGet('payrollHandoffList');
   const panel = safeGet('payrollHandoffPanel');
-  if (!list || !panel) return;
+  if (!list || !panel || !render.isCurrent()) return;
 
   if (!isAdminUser()) {
     panel.classList.add('hidden');
@@ -171,10 +180,10 @@ export async function loadEmployeePayrollHandoffs(employeeId: string): Promise<v
   }
 
   panel.classList.remove('hidden');
-  list.innerHTML = '<div class="muted">Loading payroll handoffs…</div>';
+  if (!render.write(list, '<div class="muted">Loading payroll handoffs…</div>')) return;
 
   const effectiveInput = safeGet<HTMLInputElement>('payrollHandoffEffectiveInput');
-  if (effectiveInput && !effectiveInput.value) {
+  if (effectiveInput && !effectiveInput.value && render.isCurrent()) {
     effectiveInput.value = new Date().toISOString().slice(0, 10);
   }
 
@@ -182,15 +191,19 @@ export async function loadEmployeePayrollHandoffs(employeeId: string): Promise<v
 
   try {
     const rows = await loadPayrollHandoffsForEmployee(rosterId);
+    if (!render.isCurrent()) return;
     if (!rows.length) {
-      list.innerHTML =
-        '<div class="muted">No payroll handoffs logged. Changes you save in this tab can auto-create entries.</div>';
+      render.write(
+        list,
+        '<div class="muted">No payroll handoffs logged. Changes you save in this tab can auto-create entries.</div>'
+      );
       return;
     }
 
-    list.innerHTML = rows.map(renderHandoffRow).join('');
+    render.write(list, rows.map(renderHandoffRow).join(''));
   } catch (err) {
-    list.innerHTML = '<div class="muted">Could not load payroll handoffs.</div>';
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
+    render.write(list, '<div class="muted">Could not load payroll handoffs.</div>');
     console.error('[PayrollHandoff]', err);
   }
 }

@@ -17,6 +17,12 @@ import {
   type OnboardingTaskRecord,
 } from '../services/onboardingWorkflow';
 import { supabaseClient } from '../services/supabaseClient';
+import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -172,50 +178,70 @@ export async function createDefaultOnboardingTasks(employeeId: string): Promise<
   await syncStandardOnboardingTasks(employeeId);
 }
 
-export async function loadOnboardingTasks(employeeId: string): Promise<void> {
+export async function loadOnboardingTasks(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
   if (!employeeId) return;
+  const render = createEmployeeDrawerRenderer(context, employeeId);
+  if (!render.isCurrent()) return;
 
   const container = document.getElementById('onboardingChecklist');
   const summary = document.getElementById('onboardingSummary');
   const bar = document.getElementById('onboardingProgressBar');
 
-  if (container) {
-    container.innerHTML = '<div class="empty">Loading onboarding checklist…</div>';
+  if (container && !render.write(container, '<div class="empty">Loading onboarding checklist…</div>')) {
+    return;
   }
 
   try {
     await syncStandardOnboardingTasks(employeeId);
   } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
     console.error('Could not sync onboarding checklist:', err);
     showToast('Could not sync onboarding checklist.', 'error');
   }
 
-  const { data, error } = await supabaseClient
-    .from('onboarding_tasks')
-    .select('*')
-    .eq('employee_id', employeeId);
+  if (!render.isCurrent()) return;
+
+  const { data, error } = await applyEmployeeDrawerAbortSignal(
+    supabaseClient.from('onboarding_tasks').select('*').eq('employee_id', employeeId),
+    context?.signal
+  );
+
+  if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) return;
 
   if (error) {
     console.error('Could not load onboarding tasks:', error);
     showToast('Could not load onboarding tasks.', 'error');
     if (container) {
-      container.innerHTML =
-        '<div class="empty">Could not load onboarding checklist. Try again or contact HR.</div>';
+      render.write(
+        container,
+        '<div class="empty">Could not load onboarding checklist. Try again or contact HR.</div>'
+      );
     }
-    if (summary) summary.textContent = 'Load failed';
-    if (bar) bar.style.width = '0%';
+    render.mutate(summary, (el) => {
+      el.textContent = 'Load failed';
+    });
+    render.mutate(bar, (el) => {
+      el.style.width = '0%';
+    });
     return;
   }
 
   const tasks = sortOnboardingTasksByStandard((data || []) as OnboardingTaskRecord[]);
   const i9Banner = safeGet('onboardingI9Banner');
 
-  if (!container) return;
+  if (!container || !render.isCurrent()) return;
 
   if (!tasks.length) {
-    container.innerHTML = '<div class="empty">No onboarding tasks.</div>';
-    if (summary) summary.textContent = '0 of 0 complete';
-    if (bar) bar.style.width = '0%';
+    render.write(container, '<div class="empty">No onboarding tasks.</div>');
+    render.mutate(summary, (el) => {
+      el.textContent = '0 of 0 complete';
+    });
+    render.mutate(bar, (el) => {
+      el.style.width = '0%';
+    });
     i9Banner?.classList.add('hidden');
     return;
   }
@@ -230,7 +256,7 @@ export async function loadOnboardingTasks(employeeId: string): Promise<void> {
       onboardingDueStatus(task.due_date) === 'overdue'
   );
 
-  if (i9Banner) {
+  if (i9Banner && render.isCurrent()) {
     if (overdueI9) {
       i9Banner.classList.remove('hidden');
       i9Banner.textContent = `I-9 verification is overdue (due ${String(overdueI9.due_date || '').slice(0, 10)}). Complete Section 2 immediately to stay compliant.`;
@@ -242,10 +268,12 @@ export async function loadOnboardingTasks(employeeId: string): Promise<void> {
 
   const canManage = canManageOnboardingWorkflow();
 
-  container.innerHTML = tasks.map((task) => renderOnboardingTaskRow(task, canManage)).join('');
+  if (!render.write(container, tasks.map((task) => renderOnboardingTaskRow(task, canManage)).join(''))) {
+    return;
+  }
   bindOnboardingTaskControls(employeeId);
 
-  if (summary) {
+  if (summary && render.isCurrent()) {
     const overdueCount = tasks.filter(
       (task) =>
         String(task.status || '').toLowerCase() !== 'completed' &&
@@ -253,7 +281,9 @@ export async function loadOnboardingTasks(employeeId: string): Promise<void> {
     ).length;
     summary.textContent = `${completed} of ${STANDARD_ONBOARDING_TASKS.length} complete${overdueCount ? ` · ${overdueCount} overdue` : ''}`;
   }
-  if (bar) bar.style.width = `${percent}%`;
+  render.mutate(bar, (el) => {
+    el.style.width = `${percent}%`;
+  });
 }
 
 export async function updateOnboardingTaskField(

@@ -4,6 +4,7 @@ import {
   switchDrawerTab as switchDrawerTabUi,
 } from '../ui/drawerUi';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { resetEmployeeDrawerTabLoadState, invalidateEmployeeDrawerTab } from './employeeDrawerTabLoads';
 import { generateAvailableEmployeeId, insertEmployeeRecordWithRetry } from '../services/employeeIds';
 import { cleanEmployeeNameValue, employeePersonalEmail, employeePortalSignInEmail, employeeWorkEmail } from '../services/employeeUtils';
 import {
@@ -513,7 +514,7 @@ function prepareEmployeeDrawerSession(employeeId: string): void {
   const recordId = String(employeeId || '').trim();
   if (!recordId) return;
 
-  window.resetEmployeeDrawerTabLoadState?.();
+  resetEmployeeDrawerTabLoadState();
 }
 
 export async function openEmployeeDrawer(employeeId: string): Promise<void> {
@@ -581,7 +582,7 @@ export function closeEmployeeDrawer(): void {
   openedEmployeeRecordId = null;
 
   window.selectedEmployeeId = null;
-  window.resetEmployeeDrawerTabLoadState?.();
+  resetEmployeeDrawerTabLoadState();
 
   if (typeof window.removeDrawerIdentityHeader === 'function') {
     window.removeDrawerIdentityHeader('employeeDrawerIdentityHeader');
@@ -1105,7 +1106,7 @@ async function saveEmployeeRecordInternal(): Promise<void> {
           `Logged ${payrollHandoffs} payroll handoff${payrollHandoffs === 1 ? '' : 's'} for external payroll.`
         );
       }
-      window.invalidateEmployeeDrawerTab?.('employee');
+      invalidateEmployeeDrawerTab('employee');
     } catch (err) {
       console.warn('[Drawer] Termination side effects failed:', err);
       showToast('Employee saved, but termination follow-up tasks may be incomplete.', 'error');
@@ -1122,7 +1123,7 @@ async function saveEmployeeRecordInternal(): Promise<void> {
           `Logged ${handoffCount} payroll handoff${handoffCount === 1 ? '' : 's'} for external payroll.`
         );
       }
-      window.invalidateEmployeeDrawerTab?.('employee');
+      invalidateEmployeeDrawerTab('employee');
       if (typeof window.loadHrInbox === 'function') {
         void window.loadHrInbox(true);
       }

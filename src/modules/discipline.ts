@@ -12,6 +12,7 @@ import {
   type EmployeeLike,
   type EmployeeRecordRow,
 } from '../services/employeeRecordCrud';
+import type { EmployeeDrawerLoadContext } from './employeeDrawerRenderGuard';
 import { refreshDerivedUiProfile } from '../services/derivedDataRefresh';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 import {
@@ -241,11 +242,15 @@ async function refreshDisciplineDependentUi(employeeId: string): Promise<void> {
   await refreshDerivedUiProfile('discipline');
 }
 
-export async function loadEmployeeDiscipline(employeeId: string): Promise<void> {
+export async function loadEmployeeDiscipline(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
   await loadEmployeeRecordHistory<DisciplineRecord>({
     historyContainerId: 'disciplineHistory',
     table: TABLE,
     employeeId,
+    loadContext: context,
     logPrefix: 'Discipline',
     loadingMessage: 'Loading discipline history...',
     noEmployeeMessage: 'Open an employee to view discipline records.',

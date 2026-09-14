@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   DERIVED_REFRESH_PROFILES,
+  configureDerivedUiRefresh,
+  createDerivedUiRefresher,
   refreshDerivedUiAfterMutation,
   refreshDerivedUiProfile,
 } from './derivedDataRefresh';
@@ -25,16 +27,23 @@ describe('isOpenDisciplineStatus', () => {
 });
 
 describe('refreshDerivedUiAfterMutation', () => {
+  const handlers = () => ({
+    summary: vi.fn(async () => undefined),
+    inbox: vi.fn(async (_force: boolean) => undefined),
+    attentionSummary: vi.fn(async (_force: boolean) => undefined),
+    attentionWorkspace: vi.fn(async (_force: boolean) => undefined),
+    managerHome: vi.fn(async (_force: boolean) => undefined),
+    basicKpis: vi.fn(),
+  });
+  let dependencies: ReturnType<typeof handlers>;
+
   beforeEach(() => {
-    (globalThis as { window?: Window & typeof globalThis }).window = globalThis as unknown as Window &
-      typeof globalThis;
+    dependencies = handlers();
+    configureDerivedUiRefresh(dependencies);
   });
 
   afterEach(() => {
-    delete window.loadSummaryMetrics;
-    delete window.loadHrInbox;
-    delete window.loadManagerHome;
-    delete window.renderBasicDashboardKpis;
+    vi.unstubAllGlobals();
   });
 
   it('force-refetches inbox and manager home when requested', async () => {
@@ -43,10 +52,7 @@ describe('refreshDerivedUiAfterMutation', () => {
     const managerHome = vi.fn(async () => undefined);
     const basic = vi.fn();
 
-    window.loadSummaryMetrics = summary;
-    window.loadHrInbox = inbox;
-    window.loadManagerHome = managerHome;
-    window.renderBasicDashboardKpis = basic;
+    configureDerivedUiRefresh({ ...dependencies, summary, inbox, managerHome, basicKpis: basic });
 
     await refreshDerivedUiAfterMutation({
       summary: true,
@@ -66,9 +72,7 @@ describe('refreshDerivedUiAfterMutation', () => {
     const inbox = vi.fn(async () => undefined);
     const managerHome = vi.fn(async () => undefined);
 
-    window.loadSummaryMetrics = summary;
-    window.loadHrInbox = inbox;
-    window.loadManagerHome = managerHome;
+    configureDerivedUiRefresh({ ...dependencies, summary, inbox, managerHome });
 
     expect(DERIVED_REFRESH_PROFILES.discipline).toEqual({
       summary: true,
@@ -86,7 +90,7 @@ describe('refreshDerivedUiAfterMutation', () => {
 
   it('care and policy campaign profiles force inbox refresh', async () => {
     const inbox = vi.fn(async () => undefined);
-    window.loadHrInbox = inbox;
+    configureDerivedUiRefresh({ ...dependencies, inbox });
 
     expect(DERIVED_REFRESH_PROFILES.care).toEqual({ inbox: true });
     expect(DERIVED_REFRESH_PROFILES.policyCampaigns).toEqual({ inbox: true });
@@ -96,6 +100,76 @@ describe('refreshDerivedUiAfterMutation', () => {
 
     expect(inbox).toHaveBeenCalledTimes(2);
     expect(inbox).toHaveBeenCalledWith(true);
+  });
+
+  it('runs with no browser globals', async () => {
+    vi.stubGlobal('window', undefined);
+    await refreshDerivedUiProfile('employeeLifecycle');
+    expect(dependencies.summary).toHaveBeenCalledTimes(1);
+    expect(dependencies.inbox).toHaveBeenCalledWith(true);
+    expect(dependencies.attentionWorkspace).toHaveBeenCalledWith(true);
+    expect(dependencies.managerHome).toHaveBeenCalledWith(true);
+    expect(dependencies.basicKpis).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not run unrequested handlers', async () => {
+    await refreshDerivedUiAfterMutation({});
+    for (const handler of Object.values(dependencies)) expect(handler).not.toHaveBeenCalled();
+    await refreshDerivedUiProfile('attendance');
+    expect(dependencies.basicKpis).toHaveBeenCalledTimes(1);
+    expect(dependencies.inbox).not.toHaveBeenCalled();
+    expect(dependencies.attentionWorkspace).not.toHaveBeenCalled();
+  });
+
+  it('refreshes attention directly only when an inbox refresh is not requested', async () => {
+    await refreshDerivedUiAfterMutation({ attention: true });
+    expect(dependencies.attentionSummary).toHaveBeenCalledWith(true);
+    expect(dependencies.attentionWorkspace).toHaveBeenCalledWith(true);
+    expect(dependencies.inbox).not.toHaveBeenCalled();
+    dependencies.attentionSummary.mockClear();
+    await refreshDerivedUiAfterMutation({ inbox: true, attention: true });
+    expect(dependencies.attentionSummary).not.toHaveBeenCalled();
+    expect(dependencies.inbox).toHaveBeenCalledWith(true);
+  });
+
+  it('waits for asynchronous handlers to complete', async () => {
+    let finish: () => void;
+    const pending = new Promise<void>((resolve) => { finish = resolve; });
+    const refresher = createDerivedUiRefresher({ ...dependencies, inbox: () => pending });
+    let completed = false;
+    const refresh = refresher.refreshProfile('care').then(() => { completed = true; });
+    await Promise.resolve();
+    expect(completed).toBe(false);
+    finish();
+    await refresh;
+    expect(completed).toBe(true);
+  });
+
+  it('reports synchronous failures without skipping other requested refreshes', async () => {
+    const refresher = createDerivedUiRefresher({
+      ...dependencies,
+      summary: () => { throw new Error('summary failed'); },
+    });
+    await expect(refresher.refreshProfile('reviews')).rejects.toThrow('summary failed');
+    expect(dependencies.inbox).toHaveBeenCalledWith(true);
+    expect(dependencies.managerHome).toHaveBeenCalledWith(true);
+    expect(dependencies.basicKpis).toHaveBeenCalledTimes(1);
+  });
+
+  it('propagates asynchronous failures', async () => {
+    dependencies.inbox.mockRejectedValueOnce(new Error('inbox failed'));
+    await expect(refreshDerivedUiProfile('care')).rejects.toThrow('inbox failed');
+  });
+
+  it('keeps separately constructed coordinators independent', async () => {
+    const other = handlers();
+    const first = createDerivedUiRefresher(dependencies);
+    const second = createDerivedUiRefresher(other);
+    await first.refreshProfile('care');
+    expect(other.inbox).not.toHaveBeenCalled();
+    await second.refreshProfile('attendance');
+    expect(dependencies.basicKpis).not.toHaveBeenCalled();
+    expect(other.basicKpis).toHaveBeenCalledTimes(1);
   });
 
   it('filters deleted/closed discipline out of open lists using canonical predicate', () => {

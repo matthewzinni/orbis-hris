@@ -2,6 +2,12 @@ import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
 import { canAccessDisciplineForEmployee } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { esc } from '../utils/helpers';
+import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from '../modules/employeeDrawerRenderGuard';
 
 type HistoryRecord = {
   id?: string | number;
@@ -137,15 +143,20 @@ export function getResolvedHistoryEmployeeId(employeeId: string | null = null): 
 async function fetchHistoryRows(
   table: string,
   employeeId: string,
-  orderColumn: string
+  orderColumn: string,
+  signal?: AbortSignal
 ): Promise<Record<string, unknown>[]> {
-  const { data, error } = await supabaseClient
-    .from(table)
-    .select('*')
-    .eq('employee_id', employeeId)
-    .order(orderColumn, { ascending: false });
+  const { data, error } = await applyEmployeeDrawerAbortSignal(
+    supabaseClient
+      .from(table)
+      .select('*')
+      .eq('employee_id', employeeId)
+      .order(orderColumn, { ascending: false }),
+    signal
+  );
 
   if (error) {
+    if (isEmployeeDrawerLoadAbort(error)) return [];
     console.warn(`[History] Could not load ${table}:`, error);
     return [];
   }
@@ -153,27 +164,34 @@ async function fetchHistoryRows(
   return (data || []) as Record<string, unknown>[];
 }
 
-export async function loadEmployeeHistory(employeeId: string): Promise<void> {
+export async function loadEmployeeHistory(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
   const actualEmployeeId = getResolvedHistoryEmployeeId(employeeId);
   const target = document.getElementById('historyFeed');
 
-  if (!actualEmployeeId || !target) {
+  if (!actualEmployeeId || !target || !render.isCurrent()) {
     return;
   }
 
-  target.innerHTML = '<div class="empty">Loading history...</div>';
+  if (!render.write(target, '<div class="empty">Loading history...</div>')) return;
 
   const includeDiscipline = canAccessDisciplineForEmployee({ id: actualEmployeeId });
 
-  const [notes, meetings, discipline, incidents, reviews] = await Promise.all([
-    fetchHistoryRows('employee_notes', actualEmployeeId, 'note_date'),
-    fetchHistoryRows('employee_meetings', actualEmployeeId, 'meeting_date'),
-    includeDiscipline
-      ? fetchHistoryRows('discipline_reports', actualEmployeeId, 'incident_date')
-      : Promise.resolve([]),
-    fetchHistoryRows('incident_reports', actualEmployeeId, 'incident_date'),
-    fetchHistoryRows('employee_reviews', actualEmployeeId, 'review_date'),
-  ]);
+  try {
+    const [notes, meetings, discipline, incidents, reviews] = await Promise.all([
+      fetchHistoryRows('employee_notes', actualEmployeeId, 'note_date', context?.signal),
+      fetchHistoryRows('employee_meetings', actualEmployeeId, 'meeting_date', context?.signal),
+      includeDiscipline
+        ? fetchHistoryRows('discipline_reports', actualEmployeeId, 'incident_date', context?.signal)
+        : Promise.resolve([]),
+      fetchHistoryRows('incident_reports', actualEmployeeId, 'incident_date', context?.signal),
+      fetchHistoryRows('employee_reviews', actualEmployeeId, 'review_date', context?.signal),
+    ]);
+
+    if (!render.isCurrent()) return;
 
   const timeline: TimelineItem[] = [
     ...notes
@@ -213,25 +231,33 @@ export async function loadEmployeeHistory(employeeId: string): Promise<void> {
   });
 
   if (!timeline.length) {
-    target.innerHTML = '<div class="empty">No history available.</div>';
+    render.write(target, '<div class="empty">No history available.</div>');
     return;
   }
 
-  target.innerHTML = timeline
-    .map((item) => {
-      const date = item.date
-        ? new Date(`${item.date}T00:00:00`).toLocaleDateString()
-        : '—';
+  render.write(
+    target,
+    timeline
+      .map((item) => {
+        const date = item.date
+          ? new Date(`${item.date}T00:00:00`).toLocaleDateString()
+          : '—';
 
-      return `
+        return `
         <div class="card" style="margin-bottom:10px;">
           <strong>${esc(item.type)}</strong>
           <div style="font-size:12px; color:#64748b;">${date}</div>
           <div style="margin-top:4px;">${esc(item.text || '—')}</div>
         </div>
       `;
-    })
-    .join('');
+      })
+      .join('')
+  );
+  } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
+    console.warn('[History] Unexpected load failure:', err);
+    render.write(target, '<div class="empty">Could not load history.</div>');
+  }
 }
 
 window.renderHistoryList = renderHistoryList;

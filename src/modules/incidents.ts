@@ -10,6 +10,7 @@ import {
   setRecordEditModeUi,
   type EmployeeRecordRow,
 } from '../services/employeeRecordCrud';
+import type { EmployeeDrawerLoadContext } from './employeeDrawerRenderGuard';
 import { refreshDerivedUiProfile } from '../services/derivedDataRefresh';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
 import {
@@ -127,11 +128,15 @@ async function refreshIncidentDependentUi(employeeId: string): Promise<void> {
   await refreshDerivedUiProfile('incidents');
 }
 
-export async function loadEmployeeIncidents(employeeId: string): Promise<void> {
+export async function loadEmployeeIncidents(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
   await loadEmployeeRecordHistory<IncidentRecord>({
     historyContainerId: 'incidentsHistory',
     table: TABLE,
     employeeId,
+    loadContext: context,
     logPrefix: 'Incidents',
     loadingMessage: 'Loading incidents...',
     noEmployeeMessage: 'Open an employee to view incidents.',

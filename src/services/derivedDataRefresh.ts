@@ -50,43 +50,63 @@ export const DERIVED_REFRESH_PROFILES = {
 
 export type DerivedRefreshProfile = keyof typeof DERIVED_REFRESH_PROFILES;
 
-export async function refreshDerivedUiAfterMutation(
-  options: DerivedRefreshOptions
-): Promise<void> {
-  const tasks: Promise<unknown>[] = [];
+/** Required application ports. The coordinator does not import UI implementations. */
+export type DerivedRefreshDependencies = Readonly<{
+  summary: () => unknown | Promise<unknown>;
+  inbox: (force: boolean) => unknown | Promise<unknown>;
+  attentionSummary: (force: boolean) => unknown | Promise<unknown>;
+  attentionWorkspace: (force: boolean) => unknown | Promise<unknown>;
+  managerHome: (force: boolean) => unknown | Promise<unknown>;
+  basicKpis: () => unknown | Promise<unknown>;
+}>;
 
-  if (options.summary && typeof window.loadSummaryMetrics === 'function') {
-    tasks.push(Promise.resolve(window.loadSummaryMetrics()));
-  }
+export function createDerivedUiRefresher(dependencies: DerivedRefreshDependencies) {
+  // Capture the callbacks so later changes to a caller's object cannot rewire us.
+  const { summary, inbox, attentionSummary, attentionWorkspace, managerHome, basicKpis } = dependencies;
 
-  if (options.inbox && typeof window.loadHrInbox === 'function') {
-    tasks.push(Promise.resolve(window.loadHrInbox(true)));
-  } else if (options.attention && typeof window.loadAttentionSummary === 'function') {
-    tasks.push(Promise.resolve(window.loadAttentionSummary(true)));
-  }
+  async function refreshAfterMutation(options: DerivedRefreshOptions): Promise<void> {
+    const tasks: Promise<unknown>[] = [];
+    const schedule = (callback: () => unknown) => {
+      // A synchronous failure in one handler must not prevent the others starting.
+      tasks.push(Promise.resolve().then(callback));
+    };
 
-  if (
-    (options.attention || options.inbox) &&
-    typeof window.loadAttentionWorkspaceUi === 'function'
-  ) {
-    tasks.push(Promise.resolve(window.loadAttentionWorkspaceUi(true)));
-  }
+    if (options.summary) schedule(summary);
+    if (options.inbox) schedule(() => inbox(true));
+    else if (options.attention) schedule(() => attentionSummary(true));
+    if (options.attention || options.inbox) schedule(() => attentionWorkspace(true));
+    if (options.managerHome) schedule(() => managerHome(true));
+    if (options.basicKpis) schedule(basicKpis);
 
-  if (options.managerHome && typeof window.loadManagerHome === 'function') {
-    tasks.push(Promise.resolve(window.loadManagerHome(true)));
-  }
-
-  if (options.basicKpis && typeof window.renderBasicDashboardKpis === 'function') {
-    window.renderBasicDashboardKpis();
-  }
-
-  if (tasks.length) {
     await Promise.all(tasks);
   }
+
+  return {
+    refreshAfterMutation,
+    refreshProfile: (profile: DerivedRefreshProfile) => refreshAfterMutation(DERIVED_REFRESH_PROFILES[profile]),
+  };
+}
+
+let applicationRefresher: ReturnType<typeof createDerivedUiRefresher> | undefined;
+
+/** Called by the application composition layer before auth and protected boot. */
+export function configureDerivedUiRefresh(dependencies: DerivedRefreshDependencies): void {
+  applicationRefresher = createDerivedUiRefresher(dependencies);
+}
+
+function getApplicationRefresher() {
+  if (!applicationRefresher) {
+    throw new Error('Derived UI refresh is not configured. Initialize application services before mutations.');
+  }
+  return applicationRefresher;
+}
+
+export async function refreshDerivedUiAfterMutation(options: DerivedRefreshOptions): Promise<void> {
+  await getApplicationRefresher().refreshAfterMutation(options);
 }
 
 export async function refreshDerivedUiProfile(
   profile: DerivedRefreshProfile
 ): Promise<void> {
-  await refreshDerivedUiAfterMutation(DERIVED_REFRESH_PROFILES[profile]);
+  await getApplicationRefresher().refreshProfile(profile);
 }

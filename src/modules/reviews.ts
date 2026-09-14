@@ -1,4 +1,11 @@
 import { canAccessPerformanceReviews, isSupervisorUser } from '../services/access';
+import { invalidateEmployeeDrawerTab } from './employeeDrawerTabLoads';
+import {
+  applyEmployeeDrawerAbortSignal,
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+} from './employeeDrawerRenderGuard';
 import {
   bindHistoryItemActions,
   clearRecordEditModeUi,
@@ -302,7 +309,7 @@ function applyReviewAutoSignals(
 }
 
 async function refreshReviewDependentUi(employeeId: string): Promise<void> {
-  window.invalidateEmployeeDrawerTab?.('reviews');
+  invalidateEmployeeDrawerTab('reviews');
   await loadEmployeeReviews(employeeId);
 
   const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
@@ -335,47 +342,60 @@ async function refreshReviewDependentUi(employeeId: string): Promise<void> {
   }
 }
 
-export async function loadEmployeeReviews(employeeId: string): Promise<void> {
+export async function loadEmployeeReviews(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
   const target = safeGet('reviewsHistory');
-  if (!target) return;
+  if (!target || !render.isCurrent()) return;
 
-  target.innerHTML = '<div class="muted">Loading reviews…</div>';
+  if (!render.write(target, '<div class="muted">Loading reviews…</div>')) return;
 
   try {
     if (!assertPerformanceReviewAccess()) {
-      target.innerHTML =
-        '<div class="empty">Performance reviews are not available for this employee.</div>';
+      render.write(
+        target,
+        '<div class="empty">Performance reviews are not available for this employee.</div>'
+      );
       return;
     }
 
     const employee = getDrawerEmployee();
     const lookupIds = getEmployeeLookupIds(employee, employeeId);
 
-    const { data, error } = await supabaseClient
-      .from('employee_reviews')
-      .select('*')
-      .in('employee_id', lookupIds)
-      .order('review_date', { ascending: false });
+    const { data, error } = await applyEmployeeDrawerAbortSignal(
+      supabaseClient
+        .from('employee_reviews')
+        .select('*')
+        .in('employee_id', lookupIds)
+        .order('review_date', { ascending: false }),
+      context?.signal
+    );
+
+    if (!render.isCurrent() || isEmployeeDrawerLoadAbort(error)) return;
 
     if (error) {
       console.error('Could not load reviews:', error);
-      target.innerHTML = '<div class="empty">Could not load reviews.</div>';
-      showToast('Could not load reviews.', 'error');
+      render.write(target, '<div class="empty">Could not load reviews.</div>');
+      if (render.isCurrent()) showToast('Could not load reviews.', 'error');
       return;
     }
 
     const rows = (data || []) as ReviewRecord[];
 
     if (!rows.length) {
-      target.innerHTML = '<div class="empty">No reviews found for this employee.</div>';
+      render.write(target, '<div class="empty">No reviews found for this employee.</div>');
       return;
     }
 
     const showReviewDelete = !isSupervisorUser();
 
-    target.innerHTML = rows
-      .map(
-        (row) => `
+    if (!render.write(
+      target,
+      rows
+        .map(
+          (row) => `
       <div class="history-item" data-review-id="${esc(row.id || '')}">
         <div class="history-top">
           <div>
@@ -399,8 +419,11 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
         </div>
       </div>
     `
-      )
-      .join('');
+        )
+        .join('')
+    )) {
+      return;
+    }
 
     bindHistoryItemActions({
       container: target,
@@ -411,8 +434,13 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
       onEdit: editReviewRecord,
       onDelete: (reviewId) => deleteReviewRecord(reviewId, employeeId),
     });
+  } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
+    console.error('Could not load reviews:', err);
+    render.write(target, '<div class="empty">Could not load reviews.</div>');
+    showToast('Could not load reviews.', 'error');
   } finally {
-    void loadPerformanceReviewAttachments(employeeId);
+    if (render.isCurrent()) void loadPerformanceReviewAttachments(employeeId);
   }
 }
 

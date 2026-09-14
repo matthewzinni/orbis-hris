@@ -92,6 +92,8 @@ import './modules/employeeIronShift';
 import './modules/lazyReports';
 import './modules/lazySettingsAdmin';
 import { initAppShell, showAuthenticatedOrbisView, showAuthView } from './app/appShell';
+import { initializeDerivedRefreshBindings } from './app/derivedRefreshBindings';
+import { initializeEmployeeDrawerBindings } from './app/employeeDrawerBindings';
 import { initAppSections, showAppSection } from './ui/appSections';
 import { switchMainView } from './ui/navigation';
 import './services/auditTrail';
@@ -181,6 +183,9 @@ import './ui/employeeRoster';
 devLog('Orbis main.ts loaded');
 
 markOrbisMainBoot();
+
+initializeDerivedRefreshBindings();
+initializeEmployeeDrawerBindings();
 
 const bridge = window as any;
 

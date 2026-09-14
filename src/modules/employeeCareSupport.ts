@@ -15,6 +15,12 @@ import {
 } from '../services/careEmployeePicker';
 import { showOrbisConfirm } from '../ui/confirmModal';
 import {
+  createEmployeeDrawerRenderer,
+  isEmployeeDrawerLoadAbort,
+  type EmployeeDrawerLoadContext,
+  type EmployeeDrawerRenderer,
+} from './employeeDrawerRenderGuard';
+import {
   bindCareEngagementEditorEvents,
   openCareItemEditor,
   openCareRecognitionEditor,
@@ -103,10 +109,20 @@ const RECOGNITION_LABELS: Record<string, string> = {
   peer_recognition: 'Peer Recognition',
 };
 
-function renderList(targetId: string, html: string, emptyMessage: string): void {
+function renderList(
+  targetId: string,
+  html: string,
+  emptyMessage: string,
+  render?: EmployeeDrawerRenderer
+): void {
   const el = document.getElementById(targetId);
   if (!el) return;
-  el.innerHTML = html || `<div class="empty">${esc(emptyMessage)}</div>`;
+  const content = html || `<div class="empty">${esc(emptyMessage)}</div>`;
+  if (render) {
+    render.write(el, content);
+    return;
+  }
+  el.innerHTML = content;
 }
 
 function actionButtons(editAttr: string, editId: string, deleteAttr: string, deleteId?: string): string {
@@ -306,12 +322,16 @@ async function confirmDeleteDrawerRecord(
 
 bindCareEngagementEditorEvents();
 
-export async function loadEmployeeCareSupport(employeeId: string): Promise<void> {
+export async function loadEmployeeCareSupport(
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+): Promise<void> {
+  const render = createEmployeeDrawerRenderer(context, employeeId);
   const notesEl = document.getElementById('employeeCareNotesList');
-  if (!notesEl) return;
+  if (!notesEl || !render.isCurrent()) return;
 
   if (!canViewCareEngagementDetails()) {
-    renderList('employeeCareNotesList', '', 'Care & Support is available to HR administrators only.');
+    renderList('employeeCareNotesList', '', 'Care & Support is available to HR administrators only.', render);
     return;
   }
 
@@ -321,25 +341,26 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
       : window.currentEmployee;
 
   if (!employee) {
-    renderList('employeeCareNotesList', '', 'Open an employee to view care & support history.');
+    renderList('employeeCareNotesList', '', 'Open an employee to view care & support history.', render);
     return;
   }
 
   const recordId = String(employeeId || resolveEmployeeId(employee)).trim();
   if (!recordId) {
-    renderList('employeeCareNotesList', '', 'Employee record not found.');
+    renderList('employeeCareNotesList', '', 'Employee record not found.', render);
     return;
   }
 
   bindDrawerCareEvents(recordId);
 
   const loadingHtml = '<div class="empty">Loading care & support...</div>';
-  notesEl.innerHTML = loadingHtml;
+  if (!render.write(notesEl, loadingHtml)) return;
   const itemsListEl = document.getElementById('employeeCareItemsList');
-  if (itemsListEl) itemsListEl.innerHTML = loadingHtml;
+  render.write(itemsListEl, loadingHtml);
 
   try {
     const dataset = await fetchCareEngagementDataset(true);
+    if (!render.isCurrent()) return;
 
     const careItems = dataset.careItems.filter((item) =>
       itemMatchesEmployee(item.employeeId, employee, item.employeeName)
@@ -386,7 +407,8 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
       `;
         })
         .join('')}`,
-      `No care items in the tracker for ${name} yet.`
+      `No care items in the tracker for ${name} yet.`,
+      render
     );
 
     renderList(
@@ -404,7 +426,8 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
       `
         )
         .join('')}`,
-      `No care notes for ${name} yet.`
+      `No care notes for ${name} yet.`,
+      render
     );
 
     renderList(
@@ -420,7 +443,8 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
       `
         )
         .join('')}`,
-      'No follow-up items scheduled.'
+      'No follow-up items scheduled.',
+      render
     );
 
     renderList(
@@ -436,7 +460,8 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
       `
         )
         .join('')}`,
-      'No recognition history logged.'
+      'No recognition history logged.',
+      render
     );
 
     renderList(
@@ -452,7 +477,8 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
       `
         )
         .join('')}`,
-      'No support resources shared yet.'
+      'No support resources shared yet.',
+      render
     );
 
     renderList(
@@ -469,11 +495,13 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
       `
         )
         .join('')}`,
-      'No wellness or check-in history yet.'
+      'No wellness or check-in history yet.',
+      render
     );
   } catch (err) {
+    if (isEmployeeDrawerLoadAbort(err) || !render.isCurrent()) return;
     console.error('[EmployeeCareSupport] Load failed:', err);
-    renderList('employeeCareNotesList', '', 'Could not load care & support data.');
+    renderList('employeeCareNotesList', '', 'Could not load care & support data.', render);
   }
 }
 

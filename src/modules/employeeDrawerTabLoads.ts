@@ -1,138 +1,131 @@
 /**
- * Lazy-load employee drawer tab data when a tab is first activated (avoids N parallel
- * Supabase calls on every drawer open).
+ * Drawer loading coordination. UI implementations and selected-employee state are
+ * supplied by the application layer, never discovered through browser globals.
  */
+import {
+  type EmployeeDrawerLoadContext,
+  isEmployeeDrawerLoadAbort,
+} from './employeeDrawerRenderGuard';
 
-let loadedEmployeeId: string | null = null;
-let drawerLoadGeneration = 0;
-const loadedTabs = new Set<string>();
-const loadingTabs = new Set<string>();
+export const EMPLOYEE_DRAWER_TABS = [
+  'profile', 'notes', 'discipline', 'incidents', 'meetings', 'stay-interviews',
+  'reviews', 'emergency', 'onboarding', 'offboarding', 'time-off', 'documents',
+  'history', 'care-support', 'employee',
+] as const;
+export type EmployeeDrawerTab = typeof EMPLOYEE_DRAWER_TABS[number];
+export type EmployeeDrawerLoader = (
+  employeeId: string,
+  context?: EmployeeDrawerLoadContext
+) => void | Promise<void>;
+export type EmployeeDrawerLoaders = Readonly<Record<EmployeeDrawerTab, EmployeeDrawerLoader>>;
+export type EmployeeDrawerDependencies = {
+  loaders: EmployeeDrawerLoaders;
+  getEmployeeId: () => string;
+  canLoad: (tab: EmployeeDrawerTab, employeeId: string) => boolean;
+  onError: (error: unknown, tab: EmployeeDrawerTab, employeeId: string) => void;
+};
 
-function getDrawerEmployeeId(employeeId?: string): string {
-  if (employeeId) return String(employeeId).trim();
+type PendingRequest = {
+  promise: Promise<void>;
+  controller: AbortController;
+};
 
-  const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
+export function createEmployeeDrawerTabLoader(dependencies: EmployeeDrawerDependencies) {
+  const loaders = { ...dependencies.loaders };
+  let selectedEmployeeId: string | null = null;
+  const loaded = new Set<EmployeeDrawerTab>();
+  // Request identity protects both employee switches and invalidation during a load.
+  const pending = new Map<EmployeeDrawerTab, PendingRequest>();
 
-  return String(
-    employee?.dbId || employee?.id || employee?.employee_id || window.selectedEmployeeId || ''
-  ).trim();
+  function abortPending(tab?: EmployeeDrawerTab): void {
+    if (tab) {
+      pending.get(tab)?.controller.abort();
+      pending.delete(tab);
+      return;
+    }
+    for (const request of pending.values()) request.controller.abort();
+    pending.clear();
+  }
+
+  function reset(): void {
+    abortPending();
+    selectedEmployeeId = null;
+    loaded.clear();
+  }
+
+  function invalidate(tab: string): void {
+    loaded.delete(tab as EmployeeDrawerTab);
+    abortPending(tab as EmployeeDrawerTab);
+  }
+
+  function load(tabName: string, employeeId?: string): Promise<void> {
+    const id = String(employeeId || dependencies.getEmployeeId() || '').trim();
+    if (!id) return Promise.resolve();
+    if (selectedEmployeeId !== id) {
+      reset();
+      selectedEmployeeId = id;
+    }
+    if (!EMPLOYEE_DRAWER_TABS.includes(tabName as EmployeeDrawerTab)) return Promise.resolve();
+    const tab = tabName as EmployeeDrawerTab;
+    if (!dependencies.canLoad(tab, id)) return Promise.resolve();
+    if (loaded.has(tab)) return Promise.resolve();
+    const existing = pending.get(tab);
+    if (existing) return existing.promise;
+
+    const controller = new AbortController();
+    const request: PendingRequest = { promise: Promise.resolve(), controller };
+    const isCurrent = () =>
+      selectedEmployeeId === id && pending.get(tab) === request && !controller.signal.aborted;
+    const context: EmployeeDrawerLoadContext = {
+      employeeId: id,
+      tab,
+      signal: controller.signal,
+      isCurrent,
+    };
+
+    request.promise = Promise.resolve()
+      .then(() => {
+        // A drawer can be closed/switched before this queued callback even starts.
+        if (!isCurrent() || !dependencies.canLoad(tab, id)) return false;
+        return Promise.resolve(loaders[tab](id, context)).then(() => true);
+      })
+      .then((didLoad) => {
+        if (didLoad && isCurrent()) loaded.add(tab);
+      })
+      .catch((error) => {
+        if (isEmployeeDrawerLoadAbort(error) || !isCurrent()) return;
+        dependencies.onError(error, tab, id);
+      })
+      .finally(() => {
+        if (isCurrent()) pending.delete(tab);
+      });
+    pending.set(tab, request);
+    return request.promise;
+  }
+
+  return { load, reset, invalidate };
 }
 
-function runDrawerTabLoad(
-  tabName: string,
-  employeeId: string,
-  generation: number,
-  loader: () => void | Promise<void>
-): void {
-  loadingTabs.add(tabName);
+let applicationLoader: ReturnType<typeof createEmployeeDrawerTabLoader> | undefined;
 
-  void Promise.resolve()
-    .then(() => loader())
-    .then(() => {
-      if (generation !== drawerLoadGeneration || loadedEmployeeId !== employeeId) return;
-      loadedTabs.add(tabName);
-    })
-    .catch((err) => {
-      console.error(`[DrawerTab] ${tabName} load failed:`, err);
-    })
-    .finally(() => {
-      if (generation === drawerLoadGeneration && loadedEmployeeId === employeeId) {
-        loadingTabs.delete(tabName);
-      }
-    });
+export function configureEmployeeDrawerTabLoads(dependencies: EmployeeDrawerDependencies): void {
+  applicationLoader?.reset();
+  applicationLoader = createEmployeeDrawerTabLoader(dependencies);
+}
+
+function getApplicationLoader() {
+  if (!applicationLoader) throw new Error('Employee drawer loaders are not configured.');
+  return applicationLoader;
 }
 
 export function resetEmployeeDrawerTabLoadState(): void {
-  loadedEmployeeId = null;
-  loadedTabs.clear();
-  loadingTabs.clear();
-  drawerLoadGeneration += 1;
+  getApplicationLoader().reset();
 }
 
-/** Force the next visit to a tab to reload (e.g. after save). */
 export function invalidateEmployeeDrawerTab(tabName: string): void {
-  loadedTabs.delete(tabName);
-  loadingTabs.delete(tabName);
+  getApplicationLoader().invalidate(tabName);
 }
 
-export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): void {
-  const id = getDrawerEmployeeId(employeeId);
-  if (!id) return;
-
-  if (loadedEmployeeId !== id) {
-    loadedTabs.clear();
-    loadingTabs.clear();
-    drawerLoadGeneration += 1;
-    loadedEmployeeId = id;
-  }
-
-  if (loadedTabs.has(tabName) || loadingTabs.has(tabName)) return;
-
-  const generation = drawerLoadGeneration;
-
-  switch (tabName) {
-    case 'profile':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeInternalJobInterests?.(id));
-      break;
-    case 'notes':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeNotes?.(id));
-      break;
-    case 'discipline':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeDiscipline?.(id));
-      break;
-    case 'incidents':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeIncidents?.(id));
-      break;
-    case 'meetings':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeMeetings?.(id));
-      break;
-    case 'stay-interviews':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadStayInterviews?.(id));
-      break;
-    case 'reviews': {
-      const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
-      if (
-        typeof window.canAccessPerformanceReviews === 'function' &&
-        !window.canAccessPerformanceReviews(employee)
-      ) {
-        return;
-      }
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeReviews?.(id));
-      break;
-    }
-    case 'emergency':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmergencyContacts?.(id));
-      break;
-    case 'onboarding':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadOnboardingTasks?.(id));
-      break;
-    case 'offboarding':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadOffboardingTasks?.(id));
-      break;
-    case 'time-off':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeLeaveRequests?.(id));
-      break;
-    case 'documents':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeDocuments?.(id));
-      break;
-    case 'history':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeHistory?.(id));
-      break;
-    case 'care-support':
-      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeCareSupport?.(id));
-      break;
-    case 'employee':
-      runDrawerTabLoad(tabName, id, generation, () => {
-        window.loadEmployeeManualAtRisk?.(id);
-        window.loadEmployeeManualImpactPlayer?.(id);
-        return window.loadEmployeePayrollHandoffs?.(id);
-      });
-      break;
-    default:
-      break;
-  }
+export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): Promise<void> {
+  return getApplicationLoader().load(tabName, employeeId);
 }
-
-window.resetEmployeeDrawerTabLoadState = resetEmployeeDrawerTabLoadState;
-window.invalidateEmployeeDrawerTab = invalidateEmployeeDrawerTab;
-window.loadEmployeeDrawerTab = loadEmployeeDrawerTab;
