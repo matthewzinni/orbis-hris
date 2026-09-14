@@ -145,7 +145,9 @@ body {
   margin-top: 8px;
 }
 
-.signature-typed-row input {
+.signature-typed-row input,
+#signFirstName,
+#signLastName {
   flex: 1 1 220px;
   min-height: 44px;
   padding: 10px 12px;
@@ -204,4 +206,10 @@ body {
   color: var(--sign-error-text);
   background: var(--sign-error-bg);
   border: 1px solid rgba(180, 35, 24, 0.2);
+}
+
+#signFirstName,
+#signLastName {
+  width: 100%;
+  flex: none;
 }

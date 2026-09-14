@@ -16,9 +16,18 @@ function formatDisplayDate(value: unknown): string {
   });
 }
 
+function signingUrl(token: string): string {
+  const url = new URL(getFormSignatureFunctionUrl(token));
+  if (new URLSearchParams(window.location.search).has('group')) {
+    url.searchParams.delete('token');
+    url.searchParams.set('group', token);
+  }
+  return url.toString();
+}
+
 function getTokenFromUrl(): string {
   const params = new URLSearchParams(window.location.search);
-  return String(params.get('token') || params.get('signToken') || '').trim();
+  return String(params.get('group') || params.get('token') || params.get('signToken') || '').trim();
 }
 
 function renderError(message: string): void {
@@ -35,7 +44,7 @@ function renderSuccess(): void {
 }
 
 async function fetchSigningContext(token: string): Promise<SignPayload> {
-  const response = await fetch(getFormSignatureFunctionUrl(token), {
+  const response = await fetch(signingUrl(token), {
     method: 'GET',
     headers: getEdgeFunctionHeaders(),
   });
@@ -60,6 +69,7 @@ function renderSigningForm(payload: SignPayload, token: string): void {
     meta.textContent = [payload.subtitle, formatDisplayDate(payload.date)].filter(Boolean).join(' · ');
   }
 
+  const groupSigning = payload.groupSigning === true;
   const defaultName = String(payload.signerName || payload.employeeName || '').trim();
   const summaryHtml = formatAcknowledgmentSummaryHtml(
     payload.summary || 'No document details were included with this signing request.'
@@ -75,6 +85,12 @@ function renderSigningForm(payload: SignPayload, token: string): void {
       <span>I have reviewed this document and agree to sign electronically.</span>
     </label>
     <div class="signature-field-controls" style="margin-top:14px;">
+      ${groupSigning ? `<p class="muted">Enter your first and last name as recorded with HR.</p>
+      <label for="signFirstName">First name</label>
+      <input id="signFirstName" name="given-name" autocomplete="given-name" maxlength="100" placeholder="First name" />
+      <label for="signLastName">Last name</label>
+      <input id="signLastName" name="family-name" autocomplete="family-name" maxlength="100" placeholder="Last name" />
+      <button type="button" class="button soft" id="signApplyBtn">Preview signature</button>` : `
       <label for="signName" style="font-size:12px; font-weight:700; color:#667085; text-transform:uppercase;">Full legal name</label>
       <div class="signature-typed-row" style="display:flex; gap:8px;">
         <input
@@ -88,26 +104,30 @@ function renderSigningForm(payload: SignPayload, token: string): void {
           name="orbis-signer-legal-name"
         />
         <button type="button" class="button soft" id="signApplyBtn">Preview signature</button>
-      </div>
+      </div>`}
     </div>
+    <div id="signFeedback" role="alert" aria-live="polite"></div>
     <div class="sign-preview" id="signPreview"><span class="muted">Signature preview</span></div>
     <div class="sign-actions">
       <button type="button" class="button primary" id="signSubmitBtn">Sign document</button>
     </div>
   `;
 
+  const field = (id: string) => String((document.getElementById(id) as HTMLInputElement | null)?.value || '').trim();
+  const nameValue = () => groupSigning ? `${field('signFirstName')} ${field('signLastName')}`.trim() : field('signName');
+  const validName = () => groupSigning ? Boolean(field('signFirstName') && field('signLastName')) : nameValue().length >= 2;
   let signatureData = '';
 
-  document.getElementById('signName')?.addEventListener('input', () => {
+  ['signName', 'signFirstName', 'signLastName'].forEach(id => document.getElementById(id)?.addEventListener('input', () => {
     signatureData = '';
     const preview = document.getElementById('signPreview');
     if (preview) preview.innerHTML = '<span class="muted">Signature preview</span>';
-  });
+  }));
 
   document.getElementById('signApplyBtn')?.addEventListener('click', () => {
-    const name = String((document.getElementById('signName') as HTMLInputElement | null)?.value || '').trim();
-    if (name.length < 2) {
-      alert('Enter your full legal name.');
+    const name = nameValue();
+    if (!validName()) {
+      alert(groupSigning ? 'Enter both your first and last name.' : 'Enter your full legal name.');
       return;
     }
 
@@ -120,15 +140,15 @@ function renderSigningForm(payload: SignPayload, token: string): void {
 
   document.getElementById('signSubmitBtn')?.addEventListener('click', async () => {
     const agree = (document.getElementById('signAgree') as HTMLInputElement | null)?.checked;
-    const name = String((document.getElementById('signName') as HTMLInputElement | null)?.value || '').trim();
+    const name = nameValue();
 
     if (!agree) {
       alert('Please confirm you agree to sign electronically.');
       return;
     }
 
-    if (!name || name.length < 2) {
-      alert('Enter your full legal name.');
+    if (!validName()) {
+      alert(groupSigning ? 'Enter both your first and last name.' : 'Enter your full legal name.');
       return;
     }
 
@@ -141,13 +161,16 @@ function renderSigningForm(payload: SignPayload, token: string): void {
       submitBtn.textContent = 'Submitting…';
     }
 
+    const feedback = document.getElementById('signFeedback');
+    if (feedback) feedback.textContent = '';
     try {
-      const response = await fetch(getFormSignatureFunctionUrl(token), {
+      const response = await fetch(signingUrl(token), {
         method: 'POST',
         headers: getEdgeFunctionHeaders(),
         body: JSON.stringify({
           signature: signatureData,
           signerName: name,
+          ...(groupSigning ? { firstName: field('signFirstName'), lastName: field('signLastName') } : {}),
           agreed: true,
         }),
       });
@@ -163,7 +186,10 @@ function renderSigningForm(payload: SignPayload, token: string): void {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Sign document';
       }
-      alert(err instanceof Error ? err.message : 'Could not submit signature.');
+      if (feedback) {
+        feedback.className = 'sign-error';
+        feedback.textContent = err instanceof Error ? err.message : 'Could not submit signature.';
+      }
     }
   });
 }

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { handleHandbookGroup } from './handbookGroup.ts';
 import { validateSignatureDataUrl } from './signatureValidation.ts';
 
 const corsHeaders = {
@@ -186,6 +187,8 @@ Deno.serve(async (req) => {
   try {
     const client = getServiceClient();
     const url = new URL(req.url);
+    const groupToken = String(url.searchParams.get('group') || '').trim();
+    if (groupToken) return await handleHandbookGroup(client, req, groupToken, jsonResponse);
     const token = String(url.searchParams.get('token') || '').trim();
 
     if (!token) {

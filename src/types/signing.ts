@@ -2,6 +2,7 @@ import type { SignatureFormType, SignatureSignerRole } from '../services/signatu
 
 /** GET response from the `form-signature` edge function. */
 export type SignPayload = {
+  groupSigning?: boolean;
   status?: string;
   title?: string;
   subtitle?: string;

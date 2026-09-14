@@ -1,7 +1,7 @@
 import { isAdminUser } from '../services/accessState';
 import { copySigningLink } from '../services/signatureRequests';
 import {
-  createHandbookSigningLink, HANDBOOK_ACKNOWLEDGMENT_TEXT,
+  createHandbookGroupLink, createHandbookSigningLink, HANDBOOK_ACKNOWLEDGMENT_TEXT,
   listHandbookAcknowledgments, type HandbookAcknowledgment,
 } from '../services/handbookAcknowledgments';
 function esc(value: unknown): string {
@@ -28,7 +28,7 @@ export function renderSignedHandbook(record: HandbookAcknowledgment): string {
     <p>Signed by: ${esc(record.signer_name || '')}</p>
     <div>Signature:<br>${image}</div>
     <p>Date: ${esc(record.signed_at ? dateLabel(record.signed_at) : '')}</p>
-    <div class="audit">Electronically signed with consent.<br>Employee ID: ${esc(record.employee_id)}<br>Record: ${esc(record.id)}<br>Recorded at: ${esc(record.signed_at || '')}</div>
+    <div class="audit">Electronically signed with consent.<br>${record.signing_method === 'shared_link_name_match' ? 'Shared link: matched by first and last name.<br>' : ''}Employee ID: ${esc(record.employee_id)}<br>Record: ${esc(record.id)}<br>Recorded at: ${esc(record.signed_at || '')}</div>
     </body></html>`;
 }
 
@@ -60,6 +60,7 @@ export async function loadHandbookAcknowledgments(employeeId: string): Promise<v
       <p class="muted">Copy a link for the employee to review and sign. Their name, signature, and signing date are saved here.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         ${isAdminUser() && !rows.some(row => row.signed_at) ? '<button type="button" class="button primary" data-handbook-link>Copy signing link</button>' : ''}
+        ${isAdminUser() ? '<button type="button" class="button soft" data-handbook-group-link>Copy group signing link</button>' : ''}
         <button type="button" class="button soft" data-handbook-refresh>Refresh status</button>
       </div>
       <div data-handbook-link-result style="margin-top:12px" aria-live="polite"></div>
@@ -74,6 +75,24 @@ export async function loadHandbookAcknowledgments(employeeId: string): Promise<v
         const record = rows.find(row => row.id === button.dataset.handbookView);
         if (record) viewSignedHandbook(record);
       });
+    });
+    const groupButton = target.querySelector<HTMLButtonElement>('[data-handbook-group-link]');
+    groupButton?.addEventListener('click', async () => {
+      groupButton.disabled = true;
+      const result = target.querySelector<HTMLElement>('[data-handbook-link-result]');
+      try {
+        const url = await createHandbookGroupLink();
+        if (!isCurrent()) return;
+        if (result) result.innerHTML = `<label>Group signing link<input type="text" readonly value="${esc(url)}" style="width:100%"></label><p class="muted">Share this same link with everyone. Employees enter their first and last name, then sign. The link lasts 90 days; copying it again reuses the active link.</p>`;
+        try {
+          await copySigningLink(url);
+          window.showToast?.('Group signing link copied. Share it with everyone.');
+        } catch {
+          window.showToast?.('Group link created. Copy it from the field below.', 'warning');
+        }
+      } catch (error) {
+        if (isCurrent() && result) result.textContent = error instanceof Error ? error.message : 'Could not create group link.';
+      } finally { groupButton.disabled = false; }
     });
     const button = target.querySelector<HTMLButtonElement>('[data-handbook-link]');
     button?.addEventListener('click', async () => {

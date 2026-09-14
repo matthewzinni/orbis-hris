@@ -20,3 +20,11 @@ The database migration and edge function must be deployed before the new web int
 ## Validation
 
 Type checking, unit tests, production build, and lint were run in an isolated copy of the current local checkout. Browser signing tests use a mocked signing service and a test Supabase URL. The migration was executed in temporary PostgreSQL (PGlite) with fixture roles and employees to verify reuse, expiration, completion, replay rejection, role permissions, and employee isolation. Production migration/application behavior still requires the release smoke test above.
+
+## Shared group link
+
+HR can select **Copy group signing link** in the same Documents section and send one URL to the whole group. Employees enter only first and last name, review the wording, consent, and sign. The server matches both names against current employee records, ignoring case and repeated spaces. It does not guess or display a directory. Missing or multiple matches leave all records unchanged and ask the employee to contact HR.
+
+The shared link lasts 90 days. Copying it again reuses the current link, or replaces an expired link. Each employee receives their own signed record; repeat submissions preserve the existing signature and timestamp. Existing pending individual requests are reconciled. The signed view labels this method as **matched by first and last name**; name matching is not identity verification.
+
+Deploy `20260914160000_handbook_group_signing.sql`, then the updated `form-signature` function (including `handbookGroup.ts`), then the web app. No public roster access or anonymous database RPC execution is enabled.

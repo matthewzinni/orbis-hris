@@ -13,6 +13,7 @@
     "allowJs": true,
     "noEmitOnError": false,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts"],

@@ -10,6 +10,7 @@ export type HandbookAcknowledgment = {
   document_title: string;
   acknowledgment_text: string;
   created_at: string;
+  signing_method?: 'individual_link' | 'shared_link_name_match';
   signed_at: string | null;
   signer_name: string | null;
   employee_signature: string | null;
@@ -28,4 +29,13 @@ export async function createHandbookSigningLink(employeeId: string): Promise<str
   });
   if (error || !data?.token) throw new Error(error?.message || 'Could not create the signing link.');
   return buildPublicSigningUrl(String(data.token));
+}
+
+export async function createHandbookGroupLink(): Promise<string> {
+  const { data, error } = await supabaseClient.rpc('orbis_create_handbook_group_link');
+  if (error || !data?.token) throw new Error(error?.message || 'Could not create the group signing link.');
+  const url = new URL(buildPublicSigningUrl(String(data.token)));
+  url.searchParams.delete('token');
+  url.searchParams.set('group', String(data.token));
+  return url.toString();
 }
