@@ -6,13 +6,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-type FormType = 'discipline' | 'incident' | 'review';
+type FormType = 'discipline' | 'incident' | 'review' | 'handbook';
 type SignerRole = 'employee' | 'manager' | 'witness';
 
 const TABLE_BY_FORM: Record<FormType, string> = {
   discipline: 'discipline_reports',
   incident: 'incident_reports',
   review: 'employee_reviews',
+  handbook: 'handbook_acknowledgment_forms',
 };
 
 function jsonResponse(body: Record<string, unknown>, status = 200): Response {
@@ -131,6 +132,17 @@ async function loadFormSummary(
   }
 
   const row = data as Record<string, unknown>;
+
+  if (formType === 'handbook') {
+    if (String(row.employee_id) !== employeeId) return null;
+    return {
+      title: String(row.document_title),
+      subtitle: 'BTW Global LLC',
+      date: String(row.created_at),
+      summary: String(row.acknowledgment_text),
+      employeeName: String(row.employee_name),
+    };
+  }
 
   if (formType === 'discipline') {
     return {

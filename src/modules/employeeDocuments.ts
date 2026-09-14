@@ -1,3 +1,4 @@
+import { loadHandbookAcknowledgments } from './handbookAcknowledgments';
 import { canAccessPerformanceReviews } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
@@ -185,6 +186,7 @@ export async function openEmployeeDocument(filePath: string): Promise<void> {
 }
 
 export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
+  void loadHandbookAcknowledgments(employeeId);
   const target = safeGet('docHistory');
 
   if (!target) {

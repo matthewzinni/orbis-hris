@@ -18,6 +18,7 @@ const TABLE_BY_FORM: Record<SignatureFormType, string> = {
   discipline: 'discipline_reports',
   incident: 'incident_reports',
   review: 'employee_reviews',
+  handbook: 'handbook_acknowledgment_forms',
 };
 
 const PAGE_WIDTH = 612;
@@ -149,6 +150,17 @@ function buildDocumentMeta(
 
   const signature = String(record.employee_signature || '').trim();
   const employeeSignature = signature.startsWith('data:image/') ? signature : undefined;
+
+  if (formType === 'handbook') {
+    return {
+      title: toPdfSafeText(record.document_title),
+      subtitle: 'BTW Global LLC',
+      date: toPdfSafeText(formatDateLabel(record.signed_at || record.created_at)),
+      summary: toPdfSafeText(record.acknowledgment_text),
+      employeeName: toPdfSafeText(record.signer_name || record.employee_name),
+      employeeSignature,
+    };
+  }
 
   if (formType === 'discipline') {
     return {

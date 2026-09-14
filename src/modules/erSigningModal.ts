@@ -131,6 +131,12 @@ function renderSigningForm(payload: SignPayload, token: string): void {
 
   let signatureData = '';
 
+  document.getElementById('erSigningName')?.addEventListener('input', () => {
+    signatureData = '';
+    const preview = document.getElementById('erSigningPreview');
+    if (preview) preview.innerHTML = '<span class="muted">Signature preview</span>';
+  });
+
   safeGet<HTMLButtonElement>('erSigningPreviewBtn')?.addEventListener('click', () => {
     const name = String(safeGet<HTMLInputElement>('erSigningName')?.value || '').trim();
     if (name.length < 2) {
@@ -164,9 +170,7 @@ function renderSigningForm(payload: SignPayload, token: string): void {
       return;
     }
 
-    if (!signatureData) {
-      signatureData = createTypedSignatureImage(name);
-    }
+    signatureData = createTypedSignatureImage(name);
 
     if (submitBtn) {
       submitBtn.disabled = true;

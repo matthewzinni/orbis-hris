@@ -41,6 +41,7 @@ const SIGNATURE_LABELS: Record<string, string> = {
   discipline: 'Discipline acknowledgment',
   incident: 'Incident acknowledgment',
   review: 'Performance review acknowledgment',
+  handbook: 'Employee Handbook Acknowledgement',
 };
 
 function formatDateLabel(value: string | null | undefined): string {

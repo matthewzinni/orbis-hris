@@ -1,6 +1,6 @@
 import { supabaseClient } from './supabaseClient';
 
-export type SignatureFormType = 'discipline' | 'incident' | 'review';
+export type SignatureFormType = 'discipline' | 'incident' | 'review' | 'handbook';
 export type SignatureSignerRole = 'employee' | 'manager' | 'witness';
 
 export type CreateSignatureRequestInput = {
@@ -95,6 +95,9 @@ async function cancelDuplicatePendingSignatureRequests(
 export async function createSignatureRequest(
   input: CreateSignatureRequestInput
 ): Promise<{ token: string; signingUrl: string; reused: boolean }> {
+  if (input.formType === 'handbook') {
+    throw new Error('Use the handbook acknowledgement action to create this request.');
+  }
   const existing = await findPendingEmployeeSignatureRequest(input);
   if (existing) {
     const recordId = String(input.recordId || '').trim();

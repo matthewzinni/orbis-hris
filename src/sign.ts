@@ -98,6 +98,12 @@ function renderSigningForm(payload: SignPayload, token: string): void {
 
   let signatureData = '';
 
+  document.getElementById('signName')?.addEventListener('input', () => {
+    signatureData = '';
+    const preview = document.getElementById('signPreview');
+    if (preview) preview.innerHTML = '<span class="muted">Signature preview</span>';
+  });
+
   document.getElementById('signApplyBtn')?.addEventListener('click', () => {
     const name = String((document.getElementById('signName') as HTMLInputElement | null)?.value || '').trim();
     if (name.length < 2) {
@@ -126,9 +132,8 @@ function renderSigningForm(payload: SignPayload, token: string): void {
       return;
     }
 
-    if (!signatureData) {
-      signatureData = createTypedSignatureImage(name);
-    }
+    // Always sign the name currently entered, even if an earlier name was previewed.
+    signatureData = createTypedSignatureImage(name);
 
     const submitBtn = document.getElementById('signSubmitBtn') as HTMLButtonElement | null;
     if (submitBtn) {
