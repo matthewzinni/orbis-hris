@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-const summary = 'I acknowledge that I have received and reviewed the BTW Global LLC Employee Handbook. I understand that the handbook is not a contract of employment and that policies may change at any time.';
+const summary = 'I acknowledge that I have received and reviewed the BTW Global LLC Employee Handbook 4.1, effective 1 September 2026. I understand that the handbook is not a contract of employment and that policies may change at any time.';
 
 test('same group link accepts different employees using only first and last name', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -9,12 +9,13 @@ test('same group link accepts different employees using only first and last name
       submissions.push(route.request().postDataJSON());
       await route.fulfill({ json: { ok: true, status: 'signed' } });
     } else {
-      await route.fulfill({ json: { title: 'Employee Handbook Acknowledgement', subtitle: 'BTW Global LLC',
+      await route.fulfill({ json: { title: 'Employee Handbook 4.1 effective 1 September 2026', subtitle: 'BTW Global LLC',
         summary, formType: 'handbook', groupSigning: true } });
     }
   });
   for (const first of ['Alex', 'Taylor']) {
     await page.goto('/sign.html?group=shared-test');
+    await expect(page.locator('#signTitle')).toHaveText('Employee Handbook 4.1 effective 1 September 2026');
     await expect(page.locator('#signName')).toHaveCount(0);
     await page.getByLabel('First name', { exact: true }).fill(first);
     await page.getByLabel('Last name', { exact: true }).fill('Example');
@@ -36,7 +37,7 @@ test('unmatched name shows an error, keeps entered names, and allows correction'
     if (route.request().method() === 'POST') {
       return route.fulfill({ status: 422, json: { error: 'We could not match your name to one employee record. Check your first and last name or contact HR. Your signature has not been saved.' } });
     }
-    return route.fulfill({ json: { title: 'Employee Handbook Acknowledgement', summary, groupSigning: true } });
+    return route.fulfill({ json: { title: 'Employee Handbook 4.1 effective 1 September 2026', summary, groupSigning: true } });
   });
   await page.goto('/sign.html?group=shared-test');
   await page.getByLabel('First name', { exact: true }).fill('Unknown');

@@ -4,7 +4,7 @@ import { handleHandbookGroup } from '../../supabase/functions/form-signature/han
 const respond = (body: Record<string, unknown>, status = 200) => new Response(JSON.stringify(body), { status });
 function client(status = 'signed') {
   const query = { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: { document_title: 'Employee Handbook Acknowledgement',
+    maybeSingle: vi.fn().mockResolvedValue({ data: { document_title: 'Employee Handbook 4.1 effective 1 September 2026',
       acknowledgment_text: 'Issued wording', expires_at: '2099-01-01' }, error: null }) };
   return { from: vi.fn(() => query), rpc: vi.fn().mockResolvedValue({ data: { status }, error: null }) };
 }
@@ -14,7 +14,7 @@ describe('shared handbook signing endpoint', () => {
   it('shows only the document and no employee records on GET', async () => {
     const db = client();
     const response = await handleHandbookGroup(db as never, new Request('https://example.test'), 'token', respond);
-    expect(await response.json()).toEqual({ title: 'Employee Handbook Acknowledgement', subtitle: 'BTW Global LLC',
+    expect(await response.json()).toEqual({ title: 'Employee Handbook 4.1 effective 1 September 2026', subtitle: 'BTW Global LLC',
       summary: 'Issued wording', formType: 'handbook', groupSigning: true, expiresAt: '2099-01-01' });
     expect(db.rpc).not.toHaveBeenCalled();
   });

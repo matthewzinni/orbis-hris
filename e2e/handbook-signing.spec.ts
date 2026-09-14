@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-const text = 'I acknowledge that I have received and reviewed the BTW Global LLC Employee Handbook. I understand that the handbook is not a contract of employment and that policies may change at any time.';
+const text = 'I acknowledge that I have received and reviewed the BTW Global LLC Employee Handbook 4.1, effective 1 September 2026. I understand that the handbook is not a contract of employment and that policies may change at any time.';
 
 test('employee reviews and signs the handbook from a public link on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -9,12 +9,12 @@ test('employee reviews and signs the handbook from a public link on a phone', as
       submitted = route.request().postDataJSON();
       await route.fulfill({ json: { ok: true, status: 'signed' } });
     } else {
-      await route.fulfill({ json: { title: 'Employee Handbook Acknowledgement', subtitle: 'BTW Global LLC',
+      await route.fulfill({ json: { title: 'Employee Handbook 4.1 effective 1 September 2026', subtitle: 'BTW Global LLC',
         date: '2026-09-14T15:00:00Z', summary: text, signerName: 'Test Employee', formType: 'handbook' } });
     }
   });
   await page.goto('/sign.html?token=handbook-test');
-  await expect(page.locator('#signTitle')).toHaveText('Employee Handbook Acknowledgement');
+  await expect(page.locator('#signTitle')).toHaveText('Employee Handbook 4.1 effective 1 September 2026');
   await expect(page.locator('.sign-summary-body')).toHaveText(text);
   await page.locator('#signApplyBtn').click();
   const firstSignature = await page.locator('#signPreview img').getAttribute('src');

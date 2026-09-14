@@ -1,7 +1,8 @@
 import { supabaseClient } from './supabaseClient';
 import { buildPublicSigningUrl } from './signatureRequests';
 
-export const HANDBOOK_ACKNOWLEDGMENT_TEXT = 'I acknowledge that I have received and reviewed the BTW Global LLC Employee Handbook. I understand that the handbook is not a contract of employment and that policies may change at any time.';
+export const HANDBOOK_DOCUMENT_TITLE = 'Employee Handbook 4.1 effective 1 September 2026';
+export const HANDBOOK_ACKNOWLEDGMENT_TEXT = 'I acknowledge that I have received and reviewed the BTW Global LLC Employee Handbook 4.1, effective 1 September 2026. I understand that the handbook is not a contract of employment and that policies may change at any time.';
 
 export type HandbookAcknowledgment = {
   id: string;
