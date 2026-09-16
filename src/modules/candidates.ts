@@ -29,6 +29,7 @@ import {
   uploadCandidateResume,
 } from '../services/candidateResume';
 import { devLog, devWarn, devError } from '../utils/devLog';
+import { filterCandidatesByStage } from './candidateFilters';
 
 interface CandidateRecord {
   id?: string;
@@ -61,6 +62,15 @@ let isConvertInProgress = false;
 let pendingCandidateResumeFile: File | null = null;
 let candidateResumeUiBound = false;
 let candidateResumeViewAvailable = false;
+
+function bindCandidateStageFilter(): HTMLSelectElement | null {
+  const filter = safeGet<HTMLSelectElement>('candidateStageFilter');
+  if (!filter || filter.dataset.candidateFilterBound === 'true') return filter;
+
+  filter.dataset.candidateFilterBound = 'true';
+  filter.addEventListener('change', () => void loadCandidates());
+  return filter;
+}
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -620,6 +630,8 @@ export async function loadCandidates(): Promise<void> {
     return;
   }
 
+  const stageFilter = bindCandidateStageFilter();
+
   target.innerHTML = '<div class="empty">Loading candidates...</div>';
 
   try {
@@ -639,18 +651,25 @@ export async function loadCandidates(): Promise<void> {
       return;
     }
 
-    const rows = filterCandidatesForCurrentAccess((data || []) as CandidateRecord[]).sort(
-      (a, b) => {
-        const dateA = String(a.created_at || '');
-        const dateB = String(b.created_at || '');
-        return dateB.localeCompare(dateA);
-      }
-    );
+    const accessibleRows = filterCandidatesForCurrentAccess((data || []) as CandidateRecord[]);
+    const rows = filterCandidatesByStage(accessibleRows, stageFilter?.value || '').sort((a, b) => {
+      const dateA = String(a.created_at || '');
+      const dateB = String(b.created_at || '');
+      return dateB.localeCompare(dateA);
+    });
+
+    const candidateCount = safeGet('candidateCount');
+    if (candidateCount) {
+      const filterLabel = stageFilter?.selectedOptions?.[0]?.textContent?.trim() || 'All Candidates';
+      candidateCount.textContent = `${rows.length} ${rows.length === 1 ? 'candidate' : 'candidates'} · ${filterLabel}`;
+    }
 
     if (!rows.length) {
-      const emptyMessage = isSupervisorUser()
-        ? 'No candidates found for your department scope.'
-        : 'No candidates found.';
+      const emptyMessage = stageFilter?.value
+        ? `No ${stageFilter.value.toLowerCase()} candidates found.`
+        : isSupervisorUser()
+          ? 'No candidates found for your department scope.'
+          : 'No active candidates found.';
 
       target.innerHTML = `<div class="empty">${escapeHtml(emptyMessage)}</div>`;
       window.renderMobileCandidateCards?.([]);
