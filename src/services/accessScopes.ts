@@ -232,9 +232,10 @@ export function canAccessPerformanceReviews(employee?: EmployeeLike | null): boo
 
 /** Employee Admin tab + flags: admins always; supervisors only for their direct reports. */
 export function canEditEmployeeAdmin(employee?: EmployeeLike | null): boolean {
-  if (Boolean(window.isCreatingEmployee)) return false;
-
+  // Administrators must be able to fill and save a new employee record.
   if (isAdminUser()) return true;
+
+  if (Boolean(window.isCreatingEmployee)) return false;
 
   if (isSupervisorUser()) {
     const target =
