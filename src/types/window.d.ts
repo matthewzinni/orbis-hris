@@ -373,6 +373,7 @@ declare global {
     loadReportsSection?: (force?: boolean) => Promise<void>;
     exportReportsStayInterviewsCsv?: () => void;
     exportReportsHeadcountCsv?: () => void;
+    exportReportsInsuranceRosterCsv?: () => void;
     exportReportsErTrendsCsv?: () => void;
     printReportsSection?: () => void;
     openJanusAccountDrawer?: (accountId?: string, tab?: string) => Promise<void>;

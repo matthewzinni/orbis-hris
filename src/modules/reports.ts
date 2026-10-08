@@ -1,3 +1,4 @@
+import { buildInsuranceRosterRows, INSURANCE_ROSTER_HEADERS } from '../services/insuranceRoster';
 import { supabaseClient } from '../services/supabaseClient';
 import { isAdminUser, hasOrgWideDisciplineAccess } from '../services/access';
 import {
@@ -728,6 +729,22 @@ export function exportReportsHeadcountCsv(): void {
   showToast('Headcount report exported.');
 }
 
+export function exportReportsInsuranceRosterCsv(): void {
+  const rows = buildInsuranceRosterRows(getScopedEmployees());
+  if (!rows.length) {
+    showToast('No active stateside full-time employees found.', 'error');
+    return;
+  }
+
+  downloadCsv(
+    `orbis-insurance-roster-${new Date().toISOString().slice(0, 10)}.csv`,
+    INSURANCE_ROSTER_HEADERS,
+    rows
+  );
+
+  showToast(`Insurance roster exported for ${rows.length} employee${rows.length === 1 ? '' : 's'}.`);
+}
+
 export function exportReportsErTrendsCsv(): void {
   if (!cachedErRecentRows.length) {
     showToast('No employee relations activity to export.', 'error');
@@ -846,6 +863,10 @@ function bindReportsEvents(): void {
     exportReportsHeadcountCsv();
   });
 
+  document.getElementById('exportReportsInsuranceRosterCsvBtn')?.addEventListener('click', () => {
+    exportReportsInsuranceRosterCsv();
+  });
+
   document.getElementById('exportReportsErCsvBtn')?.addEventListener('click', () => {
     exportReportsErTrendsCsv();
   });
@@ -860,5 +881,6 @@ bindReportsEvents();
 window.loadReportsSection = loadReportsSection;
 window.exportReportsStayInterviewsCsv = exportReportsStayInterviewsCsv;
 window.exportReportsHeadcountCsv = exportReportsHeadcountCsv;
+window.exportReportsInsuranceRosterCsv = exportReportsInsuranceRosterCsv;
 window.exportReportsErTrendsCsv = exportReportsErTrendsCsv;
 window.printReportsSection = printReportsSection;
