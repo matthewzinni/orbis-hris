@@ -95,6 +95,9 @@ test('Documents creates a standalone draft without an account or signer, then ad
  await page.getByRole('button',{name:'Create Document',exact:true}).click();
  await page.locator('#documentSigning [data-doc-field="title"]').fill('Publisher document');
  await page.locator('#documentSigning [data-doc-field="body"]').fill('Draft publisher terms');
+ await page.getByRole('button',{name:'Copy signing link',exact:true}).click();
+ await expect(page.locator('[data-signing-message]')).toContainText('signer’s name and email');
+ expect(saved).toBeUndefined();
  await page.getByRole('button',{name:'Save draft',exact:true}).click();
  await expect(page.locator('[data-signing-list]')).toContainText('Publisher document');
  expect(saved).not.toHaveProperty('p_account_id');
@@ -103,11 +106,11 @@ test('Documents creates a standalone draft without an account or signer, then ad
  await expect(page.locator('[data-signing-message]')).toContainText('add a signer');
  await page.getByRole('button',{name:'Edit draft',exact:true}).click();
  await page.locator('[data-signing-name]').fill('Test Recipient');await page.locator('[data-signing-email]').fill('recipient@example.com');
- await page.getByRole('button',{name:'Save draft',exact:true}).click();
+ await page.getByRole('button',{name:'Copy signing link',exact:true}).click();
  await expect(page.locator('[data-signing-list]')).toContainText('recipient@example.com');
- await page.getByRole('button',{name:'Create signing link',exact:true}).click();
  await expect(page.locator('.document-signing-link')).toHaveValue(new RegExp(`/document-sign.html#${token}$`));
  await expect(page.locator('[data-signing-list]')).toContainText('Awaiting signature');
+ await expect(page.getByRole('button',{name:'Copy signing link',exact:true})).toBeVisible();
  expect(accountRequests).toEqual([]);
  await expect(page.locator('#janusAccountDrawer #janusDocumentSigning')).toHaveCount(0);
  await page.screenshot({path:'../standalone-document-sender.png',fullPage:true});

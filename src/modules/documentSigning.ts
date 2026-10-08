@@ -31,7 +31,8 @@ function editor(record?: SigningDocument): void {
       <label>Signer email (optional)<input data-signing-email type="email" maxlength="254" value="${esc(record?.signer_email || '')}"></label>
       <label style="display:flex;gap:8px"><input data-signing-edits type="checkbox" ${record?.allow_recipient_edits !== false ? 'checked' : ''}>Allow the recipient to edit text and letterhead before signing</label>
     </div>
-    <div class="button-row"><button class="button primary" data-signing-save type="button">Save draft</button><button class="button soft" data-signing-preview-pdf type="button">Preview PDF</button><button class="button soft" data-signing-close type="button">Close editor</button></div>`;
+    <p class="muted">Enter the signer’s name and email to copy a signing link.</p>
+    <div class="button-row"><button class="button soft" data-signing-save type="button">Save draft</button><button class="button primary" data-signing-copy type="button">Copy signing link</button><button class="button soft" data-signing-preview-pdf type="button">Preview PDF</button><button class="button soft" data-signing-close type="button">Close editor</button></div>`;
   readContent = mountDocumentEditor(area.querySelector<HTMLElement>('[data-signing-content]')!, record?.content || emptyDocumentContent(), () => { dirty = true; });
   area.addEventListener('input', () => { dirty = true; }, { once: true });
   dirty = false;
@@ -99,14 +100,24 @@ async function action(button: HTMLButtonElement): Promise<void> {
   controls.forEach(control => { control.disabled = true; });
   const version = loadVersion;
   try {
-    if (button.hasAttribute('data-signing-save') && readContent) {
+    if ((button.hasAttribute('data-signing-save') || button.hasAttribute('data-signing-copy')) && readContent) {
+      const copyLink = button.hasAttribute('data-signing-copy');
       const content = readContent(); const invalid = validateDocumentContent(content); if (invalid) throw new Error(invalid);
       const name = root.querySelector<HTMLInputElement>('[data-signing-name]')!.value.trim();
       const email = root.querySelector<HTMLInputElement>('[data-signing-email]')!;
       if ((name && name.length < 2) || (email.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim()))) throw new Error('Enter a valid signer name and email, or leave them blank to save a document without signing.');
-      await saveSigningDocument(content, name, email.value.trim(), root.querySelector<HTMLInputElement>('[data-signing-edits]')!.checked, editingId);
+      if (copyLink && (!name || !email.value.trim())) throw new Error('Enter the signer’s name and email to copy a signing link.');
+      const id = await saveSigningDocument(content, name, email.value.trim(), root.querySelector<HTMLInputElement>('[data-signing-edits]')!.checked, editingId);
       if (loadVersion !== version) return;
-      dirty = false; await loadDocumentSigning(); message('Document draft saved.');
+      editingId = id; dirty = false;
+      if (copyLink) {
+        const url = await issueSigningDocumentLink(id);
+        if (loadVersion !== version) return;
+        await loadDocumentSigning();
+        await showSigningLink(id, url, name);
+      } else {
+        await loadDocumentSigning(); message('Document draft saved.');
+      }
     } else if (button.hasAttribute('data-signing-preview-pdf') && readContent) {
       const content = readContent(); const invalid = validateDocumentContent(content); if (invalid) throw new Error(invalid);
       const { downloadSigningPdf } = await import('../services/signingDocumentPdf'); await downloadSigningPdf(content);
@@ -116,15 +127,20 @@ async function action(button: HTMLButtonElement): Promise<void> {
       const url = await issueSigningDocumentLink(record.id);
       if (loadVersion !== version) return;
       await loadDocumentSigning();
-      const area = root.querySelector(`[data-signing-link-result="${record.id}"]`)!;
-      area.innerHTML = `<label>Signing link<input class="document-signing-link" readonly value="${esc(url)}"></label><p class="muted">Share this link with ${esc(record.signer_name)}. It expires in 14 days. No Orbis account is needed.</p>`;
-      try { await copySigningLink(url); message('Signing link copied.'); } catch { message('Signing link created. Copy the link above.'); }
+      await showSigningLink(record.id, url, record.signer_name);
     } else if (button.dataset.signingCancel && record) {
       const { showOrbisConfirm } = await import('../ui/confirmModal');
       if (!await showOrbisConfirm('Cancel this signing link? The recipient will no longer be able to sign with it.', {title:'Cancel signing link',confirmLabel:'Cancel link'})) return;
       await cancelSigningDocumentLink(record.id); if (loadVersion !== version) return; await loadDocumentSigning(); message('Link cancelled. You can edit the draft again.');
     }
   } finally { busy = false; button.disabled = false; controls.forEach(control => { control.disabled = false; }); }
+}
+async function showSigningLink(id: string, url: string, signerName: string): Promise<void> {
+  const area = root?.querySelector(`[data-signing-link-result="${id}"]`);
+  if (!area) return;
+  area.innerHTML = `<label>Signing link<input class="document-signing-link" readonly value="${esc(url)}"></label><p class="muted">Share this link with ${esc(signerName)}. They can review and sign the document without an Orbis account. The link expires in 14 days.</p>`;
+  try { await copySigningLink(url); message('Signing link copied.'); }
+  catch { message('Signing link created. Copy the link above.'); }
 }
 async function confirmDiscard(): Promise<boolean> {
   const { showOrbisConfirm } = await import('../ui/confirmModal');
