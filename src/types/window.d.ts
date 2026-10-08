@@ -312,7 +312,7 @@ declare global {
     deleteStayInterview?: (stayInterviewId: string) => Promise<void>;
     cancelStayInterviewEdit?: () => void;
     generateStayInterviewSummary?: () => Promise<void>;
-    exportInvestigationsCsv?: () => void;
+    exportInvestigationsExcel?: () => void;
     openInvestigationsView?: () => void;
     openNewInvestigationForm?: () => void;
     closeInvestigationDrawer?: () => void;
@@ -371,10 +371,10 @@ declare global {
     queueEmployeeSignatureAndOpenPdf?: typeof queueEmployeeSignatureAndOpenPdf;
     bootErSigningFromUrl?: () => void;
     loadReportsSection?: (force?: boolean) => Promise<void>;
-    exportReportsStayInterviewsCsv?: () => void;
-    exportReportsHeadcountCsv?: () => void;
-    exportReportsInsuranceRosterCsv?: () => void;
-    exportReportsErTrendsCsv?: () => void;
+    exportReportsStayInterviewsExcel?: () => void;
+    exportReportsHeadcountExcel?: () => void;
+    exportReportsInsuranceRosterExcel?: () => void;
+    exportReportsErTrendsExcel?: () => void;
     printReportsSection?: () => void;
     openJanusAccountDrawer?: (accountId?: string, tab?: string) => Promise<void>;
     closeJanusAccountDrawer?: () => void;
@@ -383,7 +383,7 @@ declare global {
     applyJanusDrawerAccess?: () => void;
     loadOperationsIssues?: () => Promise<void>;
     ensureOperationsIssuesLoaded?: (force?: boolean) => void;
-    exportOperationsIssuesCsv?: () => void;
+    exportOperationsIssuesExcel?: () => void;
     openOperationsView?: () => void;
     openNewOperationsIssueForm?: () => void;
     closeOperationsIssueDrawer?: () => void;
@@ -509,7 +509,7 @@ declare global {
     rosterViewMode?: string;
     refreshPerformanceReviewsDueKpi?: () => void | Promise<void>;
     deleteLeaveRequestById?: (requestId: string) => void | Promise<void>;
-    exportOperationsIssuesCsv?: () => void;
+    exportOperationsIssuesExcel?: () => void;
 
     // Employee roster + audit bridge
     currentUser?: { email?: string; name?: string } | null;

@@ -38,8 +38,8 @@ export function ensureOperationsIssuesLoaded(force = false): void {
     .catch(reportFailure);
 }
 
-export function exportOperationsIssuesCsv(): void {
-  void ensureOperationsModule().then((mod) => mod.exportOperationsIssuesCsv()).catch(reportFailure);
+export function exportOperationsIssuesExcel(): void {
+  void ensureOperationsModule().then((mod) => mod.exportOperationsIssuesExcel()).catch(reportFailure);
 }
 
 export function openOperationsView(): void {

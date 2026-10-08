@@ -1,3 +1,4 @@
+import { downloadExcel } from '../services/excelExport';
 import { applySharedDrawerOpenStyles, unlockBodyScrollIfIdle } from '../mobile/mobileOverlays';
 import { supabaseClient } from '../services/supabaseClient';
 import {
@@ -927,7 +928,7 @@ function bindOperationsEvents(): void {
 
   safeGet('exportOperationsIssuesBtn')?.addEventListener('click', (event) => {
     event.preventDefault();
-    exportOperationsIssuesCsv();
+    exportOperationsIssuesExcel();
   });
 
   safeGet('saveOperationsIssueBtn')?.addEventListener('click', (event) => {
@@ -980,12 +981,7 @@ function isOperationsCenterVisible(): boolean {
   return rect.top < window.innerHeight && rect.bottom > 0;
 }
 
-/** Load issues when the Operations section is on screen but navigation did not run. */
-function csvEscape(value: unknown): string {
-  return `"${String(value ?? '').replace(/"/g, '""')}"`;
-}
-
-export function exportOperationsIssuesCsv(): void {
+export async function exportOperationsIssuesExcel(): Promise<void> {
   if (!canAccessOperationsCenter()) {
     showToast('Operations Center requires admin or supervisor access.', 'error');
     return;
@@ -1034,19 +1030,13 @@ export function exportOperationsIssuesCsv(): void {
     issue.resolution_notes,
   ]);
 
-  const csv = [headers, ...rows]
-    .map((row) => row.map(csvEscape).join(','))
-    .join('\n');
+  const downloaded = await downloadExcel(
+    `operations-issues-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    headers,
+    rows
+  );
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `operations-issues-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-
-  showToast(`Exported ${issues.length} issue${issues.length === 1 ? '' : 's'}.`);
+  if (downloaded) showToast(`Exported ${issues.length} issue${issues.length === 1 ? '' : 's'}.`);
 }
 
 export function ensureOperationsIssuesLoaded(force = false): void {
@@ -1105,7 +1095,7 @@ export function openOperationsView(): void {
 function registerOperationsWindowGlobals(): void {
   const globalRef = globalThis as typeof globalThis & {
     loadOperationsIssues?: typeof loadOperationsIssues;
-    exportOperationsIssuesCsv?: typeof exportOperationsIssuesCsv;
+    exportOperationsIssuesExcel?: typeof exportOperationsIssuesExcel;
     openOperationsView?: typeof openOperationsView;
     openNewOperationsIssueForm?: typeof openNewOperationsIssueForm;
     openOperationsIssueDrawer?: typeof openOperationsIssueDrawer;
@@ -1121,7 +1111,7 @@ function registerOperationsWindowGlobals(): void {
 
   globalRef.loadOperationsIssues = loadOperationsIssues;
   globalRef.ensureOperationsIssuesLoaded = ensureOperationsIssuesLoaded;
-  globalRef.exportOperationsIssuesCsv = exportOperationsIssuesCsv;
+  globalRef.exportOperationsIssuesExcel = exportOperationsIssuesExcel;
   globalRef.openOperationsView = openOperationsView;
   globalRef.openNewOperationsIssueForm = openNewOperationsIssueForm;
   globalRef.openOperationsIssueDrawer = openOperationsIssueDrawer;

@@ -1,3 +1,4 @@
+import { downloadExcel } from '../services/excelExport';
 import { applySharedDrawerOpenStyles, clearSharedDrawerInlineStyles, unlockBodyScrollIfIdle } from '../mobile/mobileOverlays';
 import { supabaseClient } from '../services/supabaseClient';
 import {
@@ -1602,7 +1603,7 @@ async function handleAddEvidenceLink(): Promise<void> {
   }
 }
 
-export function exportInvestigationsCsv(): void {
+export async function exportInvestigationsExcel(): Promise<void> {
   if (!canAccessInvestigationsCenter()) {
     showToast('Investigations requires administrator access.', 'error');
     return;
@@ -1630,7 +1631,7 @@ export function exportInvestigationsCsv(): void {
     'Allegation Summary',
   ];
 
-  const csvRows = rows.map((row) => {
+  const exportRows = rows.map((row) => {
     const reportedById = String(row.reported_by_employee_id || '').trim();
     const reportedByName = reportedById
       ? formatEmployeeNamesForExport([reportedById])
@@ -1652,19 +1653,13 @@ export function exportInvestigationsCsv(): void {
     ];
   });
 
-  const csv = [headers, ...csvRows]
-    .map((line) => line.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
-    .join('\n');
+  const downloaded = await downloadExcel(
+    `investigations-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    headers,
+    exportRows
+  );
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `investigations-${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-
-  showToast(`Exported ${rows.length} case${rows.length === 1 ? '' : 's'}.`);
+  if (downloaded) showToast(`Exported ${rows.length} case${rows.length === 1 ? '' : 's'}.`);
 }
 
 export function ensureInvestigationsLoaded(force = false): void {
@@ -1767,7 +1762,7 @@ function bindInvestigationsEvents(): void {
 
   safeGet('exportInvestigationsBtn')?.addEventListener('click', (event) => {
     event.preventDefault();
-    exportInvestigationsCsv();
+    exportInvestigationsExcel();
   });
 
   safeGet('saveInvestigationBtn')?.addEventListener('click', (event) => {

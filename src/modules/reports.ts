@@ -1,3 +1,4 @@
+import { downloadExcel } from '../services/excelExport';
 import { buildInsuranceRosterRows, INSURANCE_ROSTER_HEADERS } from '../services/insuranceRoster';
 import { supabaseClient } from '../services/supabaseClient';
 import { isAdminUser, hasOrgWideDisciplineAccess } from '../services/access';
@@ -652,41 +653,14 @@ function renderDepartmentHeadcountReport(): void {
     .join('');
 }
 
-function csvEscape(value: unknown): string {
-  const text = String(value ?? '');
-
-  if (/[",\n]/.test(text)) {
-    return `"${text.replaceAll('"', '""')}"`;
-  }
-
-  return text;
-}
-
-function downloadCsv(filename: string, headers: string[], rows: string[][]): void {
-  const lines = [headers.map(csvEscape).join(',')];
-
-  rows.forEach((row) => {
-    lines.push(row.map(csvEscape).join(','));
-  });
-
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-export function exportReportsStayInterviewsCsv(): void {
+export async function exportReportsStayInterviewsExcel(): Promise<void> {
   if (!cachedStayInterviewRows.length) {
     showToast('No stay interview rows to export.', 'error');
     return;
   }
 
-  downloadCsv(
-    `orbis-stay-interviews-${new Date().toISOString().slice(0, 10)}.csv`,
+  const downloaded = await downloadExcel(
+    `orbis-stay-interviews-${new Date().toISOString().slice(0, 10)}.xlsx`,
     ['Employee', 'Department', 'Next Stay Interview', 'Last Stay Interview', 'Type', 'Status'],
     cachedStayInterviewRows.map((row) => [
       row.name,
@@ -698,10 +672,10 @@ export function exportReportsStayInterviewsCsv(): void {
     ])
   );
 
-  showToast('Stay interview report exported.');
+  if (downloaded) showToast('Stay interview report exported as Excel.');
 }
 
-export function exportReportsHeadcountCsv(): void {
+export async function exportReportsHeadcountExcel(): Promise<void> {
   const active = getScopedEmployees().filter((employee) =>
     isActiveDashboardEmployee(employee)
   );
@@ -720,39 +694,39 @@ export function exportReportsHeadcountCsv(): void {
     return;
   }
 
-  downloadCsv(
-    `orbis-headcount-by-department-${new Date().toISOString().slice(0, 10)}.csv`,
+  const downloaded = await downloadExcel(
+    `orbis-headcount-by-department-${new Date().toISOString().slice(0, 10)}.xlsx`,
     ['Department', 'Headcount'],
-    rows.map(([department, count]) => [department, String(count)])
+    rows.map(([department, count]) => [department, count])
   );
 
-  showToast('Headcount report exported.');
+  if (downloaded) showToast('Headcount report exported as Excel.');
 }
 
-export function exportReportsInsuranceRosterCsv(): void {
+export async function exportReportsInsuranceRosterExcel(): Promise<void> {
   const rows = buildInsuranceRosterRows(getScopedEmployees());
   if (!rows.length) {
     showToast('No active stateside full-time employees found.', 'error');
     return;
   }
 
-  downloadCsv(
-    `orbis-insurance-roster-${new Date().toISOString().slice(0, 10)}.csv`,
+  const downloaded = await downloadExcel(
+    `orbis-insurance-roster-${new Date().toISOString().slice(0, 10)}.xlsx`,
     INSURANCE_ROSTER_HEADERS,
     rows
   );
 
-  showToast(`Insurance roster exported for ${rows.length} employee${rows.length === 1 ? '' : 's'}.`);
+  if (downloaded) showToast(`Insurance roster exported for ${rows.length} employee${rows.length === 1 ? '' : 's'}.`);
 }
 
-export function exportReportsErTrendsCsv(): void {
+export async function exportReportsErTrendsExcel(): Promise<void> {
   if (!cachedErRecentRows.length) {
     showToast('No employee relations activity to export.', 'error');
     return;
   }
 
-  downloadCsv(
-    `orbis-er-trends-${new Date().toISOString().slice(0, 10)}.csv`,
+  const downloaded = await downloadExcel(
+    `orbis-er-trends-${new Date().toISOString().slice(0, 10)}.xlsx`,
     ['Type', 'Date', 'Employee', 'Department', 'Category', 'Status'],
     cachedErRecentRows.map((row) => [
       row.kind,
@@ -764,7 +738,7 @@ export function exportReportsErTrendsCsv(): void {
     ])
   );
 
-  showToast('ER trends activity exported.');
+  if (downloaded) showToast('ER trends activity exported as Excel.');
 }
 
 export function printReportsSection(): void {
@@ -855,20 +829,20 @@ function bindReportsEvents(): void {
     void loadReportsSection(true);
   });
 
-  document.getElementById('exportReportsStayCsvBtn')?.addEventListener('click', () => {
-    exportReportsStayInterviewsCsv();
+  document.getElementById('exportReportsStayExcelBtn')?.addEventListener('click', () => {
+    exportReportsStayInterviewsExcel();
   });
 
-  document.getElementById('exportReportsHeadcountCsvBtn')?.addEventListener('click', () => {
-    exportReportsHeadcountCsv();
+  document.getElementById('exportReportsHeadcountExcelBtn')?.addEventListener('click', () => {
+    exportReportsHeadcountExcel();
   });
 
-  document.getElementById('exportReportsInsuranceRosterCsvBtn')?.addEventListener('click', () => {
-    exportReportsInsuranceRosterCsv();
+  document.getElementById('exportReportsInsuranceRosterExcelBtn')?.addEventListener('click', () => {
+    exportReportsInsuranceRosterExcel();
   });
 
-  document.getElementById('exportReportsErCsvBtn')?.addEventListener('click', () => {
-    exportReportsErTrendsCsv();
+  document.getElementById('exportReportsErExcelBtn')?.addEventListener('click', () => {
+    exportReportsErTrendsExcel();
   });
 
   document.getElementById('printReportsBtn')?.addEventListener('click', () => {
@@ -879,8 +853,8 @@ function bindReportsEvents(): void {
 bindReportsEvents();
 
 window.loadReportsSection = loadReportsSection;
-window.exportReportsStayInterviewsCsv = exportReportsStayInterviewsCsv;
-window.exportReportsHeadcountCsv = exportReportsHeadcountCsv;
-window.exportReportsInsuranceRosterCsv = exportReportsInsuranceRosterCsv;
-window.exportReportsErTrendsCsv = exportReportsErTrendsCsv;
+window.exportReportsStayInterviewsExcel = exportReportsStayInterviewsExcel;
+window.exportReportsHeadcountExcel = exportReportsHeadcountExcel;
+window.exportReportsInsuranceRosterExcel = exportReportsInsuranceRosterExcel;
+window.exportReportsErTrendsExcel = exportReportsErTrendsExcel;
 window.printReportsSection = printReportsSection;

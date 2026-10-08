@@ -152,7 +152,7 @@ import {
   deleteOperationsIssueRecord,
   isOperationsIssueDrawerOpen,
   ensureOperationsIssuesLoaded,
-  exportOperationsIssuesCsv,
+  exportOperationsIssuesExcel,
   loadOperationsIssues,
   openNewOperationsIssueForm,
   openOperationsIssueDrawer,
@@ -259,7 +259,7 @@ function registerLegacyBridges(): void {
 
   bridge.loadOperationsIssues = loadOperationsIssues;
   bridge.ensureOperationsIssuesLoaded = ensureOperationsIssuesLoaded;
-  bridge.exportOperationsIssuesCsv = exportOperationsIssuesCsv;
+  bridge.exportOperationsIssuesExcel = exportOperationsIssuesExcel;
   bridge.openOperationsView = openOperationsView;
   bridge.openNewOperationsIssueForm = openNewOperationsIssueForm;
   bridge.openOperationsIssueDrawer = openOperationsIssueDrawer;
@@ -272,7 +272,7 @@ function registerLegacyBridges(): void {
 
   globalThis.loadOperationsIssues = loadOperationsIssues;
   globalThis.ensureOperationsIssuesLoaded = ensureOperationsIssuesLoaded;
-  globalThis.exportOperationsIssuesCsv = exportOperationsIssuesCsv;
+  globalThis.exportOperationsIssuesExcel = exportOperationsIssuesExcel;
   globalThis.openOperationsView = openOperationsView;
   globalThis.openNewOperationsIssueForm = openNewOperationsIssueForm;
   globalThis.openOperationsIssueDrawer = openOperationsIssueDrawer;

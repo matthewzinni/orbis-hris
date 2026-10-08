@@ -38,6 +38,7 @@
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.52.0",
     "eslint": "^10.5.0",
+    "fflate": "^0.8.3",
     "globals": "^17.6.0",
     "supabase": "^2.107.0",
     "typescript": "^6.0.3",
@@ -47,6 +48,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "write-excel-file": "^4.1.1"
   }
 }

@@ -22,7 +22,7 @@ async function wireInvestigationsGlobals(mod: InvestigationsModule): Promise<voi
   window.loadInvestigations = mod.loadInvestigations;
   window.ensureInvestigationsLoaded = mod.ensureInvestigationsLoaded;
   window.ensureInvestigationsReady = mod.ensureInvestigationsReady;
-  window.exportInvestigationsCsv = mod.exportInvestigationsCsv;
+  window.exportInvestigationsExcel = mod.exportInvestigationsExcel;
   window.openInvestigationsView = mod.openInvestigationsView;
   window.openNewInvestigationForm = mod.openNewInvestigationForm;
   window.openInvestigationDrawer = mod.openInvestigationDrawer;
@@ -71,11 +71,11 @@ export async function ensureInvestigationsReady(): Promise<void> {
   await mod.ensureInvestigationsReady();
 }
 
-export function exportInvestigationsCsv(): void {
+export function exportInvestigationsExcel(): void {
   void ensureInvestigationsModule()
     .then(async (mod) => {
       await wireInvestigationsGlobals(mod);
-      mod.exportInvestigationsCsv();
+      await mod.exportInvestigationsExcel();
     })
     .catch((err) => console.error('[Investigations] Export failed:', err));
 }
@@ -148,7 +148,7 @@ export function isInvestigationDrawerOpen(): boolean {
 window.loadInvestigations = loadInvestigations;
 window.ensureInvestigationsLoaded = ensureInvestigationsLoaded;
 window.ensureInvestigationsReady = ensureInvestigationsReady;
-window.exportInvestigationsCsv = exportInvestigationsCsv;
+window.exportInvestigationsExcel = exportInvestigationsExcel;
 window.openInvestigationsView = openInvestigationsView;
 window.openNewInvestigationForm = openNewInvestigationForm;
 window.openInvestigationDrawer = openInvestigationDrawer;
