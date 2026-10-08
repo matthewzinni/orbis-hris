@@ -17,6 +17,7 @@ export default defineConfig({
       input: {
         main: 'index.html',
         sign: 'sign.html',
+        documentSign: 'document-sign.html',
       },
       output: {
         // Preserve legacy window registrations when modules cross chunk boundaries.

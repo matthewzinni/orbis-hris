@@ -1,0 +1,23 @@
+.document-editor-fields {display:grid;gap:14px;min-width:0}
+.document-editor-fields label {display:grid;gap:6px;font-size:14px;font-weight:600}
+.document-editor-fields input:not([type=file]),.document-editor-fields textarea {width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #64748b66;border-radius:8px;font:inherit;color:inherit;background:transparent}
+.document-editor-fields textarea {resize:vertical;font-weight:400;line-height:1.55}
+.document-editor-fields input[type=file] {max-width:100%}
+.document-paper {background:white;color:#182335;padding:32px;line-height:1.65;border:1px solid #d9e0e8;margin-top:24px;border-radius:4px;overflow-wrap:anywhere}
+.document-paper header {border-bottom:2px solid #213e64;padding-bottom:16px;min-height:30px}
+.document-paper h2 {font-size:22px;line-height:1.3;margin:24px 0}
+.document-letterhead-details,.document-text {white-space:pre-wrap}
+.document-letterhead-details {font-size:13px;color:#526274}
+.document-logo {max-width:180px;max-height:80px;object-fit:contain;float:right;margin:0 0 12px 16px}
+.document-signing-list {display:grid;gap:12px;margin-top:20px}
+.document-signing-item {border:1px solid #64748b55;border-radius:10px;padding:16px;display:grid;gap:8px}
+.document-signing-actions {display:flex;gap:8px;flex-wrap:wrap}
+.document-signing-link {width:100%;box-sizing:border-box;padding:10px;font:inherit}
+.document-signing-editor {margin-top:18px}
+.document-signing-editor .button-row {display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.document-sign-page .sign-card {width:min(900px,100%)}
+.document-sign-page label {margin-top:14px}
+.document-sign-page input[type=text] {width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;box-sizing:border-box}
+.document-consent {display:flex;gap:10px;align-items:flex-start;margin-top:20px}
+.document-sign-preview img {max-width:100%;max-height:100px}
+@media(max-width:600px){.document-paper{padding:20px}.document-logo{float:none;display:block;margin:0 0 12px}.document-signing-actions .button{flex:1 1 150px}}
