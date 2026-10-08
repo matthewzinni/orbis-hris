@@ -7,7 +7,6 @@ export type SigningDocumentContent = {
 };
 export type SigningDocument = {
   id: string;
-  account_id: string;
   content: SigningDocumentContent;
   signer_name: string;
   signer_email: string;

@@ -7,7 +7,7 @@ const account='00000000-0000-0000-0000-000000000001';
 const content={title:'Publisher agreement',body:'Original terms',letterhead_name:'Publisher',letterhead_details:'Address',logo:''};
 const signature='data:image/png;base64,iVBORw0KGgo=';
 async function save(allow=true) {
- const result=await db.query<{id:string}>('select public.orbis_save_signing_document($1,$2,$3,$4,$5) as id',[account,JSON.stringify(content),'Test Publisher','publisher@example.com',allow]);return result.rows[0].id;
+ const result=await db.query<{id:string}>('select public.orbis_save_signing_document($1,$2,$3,$4) as id',[JSON.stringify(content),'Test Publisher','publisher@example.com',allow]);return result.rows[0].id;
 }
 async function issue(id:string){const r=await db.query<{link:{token:string}}> ('select public.orbis_issue_document_signing_link($1) as link',[id]);return r.rows[0].link.token;}
 async function complete(token:string,body=content){const r=await db.query<{result:{status:string}}> ('select public.orbis_complete_document_signing($1,$2,$3,$4,$5,$6) as result',[token,JSON.stringify(body),signature,'Test Publisher','a'.repeat(64),'test']);return r.rows[0].result.status;}
@@ -23,12 +23,23 @@ beforeAll(async()=>{
  grant execute on function auth.jwt() to authenticated;
  create function public.orbis_can_read_janus() returns boolean language sql as $$ select coalesce(current_setting('app.access',true),'write') in ('read','write') $$;
  create function public.orbis_can_write_janus() returns boolean language sql as $$ select coalesce(current_setting('app.access',true),'write')='write' $$;
+ create function public.orbis_is_admin() returns boolean language sql as $$ select coalesce(current_setting('app.access',true),'write')='write' $$;
  create table public.janus_accounts(id uuid primary key);
  insert into public.janus_accounts values ('${account}');`);
  await db.exec(readFileSync(new URL('../../supabase/migrations/20261008160000_janus_document_signing.sql',import.meta.url),'utf8'));
+ await db.exec(readFileSync(new URL('../../supabase/migrations/20261008170000_standalone_document_creation.sql',import.meta.url),'utf8'));
 },20000);
 afterAll(async()=>{await db?.close();});
 describe('publisher signing database workflow',()=>{
+ it('creates standalone drafts without an account or signer and requires a signer only for links',async()=>{
+  const result=await db.query<{id:string}>('select public.orbis_save_signing_document($1,$2,$3,$4) as id',[JSON.stringify(content),'','',true]);
+  const id=result.rows[0].id;
+  const row=await db.query<{account_id:string|null;signer_name:string}>('select account_id,signer_name from public.janus_signing_documents where id=$1',[id]);
+  expect(row.rows[0].account_id).toBeNull();expect(row.rows[0].signer_name).toBe('');
+  await expect(issue(id)).rejects.toThrow('Add a signer name');
+  await db.query('select public.orbis_save_signing_document($1::jsonb,$2::text,$3::text,$4::boolean,$5::uuid)',[JSON.stringify(content),'Recipient','recipient@example.com',true,id]);
+  expect(await issue(id)).toMatch(/^[a-f0-9-]{36}$/);
+ });
  it('saves the final edited snapshot once and locks the signed document',async()=>{
   const id=await save();const token=await issue(id);
   expect(await issue(id)).toBe(token);
@@ -38,7 +49,7 @@ describe('publisher signing database workflow',()=>{
   const r=await db.query<{content:typeof content;signed_content:typeof content}>('select content,signed_content from public.janus_signing_documents where id=$1',[id]);
   expect(r.rows[0].content).toEqual(content);expect(r.rows[0].signed_content).toEqual(edited);
   await expect(db.query('select public.orbis_cancel_document_signing_link($1)',[id])).rejects.toThrow('Signed documents');
-  await expect(db.query('select public.orbis_save_signing_document($1,$2,$3,$4,$5,$6)',[account,JSON.stringify(content),'Test','test@example.com',true,id])).rejects.toThrow('Only draft');
+  await expect(db.query('select public.orbis_save_signing_document($1::jsonb,$2::text,$3::text,$4::boolean,$5::uuid)',[JSON.stringify(content),'Test','test@example.com',true,id])).rejects.toThrow('Only draft');
  });
  it('rejects publisher changes when the sender disallows edits',async()=>{
   const id=await save(false);const token=await issue(id);
@@ -63,7 +74,7 @@ describe('publisher signing database workflow',()=>{
   await db.exec('reset role; set role authenticated');
   await expect(db.query("update public.janus_signing_documents set status='signed'")).rejects.toThrow('permission denied');
   await expect(complete('00000000-0000-0000-0000-000000000000')).rejects.toThrow('permission denied');
-  await db.exec("set app.access='read'");await expect(save()).rejects.toThrow('Janus edit access');
+  await db.exec("set app.access='read'");await expect(save()).rejects.toThrow('administrator access');
   await db.exec("set app.access='none'");expect((await db.query('select * from public.janus_signing_documents')).rows).toEqual([]);
   await db.exec("reset role; set app.access='write'");
  });

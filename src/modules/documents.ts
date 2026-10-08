@@ -102,6 +102,10 @@ export function initializeDocumentsLibrary(): void {
   devLog('Documents Library initializing...');
   injectDocumentUploadModalStyles();
   bindDocumentEvents();
+  const createButton = document.getElementById('createDocumentBtn');
+  if (createButton) createButton.onclick = () => {
+    void import('./documentSigning').then(module => module.loadDocumentSigning(true));
+  };
   void loadDocuments();
 }
 
@@ -191,6 +195,8 @@ export function renderDocumentsLibrary(): void {
 }
 
 export async function loadDocuments(): Promise<void> {
+  const { loadDocumentSigning } = await import('./documentSigning');
+  await loadDocumentSigning();
   const container = getDocumentsContainer();
 
   if (container) {

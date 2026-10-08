@@ -440,8 +440,6 @@ export async function refreshJanusAccountPanels(
 
   if (meetings) renderMeetingsList(meetings);
   if (documents) {
-    const { loadJanusDocumentSigning } = await import('./janusDocumentSigning');
-    await loadJanusDocumentSigning(accountId);
     documentCache.clear();
     documents.forEach((doc) => documentCache.set(doc.id, doc));
     renderDocumentsList(documents);

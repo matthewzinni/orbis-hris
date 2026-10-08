@@ -6,15 +6,18 @@
         <section id="documentsPage" class="page">
           <div class="page-header">
             <div>
-              <h1>Document Library</h1>
-              <p>Policies, forms, handbooks, and HR documents.</p>
+              <h1>Documents</h1>
+              <p>Create documents, request signatures, and manage your document library.</p>
             </div>
 
+            <button id="createDocumentBtn" class="button primary admin-only" data-admin-only type="button">Create Document</button>
             <button id="uploadDocumentBtn" class="button primary" type="button">
               Upload Document
             </button>
             <input id="documentUploadInput" type="file" hidden />
           </div>
+
+          <div id="documentSigning" class="card hidden admin-only" data-admin-only></div>
 
           <div class="documents-toolbar">
             <input type="search" id="documentsSearchInput" placeholder="Search documents..." />

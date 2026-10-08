@@ -68,10 +68,10 @@ test('cancelled or expired signing links show the server error without revealing
  await expect(page.locator('.sign-error')).toContainText('expired');await expect(page.locator('.document-paper')).toHaveCount(0);
 });
 
-test('Janus sender creates a draft and a publisher signing link',async({page})=>{
+test('Documents creates a standalone draft without an account or signer, then adds a signing link',async({page})=>{
  const user={id:token,email:'sender@example.com',aud:'authenticated',role:'authenticated',app_metadata:{provider:'email'},user_metadata:{},created_at:'2026-01-01'};
  const jwt=`${Buffer.from(JSON.stringify({alg:'HS256',typ:'JWT'})).toString('base64url')}.${Buffer.from(JSON.stringify({sub:token,exp:2000000000,role:'authenticated'})).toString('base64url')}.test`;
- const account={id:token,name:'Test Publisher Account',account_type:'publisher',status:'active'};
+ const accountRequests:string[]=[];
  let saved:Record<string,unknown>|undefined;
  let pending=false;
  await page.route('https://placeholder.supabase.co/**',async route=>{
@@ -80,10 +80,10 @@ test('Janus sender creates a draft and a publisher signing link',async({page})=>
   if(url.pathname.endsWith('/auth/v1/token')) json={access_token:jwt,refresh_token:'test-refresh-token',expires_in:3600,token_type:'bearer',user};
   else if(url.pathname.endsWith('/auth/v1/user'))json=user;
   else if(url.pathname.endsWith('/user_access'))json=[{email:user.email,role:'admin',approval_status:'approved',is_active:true}];
-  else if(url.pathname.endsWith('/janus_accounts'))json=url.searchParams.has('id')?account:[account];
+  else if(url.pathname.endsWith('/janus_accounts'))accountRequests.push(url.pathname);
   else if(url.pathname.endsWith('/rpc/orbis_save_signing_document')) { saved=route.request().postDataJSON();json=token; }
   else if(url.pathname.endsWith('/rpc/orbis_issue_document_signing_link')) { pending=true;json={token,expiresAt:'2030-01-01'}; }
-  else if(url.pathname.endsWith('/janus_signing_documents'))json=saved?[{id:token,account_id:token,content:saved.p_content,signer_name:saved.p_signer_name,signer_email:saved.p_signer_email,allow_recipient_edits:saved.p_allow_edits,status:pending?'pending':'draft',created_at:'2026-01-01'}]:[];
+  else if(url.pathname.endsWith('/janus_signing_documents'))json=saved?[{id:token,account_id:null,content:saved.p_content,signer_name:saved.p_signer_name,signer_email:saved.p_signer_email,allow_recipient_edits:saved.p_allow_edits,status:pending?'pending':'draft',created_at:'2026-01-01'}]:[];
   await route.fulfill({json});
  });
  await page.goto('/');
@@ -91,16 +91,24 @@ test('Janus sender creates a draft and a publisher signing link',async({page})=>
  const login=await page.evaluate(async()=>{const result=await window.signIn?.('sender@example.com','test-password');return {ok:Boolean(result),role:window.currentUserRole,error:document.getElementById('loginError')?.textContent};});
  expect(login).toMatchObject({role:'admin'});
  await page.waitForFunction(()=>window.currentUserRole==='admin');
- await page.evaluate(async()=>{await window.loadJanus?.();await window.openJanusAccountDrawer?.('00000000-0000-0000-0000-000000000001','documents');});
- await page.getByRole('button',{name:'Create document',exact:true}).click();
- await page.locator('#janusDocumentSigning [data-doc-field="title"]').fill('Publisher document');
- await page.locator('#janusDocumentSigning [data-doc-field="body"]').fill('Draft publisher terms');
- await page.locator('[data-signing-name]').fill('Test Publisher');await page.locator('[data-signing-email]').fill('publisher@example.com');
+ await page.getByLabel('Primary navigation').getByRole('button',{name:'Documents',exact:true}).click();
+ await page.getByRole('button',{name:'Create Document',exact:true}).click();
+ await page.locator('#documentSigning [data-doc-field="title"]').fill('Publisher document');
+ await page.locator('#documentSigning [data-doc-field="body"]').fill('Draft publisher terms');
  await page.getByRole('button',{name:'Save draft',exact:true}).click();
  await expect(page.locator('[data-signing-list]')).toContainText('Publisher document');
- expect(saved?.p_account_id).toBe(token);
+ expect(saved).not.toHaveProperty('p_account_id');
+ expect(saved?.p_signer_name).toBe('');
+ await page.getByRole('button',{name:'Create signing link',exact:true}).click();
+ await expect(page.locator('[data-signing-message]')).toContainText('add a signer');
+ await page.getByRole('button',{name:'Edit draft',exact:true}).click();
+ await page.locator('[data-signing-name]').fill('Test Recipient');await page.locator('[data-signing-email]').fill('recipient@example.com');
+ await page.getByRole('button',{name:'Save draft',exact:true}).click();
+ await expect(page.locator('[data-signing-list]')).toContainText('recipient@example.com');
  await page.getByRole('button',{name:'Create signing link',exact:true}).click();
  await expect(page.locator('.document-signing-link')).toHaveValue(new RegExp(`/document-sign.html#${token}$`));
  await expect(page.locator('[data-signing-list]')).toContainText('Awaiting signature');
- await page.screenshot({path:'../publisher-sender.png',fullPage:true});
+ expect(accountRequests).toEqual([]);
+ await expect(page.locator('#janusAccountDrawer #janusDocumentSigning')).toHaveCount(0);
+ await page.screenshot({path:'../standalone-document-sender.png',fullPage:true});
 });

@@ -1,13 +1,13 @@
 import { supabaseClient } from './supabaseClient';
 import type { SigningDocument, SigningDocumentContent } from './signingDocumentModel';
 
-export async function fetchSigningDocuments(accountId: string): Promise<SigningDocument[]> {
-  const { data, error } = await supabaseClient.from('janus_signing_documents').select('*').eq('account_id', accountId).order('created_at', { ascending: false });
+export async function fetchSigningDocuments(): Promise<SigningDocument[]> {
+  const { data, error } = await supabaseClient.from('janus_signing_documents').select('*').order('created_at', { ascending: false });
   if (error) throw error;
   return data || [];
 }
-export async function saveSigningDocument(accountId: string, content: SigningDocumentContent, signerName: string, signerEmail: string, allowEdits: boolean, id: string | null): Promise<string> {
-  const { data, error } = await supabaseClient.rpc('orbis_save_signing_document', { p_account_id: accountId, p_content: content, p_signer_name: signerName, p_signer_email: signerEmail, p_allow_edits: allowEdits, p_id: id });
+export async function saveSigningDocument(content: SigningDocumentContent, signerName: string, signerEmail: string, allowEdits: boolean, id: string | null): Promise<string> {
+  const { data, error } = await supabaseClient.rpc('orbis_save_signing_document', { p_content: content, p_signer_name: signerName, p_signer_email: signerEmail, p_allow_edits: allowEdits, p_id: id });
   if (error) throw error;
   return String(data);
 }

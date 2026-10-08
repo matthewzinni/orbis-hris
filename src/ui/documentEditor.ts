@@ -9,7 +9,7 @@ export function mountDocumentEditor(root: HTMLElement, initial: SigningDocumentC
   let logo = initial.logo;
   root.innerHTML = `<div class="document-editor-fields">
     <label>Document title<input data-doc-field="title" maxlength="200" value="${esc(initial.title)}"></label>
-    <label>Letterhead name<input data-doc-field="letterhead_name" maxlength="200" placeholder="Company or publisher name" value="${esc(initial.letterhead_name)}"></label>
+    <label>Letterhead name<input data-doc-field="letterhead_name" maxlength="200" placeholder="Company name" value="${esc(initial.letterhead_name)}"></label>
     <label>Letterhead details<textarea data-doc-field="letterhead_details" rows="3" maxlength="2000" placeholder="Address, website, contact details">${esc(initial.letterhead_details)}</textarea></label>
     <label>Letterhead logo (PNG or JPG, up to 500 KB)<input data-doc-logo type="file" accept="image/png,image/jpeg"></label>
     <button class="button soft" type="button" data-doc-remove-logo>Remove logo</button>
