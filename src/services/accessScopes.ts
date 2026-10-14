@@ -57,11 +57,15 @@ export function getCurrentAuthEmail(): string {
     .toLowerCase();
 }
 
-/** Employee HR Notes are private to Matthew's work account. RLS verifies the auth UID. */
-export const HR_NOTES_OWNER_EMAIL = 'matthew.zinni@btwglobal.com';
+/** HR notes are shared by these three work accounts. RLS verifies protected auth UIDs. */
+export const HR_NOTES_ACCESS_EMAILS = new Set([
+  'matthew.zinni@btwglobal.com',
+  'brent.wynne@btwglobal.com',
+  'trent.wynne@btwglobal.com',
+]);
 
 export function canAccessHrNotes(): boolean {
-  return isAdminUser() && getCurrentAuthEmail() === HR_NOTES_OWNER_EMAIL;
+  return isAdminUser() && HR_NOTES_ACCESS_EMAILS.has(getCurrentAuthEmail());
 }
 
 /** Manual banked-PTO adjustments are restricted to Matthew only. */
