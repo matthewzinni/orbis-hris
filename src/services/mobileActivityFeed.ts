@@ -1,3 +1,5 @@
+import { canAccessHrNotes } from './accessScopes';
+import { isSystemEmployeeNoteType } from './employeeSystemNotes';
 import {
   employeeMatchesSupervisorAccess,
   isAdminUser,
@@ -107,11 +109,11 @@ export async function fetchMobileActivityFeed(limit = 30): Promise<MobileActivit
 
   const [notesRes, disciplineRes, meetingsRes, reviewsRes, leaveRes, stayRes] =
     await Promise.all([
-      supabaseClient
+      canAccessHrNotes() ? supabaseClient
         .from('employee_notes')
         .select('id, employee_id, note_type, note_text, note_date, created_at')
         .order('created_at', { ascending: false })
-        .limit(perTable),
+        .limit(perTable) : Promise.resolve({ data: [], error: null }),
       includeDiscipline
         ? supabaseClient
             .from('discipline_reports')
@@ -154,6 +156,7 @@ export async function fetchMobileActivityFeed(limit = 30): Promise<MobileActivit
   const items: MobileActivityItem[] = [];
 
   for (const row of (notesRes.data || []) as Record<string, unknown>[]) {
+    if (!canAccessHrNotes() || isSystemEmployeeNoteType(row.note_type)) continue;
     const mapped = mapRow(row, {
       id: String(row.id),
       source: 'note',

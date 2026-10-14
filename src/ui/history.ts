@@ -1,3 +1,4 @@
+import { canAccessHrNotes } from '../services/accessScopes';
 import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
 import { canAccessDisciplineForEmployee } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
@@ -166,7 +167,9 @@ export async function loadEmployeeHistory(employeeId: string): Promise<void> {
   const includeDiscipline = canAccessDisciplineForEmployee({ id: actualEmployeeId });
 
   const [notes, meetings, discipline, incidents, reviews] = await Promise.all([
-    fetchHistoryRows('employee_notes', actualEmployeeId, 'note_date'),
+    canAccessHrNotes()
+      ? fetchHistoryRows('employee_notes', actualEmployeeId, 'note_date')
+      : Promise.resolve([]),
     fetchHistoryRows('employee_meetings', actualEmployeeId, 'meeting_date'),
     includeDiscipline
       ? fetchHistoryRows('discipline_reports', actualEmployeeId, 'incident_date')
@@ -177,7 +180,7 @@ export async function loadEmployeeHistory(employeeId: string): Promise<void> {
 
   const timeline: TimelineItem[] = [
     ...notes
-      .filter((note) => !isSystemEmployeeNoteType(note.note_type))
+      .filter((note) => canAccessHrNotes() && !isSystemEmployeeNoteType(note.note_type))
       .map((note) => ({
         type: 'Note',
         date: String(note.note_date || ''),

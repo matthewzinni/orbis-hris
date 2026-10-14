@@ -18,6 +18,7 @@ import {
   setCurrentUserAccess,
 } from './accessRoles';
 import {
+  canAccessHrNotes,
   canAccessPerformanceReviews,
   canAccessDisciplineForEmployee,
   canEditEmployeeAdmin,
@@ -169,6 +170,32 @@ function setEmployeeFlagButtonsLocked(locked: boolean, lockTitle: string): void 
   });
 }
 
+function applyHrNotesTabAccess(): void {
+  const allowed = canAccessHrNotes();
+  const button = document.querySelector<HTMLButtonElement>('#employeeDrawer [data-tab="notes"]');
+  const panel = document.getElementById('tab-notes');
+  const wasActive = button?.classList.contains('active') || button?.getAttribute('aria-selected') === 'true';
+  button?.classList.toggle('hidden', !allowed);
+  button?.setAttribute('aria-hidden', String(!allowed));
+  if (button) button.tabIndex = allowed ? 0 : -1;
+  if (!allowed) {
+    button?.classList.remove('active');
+    button?.setAttribute('aria-selected', 'false');
+    if (panel) {
+      panel.classList.remove('active');
+      panel.hidden = true;
+      panel.setAttribute('aria-hidden', 'true');
+    }
+    const history = document.getElementById('notesHistory');
+    if (history) history.innerHTML = '';
+    // Do not retain a previous account's drafts after access changes.
+    window.cancelNoteEdit?.();
+    const timeline = document.getElementById('historyFeed');
+    if (timeline) timeline.innerHTML = '';
+    if (wasActive) window.activateDrawerTab?.('employee', 'profile', false);
+  }
+}
+
 function applyDisciplineTabAccess(employee?: EmployeeLike | null): void {
   const allowed = canAccessDisciplineForEmployee(employee);
   const drawer = document.getElementById('employeeDrawer');
@@ -222,8 +249,8 @@ function applyDisciplineDashboardAccess(): void {
   );
   if (activitySubtitle) {
     activitySubtitle.textContent = orgWide
-      ? 'Recent notes, discipline, reviews, and team updates'
-      : 'Recent notes, discipline for your team, reviews, and team updates';
+      ? `${canAccessHrNotes() ? 'Private HR notes, ' : ''}discipline, reviews, and team updates`
+      : 'Discipline for your team, reviews, and team updates';
   }
 }
 
@@ -755,6 +782,7 @@ export function applyRolePermissions(): void {
   }
 
   applyRoleLocks();
+  applyHrNotesTabAccess();
   applyPerformanceReviewTabAccess(currentEmployee as EmployeeLike | null | undefined);
   applyDisciplineTabAccess(currentEmployee as EmployeeLike | null | undefined);
   applyDisciplineDashboardAccess();
