@@ -82,7 +82,7 @@ export async function saveEmployeeNote(): Promise<void> {
   stopAllDictation();
   if (!canAccessHrNotes()) {
     cancelNoteEdit();
-    showToast('HR Notes are private to Matthew’s work account.', 'error');
+    showToast('HR Notes are restricted to Matthew, Brent, and Trent’s work accounts.', 'error');
     return;
   }
 

@@ -76,10 +76,14 @@ describe('canViewCompletedPerformanceReviewsLedger', () => {
 
 
 describe('canAccessHrNotes', () => {
-  it('requires Matthew’s work account and active admin access', () => {
+  it('requires one of the three leadership work accounts and active admin access', () => {
     vi.mocked(isAdminUser).mockReturnValue(true);
     vi.mocked(getCurrentUserAccess).mockReturnValue({ email: ' Matthew.Zinni@btwglobal.com ' } as never);
     expect(canAccessHrNotes()).toBe(true);
+    for (const email of ['brent.wynne@btwglobal.com', 'trent.wynne@btwglobal.com']) {
+      vi.mocked(getCurrentUserAccess).mockReturnValue({ email } as never);
+      expect(canAccessHrNotes()).toBe(true);
+    }
     vi.mocked(getCurrentUserAccess).mockReturnValue({ email: 'orlando.gomez@btwglobal.com' } as never);
     expect(canAccessHrNotes()).toBe(false);
     vi.mocked(getCurrentUserAccess).mockReturnValue({ email: 'matthew.zinni@btwglobal.com' } as never);
