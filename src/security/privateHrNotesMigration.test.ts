@@ -87,6 +87,14 @@ describe.sequential('private HR Notes database enforcement',()=>{
     await expect(db.exec("update employee_notes set note_type='At-Risk Flag' where id=1")).rejects.toThrow('cannot be converted');
     await expect(db.exec("update employee_notes set note_type='General' where id=2")).rejects.toThrow('cannot be converted');
   });
+  it('allows an empty preview database and keeps notes inaccessible', async () => {
+    await db.exec('reset role; begin; delete from hr_notes_owner; drop table hr_notes_access; delete from auth.users');
+    try {
+      await db.exec(readFileSync(new URL('../../supabase/migrations/20261014190000_shared_hr_notes_leadership.sql',import.meta.url),'utf8'));
+      await session(owner);
+      expect((await db.query('select id from employee_notes where id=1')).rows).toEqual([]);
+    } finally { await db.exec('reset role; rollback'); }
+  });
   it('fails closed if no owner is configured',async()=>{
     await db.exec('reset role; delete from hr_notes_access');
     await session(owner);

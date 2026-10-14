@@ -13,7 +13,9 @@ where lower(trim(email)) in (
   'trent.wynne@btwglobal.com'
 );
 do $$ begin
-  if (select count(*) from public.hr_notes_access) <> 3 then
+  -- Supabase preview branches contain no Auth users; leave their notes inaccessible.
+  if exists (select 1 from auth.users)
+    and (select count(*) from public.hr_notes_access) <> 3 then
     raise exception 'Expected exactly three existing leadership work auth accounts for HR notes.';
   end if;
 end $$;
