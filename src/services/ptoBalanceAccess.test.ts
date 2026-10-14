@@ -21,8 +21,9 @@ vi.mock('../config/instanceConfig', () => ({
   BTW_DEFAULT_ORG_WIDE_DISCIPLINE_EMAILS: ['matthew.zinni@btwglobal.com'],
 }));
 
-import { getCurrentUserAccess } from './accessState';
+import { getCurrentUserAccess, isAdminUser } from './accessState';
 import {
+  canAccessHrNotes,
   canAdjustPtoBalance,
   canViewCompletedPerformanceReviewsLedger,
   PTO_BALANCE_EDITOR_EMAIL,
@@ -70,5 +71,19 @@ describe('canViewCompletedPerformanceReviewsLedger', () => {
       email: 'brent@btwglobal.com',
     } as never);
     expect(canViewCompletedPerformanceReviewsLedger()).toBe(false);
+  });
+});
+
+
+describe('canAccessHrNotes', () => {
+  it('requires Matthew’s work account and active admin access', () => {
+    vi.mocked(isAdminUser).mockReturnValue(true);
+    vi.mocked(getCurrentUserAccess).mockReturnValue({ email: ' Matthew.Zinni@btwglobal.com ' } as never);
+    expect(canAccessHrNotes()).toBe(true);
+    vi.mocked(getCurrentUserAccess).mockReturnValue({ email: 'orlando.gomez@btwglobal.com' } as never);
+    expect(canAccessHrNotes()).toBe(false);
+    vi.mocked(getCurrentUserAccess).mockReturnValue({ email: 'matthew.zinni@btwglobal.com' } as never);
+    vi.mocked(isAdminUser).mockReturnValue(false);
+    expect(canAccessHrNotes()).toBe(false);
   });
 });

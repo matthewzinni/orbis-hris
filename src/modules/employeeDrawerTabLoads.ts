@@ -1,3 +1,4 @@
+import { canAccessHrNotes } from '../services/accessScopes';
 /**
  * Lazy-load employee drawer tab data when a tab is first activated (avoids N parallel
  * Supabase calls on every drawer open).
@@ -75,6 +76,7 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
       runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeInternalJobInterests?.(id));
       break;
     case 'notes':
+      if (!canAccessHrNotes()) return;
       runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeNotes?.(id));
       break;
     case 'discipline':

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+vi.mock('../services/accessScopes', () => ({ canAccessHrNotes: vi.fn(() => true) }));
+import { canAccessHrNotes } from '../services/accessScopes';
+
 type DrawerTabLoads = typeof import('./employeeDrawerTabLoads');
 
 describe.sequential('employeeDrawerTabLoads', () => {
@@ -9,6 +12,7 @@ describe.sequential('employeeDrawerTabLoads', () => {
 
   beforeEach(async () => {
     vi.resetModules();
+    vi.mocked(canAccessHrNotes).mockReturnValue(true);
     loadEmployeeNotes = vi.fn().mockResolvedValue(undefined);
     drawerWindow.currentEmployee = { dbId: 'emp-1' };
     drawerWindow.loadEmployeeNotes = loadEmployeeNotes;
@@ -17,6 +21,13 @@ describe.sequential('employeeDrawerTabLoads', () => {
 
     tabLoads = await import('./employeeDrawerTabLoads');
     tabLoads.resetEmployeeDrawerTabLoadState();
+  });
+
+  it('does not load private notes for another account', async () => {
+    vi.mocked(canAccessHrNotes).mockReturnValue(false);
+    tabLoads.loadEmployeeDrawerTab('notes', 'emp-1');
+    await Promise.resolve();
+    expect(loadEmployeeNotes).not.toHaveBeenCalled();
   });
 
   it('loads a tab once per employee until invalidated', async () => {

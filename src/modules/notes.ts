@@ -1,3 +1,4 @@
+import { canAccessHrNotes } from '../services/accessScopes';
 import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
 import { getEmployeeLookupIds } from '../services/employeeRecordCrud';
 import { supabaseClient } from '../services/supabaseClient';
@@ -23,6 +24,7 @@ function getResolvedNoteEmployeeId(employeeId: string | null = null): string {
 }
 
 export function startNoteEdit(note: EmployeeNote): void {
+  if (!canAccessHrNotes()) return;
   resetDrawerForms();
 
   currentNoteId = note.id ? String(note.id) : null;
@@ -78,6 +80,11 @@ async function refreshDashboardAfterNoteChange(): Promise<void> {
 
 export async function saveEmployeeNote(): Promise<void> {
   stopAllDictation();
+  if (!canAccessHrNotes()) {
+    cancelNoteEdit();
+    showToast('HR Notes are private to Matthew’s work account.', 'error');
+    return;
+  }
 
   if (!window.currentEmployee) {
     showToast('Open an employee before saving a note.', 'error');
@@ -97,6 +104,11 @@ export async function saveEmployeeNote(): Promise<void> {
 
   if (!note_date || !note_text) {
     showToast('Enter a note date and note text.', 'error');
+    return;
+  }
+
+  if (isSystemEmployeeNoteType(note_type)) {
+    showToast('Choose an HR note type.', 'error');
     return;
   }
 
@@ -142,6 +154,7 @@ export async function saveEmployeeNote(): Promise<void> {
 }
 
 export async function deleteNote(noteId: string): Promise<void> {
+  if (!canAccessHrNotes()) return;
   const employeeId = getResolvedNoteEmployeeId();
 
   if (!employeeId) {
@@ -155,7 +168,7 @@ export async function deleteNote(noteId: string): Promise<void> {
     danger: true,
   });
 
-  if (!confirmed) {
+  if (!confirmed || !canAccessHrNotes()) {
     return;
   }
 
@@ -199,6 +212,12 @@ export async function loadEmployeeNotes(employeeId: string): Promise<void> {
     return;
   }
 
+  if (!canAccessHrNotes()) {
+    target.innerHTML = '';
+    cancelNoteEdit();
+    return;
+  }
+
   target.innerHTML = '<div class="muted">Loading notes…</div>';
 
   const employee = window.currentEmployee as Record<string, unknown> | null | undefined;
@@ -209,6 +228,11 @@ export async function loadEmployeeNotes(employeeId: string): Promise<void> {
     .select('*')
     .in('employee_id', lookupIds)
     .order('note_date', { ascending: false });
+
+  if (!canAccessHrNotes()) {
+    target.innerHTML = '';
+    return;
+  }
 
   if (error) {
     console.error('[Notes] Load failed:', error);

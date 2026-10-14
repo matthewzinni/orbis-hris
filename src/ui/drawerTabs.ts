@@ -1,3 +1,4 @@
+import { canAccessHrNotes } from '../services/accessScopes';
 /**
  * Accessible drawer tab groups (WAI-ARIA tabs pattern).
  */
@@ -188,6 +189,9 @@ function enhanceTabGroup(kind: DrawerTabKind): DrawerTabGroup | null {
 }
 
 export function activateDrawerTab(kind: DrawerTabKind, tabName: string, focusTab = true): boolean {
+  if (kind === 'employee' && tabName === 'notes' && !canAccessHrNotes()) {
+    tabName = 'profile';
+  }
   if (
     kind === 'employee' &&
     tabName === 'reviews' &&

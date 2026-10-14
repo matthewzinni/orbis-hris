@@ -1,3 +1,4 @@
+import { canAccessHrNotes } from '../services/accessScopes';
 // Shared DOM helpers, toast, and print utilities (ported from js/utils/helpers.js)
 
 import { orbisLetterheadHtml, orbisPrintFooterHtml } from '../brand/letterhead';
@@ -321,6 +322,7 @@ export function printDisciplineRecord(record: {
 }
 
 export function printNote(): void {
+  if (!canAccessHrNotes()) return;
   const date = (safeGet('noteDate') as HTMLInputElement | null)?.value || '';
   const type = (safeGet('noteType') as HTMLInputElement | null)?.value || '';
   const text = (safeGet('noteText') as HTMLTextAreaElement | null)?.value || '';
