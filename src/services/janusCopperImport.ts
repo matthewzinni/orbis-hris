@@ -80,6 +80,7 @@ function splitName(full: string): { first: string; last: string } {
 
 function inferAccountType(row: Record<string, string>): JanusAccountDraft['account_type'] {
   const raw = pick(row, ['account_type', 'type', 'company_type']).toLowerCase();
+  if (/^treat(?:\s*&\s*|[\s_-]+(?:and[\s_-]+)?)train$/.test(raw.trim())) return 'treat_train';
   if (raw.includes('vendor')) return 'vendor';
   if (raw.includes('partner')) return 'partner';
   if (raw.includes('publish')) return 'publisher';

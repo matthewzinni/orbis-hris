@@ -1,4 +1,4 @@
-export type JanusAccountType = 'client' | 'vendor' | 'partner' | 'publisher' | 'other';
+export type JanusAccountType = 'client' | 'vendor' | 'partner' | 'publisher' | 'treat_train' | 'other';
 
 export type JanusAccountStatus = 'active' | 'inactive' | 'prospect';
 
@@ -101,6 +101,7 @@ export const JANUS_ACCOUNT_TYPES: JanusAccountType[] = [
   'vendor',
   'partner',
   'publisher',
+  'treat_train',
   'other',
 ];
 
@@ -124,6 +125,7 @@ const ACCOUNT_TYPE_LABELS: Record<JanusAccountType, string> = {
   vendor: 'Vendor',
   partner: 'Partner',
   publisher: 'Publisher',
+  treat_train: 'Treat & Train',
   other: 'Other',
 };
 
