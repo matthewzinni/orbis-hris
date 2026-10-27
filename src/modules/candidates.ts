@@ -1368,27 +1368,46 @@ async function convertCandidateToEmployeeInternal(candidateId: string): Promise<
   }
 
   const candidateEmail = String(data.email || '').trim().toLowerCase();
-  let emailMatch: { id: string } | null = null;
+  const candidatePhone = String(data.phone || '').trim();
+  let emailMatch: { id: string; phone: string | null } | null = null;
 
   if (candidateEmail) {
     const { data: emailRows, error: emailError } = await supabaseClient
       .from('employees')
-      .select('id')
+      .select('id, phone')
       .or(`work_email.eq.${candidateEmail},personal_email.eq.${candidateEmail}`)
       .limit(1);
 
     if (emailError) {
       devWarn('Could not check for existing employee email before conversion:', emailError);
     } else if (emailRows?.[0]?.id) {
-      emailMatch = { id: String(emailRows[0].id) };
+      emailMatch = { id: String(emailRows[0].id), phone: emailRows[0].phone };
     }
   }
 
-  const matchedEmployeeId =
-    emailMatch?.id ||
-    (existingEmployee.data?.[0]?.id ? String(existingEmployee.data[0].id) : '');
+  const matchedEmployee = emailMatch || existingEmployee.data?.[0];
+  const matchedEmployeeId = String(matchedEmployee?.id || '');
 
   if (matchedEmployeeId) {
+    if (candidatePhone && !String(matchedEmployee?.phone || '').trim()) {
+      let phoneUpdate = supabaseClient
+        .from('employees')
+        .update({ phone: candidatePhone })
+        .eq('id', matchedEmployeeId);
+
+      // Only fill the blank value we read; preserve any number saved since the lookup.
+      phoneUpdate = matchedEmployee?.phone == null
+        ? phoneUpdate.is('phone', null)
+        : phoneUpdate.eq('phone', matchedEmployee.phone);
+
+      const { error: phoneError } = await phoneUpdate;
+      if (phoneError) {
+        console.error('Could not copy candidate phone to employee:', phoneError);
+        showToast('Could not save the employee phone number. Please try hiring again.', 'error');
+        return false;
+      }
+    }
+
     await supabaseClient
       .from('candidates')
       .update({ stage: 'Hired', linked_employee_id: matchedEmployeeId })
@@ -1406,8 +1425,6 @@ async function convertCandidateToEmployeeInternal(candidateId: string): Promise<
 
     return true;
   }
-
-  const candidatePhone = String(data.phone || '').trim();
 
   const employeePayload: Record<string, unknown> = {
     id: await generateAvailableEmployeeId(),
