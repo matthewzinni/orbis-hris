@@ -400,7 +400,7 @@ export function applyAdminDashboardView(): void {
               <span
                 id="kPerformanceReviewsDueInfo"
                 class="info-icon"
-                title="90-day and annual performance reviews overdue or due within 7 days."
+                title="90-day performance reviews overdue or due within 7 days."
                 style="cursor: help; font-size: 0.8rem; color: var(--muted)"
                 >ⓘ</span
               >`;

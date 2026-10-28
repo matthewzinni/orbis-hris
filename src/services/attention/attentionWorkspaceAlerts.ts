@@ -44,7 +44,7 @@ export function summarizeAttentionCategoryAlerts(
     alerts.push({
       id: 'performance-reviews-due',
       label: 'Performance reviews due',
-      detail: `${performanceReviews} 90-day or annual review${performanceReviews === 1 ? '' : 's'} need attention`,
+      detail: `${performanceReviews} 90-day review${performanceReviews === 1 ? '' : 's'} need attention`,
       count: performanceReviews,
       viewId: 'myTasksView',
     });
@@ -127,7 +127,7 @@ export function syncAttentionSummaryKpis(summary: AttentionSummary, items: Atten
     } else if (summary.dueSoon > 0) {
       perfSub.textContent = `${summary.dueSoon} due within 7 days`;
     } else if (performanceReviews === 0) {
-      perfSub.textContent = 'No 90-day or annual reviews due right now';
+      perfSub.textContent = 'No 90-day reviews due right now';
     }
   }
 }
