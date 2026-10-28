@@ -494,7 +494,7 @@ function updatePerformanceReviewsDueKpiSubtext(
   const dueSoon = total - overdue;
 
   if (!total) {
-    setKpiText('kPerformanceReviewsDueSub', 'No 90-day or annual reviews due right now');
+    setKpiText('kPerformanceReviewsDueSub', 'No 90-day reviews due right now');
     return;
   }
 

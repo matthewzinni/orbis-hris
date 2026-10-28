@@ -40,6 +40,9 @@ export type PerformanceReviewDueCandidate = {
 
 export const PERFORMANCE_REVIEW_DUE_SOON_DAYS = 7;
 
+/** Annual reviews remain available to record without automatic deadlines or reminders. */
+const ANNUAL_REVIEW_DUE_DATES_ENABLED = false;
+
 /** 90-day performance reviews apply only to hires on or after this date. */
 export const NINETY_DAY_REVIEW_HIRE_CUTOFF = '2026-03-01';
 
@@ -293,8 +296,10 @@ export function computePerformanceReviewDueCandidates(
     const ninetyDay = build90DayDueCandidate(employee, hireDate, employeeReviews);
     if (ninetyDay) items.push(ninetyDay);
 
-    const annual = buildAnnualDueCandidate(employee, hireDate, employeeReviews, normalizedToday);
-    if (annual) items.push(annual);
+    if (ANNUAL_REVIEW_DUE_DATES_ENABLED) {
+      const annual = buildAnnualDueCandidate(employee, hireDate, employeeReviews, normalizedToday);
+      if (annual) items.push(annual);
+    }
   });
 
   items.sort((left, right) => {

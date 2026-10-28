@@ -48,7 +48,7 @@ function collectWorkspaceAlertsFromDom(): WorkspaceAlert[] {
     alerts.push({
       id: 'performance-reviews-due',
       label: 'Performance reviews due',
-      detail: `${performanceReviewsDue} 90-day or annual review${performanceReviewsDue === 1 ? '' : 's'} need attention`,
+      detail: `${performanceReviewsDue} 90-day review${performanceReviewsDue === 1 ? '' : 's'} need attention`,
       count: performanceReviewsDue,
       viewId: 'myTasksView',
     });

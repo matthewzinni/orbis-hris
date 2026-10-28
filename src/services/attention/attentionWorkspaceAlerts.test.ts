@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   summarizeAttentionCategoryAlerts,
   summarizeAttentionRollupAlert,
+  syncAttentionSummaryKpis,
 } from './attentionWorkspaceAlerts';
 import type { AttentionItem, AttentionSummary } from './types';
 
@@ -42,6 +43,32 @@ const sampleItems: AttentionItem[] = [
 ];
 
 describe('attentionWorkspaceAlerts', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('shows no reviews due when other task categories are overdue', () => {
+    const fields = {
+      kPerformanceReviewsDue: { textContent: '' },
+      kPerformanceReviewsDueSub: { textContent: '' },
+    };
+    vi.stubGlobal('document', { getElementById: (id: string) => fields[id] || null });
+
+    syncAttentionSummaryKpis({ overdue: 4, dueSoon: 2 } as AttentionSummary, [sampleItems[1]]);
+
+    expect(fields.kPerformanceReviewsDue.textContent).toBe('0');
+    expect(fields.kPerformanceReviewsDueSub.textContent).toBe('No 90-day reviews due right now');
+  });
+
+  it('keeps review overdue counts separate from other task categories', () => {
+    const subtitle = { textContent: '' };
+    vi.stubGlobal('document', {
+      getElementById: (id: string) => id === 'kPerformanceReviewsDueSub' ? subtitle : null,
+    });
+
+    syncAttentionSummaryKpis({ overdue: 4, dueSoon: 2 } as AttentionSummary, sampleItems);
+
+    expect(subtitle.textContent).toBe('1 overdue · 0 due within 7 days');
+  });
+
   it('builds category alerts from attention items', () => {
     const alerts = summarizeAttentionCategoryAlerts(sampleItems);
     expect(alerts.map((alert) => alert.id)).toEqual([
