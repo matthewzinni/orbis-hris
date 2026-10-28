@@ -106,8 +106,11 @@ export function summarizeAttentionForWorkspaceAlerts(
   return rollup ? [rollup, ...categories] : categories;
 }
 
-export function syncAttentionSummaryKpis(summary: AttentionSummary, items: AttentionItem[]): void {
-  const performanceReviews = items.filter((item) => item.category === 'performance_review').length;
+export function syncAttentionSummaryKpis(_summary: AttentionSummary, items: AttentionItem[]): void {
+  const reviewItems = items.filter((item) => item.category === 'performance_review');
+  const performanceReviews = reviewItems.length;
+  const overdueReviews = reviewItems.filter((item) => item.status === 'overdue').length;
+  const dueSoonReviews = performanceReviews - overdueReviews;
   const discipline = items.filter((item) => item.category === 'discipline').length;
 
   const perfEl = document.getElementById('kPerformanceReviewsDue');
@@ -122,10 +125,10 @@ export function syncAttentionSummaryKpis(summary: AttentionSummary, items: Atten
 
   const perfSub = document.getElementById('kPerformanceReviewsDueSub');
   if (perfSub) {
-    if (summary.overdue > 0) {
-      perfSub.textContent = `${summary.overdue} overdue · ${summary.dueSoon} due within 7 days`;
-    } else if (summary.dueSoon > 0) {
-      perfSub.textContent = `${summary.dueSoon} due within 7 days`;
+    if (overdueReviews > 0) {
+      perfSub.textContent = `${overdueReviews} overdue · ${dueSoonReviews} due within 7 days`;
+    } else if (dueSoonReviews > 0) {
+      perfSub.textContent = `${dueSoonReviews} due within 7 days`;
     } else if (performanceReviews === 0) {
       perfSub.textContent = 'No 90-day reviews due right now';
     }
