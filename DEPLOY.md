@@ -188,6 +188,19 @@ bash scripts/setup_github_weekly_report_secrets.sh       # copies the new secret
 gh workflow run weekly-time-off-email.yml                # send a test now
 ```
 
+### "Send now" button in Orbis (Reports → Time off this week)
+
+Admins can send the same report on demand — to leadership or just to themselves as a preview —
+from **Reports → Time off this week**. The button calls the `send-time-off-report` Edge Function,
+which needs the token and email settings as Supabase secrets:
+
+```bash
+npx supabase secrets set QBT_ACCESS_TOKEN=...            # same token as GitHub
+npx supabase secrets set TIME_OFF_EXTRA_EMAILS=david.allewalt@btwglobal.com
+# SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / MAIL_FROM — already set if leave-request emails work
+npx supabase functions deploy send-time-off-report
+```
+
 ## Smoke test (production)
 
 1. Hard refresh or incognito → `https://www.orbis-btw.com`

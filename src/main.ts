@@ -133,6 +133,7 @@ import {
 } from './modules/meetings';
 import './modules/stayInterviews';
 import './modules/stayInterviewOrgInsights';
+import './modules/timeOffReportCard';
 import './modules/emergencyContacts';
 import './modules/employeeDocuments';
 import {

@@ -43,3 +43,6 @@ verify_jwt = true
 
 [functions.document-signature]
 verify_jwt = false
+
+[functions.send-time-off-report]
+verify_jwt = true
