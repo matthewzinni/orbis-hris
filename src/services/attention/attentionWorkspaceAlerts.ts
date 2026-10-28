@@ -1,4 +1,5 @@
 import type { AttentionItem, AttentionSummary } from './types';
+import { daysUntil } from './utils';
 
 export type AttentionWorkspaceAlert = {
   id: string;
@@ -109,8 +110,11 @@ export function summarizeAttentionForWorkspaceAlerts(
 export function syncAttentionSummaryKpis(_summary: AttentionSummary, items: AttentionItem[]): void {
   const reviewItems = items.filter((item) => item.category === 'performance_review');
   const performanceReviews = reviewItems.length;
-  const overdueReviews = reviewItems.filter((item) => item.status === 'overdue').length;
-  const dueSoonReviews = performanceReviews - overdueReviews;
+  const reviewDayOffsets = reviewItems.map((item) => daysUntil(item.dueDate));
+  const overdueReviews = reviewDayOffsets.filter((days) => days !== null && days < 0).length;
+  const dueSoonReviews = reviewDayOffsets.filter(
+    (days) => days !== null && days >= 0 && days <= 7
+  ).length;
   const discipline = items.filter((item) => item.category === 'discipline').length;
 
   const perfEl = document.getElementById('kPerformanceReviewsDue');
@@ -131,6 +135,8 @@ export function syncAttentionSummaryKpis(_summary: AttentionSummary, items: Atte
       perfSub.textContent = `${dueSoonReviews} due within 7 days`;
     } else if (performanceReviews === 0) {
       perfSub.textContent = 'No 90-day reviews due right now';
+    } else {
+      perfSub.textContent = `${performanceReviews} open review reminder${performanceReviews === 1 ? '' : 's'}`;
     }
   }
 }
