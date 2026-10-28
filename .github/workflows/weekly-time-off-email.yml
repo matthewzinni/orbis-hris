@@ -1,0 +1,55 @@
+# Monday time-off email to leadership — pulls this week's time off from QuickBooks Time (TSheets).
+# Runs in the cloud (no Mac awake required).
+# Schedule: 7:00 AM US Eastern every Monday. GitHub cron is UTC, so it fires at 11:00 and 12:00 UTC
+# and the script only sends from whichever slot is 7 AM Eastern that day (handles daylight saving).
+# Manual run: GitHub → Actions → Weekly Time Off Email → Run workflow (sends immediately).
+
+name: Weekly Time Off Email
+
+on:
+  schedule:
+    - cron: '0 11 * * 1'
+    - cron: '0 12 * * 1'
+  workflow_dispatch:
+    inputs:
+      week_of:
+        description: 'Any date in the week to report (YYYY-MM-DD). Blank = this week.'
+        required: false
+        default: ''
+      mail_to:
+        description: 'Send only to these addresses (comma-separated). Blank = normal leadership list.'
+        required: false
+        default: ''
+
+concurrency:
+  group: weekly-time-off-email
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send time off email
+        env:
+          QBT_ACCESS_TOKEN: ${{ secrets.QBT_ACCESS_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          TIME_OFF_EXTRA_EMAILS: ${{ secrets.TIME_OFF_EXTRA_EMAILS }}
+          CRON_SCHEDULE: ${{ github.event.schedule }}
+          WEEK_OF: ${{ github.event.inputs.week_of }}
+          TIME_OFF_MAIL_TO: ${{ github.event.inputs.mail_to }}
+          WEEKLY_REPORT_MAX_ATTEMPTS: '5'
+          WEEKLY_REPORT_RETRY_WAIT_SECONDS: '300'
+        run: |
+          args=()
+          if [ "${{ github.event_name }}" = "schedule" ]; then args+=(--scheduled); fi
+          if [ -n "$WEEK_OF" ]; then args+=(--week-of "$WEEK_OF"); fi
+          python3 scripts/weekly_time_off_email.py "${args[@]}"

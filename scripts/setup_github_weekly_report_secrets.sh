@@ -32,6 +32,8 @@ keys=(
   MAIL_FROM
   MAIL_TO
   ORBIS_APP_URL
+  QBT_ACCESS_TOKEN
+  TIME_OFF_EXTRA_EMAILS
 )
 
 echo "Setting GitHub Actions secrets for $(gh repo view --json nameWithOwner -q .nameWithOwner)…"
@@ -48,4 +50,5 @@ done
 
 echo ""
 echo "Done. Test with: gh workflow run weekly-orbis-report.yml"
+echo "Time off email test: gh workflow run weekly-time-off-email.yml"
 echo "Logs: GitHub → Actions → Weekly Orbis HR Report"

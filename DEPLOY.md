@@ -169,6 +169,25 @@ Deploy:
 supabase functions deploy intuit-workforce-attendance
 ```
 
+## Monday time-off email (QuickBooks Time / TSheets)
+
+Every Monday at 7:00 AM Eastern, GitHub Actions runs `scripts/weekly_time_off_email.py`
+(`.github/workflows/weekly-time-off-email.yml`). It reads this week's time off request entries
+from QuickBooks Time and emails leadership (Orbis leadership list + approved Orbis admins +
+`TIME_OFF_EXTRA_EMAILS`) two lists: approved time off and requests still pending.
+
+It reuses the weekly HR report secrets (`SUPABASE_*`, `SMTP_*`, `MAIL_FROM`) and adds:
+
+- `QBT_ACCESS_TOKEN` — QuickBooks Time → Feature Add-ons → **API** → Add a new application/token.
+  Copy the access token into `scripts/.env.weekly_report` as `QBT_ACCESS_TOKEN=...` (never paste it in chat).
+- `TIME_OFF_EXTRA_EMAILS` — optional, comma-separated (e.g. David).
+
+```bash
+python3 scripts/weekly_time_off_email.py --dry-run      # preview locally
+bash scripts/setup_github_weekly_report_secrets.sh       # copies the new secrets to GitHub
+gh workflow run weekly-time-off-email.yml                # send a test now
+```
+
 ## Smoke test (production)
 
 1. Hard refresh or incognito → `https://www.orbis-btw.com`
