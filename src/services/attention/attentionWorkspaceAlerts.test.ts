@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   summarizeAttentionCategoryAlerts,
   summarizeAttentionRollupAlert,
@@ -43,7 +43,40 @@ const sampleItems: AttentionItem[] = [
 ];
 
 describe('attentionWorkspaceAlerts', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-07-23T12:00:00'));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('keeps an overdue review overdue after it is marked in progress', () => {
+    const subtitle = { textContent: '' };
+    vi.stubGlobal('document', {
+      getElementById: (id: string) => id === 'kPerformanceReviewsDueSub' ? subtitle : null,
+    });
+    syncAttentionSummaryKpis({} as AttentionSummary, [
+      { ...sampleItems[0], status: 'in_progress' },
+    ]);
+    expect(subtitle.textContent).toBe('1 overdue · 0 due within 7 days');
+  });
+
+  it('counts due-today and seven-day reviews without counting later or undated items as due soon', () => {
+    const subtitle = { textContent: '' };
+    vi.stubGlobal('document', {
+      getElementById: (id: string) => id === 'kPerformanceReviewsDueSub' ? subtitle : null,
+    });
+    syncAttentionSummaryKpis({} as AttentionSummary, [
+      { ...sampleItems[0], status: 'in_progress', dueDate: '2026-07-23' },
+      { ...sampleItems[0], status: 'in_progress', dueDate: '2026-07-30' },
+      { ...sampleItems[0], status: 'in_progress', dueDate: '2026-07-31' },
+      { ...sampleItems[0], status: 'in_progress', dueDate: null },
+    ]);
+    expect(subtitle.textContent).toBe('2 due within 7 days');
+  });
 
   it('shows no reviews due when other task categories are overdue', () => {
     const fields = {
