@@ -228,7 +228,10 @@ export function isPartTimeEmployee(employee: EmployeeLike | null | undefined): b
   const payType = String(employee?.pay_type || employee?.payType || '')
     .trim()
     .toLowerCase();
-  return payType.includes('part');
+  if (payType.includes('part')) return true;
+
+  const weeklyHours = Number(employee?.standard_hours ?? employee?.standardHours ?? 0);
+  return Number.isFinite(weeklyHours) && weeklyHours > 0 && weeklyHours < 30;
 }
 
 export function isLeadershipExcludedFromInHouseFte(
