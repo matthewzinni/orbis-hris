@@ -249,7 +249,7 @@ async function sendSmtpEmail(options: {
     connection: {
       hostname: options.host,
       port: options.port,
-      tls: true,
+      tls: options.port === 465,
       auth: { username: options.user, password: options.pass },
     },
   });
