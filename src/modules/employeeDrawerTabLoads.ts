@@ -43,6 +43,17 @@ function runDrawerTabLoad(
     });
 }
 
+/**
+ * True if `employeeId` is still the drawer's active employee. Tab loaders that `await` a
+ * fetch before writing to a static/shared container (e.g. a #docHistory div reused across
+ * every employee) must check this immediately before that write and bail if it's false --
+ * otherwise a fast employee-switch mid-fetch can render the previous employee's data into
+ * the now-open drawer for a different employee.
+ */
+export function isCurrentDrawerEmployee(employeeId: string): boolean {
+  return Boolean(employeeId) && String(employeeId).trim() === loadedEmployeeId;
+}
+
 export function resetEmployeeDrawerTabLoadState(): void {
   loadedEmployeeId = null;
   loadedTabs.clear();
@@ -138,3 +149,4 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
 window.resetEmployeeDrawerTabLoadState = resetEmployeeDrawerTabLoadState;
 window.invalidateEmployeeDrawerTab = invalidateEmployeeDrawerTab;
 window.loadEmployeeDrawerTab = loadEmployeeDrawerTab;
+window.isCurrentDrawerEmployee = isCurrentDrawerEmployee;

@@ -396,6 +396,7 @@ declare global {
     resetEmployeeDrawerTabLoadState?: () => void;
     invalidateEmployeeDrawerTab?: (tabName: string) => void;
     loadEmployeeDrawerTab?: (tabName: string, employeeId?: string) => void;
+    isCurrentDrawerEmployee?: (employeeId: string) => boolean;
     loadOnboardingTasks?: (employeeId: string) => Promise<void>;
     loadOffboardingTasks?: (employeeId: string) => Promise<void>;
     loadEmployeePayrollHandoffs?: (employeeId: string) => Promise<void>;
