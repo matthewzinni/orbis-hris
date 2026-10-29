@@ -12,7 +12,7 @@
 // written for them. Terminated employees (status = 'TERMINATED' and termination_date set) are
 // never included, even if they still have a stale qbt_user_id.
 //
-// Secrets: QBT_ACCESS_TOKEN (read-only QuickBooks Time calls -- GET only), ATTENDANCE_SYNC_SECRET
+// Secrets: QBT_ACCESS_TOKEN (read-only QuickBooks Time resources and reports), ATTENDANCE_SYNC_SECRET
 // (shared secret for the cron path). SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are provided by
 // Supabase automatically.
 //
@@ -22,8 +22,8 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { jsonResponse, requireOrbisAuth } from '../_shared/orbisEdgeAuth.ts';
 import { deriveAttendanceStatus, type QbtTimesheet } from './deriveStatus.ts';
+import { QbtError, qbtCurrentTotals, qbtGetAll } from './qbtApi.ts';
 
-const QBT_API = 'https://rest.tsheets.com/api/v1';
 const ET = 'America/New_York';
 
 type QbtUser = {
@@ -34,10 +34,7 @@ type QbtUser = {
 };
 
 type QbtCurrentTotal = {
-  // QuickBooks Time's current_totals response is keyed by user id; shape confirmed against the
-  // training project during Phase 4 -- `on_the_clock` plus a shift-start timestamp field is the
-  // documented convention, but verify field names against a live response before trusting this
-  // in production, since we can't hit the real API from here.
+  // The current_totals report is keyed by user id and includes on_the_clock.
   on_the_clock?: boolean;
   shift_seconds?: number;
 };
@@ -51,39 +48,8 @@ type Employee = {
   qbt_user_id?: string | null;
 };
 
-class QbtError extends Error {}
-
 function todayInEt(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: ET }).format(new Date());
-}
-
-async function qbtGetAll(
-  token: string,
-  path: string,
-  key: string,
-  params: Record<string, string>
-): Promise<Record<string, Record<string, unknown>>> {
-  const out: Record<string, Record<string, unknown>> = {};
-  for (let page = 1; page <= 50; page++) {
-    const qs = new URLSearchParams({ ...params, limit: '200', page: String(page) });
-    const res = await fetch(`${QBT_API}/${path}?${qs}`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    });
-    if (res.status === 417) break; // QBT: filter matched nothing
-    if (res.status === 401) {
-      throw new QbtError(
-        'QuickBooks Time rejected QBT_ACCESS_TOKEN (HTTP 401). Create a new token and update the secret.'
-      );
-    }
-    if (!res.ok) throw new QbtError(`QuickBooks Time HTTP ${res.status} on ${path}.`);
-    const body = (await res.json()) as {
-      results?: Record<string, Record<string, Record<string, unknown>>>;
-      more?: boolean;
-    };
-    Object.assign(out, body.results?.[key] || {});
-    if (!body.more) break;
-  }
-  return out;
 }
 
 function isTerminated(e: Employee): boolean {
@@ -144,9 +110,9 @@ Deno.serve(async (req) => {
     });
 
     const [users, timesheetsByUser, currentTotals] = await Promise.all([
-      qbtGetAll(token, 'users', 'users', { active: 'true' }),
+      qbtGetAll(token, 'users', 'users', { active: 'yes' }),
       qbtGetAll(token, 'timesheets', 'timesheets', { start_date: today, end_date: today }),
-      qbtGetAll(token, 'current_totals', 'current_totals', {}),
+      qbtCurrentTotals(token),
     ]);
 
     const timesheetsByQbtUser = new Map<string, QbtTimesheet[]>();
