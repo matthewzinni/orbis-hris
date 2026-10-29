@@ -34,10 +34,9 @@ type QbtUser = {
 };
 
 type QbtCurrentTotal = {
-  // QuickBooks Time's current_totals response is keyed by user id; shape confirmed against the
-  // training project during Phase 4 -- `on_the_clock` plus a shift-start timestamp field is the
-  // documented convention, but verify field names against a live response before trusting this
-  // in production, since we can't hit the real API from here.
+  // Unlike every other QBT resource here, current_totals is a "reports" endpoint: POST
+  // /reports/current_totals with a JSON body, not GET /current_totals -- the GET path returns a
+  // generic QBT-side 404, which is what production's first cron runs hit (see fetchCurrentTotals).
   on_the_clock?: boolean;
   shift_seconds?: number;
 };
@@ -75,7 +74,10 @@ async function qbtGetAll(
         'QuickBooks Time rejected QBT_ACCESS_TOKEN (HTTP 401). Create a new token and update the secret.'
       );
     }
-    if (!res.ok) throw new QbtError(`QuickBooks Time HTTP ${res.status} on ${path}.`);
+    if (!res.ok) {
+      const bodyText = (await res.text()).slice(0, 500);
+      throw new QbtError(`QuickBooks Time HTTP ${res.status} on ${path}: ${bodyText}`);
+    }
     const body = (await res.json()) as {
       results?: Record<string, Record<string, Record<string, unknown>>>;
       more?: boolean;
@@ -84,6 +86,34 @@ async function qbtGetAll(
     if (!body.more) break;
   }
   return out;
+}
+
+// current_totals is a "reports" endpoint (POST + JSON body), unlike the plain GET resources
+// qbtGetAll handles -- QBT requires at least one of on_the_clock/user_ids/group_ids in the body.
+async function fetchCurrentTotals(token: string): Promise<Record<string, Record<string, unknown>>> {
+  const res = await fetch(`${QBT_API}/reports/current_totals`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ data: { on_the_clock: 'both' } }),
+  });
+  if (res.status === 417) return {}; // QBT: filter matched nothing
+  if (res.status === 401) {
+    throw new QbtError(
+      'QuickBooks Time rejected QBT_ACCESS_TOKEN (HTTP 401). Create a new token and update the secret.'
+    );
+  }
+  if (!res.ok) {
+    const bodyText = (await res.text()).slice(0, 500);
+    throw new QbtError(`QuickBooks Time HTTP ${res.status} on reports/current_totals: ${bodyText}`);
+  }
+  const body = (await res.json()) as {
+    results?: { current_totals?: Record<string, Record<string, unknown>> };
+  };
+  return body.results?.current_totals || {};
 }
 
 function isTerminated(e: Employee): boolean {
@@ -146,7 +176,7 @@ Deno.serve(async (req) => {
     const [users, timesheetsByUser, currentTotals] = await Promise.all([
       qbtGetAll(token, 'users', 'users', { active: 'true' }),
       qbtGetAll(token, 'timesheets', 'timesheets', { start_date: today, end_date: today }),
-      qbtGetAll(token, 'current_totals', 'current_totals', {}),
+      fetchCurrentTotals(token),
     ]);
 
     const timesheetsByQbtUser = new Map<string, QbtTimesheet[]>();
