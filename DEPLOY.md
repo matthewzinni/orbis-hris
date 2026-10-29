@@ -215,8 +215,9 @@ Pieces:
 - Edge Function `sync-qbt-pto` — Reports → **PTO balances (QuickBooks Time)** → Preview / Refresh (admins).
 - Employee list **PTO hrs** column; profile Time Off panel and My Time Off show "From QuickBooks Time · as of …".
 
-Matching: QBT email = work or personal email → exact first + last name → first name + shared last-name word
-(unique only). Never creates or deletes employees. Unmatched users are listed and skipped.
+Matching (in passes, strongest first; unique only): exact name (Jr/III ignored) → QBT email = work or
+personal email, only if the names agree → first name/nickname + last-name word ("Alex Trent Wynne" → Trent
+Wynne, "Nick Jordan" → Nicholas Jordan). Never creates or deletes employees. Unmatched users are listed and skipped.
 
 Deploy:
 
@@ -232,8 +233,8 @@ First run (dry run, writes nothing): GitHub → Actions → **Sync PTO from Quic
 Turn on daily writes: GitHub → Settings → Secrets and variables → Actions → **Variables** →
 `PTO_SYNC_ENABLED = true`. Until then the 6 AM scheduled run is a dry run.
 
-Optional variable / secret `QBT_PTO_TYPES` = comma list of QBT PTO type names to count
-(e.g. `PTO,Vacation`). Default counts every PTO type. Set it as a GitHub Actions variable and, for the
+Optional variable / secret `QBT_PTO_TYPES` = comma list of QBT PTO type names to count.
+Default `Paid Time Off (PTO)` (Holiday, Sick, etc. are not added in); `all` counts every type. Set it as a GitHub Actions variable and, for the
 Reports button, `npx supabase secrets set QBT_PTO_TYPES=...`.
 
 Local: `python3 scripts/sync_qbt_pto_balances.py --dry-run` (uses `scripts/.env.weekly_report`).
