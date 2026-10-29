@@ -11,6 +11,7 @@ import { getLinkedEmployeeId, hasPersonalEmployeePortal } from '../services/acce
 import {
   formatPtoHours,
   loadEmployeePtoSnapshot,
+  ptoBalanceMetaText,
   ptoPanelHeaderLabel,
 } from '../services/ptoBalance';
 
@@ -100,14 +101,7 @@ export async function loadMyTimeOffPortal(): Promise<void> {
         balanceMeta.textContent =
           'PTO balance has not been imported yet. Contact HR if this looks wrong.';
       } else {
-        const parts = [
-          `Baseline ${formatPtoHours(snapshot.baselineHours)} hr`,
-          snapshot.baselineAsOf ? `as of ${snapshot.baselineAsOf}` : null,
-          snapshot.usedHours > 0
-            ? `${formatPtoHours(snapshot.usedHours)} hr approved in Orbis`
-            : null,
-        ].filter(Boolean);
-        balanceMeta.textContent = parts.join(' · ');
+        balanceMeta.textContent = ptoBalanceMetaText(snapshot, 'approved in Orbis');
       }
     }
 

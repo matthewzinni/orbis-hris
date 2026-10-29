@@ -30,6 +30,8 @@ export interface Employee {
     /** Baseline PTO hours from payroll import; remaining is computed in app. */
     pto_balance_hours?: number | null;
     pto_balance_as_of?: string | null;
+    pto_balance_source?: string | null;
+    pto_balance_breakdown?: Record<string, number> | null;
 
     // Status
     status?: 'Active' | 'Inactive' | 'Terminated' | 'Leave' | 'Absent';

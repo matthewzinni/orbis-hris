@@ -134,6 +134,7 @@ import {
 import './modules/stayInterviews';
 import './modules/stayInterviewOrgInsights';
 import './modules/timeOffReportCard';
+import './modules/ptoSyncCard';
 import './modules/emergencyContacts';
 import './modules/employeeDocuments';
 import {

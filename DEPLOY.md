@@ -201,6 +201,43 @@ npx supabase secrets set TIME_OFF_EXTRA_EMAILS=david.allewalt@btwglobal.com
 npx supabase functions deploy send-time-off-report
 ```
 
+## PTO balances from QuickBooks Time (daily sync)
+
+Remaining PTO hours come from QuickBooks Time (TSheets / Intuit Workforce) `users.pto_balances`
+(seconds per PTO type). Synced employees get `employees.pto_balance_source = 'quickbooks_time'`;
+Orbis shows that balance as-is (it is already net of time taken), with a per-type breakdown.
+Manual "Adjust banked PTO" (Matthew only) switches an employee back to `manual` until the next sync.
+
+Pieces:
+- Migration `20261029150000_pto_balance_qbt_sync.sql` — adds `pto_balance_source`, `pto_balance_breakdown`;
+  lets the service role (sync) write PTO fields; everyone except Matthew is still blocked.
+- `scripts/sync_qbt_pto_balances.py` + `.github/workflows/sync-qbt-pto.yml` — daily 6:00 AM ET.
+- Edge Function `sync-qbt-pto` — Reports → **PTO balances (QuickBooks Time)** → Preview / Refresh (admins).
+- Employee list **PTO hrs** column; profile Time Off panel and My Time Off show "From QuickBooks Time · as of …".
+
+Matching: QBT email = work or personal email → exact first + last name → first name + shared last-name word
+(unique only). Never creates or deletes employees. Unmatched users are listed and skipped.
+
+Deploy:
+
+```bash
+npx supabase db push                              # applies 20261029150000_pto_balance_qbt_sync.sql
+npx supabase functions deploy sync-qbt-pto        # QBT_ACCESS_TOKEN secret is already set
+git push                                          # Vercel redeploys the UI
+```
+
+First run (dry run, writes nothing): GitHub → Actions → **Sync PTO from QuickBooks Time** → Run workflow
+(leave "Dry run" checked), or Reports → **Preview matches**. Review the matched / not matched lists.
+
+Turn on daily writes: GitHub → Settings → Secrets and variables → Actions → **Variables** →
+`PTO_SYNC_ENABLED = true`. Until then the 6 AM scheduled run is a dry run.
+
+Optional variable / secret `QBT_PTO_TYPES` = comma list of QBT PTO type names to count
+(e.g. `PTO,Vacation`). Default counts every PTO type. Set it as a GitHub Actions variable and, for the
+Reports button, `npx supabase secrets set QBT_PTO_TYPES=...`.
+
+Local: `python3 scripts/sync_qbt_pto_balances.py --dry-run` (uses `scripts/.env.weekly_report`).
+
 ## Smoke test (production)
 
 1. Hard refresh or incognito → `https://www.orbis-btw.com`

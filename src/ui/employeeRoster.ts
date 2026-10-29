@@ -738,12 +738,34 @@ function getFilteredRosterEmployees() {
                     valA = a.displayStatus || '';
                     valB = b.displayStatus || '';
                     break;
+                case 'pto': {
+                    const ptoA = rosterPtoHours(a) ?? -1;
+                    const ptoB = rosterPtoHours(b) ?? -1;
+                    return win.currentSort?.direction === 'desc' ? ptoB - ptoA : ptoA - ptoB;
+                }
                 default:
                     valA = a.displayName || '';
                     valB = b.displayName || '';
             }            const result = compareText(valA, valB);
             return win.currentSort?.direction === 'desc' ? -result : result;
         });
+}
+
+function rosterPtoHours(employee): number | null {
+    const raw = employee?.pto_balance_hours;
+    if (raw == null || raw === '' || Number.isNaN(Number(raw))) return null;
+    return Number(raw);
+}
+
+function rosterPtoCell(employee): string {
+    const hours = rosterPtoHours(employee);
+    if (hours == null) return '<td class="muted">—</td>';
+    const asOf = employee.pto_balance_as_of ? String(employee.pto_balance_as_of).slice(0, 10) : '';
+    const fromQbt = String(employee.pto_balance_source || '').toLowerCase() === 'quickbooks_time';
+    const title = fromQbt
+        ? `From QuickBooks Time${asOf ? ` as of ${asOf}` : ''}`
+        : `Banked baseline${asOf ? ` as of ${asOf}` : ''} — open the employee for remaining after Orbis-approved PTO`;
+    return `<td class="${fromQbt ? '' : 'muted'}" title="${esc(title)}">${hours.toFixed(2)}</td>`;
 }
 
 function renderEmployeeRoster() {
@@ -774,7 +796,7 @@ function renderEmployeeRoster() {
     if (!employees.length) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="empty">
+                <td colspan="9" class="empty">
                     <div style="padding:20px; text-align:center;">
                         <strong>No employees found</strong><br>
                         <span style="color:#6b7280; font-size:13px;">
@@ -815,6 +837,7 @@ function renderEmployeeRoster() {
                 <td>${hireDateCell}</td>
                 <td class="roster-col-terminated">${terminationDateCell}</td>
                 <td><span class="${statusBadge(employee.displayStatus)}">${esc(employee.displayStatusLabel)}</span></td>
+                ${rosterPtoCell(employee)}
             </tr>
         `;
     }).join('');

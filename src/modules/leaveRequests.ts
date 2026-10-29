@@ -19,6 +19,7 @@ import {
 import {
   formatPtoHours,
   loadEmployeePtoSnapshot,
+  ptoBalanceMetaText,
   ptoPanelHeaderLabel,
   adjustEmployeePtoBaselineHours,
   setEmployeePtoBaselineHours,
@@ -289,16 +290,10 @@ async function refreshLeavePanelHeader(
 
     if (sub) {
       if (snapshot.baselineHours == null) {
-        sub.textContent = 'Import a PTO baseline from QuickBooks Time to track remaining hours.';
+        sub.textContent =
+          'No PTO balance yet — it fills in from QuickBooks Time on the next daily sync (Reports → PTO balances).';
       } else {
-        const parts = [
-          `Baseline ${formatPtoHours(snapshot.baselineHours)} hr`,
-          snapshot.baselineAsOf ? `as of ${snapshot.baselineAsOf}` : null,
-          snapshot.usedHours > 0
-            ? `${formatPtoHours(snapshot.usedHours)} hr new approved PTO in Orbis`
-            : null,
-        ].filter(Boolean);
-        sub.textContent = parts.join(' · ');
+        sub.textContent = ptoBalanceMetaText(snapshot, 'new approved PTO in Orbis');
       }
     }
   } catch {

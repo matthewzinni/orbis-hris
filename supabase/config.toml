@@ -46,3 +46,6 @@ verify_jwt = false
 
 [functions.send-time-off-report]
 verify_jwt = true
+
+[functions.sync-qbt-pto]
+verify_jwt = true

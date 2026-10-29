@@ -1,0 +1,53 @@
+# Daily PTO balance sync: QuickBooks Time (TSheets / Intuit Workforce) → Orbis employees.pto_balance_hours.
+# Schedule: 6:00 AM US Eastern every day. GitHub cron is UTC, so it fires at 10:00 and 11:00 UTC and the
+# script only runs from whichever slot is 6 AM Eastern that day (handles daylight saving).
+# Manual run: GitHub → Actions → Sync PTO from QuickBooks Time → Run workflow.
+#   Manual runs are a DRY RUN by default (prints matched / unmatched, writes nothing).
+#   Set "dry_run" to false to write balances.
+# Scheduled runs stay dry runs until the repo variable PTO_SYNC_ENABLED is set to "true"
+# (Settings → Secrets and variables → Actions → Variables).
+# Optional repo variable QBT_PTO_TYPES: comma list of QBT PTO type names to count (default: all).
+
+name: Sync PTO from QuickBooks Time
+
+on:
+  schedule:
+    - cron: '0 10 * * *'
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (show matches, write nothing)'
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: sync-qbt-pto
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync PTO balances
+        env:
+          QBT_ACCESS_TOKEN: ${{ secrets.QBT_ACCESS_TOKEN }}
+          QBT_PTO_TYPES: ${{ vars.QBT_PTO_TYPES }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+          PTO_SYNC_ENABLED: ${{ vars.PTO_SYNC_ENABLED }}
+        run: |
+          args=()
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            args+=(--scheduled)
+            # Scheduled runs only write once the repo variable PTO_SYNC_ENABLED=true is set
+            # (after the dry run has been reviewed). Until then they are dry runs.
+            if [ "$PTO_SYNC_ENABLED" != "true" ]; then args+=(--dry-run); fi
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "$DRY_RUN" != "false" ]; then args+=(--dry-run); fi
+          python3 scripts/sync_qbt_pto_balances.py "${args[@]}"
