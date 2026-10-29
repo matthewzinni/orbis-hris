@@ -47,23 +47,22 @@ describe('syncAttendanceFromQuickBooksTime', () => {
 
 describe('loadTodaysLiveAttendance', () => {
   it('maps attendance_live_status rows to camelCase', async () => {
+    const eq = vi.fn().mockResolvedValue({
+      data: [{
+        employee_id: 'BTW2101',
+        status: 'worked_clocked_out',
+        clock_in_at: '2026-10-29T12:00:00.000Z',
+        clock_out_at: '2026-10-29T20:00:00.000Z',
+        synced_at: '2026-10-29T20:05:00.000Z',
+      }],
+      error: null,
+    });
     selectFrom.mockReturnValue({
-      select: () =>
-        Promise.resolve({
-          data: [
-            {
-              employee_id: 'BTW2101',
-              status: 'worked_clocked_out',
-              clock_in_at: '2026-10-29T12:00:00.000Z',
-              clock_out_at: '2026-10-29T20:00:00.000Z',
-              synced_at: '2026-10-29T20:05:00.000Z',
-            },
-          ],
-          error: null,
-        }),
+      select: () => ({ eq }),
     });
 
     const rows = await loadTodaysLiveAttendance();
+    expect(eq).toHaveBeenCalledWith('attendance_date', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/));
 
     expect(rows).toEqual([
       {

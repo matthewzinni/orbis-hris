@@ -1,5 +1,7 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
 import { supabaseClient } from './supabaseClient';
+import { attendanceDateEt } from './attendanceLiveKpis';
+export { isNoPunchAbsent, nowTimeOfDayEt } from './attendanceLiveKpis';
 
 export type LiveAttendanceStatus = 'on_clock' | 'worked_clocked_out' | 'manual_entry' | 'no_punch';
 
@@ -99,7 +101,8 @@ export async function syncAttendanceFromQuickBooksTime(
 export async function loadTodaysLiveAttendance(): Promise<LiveAttendanceRow[]> {
   const { data, error } = await supabaseClient
     .from('attendance_live_status')
-    .select('employee_id, status, clock_in_at, clock_out_at, synced_at');
+    .select('employee_id, status, clock_in_at, clock_out_at, synced_at')
+    .eq('attendance_date', attendanceDateEt());
 
   if (error) {
     if (error.code === '42P01' || /does not exist/i.test(error.message || '')) {
@@ -117,36 +120,4 @@ export async function loadTodaysLiveAttendance(): Promise<LiveAttendanceRow[]> {
     clockOutAt: row.clock_out_at ? String(row.clock_out_at) : null,
     syncedAt: String(row.synced_at || ''),
   }));
-}
-
-const ET_TIME_ZONE = 'America/New_York';
-
-/** Current time-of-day in America/New_York as "HH:MM:SS", for comparison against
- * employees.scheduled_start_time (a plain `time` column, also "HH:MM:SS"). */
-export function nowTimeOfDayEt(date: Date = new Date()): string {
-  return new Intl.DateTimeFormat('en-GB', {
-    timeZone: ET_TIME_ZONE,
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  })
-    .format(date)
-    .replace(/[^\d:]/g, '');
-}
-
-/**
- * A `no_punch` status should only display as "absent" once the employee's scheduled shift has
- * started. Before that, or if no scheduled_start_time is set at all, it's shown neutrally
- * ("not started yet") -- never auto-flagged absent without a known schedule.
- */
-export function isNoPunchAbsent(
-  status: LiveAttendanceStatus,
-  scheduledStartTime: string | null | undefined,
-  now: Date = new Date()
-): boolean {
-  if (status !== 'no_punch') return false;
-  const scheduled = String(scheduledStartTime || '').trim();
-  if (!scheduled) return false;
-  return nowTimeOfDayEt(now) >= scheduled;
 }

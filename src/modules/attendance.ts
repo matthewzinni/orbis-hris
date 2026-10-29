@@ -25,6 +25,7 @@ import {
   type AttendanceRollCallSection,
 } from '../services/attendanceRollCallSections';
 import { employeeDisplayName } from '../services/employeeUtils';
+import { attendanceDateEt, countAttendanceKpis } from '../services/attendanceLiveKpis';
 import {
   AttendanceLiveSyncError,
   isNoPunchAbsent,
@@ -53,6 +54,8 @@ let attendanceCacheDate: string | null = null;
 let attendanceLoading = false;
 let attendanceSaving = false;
 let leaveTodayIdsCache = new Set<string>();
+let liveAttendanceRows: LiveAttendanceRow[] = [];
+let liveAttendanceDate: string | null = null;
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -79,10 +82,7 @@ function escapeHtml(value: unknown): string {
 }
 
 function todayIsoDate(): string {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-  const local = new Date(now.getTime() - offset * 60_000);
-  return local.toISOString().slice(0, 10);
+  return attendanceDateEt();
 }
 
 function getSelectedDate(): string {
@@ -380,9 +380,12 @@ function renderLiveAttendanceRows(rows: LiveAttendanceRow[]): void {
       const employee = findEmployeeById(row.employeeId);
       const name = employeeDisplayName(employee) || row.employeeId;
       const scheduledStartTime = (employee?.scheduled_start_time as string | null | undefined) ?? null;
-      const showAsAbsent = isNoPunchAbsent(row.status, scheduledStartTime);
+      const onLeave = employee ? isLeaveProtectedEmployee(employee) : false;
+      const showAsAbsent = !onLeave && isNoPunchAbsent(row.status, scheduledStartTime);
       const label =
-        row.status === 'no_punch' && !showAsAbsent ? 'Not started yet' : LIVE_STATUS_LABELS[row.status];
+        row.status === 'no_punch'
+          ? onLeave ? 'On leave' : showAsAbsent ? 'Absent (no punch)' : 'Not started yet'
+          : LIVE_STATUS_LABELS[row.status];
       const badgeClass =
         row.status === 'on_clock'
           ? 'badge-active'
@@ -416,12 +419,19 @@ async function loadLiveAttendancePanel(): Promise<void> {
   if (!body || !canViewAttendance()) return;
 
   try {
+    const liveDate = todayIsoDate();
     const rows = await loadTodaysLiveAttendance();
+    liveAttendanceRows = rows;
+    liveAttendanceDate = liveDate;
     renderLiveAttendanceRows(rows);
     updateLiveSyncedAtLabel(rows);
+    updateAttendanceKpis(ensureWorkingSnapshot());
   } catch (error) {
     console.error('[Attendance] Live status load failed:', error);
+    liveAttendanceRows = [];
+    liveAttendanceDate = null;
     body.innerHTML = '<tr><td colspan="3" class="empty">Could not load live attendance.</td></tr>';
+    updateAttendanceKpis(ensureWorkingSnapshot());
   }
 }
 
@@ -457,12 +467,38 @@ function updateAttendanceKpis(snapshot: AttendanceSummary): void {
   const asOf = safeGet('attendanceAsOf');
   const source = safeGet('attendanceSource');
 
-  const fromDom = countChecklistFromDom();
-  const presentTotal = fromDom ? fromDom.present : snapshot.present.length;
-  const absentTotal = fromDom ? fromDom.absent : snapshot.absent.length;
+  const useLive = getSelectedDate() === todayIsoDate() && liveAttendanceDate === todayIsoDate();
+  const liveById = new Map(useLive ? liveAttendanceRows.map((row) => [row.employeeId, row]) : []);
+  const presentKeys = presentKeySet(snapshot);
+  const absentKeys = absentKeySet(snapshot);
+  const body = safeGet<HTMLTableSectionElement>('attendanceChecklistBody');
+  let livePeople = 0;
+  const people = getRollCallEmployees().map((employee) => {
+    const key = personKey(personFromEmployee(employee));
+    const row = body?.querySelector(`tr.attendance-employee-row[data-attendance-key="${CSS.escape(key)}"]`);
+    const checks = getRowCheckboxes(row || null);
+    const live = [employeeRosterId(employee), employee.id, employee.dbId]
+      .map((id) => id ? liveById.get(String(id)) : undefined).find(Boolean);
+    if (live) livePeople++;
+    return {
+      liveStatus: live?.status,
+      scheduledStartTime: employee.scheduled_start_time as string | null | undefined,
+      onLeave: useLive && isLeaveProtectedEmployee(employee),
+      manualPresent: checks.present ? checks.present.checked : presentKeys.has(key),
+      manualAbsent: checks.absent ? checks.absent.checked : absentKeys.has(key),
+    };
+  });
+  const totals = countAttendanceKpis(people);
+  const fromDom = people.length ? null : countChecklistFromDom();
+  const presentTotal = people.length ? totals.present : fromDom ? fromDom.present : snapshot.present.length;
+  const absentTotal = people.length ? totals.absent : fromDom ? fromDom.absent : snapshot.absent.length;
 
   if (presentCount) presentCount.textContent = String(presentTotal);
   if (absentCount) absentCount.textContent = String(absentTotal);
+  const presentDetail = safeGet('attendancePresentDetail');
+  const absentDetail = safeGet('attendanceAbsentDetail');
+  if (presentDetail) presentDetail.textContent = livePeople ? 'Worked today · QuickBooks Time and roll call' : 'Checked in roll call';
+  if (absentDetail) absentDetail.textContent = livePeople ? 'No punch after shift start or marked absent' : 'Absent box checked';
   if (asOf) asOf.textContent = formatAsOfLabel(snapshot.asOf, snapshot.timezone);
   if (source) source.textContent = snapshot.source || 'Manual';
 }
