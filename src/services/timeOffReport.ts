@@ -35,13 +35,25 @@ async function describeInvokeFailure(error: unknown): Promise<string> {
   return error instanceof Error ? error.message : 'Could not reach the time off report service.';
 }
 
-/** Monday (YYYY-MM-DD) of the week containing `date`, using the browser's local date. */
+const ET_TIME_ZONE = 'America/New_York';
+
+/** YYYY-MM-DD calendar date for `date` in America/New_York, regardless of the browser's local timezone. */
+function etDateString(date: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: ET_TIME_ZONE }).format(date);
+}
+
+/**
+ * Monday (YYYY-MM-DD) of the week containing `date`, using the America/New_York calendar
+ * date rather than the browser's local date -- so the result matches the edge function's
+ * own ET-based fallback regardless of the admin's timezone.
+ */
 export function mondayOfWeek(date: Date): string {
-  const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${mm}-${dd}`;
+  const [y, m, d] = etDateString(date).split('-').map(Number);
+  const utcDate = new Date(Date.UTC(y, m - 1, d));
+  utcDate.setUTCDate(utcDate.getUTCDate() - ((utcDate.getUTCDay() + 6) % 7));
+  const mm = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(utcDate.getUTCDate()).padStart(2, '0');
+  return `${utcDate.getUTCFullYear()}-${mm}-${dd}`;
 }
 
 export async function sendTimeOffReport(options: {
