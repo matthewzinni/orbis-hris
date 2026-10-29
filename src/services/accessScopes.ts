@@ -144,13 +144,14 @@ export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | 
     return Boolean(empId) && scopedIds.includes(empId);
   }
 
-  const supervisorName = String(access?.supervisor_name || '')
-    .trim()
-    .toLowerCase();
+  const supervisorNames = [
+    String(access?.supervisor_name || '').trim(),
+    String(access?.display_name || '').trim(),
+  ].filter(Boolean);
 
-  if (!supervisorName) {
+  if (!supervisorNames.length) {
     console.warn(
-      '[Supervisor Match Fail] No supervisor_name on currentUserAccess:',
+      '[Supervisor Match Fail] No supervisor_name or display_name on currentUserAccess:',
       access
     );
     return false;
@@ -163,7 +164,7 @@ export function employeeMatchesSupervisorAccess(employee: EmployeeLike | null | 
     return false;
   }
 
-  return supervisorNameMatches(employeeSupervisor, supervisorName);
+  return supervisorNames.some((name) => supervisorNameMatches(employeeSupervisor, name));
 }
 
 /** Departments derived from employees visible to the current supervisor. */
