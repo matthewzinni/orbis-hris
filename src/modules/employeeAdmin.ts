@@ -100,6 +100,12 @@ const EMPLOYEE_DELETE_RELATED_TABLES = [
   'care_follow_ups',
   'care_resources_shared',
   'care_wellness_check_ins',
+  'investigation_subjects',
+  'internal_job_interest',
+  'handbook_acknowledgment_forms',
+  'leadership_enrollments',
+  'leadership_workshop_participants',
+  'leadership_development_goals',
 ] as const;
 
 async function deleteEmployeeDocumentStorageForEmployee(
@@ -185,6 +191,21 @@ export async function deleteEmployeeById(
         ),
       };
     }
+  }
+
+  // leadership_coaching_sessions keys on participant_employee_id, not employee_id -- can't join
+  // the uniform loop above.
+  const { error: coachingError } = await supabaseClient
+    .from('leadership_coaching_sessions')
+    .delete()
+    .eq('participant_employee_id', targetId);
+  if (coachingError) {
+    console.error('Could not delete related rows from leadership_coaching_sessions:', coachingError);
+    return {
+      error: new Error(
+        `Could not delete related leadership coaching session records: ${coachingError.message}`
+      ),
+    };
   }
 
   const linkError = await clearEmployeePortalLinks(targetId);
