@@ -18,6 +18,7 @@ import {
 } from '../services/leaveRequests';
 import {
   formatPtoHours,
+  loadEmployeePtoBaseline,
   loadEmployeePtoSnapshot,
   isQuickBooksTimeBalance,
   ptoBalanceMetaText,
@@ -181,14 +182,21 @@ async function applyPtoBaselineAdjustment(mode: 'add' | 'subtract' | 'set'): Pro
     showToast('Only Matthew can adjust banked PTO hours.', 'error');
     return;
   }
-  if (currentBalanceFromQbt) {
-    showToast('This balance comes from QuickBooks Time. Change it there; Orbis updates every morning.', 'error');
-    return;
-  }
-
   const rosterId = getCurrentEmployeeRosterId();
   if (!rosterId) {
     showToast('Open an employee first.', 'error');
+    return;
+  }
+
+  // Re-check against the live balance source, not just the flag captured when this drawer
+  // was opened -- a background QuickBooks Time sync can flip the source after the drawer
+  // loaded but before this button is clicked, and the stale in-memory flag would otherwise
+  // let a manual edit silently overwrite a same-day QBT sync without any warning.
+  const liveBaseline = await loadEmployeePtoBaseline(rosterId);
+  currentBalanceFromQbt = isQuickBooksTimeBalance(liveBaseline.source);
+  applyPtoBalanceEditorVisibility();
+  if (currentBalanceFromQbt) {
+    showToast('This balance comes from QuickBooks Time. Change it there; Orbis updates every morning.', 'error');
     return;
   }
 
