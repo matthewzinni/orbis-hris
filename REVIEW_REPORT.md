@@ -182,4 +182,13 @@ git merge cleanup/deep-review
 git push origin main
 ```
 
-**Phase 4 (live verification)** is still pending — it needs training-project credentials (`VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` for the Northline demo Supabase project) to run `npm run test:e2e` and click through each role's main flows. Send those when you're ready and I'll run it.
+## Phase 4 — verification status
+
+Ran the full Playwright suite locally (installed Chromium for this sandbox): **19 of 25 tests pass** with no backend configured at all. These cover bundle/startup integrity, the pre-auth login shell, mobile responsive layout (login + drawer chrome at several viewport widths), an Excel export using mocked in-memory employee data, and 4 of 6 publisher-document-signing flows that mock the network layer directly.
+
+The **6 failing tests all require a real authenticated session against a live Supabase project** — exactly the ones gated on real backend data, which is expected without credentials:
+- `handbook-group-signing.spec.ts` (2 tests) — need a real group-signing link
+- `handbook-signing.spec.ts` (3 tests) — need a real signing token / backend-configured Supabase URL
+- `publisher-document-signing.spec.ts` (1 test) — needs a real admin sign-in (`window.signIn`)
+
+**Role-based click-through (admin/supervisor/employee main flows) has not been done.** That needs training-project credentials (`VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` for the Northline demo Supabase project, dropped into `.env.training`) so I can run `npm run dev:training` and either drive it myself or hand you a checklist. Send those when you're ready, or let me know if you'd rather do that pass yourself using the DEPLOY.md "Smoke test" list plus the lifecycle checklist in `docs/AUDIT_DATA_INTEGRITY.md`.
