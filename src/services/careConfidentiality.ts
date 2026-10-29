@@ -35,6 +35,15 @@ export function canViewCareConfidentialRecord(
   return false;
 }
 
+/** Whether the current user may see a care record scoped only by employee (no confidentiality tier). */
+function canViewCareEmployeeScopedRecord(employeeId: string): boolean {
+  if (isAdminUser()) return true;
+  if (!isSupervisorUser()) return false;
+
+  const employee = findCareEmployeeById(employeeId);
+  return employee ? employeeMatchesSupervisorAccess(employee) : false;
+}
+
 /** Strip care items and notes the current user must not see (defense in depth with RLS). */
 export function filterCareEngagementDatasetForViewer(
   dataset: CareEngagementDataset
@@ -47,15 +56,25 @@ export function filterCareEngagementDatasetForViewer(
   const employeeNotes = dataset.employeeNotes.filter((note) =>
     canViewCareConfidentialRecord(note.confidentiality, note.employeeId)
   );
+  const followUps = dataset.followUps.filter((item) => canViewCareEmployeeScopedRecord(item.employeeId));
+  const resources = dataset.resources.filter((item) => canViewCareEmployeeScopedRecord(item.employeeId));
+  const wellnessCheckIns = dataset.wellnessCheckIns.filter((item) =>
+    canViewCareEmployeeScopedRecord(item.employeeId)
+  );
+  const recognition = dataset.recognition.filter((item) => canViewCareEmployeeScopedRecord(item.employeeId));
 
   if (
     careItems.length === dataset.careItems.length &&
-    employeeNotes.length === dataset.employeeNotes.length
+    employeeNotes.length === dataset.employeeNotes.length &&
+    followUps.length === dataset.followUps.length &&
+    resources.length === dataset.resources.length &&
+    wellnessCheckIns.length === dataset.wellnessCheckIns.length &&
+    recognition.length === dataset.recognition.length
   ) {
     return dataset;
   }
 
-  return { ...dataset, careItems, employeeNotes };
+  return { ...dataset, careItems, employeeNotes, followUps, resources, wellnessCheckIns, recognition };
 }
 
 export function applyCareConfidentialitySelectHelp(selectId: string): void {
