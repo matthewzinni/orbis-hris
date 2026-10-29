@@ -2,12 +2,11 @@
 // (daily GitHub Action): reads each active QuickBooks Time user's pto_balances, matches them to Orbis
 // employees, and writes pto_balance_hours / _as_of / _source / _breakdown with the service role.
 //
-// Matching (never creates or deletes employees):
-//   1. QBT email = employees.work_email or personal_email (case-insensitive)
-//   2. exact first + last name (accents/punctuation ignored)
-//   3. first name + a shared last-name word, only if unique
+// Matching (never creates or deletes employees): exact name → email (names must agree) →
+// first name/nickname + last-name word. See matchUsers.
 //
-// Secrets: QBT_ACCESS_TOKEN, optional QBT_PTO_TYPES (comma list of PTO type names to count).
+// Secrets: QBT_ACCESS_TOKEN, optional QBT_PTO_TYPES (comma list of PTO type names to count;
+// default "Paid Time Off (PTO)", "all" = every type).
 // SUPABASE_SERVICE_ROLE_KEY is provided by Supabase.
 //
 // Body: { dry_run?: boolean }
@@ -81,56 +80,109 @@ function isTerminated(e: Employee): boolean {
   return String(e.status || '').trim().toUpperCase() === 'TERMINATED' && Boolean(e.termination_date);
 }
 
-function fullName(first: unknown, last: unknown): string {
-  return `${normText(first)} ${normText(last)}`.trim();
+const NAME_SUFFIXES = new Set(['jr', 'sr', 'ii', 'iii', 'iv', 'v']);
+
+// Common nicknames -> formal first name (both directions are checked).
+const NICKNAMES: Record<string, string> = {
+  nick: 'nicholas', sam: 'samuel', matt: 'matthew', mike: 'michael', will: 'william',
+  bill: 'william', rob: 'robert', bob: 'robert', jim: 'james', tom: 'thomas',
+  tony: 'anthony', alex: 'alexander', chris: 'christopher', dan: 'daniel', dave: 'david',
+  joe: 'joseph', kate: 'katherine', katie: 'katherine', liz: 'elizabeth', beth: 'elizabeth',
+  andy: 'andrew', drew: 'andrew', ben: 'benjamin', steve: 'steven', josh: 'joshua',
+  jake: 'jacob', abby: 'abigail', jen: 'jennifer', jenny: 'jennifer', zach: 'zachary',
+};
+
+function nameTokens(value: unknown): string[] {
+  return normText(value).split(' ').filter((t) => t && !NAME_SUFFIXES.has(t));
 }
 
-function buildMatcher(employees: Employee[]) {
-  const current = employees.filter((e) => !isTerminated(e));
-  const byEmail = new Map<string, Map<string, Employee>>();
-  const byName = new Map<string, Map<string, Employee>>();
-  const add = (map: Map<string, Map<string, Employee>>, key: string, e: Employee) => {
-    if (!key) return;
-    if (!map.has(key)) map.set(key, new Map());
-    map.get(key)!.set(String(e.id), e);
-  };
-  current.forEach((e) => {
-    add(byEmail, normEmail(e.work_email), e);
-    add(byEmail, normEmail(e.personal_email), e);
-    add(byName, fullName(e.first_name, e.last_name), e);
-  });
-  const terminatedNames = new Set(employees.filter(isTerminated).map((e) => fullName(e.first_name, e.last_name)));
+function firstCompatible(a: string, b: string): boolean {
+  if (a === b) return true;
+  if (NICKNAMES[a] === b || NICKNAMES[b] === a) return true;
+  return Math.min(a.length, b.length) >= 3 && (a.startsWith(b) || b.startsWith(a));
+}
 
-  return (user: QbtUser): { employee: Employee | null; how: string } => {
-    const email = normEmail(user.email);
-    if (email && byEmail.has(email)) {
-      const hits = [...byEmail.get(email)!.values()];
-      return hits.length === 1
-        ? { employee: hits[0], how: 'email' }
-        : { employee: null, how: `email matches ${hits.length} employees` };
-    }
-    const first = normText(user.first_name);
-    const last = normText(user.last_name);
-    const full = `${first} ${last}`.trim();
-    if (byName.has(full)) {
-      const hits = [...byName.get(full)!.values()];
-      return hits.length === 1
-        ? { employee: hits[0], how: 'name' }
-        : { employee: null, how: `name matches ${hits.length} employees` };
-    }
-    const lastWords = new Set(last.split(' ').filter(Boolean));
-    if (first && lastWords.size) {
-      const hits = current.filter(
-        (e) => normText(e.first_name) === first && normText(e.last_name).split(' ').some((w) => lastWords.has(w))
-      );
-      if (hits.length === 1) return { employee: hits[0], how: 'first + last-name word' };
-      if (hits.length > 1) return { employee: null, how: `partial name matches ${hits.length} employees` };
-    }
-    if (terminatedNames.has(full)) {
-      return { employee: null, how: 'terminated in Orbis (still active in QuickBooks Time)' };
-    }
-    return { employee: null, how: 'no matching employee' };
+/**
+ * Match QBT users to Orbis employees in passes so the strongest matches claim employees first:
+ *   1. exact name (accents, punctuation, Jr/III ignored)
+ *   2. email (work or personal), only when the names are compatible
+ *   3. Orbis first name (nickname / prefix ok) + an Orbis last-name word in the QBT name
+ * Same logic as scripts/sync_qbt_pto_balances.py (match_users).
+ */
+function matchUsers(users: QbtUser[], employees: Employee[]) {
+  const current = employees.filter((e) => !isTerminated(e));
+  const first = new Map<string, string[]>();
+  const last = new Map<string, string[]>();
+  const full = new Map<string, string>();
+  employees.forEach((e) => {
+    const k = String(e.id);
+    first.set(k, nameTokens(e.first_name));
+    last.set(k, nameTokens(e.last_name));
+    full.set(k, [...first.get(k)!, ...last.get(k)!].join(' '));
+  });
+  const userTokens = users.map((u) => nameTokens(`${u.first_name || ''} ${u.last_name || ''}`));
+
+  const compatible = (i: number, e: Employee): boolean => {
+    const k = String(e.id);
+    const toks = new Set(userTokens[i]);
+    if (last.get(k)!.some((w) => toks.has(w))) return true;
+    return first.get(k)!.some((f) => [...toks].some((t) => firstCompatible(f, t)));
   };
+  const tokenMatch = (i: number, e: Employee): boolean => {
+    const k = String(e.id);
+    const toks = userTokens[i];
+    const f = first.get(k)![0];
+    return Boolean(f) && last.get(k)!.some((w) => toks.includes(w)) && toks.some((t) => firstCompatible(f, t));
+  };
+
+  const matches = new Map<number, { employee: Employee; how: string }>();
+  const reasons = new Map<number, string>();
+  const claimed = new Set<string>();
+
+  const runPass = (label: string, candidatesFor: (i: number) => Employee[]) => {
+    users.forEach((_u, i) => {
+      if (matches.has(i)) return;
+      const byId = new Map<string, Employee>();
+      candidatesFor(i)
+        .filter((e) => !claimed.has(String(e.id)))
+        .forEach((e) => byId.set(String(e.id), e));
+      const hits = [...byId.values()];
+      if (hits.length === 1) {
+        matches.set(i, { employee: hits[0], how: label });
+        claimed.add(String(hits[0].id));
+      } else if (hits.length > 1 && !reasons.has(i)) {
+        reasons.set(i, `${label} matches ${hits.length} employees`);
+      }
+    });
+  };
+
+  runPass('name', (i) =>
+    userTokens[i].length ? current.filter((e) => full.get(String(e.id)) === userTokens[i].join(' ')) : []
+  );
+  runPass('email', (i) => {
+    const em = normEmail(users[i].email);
+    if (!em) return [];
+    const hits = current.filter((e) => em === normEmail(e.work_email) || em === normEmail(e.personal_email));
+    const ok = hits.filter((e) => compatible(i, e));
+    if (hits.length && !ok.length && !reasons.has(i)) {
+      reasons.set(i, 'email belongs to a different-named employee — check QuickBooks Time');
+    }
+    return ok;
+  });
+  runPass('partial name', (i) => current.filter((e) => tokenMatch(i, e)));
+
+  const terminatedFull = new Set(employees.filter(isTerminated).map((e) => full.get(String(e.id))));
+  const unmatched = new Map<number, string>();
+  users.forEach((_u, i) => {
+    if (matches.has(i)) return;
+    unmatched.set(
+      i,
+      terminatedFull.has(userTokens[i].join(' '))
+        ? 'terminated in Orbis (still active in QuickBooks Time)'
+        : reasons.get(i) || 'no matching employee'
+    );
+  });
+  return { matches, unmatched, claimed };
 }
 
 function userBalances(
@@ -163,11 +215,15 @@ Deno.serve(async (req) => {
 
     const body = (await req.json().catch(() => ({}))) as { dry_run?: boolean };
     const dryRun = body.dry_run === true;
+    // Default counts only "Paid Time Off (PTO)" (not Holiday, Sick, ...). QBT_PTO_TYPES=all counts every type.
+    const typesRaw = String(Deno.env.get('QBT_PTO_TYPES') || '').trim() || 'Paid Time Off (PTO)';
     const allowed = new Set(
-      String(Deno.env.get('QBT_PTO_TYPES') || '')
-        .split(',')
-        .map((s) => s.trim().toLowerCase())
-        .filter(Boolean)
+      typesRaw.toLowerCase() === 'all'
+        ? []
+        : typesRaw
+            .split(',')
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean)
     );
 
     const [jobcodes, users] = await Promise.all([
@@ -181,7 +237,6 @@ Deno.serve(async (req) => {
       .select('id,first_name,last_name,work_email,personal_email,status,termination_date,pto_balance_hours');
     if (empErr) throw new Error(empErr.message);
     const employees = (empRows || []) as Employee[];
-    const match = buildMatcher(employees);
     const asOf = todayInEt();
 
     const matched: Array<{
@@ -192,36 +247,32 @@ Deno.serve(async (req) => {
       how: string;
       breakdown: Record<string, number>;
     }> = [];
-    const unmatched: Array<{ name: string; email: string; reason: string }> = [];
-    const claimed = new Map<string, string>();
-
     const sorted = (Object.values(users) as QbtUser[]).sort((a, b) =>
       `${normText(a.last_name)} ${normText(a.first_name)}`.localeCompare(`${normText(b.last_name)} ${normText(b.first_name)}`)
     );
-    for (const user of sorted) {
-      const qbtName = `${user.first_name || ''} ${user.last_name || ''}`.trim();
-      const { employee, how } = match(user);
-      if (!employee) {
-        unmatched.push({ name: qbtName, email: normEmail(user.email), reason: how });
-        continue;
-      }
-      const id = String(employee.id);
-      if (claimed.has(id)) {
-        unmatched.push({ name: qbtName, email: normEmail(user.email), reason: `employee already matched to ${claimed.get(id)}` });
-        continue;
-      }
-      claimed.set(id, qbtName);
-      const breakdown = userBalances(user, jobcodes, allowed);
-      const hours = Math.round(Object.values(breakdown).reduce((s, h) => s + h, 0) * 100) / 100;
-      matched.push({
-        employee_id: id,
-        name: `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
-        hours,
-        previous: employee.pto_balance_hours ?? null,
-        how,
-        breakdown,
+    const result = matchUsers(sorted, employees);
+    const claimed = result.claimed;
+    const unmatched = [...result.unmatched.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([i, reason]) => ({
+        name: `${sorted[i].first_name || ''} ${sorted[i].last_name || ''}`.trim(),
+        email: normEmail(sorted[i].email),
+        reason,
+      }));
+    [...result.matches.entries()]
+      .sort(([a], [b]) => a - b)
+      .forEach(([i, { employee, how }]) => {
+        const breakdown = userBalances(sorted[i], jobcodes, allowed);
+        const hours = Math.round(Object.values(breakdown).reduce((s, h) => s + h, 0) * 100) / 100;
+        matched.push({
+          employee_id: String(employee.id),
+          name: `${employee.first_name || ''} ${employee.last_name || ''}`.trim(),
+          hours,
+          previous: employee.pto_balance_hours ?? null,
+          how,
+          breakdown,
+        });
       });
-    }
 
     let updated = 0;
     if (!dryRun) {
