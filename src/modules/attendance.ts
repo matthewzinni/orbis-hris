@@ -25,6 +25,14 @@ import {
   type AttendanceRollCallSection,
 } from '../services/attendanceRollCallSections';
 import { employeeDisplayName } from '../services/employeeUtils';
+import {
+  AttendanceLiveSyncError,
+  isNoPunchAbsent,
+  loadTodaysLiveAttendance,
+  syncAttendanceFromQuickBooksTime,
+  type LiveAttendanceRow,
+  type LiveAttendanceStatus,
+} from '../services/attendanceLiveStatus';
 import { getEmployees, normalizeEmployeeStatus } from './employees';
 
 type EmployeeRow = {
@@ -327,6 +335,119 @@ async function loadAbsenceReportPanel(): Promise<void> {
       '<tr><td colspan="5" class="empty">Could not load repeated absence report.</td></tr>';
     const countEl = safeGet('attendanceRepeatAbsenceCount');
     if (countEl) countEl.textContent = '—';
+  }
+}
+
+const LIVE_STATUS_LABELS: Record<LiveAttendanceStatus, string> = {
+  on_clock: 'On the clock',
+  worked_clocked_out: 'Worked, clocked out',
+  manual_entry: 'Manual entry (QuickBooks Time)',
+  no_punch: 'No punch yet',
+};
+
+function formatClockTime(iso: string | null): string {
+  if (!iso) return '—';
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return '—';
+  return parsed.toLocaleTimeString(undefined, {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+}
+
+function findEmployeeById(employeeId: string): EmployeeRow | undefined {
+  return getEmployees().find((employee) => employeeRosterId(employee) === employeeId);
+}
+
+function renderLiveAttendanceRows(rows: LiveAttendanceRow[]): void {
+  const body = safeGet<HTMLTableSectionElement>('attendanceLiveStatusBody');
+  if (!body) return;
+
+  if (!rows.length) {
+    body.innerHTML = '<tr><td colspan="3" class="empty">No QuickBooks Time data yet. Click "Sync now" or map employees in Settings.</td></tr>';
+    return;
+  }
+
+  const sorted = [...rows].sort((a, b) => {
+    const nameA = employeeDisplayName(findEmployeeById(a.employeeId)) || a.employeeId;
+    const nameB = employeeDisplayName(findEmployeeById(b.employeeId)) || b.employeeId;
+    return nameA.localeCompare(nameB);
+  });
+
+  body.innerHTML = sorted
+    .map((row) => {
+      const employee = findEmployeeById(row.employeeId);
+      const name = employeeDisplayName(employee) || row.employeeId;
+      const scheduledStartTime = (employee?.scheduled_start_time as string | null | undefined) ?? null;
+      const showAsAbsent = isNoPunchAbsent(row.status, scheduledStartTime);
+      const label =
+        row.status === 'no_punch' && !showAsAbsent ? 'Not started yet' : LIVE_STATUS_LABELS[row.status];
+      const badgeClass =
+        row.status === 'on_clock'
+          ? 'badge-active'
+          : showAsAbsent
+            ? 'badge-absent'
+            : 'badge-soft';
+
+      return `
+        <tr>
+          <td>${escapeHtml(name)}</td>
+          <td><span class="badge ${badgeClass}">${escapeHtml(label)}</span></td>
+          <td class="muted">${escapeHtml(formatClockTime(row.clockInAt))}</td>
+        </tr>
+      `;
+    })
+    .join('');
+}
+
+function updateLiveSyncedAtLabel(rows: LiveAttendanceRow[]): void {
+  const el = safeGet('attendanceLiveSyncedAt');
+  if (!el) return;
+  const latest = rows.reduce<string | null>((max, row) => {
+    if (!row.syncedAt) return max;
+    return !max || row.syncedAt > max ? row.syncedAt : max;
+  }, null);
+  el.textContent = latest ? formatAsOfLabel(latest) : 'Never';
+}
+
+async function loadLiveAttendancePanel(): Promise<void> {
+  const body = safeGet<HTMLTableSectionElement>('attendanceLiveStatusBody');
+  if (!body || !canViewAttendance()) return;
+
+  try {
+    const rows = await loadTodaysLiveAttendance();
+    renderLiveAttendanceRows(rows);
+    updateLiveSyncedAtLabel(rows);
+  } catch (error) {
+    console.error('[Attendance] Live status load failed:', error);
+    body.innerHTML = '<tr><td colspan="3" class="empty">Could not load live attendance.</td></tr>';
+  }
+}
+
+async function syncLiveAttendanceNow(): Promise<void> {
+  const btn = safeGet<HTMLButtonElement>('attendanceLiveSyncNowBtn');
+  if (btn) btn.disabled = true;
+
+  try {
+    const result = await syncAttendanceFromQuickBooksTime({ preview: false });
+    const message =
+      result.unmatched.length || result.failedCount
+        ? `Synced ${result.matchedCount} employees. ${result.unmatched.length} QuickBooks Time user(s) unmapped, ${result.failedCount} failed.`
+        : `Synced ${result.matchedCount} employees from QuickBooks Time.`;
+    showToast(message, result.failedCount ? 'error' : 'success');
+    await loadLiveAttendancePanel();
+  } catch (error) {
+    const message =
+      error instanceof AttendanceLiveSyncError
+        ? error.message
+        : error instanceof Error
+          ? error.message
+          : 'Could not sync from QuickBooks Time.';
+    console.error('[Attendance] Live sync failed:', error);
+    showToast(message, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
@@ -663,6 +784,7 @@ export async function loadAttendance(force = false): Promise<void> {
   if (!force && attendanceCache && attendanceCacheDate === date) {
     renderAttendance(attendanceCache);
     void loadAbsenceReportPanel();
+    void loadLiveAttendancePanel();
     return;
   }
 
@@ -682,6 +804,7 @@ export async function loadAttendance(force = false): Promise<void> {
       attendanceCacheDate = date;
       renderAttendance(attendanceCache);
       void loadAbsenceReportPanel();
+      void loadLiveAttendancePanel();
       return;
     }
 
@@ -689,6 +812,7 @@ export async function loadAttendance(force = false): Promise<void> {
     attendanceCacheDate = date;
     renderAttendance(attendanceCache);
     void loadAbsenceReportPanel();
+    void loadLiveAttendancePanel();
   } catch (error) {
     const message =
       error instanceof AttendanceSyncError
@@ -702,6 +826,7 @@ export async function loadAttendance(force = false): Promise<void> {
     attendanceCacheDate = date;
     renderAttendance(attendanceCache);
     void loadAbsenceReportPanel();
+    void loadLiveAttendancePanel();
   } finally {
     attendanceLoading = false;
   }
@@ -751,6 +876,14 @@ function bindAttendanceUi(): void {
       attendanceCache = null;
       attendanceCacheDate = null;
       void loadAttendance(true);
+    });
+  }
+
+  const liveSyncNowBtn = safeGet<HTMLButtonElement>('attendanceLiveSyncNowBtn');
+  if (liveSyncNowBtn && liveSyncNowBtn.dataset.bound !== '1') {
+    liveSyncNowBtn.dataset.bound = '1';
+    liveSyncNowBtn.addEventListener('click', () => {
+      void syncLiveAttendanceNow();
     });
   }
 
