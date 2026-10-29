@@ -1226,6 +1226,14 @@ export async function moveCandidateToStage(candidateId: string, newStage: string
   }
 
   if (newStage === 'Hired') {
+    const candidateName =
+      `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim() || 'this candidate';
+    const confirmed = await showOrbisConfirm(
+      `Mark ${candidateName} as Hired? This immediately creates or updates their employee record and cannot be undone from here.`,
+      { title: 'Hire candidate', confirmLabel: 'Hire', danger: true }
+    );
+    if (!confirmed) return;
+
     await convertCandidateToEmployee(candidateId);
     return;
   }
