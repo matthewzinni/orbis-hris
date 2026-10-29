@@ -38,11 +38,28 @@ export async function loadHandbookDocuments(): Promise<HandbookDocument[]> {
   return ((data || []) as HandbookDocument[]).filter(isHandbookDocument);
 }
 
+/** Matches the "bucket/path" storage ref format uploadDocument() writes to file_url
+ * (src/modules/documents.ts's parseDocumentStorageRef). Not a full URL. */
+function parseDocumentStorageRef(value: string): { bucket: string; path: string } | null {
+  const raw = String(value || '').trim();
+  if (!raw || raw.startsWith('http')) return null;
+
+  const [bucket, ...pathParts] = raw.split('/');
+  if (!bucket || !pathParts.length || !DOCUMENT_BUCKETS.includes(bucket)) {
+    return null;
+  }
+
+  return { bucket, path: pathParts.join('/') };
+}
+
 function getStorageTarget(doc: HandbookDocument): { bucket: string; path: string } {
   if (doc.id.includes('/')) {
     const [bucket, ...pathParts] = doc.id.split('/');
     return { bucket, path: pathParts.join('/') };
   }
+
+  const fromRef = parseDocumentStorageRef(doc.file_url || '');
+  if (fromRef) return fromRef;
 
   const url = String(doc.file_url || '');
   const marker = '/storage/v1/object/public/';
