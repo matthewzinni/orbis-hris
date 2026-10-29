@@ -19,6 +19,7 @@ import {
 import {
   formatPtoHours,
   loadEmployeePtoSnapshot,
+  isQuickBooksTimeBalance,
   ptoBalanceMetaText,
   ptoPanelHeaderLabel,
   adjustEmployeePtoBaselineHours,
@@ -130,6 +131,22 @@ function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
 
 let leaveUiBound = false;
 let ptoBalanceEditorBound = false;
+/** True when the open employee's balance is synced from QuickBooks Time (Orbis is a read-only mirror). */
+let currentBalanceFromQbt = false;
+
+function applyPtoBalanceEditorVisibility(): void {
+  const canEditBalance = canAdjustPtoBalance() && !currentBalanceFromQbt;
+  document.querySelectorAll<HTMLElement>('[data-pto-balance-editor]').forEach((element) => {
+    element.classList.toggle('hidden', !canEditBalance);
+    element.setAttribute('aria-hidden', canEditBalance ? 'false' : 'true');
+  });
+  const help = safeGet('leaveRequestBalanceHelp');
+  if (help) {
+    help.textContent = currentBalanceFromQbt
+      ? 'This balance mirrors QuickBooks Time and refreshes every morning. To change it, update PTO in QuickBooks Time.'
+      : 'Banked baseline entered in Orbis. Requests approved in Orbis reduce the remaining balance until the next QuickBooks Time sync replaces it.';
+  }
+}
 
 function readPtoAdjustHoursInput(): number | null {
   const raw = String(safeGet<HTMLInputElement>('ptoBalanceAdjustHoursInput')?.value || '').trim();
@@ -162,6 +179,10 @@ function patchCurrentEmployeePtoBaseline(hours: number, asOf: string): void {
 async function applyPtoBaselineAdjustment(mode: 'add' | 'subtract' | 'set'): Promise<void> {
   if (!canAdjustPtoBalance()) {
     showToast('Only Matthew can adjust banked PTO hours.', 'error');
+    return;
+  }
+  if (currentBalanceFromQbt) {
+    showToast('This balance comes from QuickBooks Time. Change it there; Orbis updates every morning.', 'error');
     return;
   }
 
@@ -261,11 +282,7 @@ export function applyLeaveAccess(): void {
     element.setAttribute('aria-hidden', visible ? 'false' : 'true');
   });
 
-  const canEditBalance = canAdjustPtoBalance();
-  document.querySelectorAll<HTMLElement>('[data-pto-balance-editor]').forEach((element) => {
-    element.classList.toggle('hidden', !canEditBalance);
-    element.setAttribute('aria-hidden', canEditBalance ? 'false' : 'true');
-  });
+  applyPtoBalanceEditorVisibility();
 }
 
 async function refreshLeavePanelHeader(
@@ -280,13 +297,21 @@ async function refreshLeavePanelHeader(
   if (!rosterId) {
     header.textContent = 'Time Off';
     if (sub) sub.textContent = '';
+    currentBalanceFromQbt = false;
+    applyPtoBalanceEditorVisibility();
     return;
   }
+
+  // Keep the manual editor hidden until we know where this employee's balance comes from.
+  currentBalanceFromQbt = true;
+  applyPtoBalanceEditorVisibility();
 
   try {
     const rows = requests ?? (await loadLeaveRequestsForEmployee(rosterId));
     const snapshot = await loadEmployeePtoSnapshot(rosterId, rows);
     header.textContent = ptoPanelHeaderLabel(snapshot.remainingHours);
+    currentBalanceFromQbt = isQuickBooksTimeBalance(snapshot.source);
+    applyPtoBalanceEditorVisibility();
 
     if (sub) {
       if (snapshot.baselineHours == null) {
