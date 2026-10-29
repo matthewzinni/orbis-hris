@@ -223,7 +223,37 @@ export async function updateJanusAccount(
   return mapAccount(data as Record<string, unknown>);
 }
 
+const JANUS_DOCUMENTS_BUCKET = 'janus-documents';
+
+/** Best-effort cleanup of every stored file under this account's prefix before the account
+ * (and its janus_documents rows, cascade-deleted by the DB) is removed -- otherwise the
+ * files are never deleted from storage, just unreferenced. */
+async function deleteJanusAccountStorageFiles(accountId: string): Promise<void> {
+  const { data, error } = await supabaseClient.storage.from(JANUS_DOCUMENTS_BUCKET).list(accountId);
+
+  if (error) {
+    console.warn('[Janus] Could not list account storage files for cleanup:', error);
+    return;
+  }
+
+  const paths = (data || [])
+    .filter((item) => item.name && item.name !== '.emptyFolderPlaceholder')
+    .map((item) => `${accountId}/${item.name}`);
+
+  if (!paths.length) return;
+
+  const { error: removeError } = await supabaseClient.storage
+    .from(JANUS_DOCUMENTS_BUCKET)
+    .remove(paths);
+
+  if (removeError) {
+    console.warn('[Janus] Could not remove account storage files:', removeError);
+  }
+}
+
 export async function deleteJanusAccount(accountId: string): Promise<void> {
+  await deleteJanusAccountStorageFiles(accountId);
+
   const { error } = await supabaseClient.from('janus_accounts').delete().eq('id', accountId);
   if (error) throw error;
 }
