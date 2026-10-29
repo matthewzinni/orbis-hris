@@ -852,7 +852,11 @@ def main() -> None:
         if part.strip()
     ]
 
-    metrics = collect_metrics(base_url, service_key)
+    try:
+        metrics = collect_metrics(base_url, service_key)
+    except RuntimeError as err:
+        die(f"Could not collect weekly report metrics, nothing sent: {err}")
+
     html = build_html(metrics)
     subject = f"Orbis Weekly HR Snapshot — {metrics['report_date']}"
 
