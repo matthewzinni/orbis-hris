@@ -336,14 +336,29 @@ def main() -> None:
         print("\nDry run — nothing written.")
         return
 
+    failed: list[tuple[str, str]] = []
+    updated = 0
     for user, emp, _how, total, breakdown in matched:
-        patch_employee(base_url, service_key, str(emp.get("id")), {
-            "pto_balance_hours": total,
-            "pto_balance_as_of": today,
-            "pto_balance_source": SOURCE,
-            "pto_balance_breakdown": breakdown,
-        })
-    print(f"\nUpdated {len(matched)} employees (as of {today}).")
+        emp_id = str(emp.get("id"))
+        emp_name = f"{emp.get('first_name', '')} {emp.get('last_name', '')}".strip()
+        try:
+            patch_employee(base_url, service_key, emp_id, {
+                "pto_balance_hours": total,
+                "pto_balance_as_of": today,
+                "pto_balance_source": SOURCE,
+                "pto_balance_breakdown": breakdown,
+            })
+            updated += 1
+        except RuntimeError as err:
+            failed.append((emp_name or emp_id, str(err)))
+            eprint(f"  FAILED: {emp_name or emp_id}: {err}")
+
+    print(f"\nUpdated {updated} of {len(matched)} employees (as of {today}).")
+    if failed:
+        print(f"{len(failed)} employee(s) FAILED to update and were skipped (balances left stale):")
+        for name, reason in failed:
+            print(f"  {name}: {reason}")
+        die(f"{len(failed)} of {len(matched)} employee updates failed — see list above.")
 
 
 if __name__ == "__main__":
