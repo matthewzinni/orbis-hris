@@ -30,13 +30,16 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from html import escape
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+from zoneinfo import ZoneInfo
+
+ET = ZoneInfo("America/New_York")
 
 DEFAULT_MAIL_TO = "matthew.zinni@btwglobal.com"
 
@@ -817,6 +820,23 @@ def send_email_with_retries(
         raise last_err
 
 
+def scheduled_run_should_send() -> bool:
+    """GitHub cron is UTC. The workflow fires at two UTC hours so one of them is 1 PM Eastern
+    in both daylight and standard time; only that run sends (same pattern as
+    scripts/weekly_time_off_email.py and scripts/sync_qbt_pto_balances.py)."""
+    cron = os.environ.get("CRON_SCHEDULE", "").strip()
+    target = int(os.environ.get("WEEKLY_REPORT_SEND_HOUR_ET", "13"))
+    if not cron:
+        return True
+    try:
+        utc_hour = int(cron.split()[1])
+    except (IndexError, ValueError):
+        return True
+    today_utc = datetime.now(timezone.utc).date()
+    slot = datetime(today_utc.year, today_utc.month, today_utc.day, utc_hour, tzinfo=timezone.utc)
+    return slot.astimezone(ET).hour == target
+
+
 def main() -> None:
     bootstrap_config()
 
@@ -831,7 +851,16 @@ def main() -> None:
         action="store_true",
         help="Save report HTML to scripts/output/ (no email)",
     )
+    parser.add_argument(
+        "--scheduled",
+        action="store_true",
+        help="Skip unless this cron slot is 1 PM Eastern (handles daylight saving)",
+    )
     args = parser.parse_args()
+
+    if args.scheduled and not scheduled_run_should_send():
+        print("Not the 1 PM Eastern slot for today's time zone offset; skipping.")
+        return
 
     base_url = resolve_supabase_url()
     service_key = env_required("SUPABASE_SERVICE_ROLE_KEY")
