@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { isAdminUser, isSupervisorUser, employeeMatchesSupervisorAccess } = vi.hoisted(() => ({
-  isAdminUser: vi.fn(() => false),
-  isSupervisorUser: vi.fn(() => true),
-  employeeMatchesSupervisorAccess: vi.fn(() => false),
+  isAdminUser: vi.fn((): boolean => false),
+  isSupervisorUser: vi.fn((): boolean => true),
+  employeeMatchesSupervisorAccess: vi.fn((_employee?: { id: string } | null): boolean => false),
 }));
 
 vi.mock('./access', () => ({ isAdminUser, isSupervisorUser, employeeMatchesSupervisorAccess }));
