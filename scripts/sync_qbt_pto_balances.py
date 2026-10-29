@@ -145,11 +145,15 @@ def name_tokens(value: Any) -> list[str]:
 
 
 def first_compatible(a: str, b: str) -> bool:
+    """Exact or known-nickname match only. A generic startswith() prefix fallback used to be
+    allowed here, but it could silently misattribute one person's PTO balance to a different
+    employee who merely shares a last name and a first-name prefix (e.g. QBT "Marcus Reyes"
+    matching Orbis "Mark Reyes") -- and with only one such employee on the roster, there was
+    no second candidate to trip the "matches N employees" ambiguity guard. Fail to "unmatched"
+    (shown for manual review) rather than risk a wrong silent match."""
     if a == b:
         return True
-    if NICKNAMES.get(a) == b or NICKNAMES.get(b) == a:
-        return True
-    return min(len(a), len(b)) >= 3 and (a.startswith(b) or b.startswith(a))
+    return NICKNAMES.get(a) == b or NICKNAMES.get(b) == a
 
 
 def match_users(users: list[dict[str, Any]], employees: list[dict[str, Any]]):
