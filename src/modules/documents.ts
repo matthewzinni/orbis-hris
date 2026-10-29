@@ -589,9 +589,7 @@ export async function deleteDocument(doc: DocumentRecord): Promise<void> {
     }
   }
 
-  documents = documents.filter((item) => {
-    return !(item.file_name === doc.file_name && item.title === doc.title);
-  });
+  documents = documents.filter((item) => item.id !== doc.id);
 
   renderDocumentsLibrary();
   showOrbisToast(`Deleted "${doc.title}".`);

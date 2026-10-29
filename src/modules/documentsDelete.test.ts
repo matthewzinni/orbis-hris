@@ -8,7 +8,7 @@ vi.mock('./documentSigning', () => ({
   loadDocumentSigning: vi.fn(() => Promise.resolve()),
 }));
 
-import { deleteDocument, type DocumentRecord } from './documents';
+import { deleteDocument, getFilteredDocuments, type DocumentRecord } from './documents';
 
 function baseDoc(overrides: Partial<DocumentRecord> = {}): DocumentRecord {
   return {
@@ -77,5 +77,43 @@ describe('deleteDocument', () => {
 
     expect(remove).toHaveBeenCalledTimes(2);
     expect(deleteEq).toHaveBeenCalledTimes(1);
+  });
+
+  it('deletes only the targeted document, not a sibling with the same title and file name', async () => {
+    const rowA = baseDoc({ id: 'doc-a', is_active: true });
+    const rowB = baseDoc({ id: 'doc-b', is_active: true });
+    const deletedIds = new Set<string>();
+    const trackingDeleteEq = vi.fn((_col: string, value: string) => {
+      deletedIds.add(value);
+      return Promise.resolve({ error: null });
+    });
+
+    fromTable = vi.fn((table: string) => {
+      if (table === 'document_library') {
+        return {
+          select: () => ({
+            order: () =>
+              Promise.resolve({
+                data: [rowA, rowB].filter((r) => !deletedIds.has(r.id)),
+                error: null,
+              }),
+          }),
+          delete: () => ({ eq: trackingDeleteEq }),
+        };
+      }
+      return { delete: () => ({ eq: trackingDeleteEq }) };
+    });
+    vi.stubGlobal('window', {
+      supabaseClient: { storage: { from: fromStorage }, from: fromTable },
+      showToast: toastSpy,
+    });
+
+    const { loadDocuments } = await import('./documents');
+    await loadDocuments();
+    expect(getFilteredDocuments().map((d) => d.id)).toEqual(['doc-a', 'doc-b']);
+
+    await deleteDocument(rowA);
+
+    expect(getFilteredDocuments().map((d) => d.id)).toEqual(['doc-b']);
   });
 });
