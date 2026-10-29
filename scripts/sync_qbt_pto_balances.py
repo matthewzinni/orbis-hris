@@ -10,17 +10,19 @@ matches the user to an Orbis employee, and writes:
   employees.pto_balance_source     'quickbooks_time'
   employees.pto_balance_breakdown  {"<PTO type name>": hours, ...}
 
-Matching (never creates or deletes employees):
-  1. QBT email = employees.work_email or employees.personal_email (case-insensitive)
-  2. exact first + last name (accents/punctuation ignored)
-  3. first name + any shared last-name word (e.g. "Borjas" vs "Borjas-Barrera"), only if unique
+Matching (never creates or deletes employees), in passes so the strongest matches go first:
+  1. exact name (accents, punctuation, Jr/III ignored)
+  2. QBT email = work or personal email, only when the names are compatible
+  3. Orbis first name (nickname / prefix ok: Nick=Nicholas, Sam=Samuel) + a last-name word,
+     e.g. "Alex Trent Wynne" -> Trent Wynne, "Karla Barrera Gomez" -> Karla Barrera
 Anyone who does not match, or matches more than one employee, is logged and skipped.
 
 Env (GitHub Actions secrets or scripts/.env.weekly_report):
   QBT_ACCESS_TOKEN            QuickBooks Time API token
   SUPABASE_URL                https://<ref>.supabase.co
   SUPABASE_SERVICE_ROLE_KEY   service role key (bypasses RLS; required to write)
-  QBT_PTO_TYPES               optional comma list of QBT PTO type names to count (default: all)
+  QBT_PTO_TYPES               optional comma list of QBT PTO type names to count
+                              (default "Paid Time Off (PTO)"; "all" = every type)
 
 Usage:
   python3 scripts/sync_qbt_pto_balances.py --dry-run    # show matches + balances, write nothing
@@ -77,8 +79,15 @@ def fetch_all(path: str, key: str, params: dict[str, str]) -> dict[str, dict]:
     return out
 
 
+DEFAULT_PTO_TYPES = "Paid Time Off (PTO)"
+
+
 def pto_type_filter() -> set[str]:
-    raw = os.environ.get("QBT_PTO_TYPES", "")
+    """PTO type names to count. Default: only "Paid Time Off (PTO)" (not Holiday, Sick, etc.).
+    QBT_PTO_TYPES=all counts every type."""
+    raw = os.environ.get("QBT_PTO_TYPES", "").strip() or DEFAULT_PTO_TYPES
+    if raw.lower() == "all":
+        return set()
     return {p.strip().lower() for p in raw.split(",") if p.strip()}
 
 
@@ -118,64 +127,103 @@ def is_terminated(emp: dict[str, Any]) -> bool:
     return str(emp.get("status") or "").strip().upper() == "TERMINATED" and bool(emp.get("termination_date"))
 
 
-def build_matcher(employees: list[dict[str, Any]]):
+NAME_SUFFIXES = {"jr", "sr", "ii", "iii", "iv", "v"}
+
+# Common nicknames -> formal first name (both directions are checked).
+NICKNAMES = {
+    "nick": "nicholas", "sam": "samuel", "matt": "matthew", "mike": "michael", "will": "william",
+    "bill": "william", "rob": "robert", "bob": "robert", "jim": "james", "tom": "thomas",
+    "tony": "anthony", "alex": "alexander", "chris": "christopher", "dan": "daniel", "dave": "david",
+    "joe": "joseph", "kate": "katherine", "katie": "katherine", "liz": "elizabeth", "beth": "elizabeth",
+    "andy": "andrew", "drew": "andrew", "ben": "benjamin", "steve": "steven", "josh": "joshua",
+    "jake": "jacob", "abby": "abigail", "jen": "jennifer", "jenny": "jennifer", "zach": "zachary",
+}
+
+
+def name_tokens(value: Any) -> list[str]:
+    return [t for t in norm_text(value).split() if t not in NAME_SUFFIXES]
+
+
+def first_compatible(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    if NICKNAMES.get(a) == b or NICKNAMES.get(b) == a:
+        return True
+    return min(len(a), len(b)) >= 3 and (a.startswith(b) or b.startswith(a))
+
+
+def match_users(users: list[dict[str, Any]], employees: list[dict[str, Any]]):
+    """Match QBT users to Orbis employees in passes so the strongest matches claim employees first.
+
+    1. exact name (accents, punctuation, Jr/III ignored)
+    2. email (work or personal) — only if the names are compatible, so a shared or wrong email
+       in QuickBooks Time cannot attach one person's balance to someone else
+    3. Orbis first name (or nickname / prefix) + an Orbis last-name word both appear in the QBT name
+    Returns (matches {user_index: (employee, how)}, unmatched {user_index: reason}).
+    """
     current = [e for e in employees if not is_terminated(e)]
-    by_email: dict[str, list[dict]] = {}
-    by_name: dict[str, list[dict]] = {}
-    for e in current:
-        for field in ("work_email", "personal_email"):
-            em = norm_email(e.get(field))
-            if em:
-                by_email.setdefault(em, []).append(e)
-        full = f"{norm_text(e.get('first_name'))} {norm_text(e.get('last_name'))}".strip()
-        if full:
-            by_name.setdefault(full, []).append(e)
-    terminated_names = {
-        f"{norm_text(e.get('first_name'))} {norm_text(e.get('last_name'))}".strip()
-        for e in employees if is_terminated(e)
-    }
+    emp_first = {str(e.get("id")): name_tokens(e.get("first_name")) for e in employees}
+    emp_last = {str(e.get("id")): name_tokens(e.get("last_name")) for e in employees}
+    emp_full = {k: " ".join(emp_first[k] + emp_last[k]) for k in emp_first}
+    user_tokens = [name_tokens(f"{u.get('first_name', '')} {u.get('last_name', '')}") for u in users]
 
-    def unique(rows: list[dict]) -> list[dict]:
-        seen: dict[str, dict] = {}
-        for r in rows:
-            seen[str(r.get("id"))] = r
-        return list(seen.values())
+    def compatible(i: int, e: dict) -> bool:
+        k = str(e.get("id"))
+        toks = set(user_tokens[i])
+        if toks & set(emp_last[k]):
+            return True
+        return any(first_compatible(f, t) for f in emp_first[k] for t in toks)
 
-    def match(user: dict[str, Any]) -> tuple[dict | None, str]:
-        em = norm_email(user.get("email"))
-        if em and em in by_email:
-            hits = unique(by_email[em])
+    def token_match(i: int, e: dict) -> bool:
+        k = str(e.get("id"))
+        toks = user_tokens[i]
+        return bool(set(toks) & set(emp_last[k])) and any(
+            first_compatible(f, t) for f in emp_first[k][:1] for t in toks
+        )
+
+    matches: dict[int, tuple[dict, str]] = {}
+    reasons: dict[int, str] = {}
+    claimed: set[str] = set()
+
+    def run_pass(label: str, candidates_for) -> None:
+        for i in range(len(users)):
+            if i in matches:
+                continue
+            hits = [e for e in candidates_for(i) if str(e.get("id")) not in claimed]
+            hits = list({str(e.get("id")): e for e in hits}.values())
             if len(hits) == 1:
-                return hits[0], "email"
-            return None, f"email matches {len(hits)} employees"
+                matches[i] = (hits[0], label)
+                claimed.add(str(hits[0].get("id")))
+            elif len(hits) > 1 and i not in reasons:
+                reasons[i] = f"{label} matches {len(hits)} employees"
 
-        first = norm_text(user.get("first_name"))
-        last = norm_text(user.get("last_name"))
-        full = f"{first} {last}".strip()
-        if full in by_name:
-            hits = unique(by_name[full])
-            if len(hits) == 1:
-                return hits[0], "name"
-            return None, f"name matches {len(hits)} employees"
+    run_pass("name", lambda i: [
+        e for e in current if user_tokens[i] and emp_full[str(e.get("id"))] == " ".join(user_tokens[i])
+    ])
 
-        last_words = set(last.split())
-        if first and last_words:
-            hits = [
-                e for e in current
-                if norm_text(e.get("first_name")) == first
-                and last_words & set(norm_text(e.get("last_name")).split())
-            ]
-            hits = unique(hits)
-            if len(hits) == 1:
-                return hits[0], "first + last-name word"
-            if len(hits) > 1:
-                return None, f"partial name matches {len(hits)} employees"
+    def by_email(i: int) -> list[dict]:
+        em = norm_email(users[i].get("email"))
+        if not em:
+            return []
+        hits = [e for e in current if em in (norm_email(e.get("work_email")), norm_email(e.get("personal_email")))]
+        ok = [e for e in hits if compatible(i, e)]
+        if hits and not ok and i not in reasons:
+            reasons[i] = "email belongs to a different-named employee — check QuickBooks Time"
+        return ok
 
-        if full in terminated_names:
-            return None, "terminated in Orbis (still active in QuickBooks Time)"
-        return None, "no matching employee"
+    run_pass("email", by_email)
+    run_pass("partial name", lambda i: [e for e in current if token_match(i, e)])
 
-    return match
+    terminated_full = {emp_full[str(e.get("id"))] for e in employees if is_terminated(e)}
+    unmatched: dict[int, str] = {}
+    for i in range(len(users)):
+        if i in matches:
+            continue
+        if " ".join(user_tokens[i]) in terminated_full:
+            unmatched[i] = "terminated in Orbis (still active in QuickBooks Time)"
+        else:
+            unmatched[i] = reasons.get(i, "no matching employee")
+    return matches, unmatched
 
 
 # ---------------------------------------------------------------------------
@@ -249,22 +297,15 @@ def main() -> None:
         {"select": "id,first_name,last_name,work_email,personal_email,status,termination_date,"
                    "pto_balance_hours,pto_balance_as_of"},
     )
-    match = build_matcher(employees)
+    ordered = sorted(users.values(), key=lambda u: (norm_text(u.get("last_name")), norm_text(u.get("first_name"))))
+    matches, unmatched_map = match_users(ordered, employees)
 
     matched: list[tuple[dict, dict, str, float, dict[str, float]]] = []
-    unmatched: list[tuple[dict, str]] = []
+    unmatched: list[tuple[dict, str]] = [(ordered[i], why) for i, why in sorted(unmatched_map.items())]
     claimed: dict[str, str] = {}
-    for user in sorted(users.values(), key=lambda u: (norm_text(u.get("last_name")), norm_text(u.get("first_name")))):
-        emp, how = match(user)
-        if not emp:
-            unmatched.append((user, how))
-            continue
-        emp_id = str(emp.get("id"))
-        qbt_name = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
-        if emp_id in claimed:
-            unmatched.append((user, f"employee already matched to {claimed[emp_id]}"))
-            continue
-        claimed[emp_id] = qbt_name
+    for i, (emp, how) in sorted(matches.items()):
+        user = ordered[i]
+        claimed[str(emp.get("id"))] = f"{user.get('first_name', '')} {user.get('last_name', '')}".strip()
         breakdown = user_balances(user, jobcodes, allowed)
         total = round(sum(breakdown.values()), 2)
         matched.append((user, emp, how, total, breakdown))
