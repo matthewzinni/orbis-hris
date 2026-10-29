@@ -29,6 +29,36 @@
                 <div class="kpi-sub">2+ absences in the past 4 weeks</div>
               </div>
             </div>
+            <div class="card attendance-live-status-card" id="attendanceLiveStatusCard">
+              <div class="card-header attendance-live-status-header">
+                <div>
+                  <span>Live from QuickBooks Time</span>
+                  <p class="muted attendance-live-status-sub">
+                    Last synced: <span id="attendanceLiveSyncedAt">Never</span>
+                  </p>
+                </div>
+                <button class="button soft sm" id="attendanceLiveSyncNowBtn" type="button">Sync now</button>
+              </div>
+              <div class="card-body">
+                <div id="mobileAttendanceLiveStatus" class="orbis-mobile-module-list hidden" aria-live="polite"></div>
+                <div class="table-wrap orbis-desktop-module-table">
+                  <table class="attendance-live-status-table">
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Status</th>
+                        <th>Clock in</th>
+                      </tr>
+                    </thead>
+                    <tbody id="attendanceLiveStatusBody">
+                      <tr>
+                        <td colspan="3" class="empty">Not synced yet.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
             <div class="card attendance-absence-report-card" id="attendanceAbsenceReportCard">
               <div class="card-header attendance-absence-report-header">
                 <div>

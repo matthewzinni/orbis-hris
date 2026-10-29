@@ -49,3 +49,11 @@ verify_jwt = true
 
 [functions.sync-qbt-pto]
 verify_jwt = true
+
+[functions.sync-qbt-attendance]
+# false (like document-signature) because pg_cron authenticates with a dedicated shared
+# secret, not a Supabase-issued JWT -- the platform gateway would reject that bearer token
+# before it ever reached the function if this were true. The function verifies auth itself:
+# either the ATTENDANCE_SYNC_SECRET (cron) or a real admin JWT via requireOrbisAuth (the
+# "Sync now" button).
+verify_jwt = false
