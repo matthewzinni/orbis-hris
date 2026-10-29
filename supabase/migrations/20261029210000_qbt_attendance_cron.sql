@@ -27,6 +27,9 @@ exception when others then
   null; -- no prior job with this name; nothing to unschedule
 end $$;
 
+-- pg_net's default timeout (5000ms) is too short for this function -- it makes three QBT API
+-- calls plus a possible cold start, which took ~10s against real production data. Confirmed via
+-- net._http_response.timed_out on the first real post-fix cron attempts before this was added.
 select cron.schedule(
   'sync-qbt-attendance-5min',
   '*/5 * * * *',
@@ -37,7 +40,8 @@ select cron.schedule(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'attendance_sync_secret' limit 1)
     ),
-    body := '{}'::jsonb
+    body := '{}'::jsonb,
+    timeout_milliseconds := 20000
   );
   $$
 );
