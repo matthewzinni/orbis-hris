@@ -17,6 +17,7 @@ import {
   type OnboardingTaskRecord,
 } from '../services/onboardingWorkflow';
 import { supabaseClient } from '../services/supabaseClient';
+import { isCurrentDrawerEmployee } from './employeeDrawerTabLoads';
 
 function safeGet<T extends HTMLElement = HTMLElement>(id: string): T | null {
   if (typeof window.safeGet === 'function') {
@@ -194,6 +195,11 @@ export async function loadOnboardingTasks(employeeId: string): Promise<void> {
     .from('onboarding_tasks')
     .select('*')
     .eq('employee_id', employeeId);
+
+  // The drawer may have switched to a different employee while this fetch was in flight.
+  // onboardingChecklist is a single shared container, so bail rather than render a stale
+  // employee's onboarding tasks into whoever's drawer is now open.
+  if (!isCurrentDrawerEmployee(String(employeeId || '').trim())) return;
 
   if (error) {
     console.error('Could not load onboarding tasks:', error);

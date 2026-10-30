@@ -1,5 +1,6 @@
 import { supabaseClient } from '../services/supabaseClient';
 import { employeeDisplayName } from '../services/employeeUtils';
+import { isCurrentDrawerEmployee } from './employeeDrawerTabLoads';
 import {
   describeScheduledNextStayInterview,
   syncEmployeeNextStayInterviewAfterStayInterviewSaved,
@@ -360,6 +361,11 @@ export async function loadStayInterviews(employeeId: string): Promise<void> {
       .in('employee_id', employeeIds)
       .order('interview_date', { ascending: false })
       .order('created_at', { ascending: false });
+
+    // The drawer may have switched to a different employee while this fetch was in flight.
+    // stayInterviewHistory is a single shared container, so bail rather than render a stale
+    // employee's stay interviews into whoever's drawer is now open.
+    if (!isCurrentDrawerEmployee(primaryEmployeeId)) return;
 
     if (error) {
       console.error('[StayInterviews] Could not load stay interviews:', error);

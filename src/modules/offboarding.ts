@@ -8,6 +8,7 @@ import {
   sortOffboardingTasksByStandard,
   syncStandardOffboardingTasks,
 } from '../services/offboardingStandard';
+import { isCurrentDrawerEmployee } from './employeeDrawerTabLoads';
 
 function esc(value: unknown): string {
   if (typeof window.esc === 'function') {
@@ -59,6 +60,11 @@ export async function loadOffboardingTasks(employeeId: string): Promise<void> {
     .from('offboarding_tasks')
     .select('*')
     .eq('employee_id', employeeId);
+
+  // The drawer may have switched to a different employee while this fetch was in flight.
+  // offboardingChecklist is a single shared container, so bail rather than render a stale
+  // employee's offboarding tasks into whoever's drawer is now open.
+  if (!isCurrentDrawerEmployee(String(employeeId || '').trim())) return;
 
   if (error) {
     console.error('Could not load offboarding tasks:', error);

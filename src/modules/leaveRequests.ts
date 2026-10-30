@@ -33,6 +33,7 @@ import {
   isSupervisorUser,
 } from '../services/access';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { isCurrentDrawerEmployee } from './employeeDrawerTabLoads';
 
 function esc(value: unknown): string {
   if (typeof window.esc === 'function') {
@@ -355,6 +356,11 @@ export async function loadEmployeeLeaveRequests(employeeId: string): Promise<voi
   try {
     const rows = await loadLeaveRequestsForEmployee(rosterId);
     await refreshLeavePanelHeader(rosterId, rows);
+
+    // The drawer may have switched to a different employee while this fetch was in flight.
+    // leaveRequestList is a single shared container, so bail rather than render a stale
+    // employee's leave requests into whoever's drawer is now open.
+    if (!isCurrentDrawerEmployee(String(rosterId || '').trim())) return;
 
     if (!rows.length) {
       list.innerHTML = '<div class="muted">No leave requests for this employee.</div>';

@@ -7,6 +7,7 @@ vi.mock('../services/access', () => ({
 vi.mock('../services/supabaseClient',()=>({supabaseClient:{from:vi.fn()}}));
 vi.mock('../services/employeeUtils',()=>({employeeDisplayName:()=> 'Test employee'}));
 vi.mock('../utils/helpers',()=>({esc:(text:unknown)=>String(text)}));
+vi.mock('../modules/employeeDrawerTabLoads',()=>({isCurrentDrawerEmployee:()=>true}));
 import {canAccessHrNotes} from '../services/accessScopes';
 import {supabaseClient} from '../services/supabaseClient';
 import {fetchMobileActivityFeed} from '../services/mobileActivityFeed';

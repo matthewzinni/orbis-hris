@@ -10,6 +10,7 @@ import {
 } from '../services/emergencyContactPriority';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { isCurrentDrawerEmployee } from './employeeDrawerTabLoads';
 
 interface EmergencyContactRecord extends EmergencyContactPriorityRow {
   employee_id?: string;
@@ -160,6 +161,11 @@ export async function loadEmergencyContacts(employeeId: string): Promise<void> {
       .in('employee_id', idsToSearch)
       .order('priority_order', { ascending: true })
       .order('created_at', { ascending: true });
+
+    // The drawer may have switched to a different employee while this fetch was in flight.
+    // ecHistory is a single shared container, so bail rather than render a stale employee's
+    // emergency contacts into whoever's drawer is now open.
+    if (!isCurrentDrawerEmployee(primaryEmployeeId)) return;
 
     if (error) {
       console.error('[EmergencyContacts] Load failed:', error);

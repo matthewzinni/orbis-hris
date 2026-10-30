@@ -13,6 +13,7 @@ import {
 } from '../services/employeeRecordCrud';
 import { supabaseClient } from '../services/supabaseClient';
 import { esc, nl2br, safeGet, showToast, todayInputValue } from '../utils/helpers';
+import { isCurrentDrawerEmployee } from './employeeDrawerTabLoads';
 import { stopAllDictation } from './dictation';
 import { loadPerformanceReviewAttachments } from './employeeDocuments';
 import {
@@ -356,6 +357,11 @@ export async function loadEmployeeReviews(employeeId: string): Promise<void> {
       .select('*')
       .in('employee_id', lookupIds)
       .order('review_date', { ascending: false });
+
+    // The drawer may have switched to a different employee while this fetch was in flight.
+    // reviewsHistory is a single shared container, so bail rather than render a stale
+    // employee's reviews into whoever's drawer is now open.
+    if (!isCurrentDrawerEmployee(String(employeeId || '').trim())) return;
 
     if (error) {
       console.error('Could not load reviews:', error);

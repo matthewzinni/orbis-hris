@@ -3,6 +3,7 @@ import { isSystemEmployeeNoteType } from '../services/employeeSystemNotes';
 import { canAccessDisciplineForEmployee } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { esc } from '../utils/helpers';
+import { isCurrentDrawerEmployee } from '../modules/employeeDrawerTabLoads';
 
 type HistoryRecord = {
   id?: string | number;
@@ -177,6 +178,11 @@ export async function loadEmployeeHistory(employeeId: string): Promise<void> {
     fetchHistoryRows('incident_reports', actualEmployeeId, 'incident_date'),
     fetchHistoryRows('employee_reviews', actualEmployeeId, 'review_date'),
   ]);
+
+  // The drawer may have switched to a different employee while this fetch was in flight.
+  // historyFeed is a single shared container, so bail rather than render a stale employee's
+  // history into whoever's drawer is now open.
+  if (!isCurrentDrawerEmployee(actualEmployeeId)) return;
 
   const timeline: TimelineItem[] = [
     ...notes

@@ -14,6 +14,7 @@ import {
   resolveCareEmployeeId,
 } from '../services/careEmployeePicker';
 import { showOrbisConfirm } from '../ui/confirmModal';
+import { isCurrentDrawerEmployee } from './employeeDrawerTabLoads';
 import {
   bindCareEngagementEditorEvents,
   openCareItemEditor,
@@ -340,6 +341,11 @@ export async function loadEmployeeCareSupport(employeeId: string): Promise<void>
 
   try {
     const dataset = await fetchCareEngagementDataset(true);
+
+    // The drawer may have switched to a different employee while this fetch was in flight.
+    // employeeCareNotesList/employeeCareItemsList are single shared containers, so bail rather
+    // than render a stale employee's care & support data into whoever's drawer is now open.
+    if (!isCurrentDrawerEmployee(recordId)) return;
 
     const careItems = dataset.careItems.filter((item) =>
       itemMatchesEmployee(item.employeeId, employee, item.employeeName)

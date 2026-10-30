@@ -1,6 +1,7 @@
 import { supabaseClient } from './supabaseClient';
 import { showOrbisConfirm, type ConfirmOptions } from '../ui/confirmModal';
 import { safeGet, showToast } from '../utils/helpers';
+import { isCurrentDrawerEmployee } from '../modules/employeeDrawerTabLoads';
 
 export type EmployeeLike = Record<string, unknown> & {
   id?: string;
@@ -264,6 +265,11 @@ export async function loadEmployeeRecordHistory<T extends EmployeeRecordRow>(opt
 
     const idsToSearch = employeeIds.length ? employeeIds : [primaryEmployeeId];
     const { data, error } = await fetchEmployeeRecords<T>(options.table, idsToSearch, options.order);
+
+    // The drawer may have switched to a different employee while this fetch was in flight.
+    // historyContainerId is a single shared container, so bail rather than render a stale
+    // employee's records into whoever's drawer is now open.
+    if (!isCurrentDrawerEmployee(primaryEmployeeId)) return null;
 
     if (error) {
       console.error(`[${options.logPrefix}] Could not load records:`, error);
