@@ -6,6 +6,8 @@ import {
 import {
   ATTENDANCE_LOOKBACK_DAYS,
   ATTENDANCE_REPEAT_ABSENCE_MIN,
+  ATTENDANCE_UNEXCUSED_LIMIT,
+  ATTENDANCE_UNEXCUSED_WINDOW_DAYS,
   loadRepeatedAbsenceReport,
   type AbsenceRollupRow,
 } from '../services/attendanceAbsenceReport';
@@ -195,22 +197,41 @@ function absentKeySet(snapshot: AttendanceSummary): Set<string> {
   return new Set(snapshot.absent.map((person) => personKey(person)));
 }
 
+/** Saved excused flag per absent person (undefined for roll calls saved before the flag existed). */
+function absentExcusedMap(snapshot: AttendanceSummary): Map<string, boolean | undefined> {
+  return new Map(snapshot.absent.map((person) => [personKey(person), person.excused]));
+}
+
+/** Absent rows default to excused when the employee is on approved leave. */
+function isRowExcused(
+  key: string,
+  isAbsent: boolean,
+  onLeave: boolean,
+  excusedByKey: Map<string, boolean | undefined>
+): boolean {
+  const saved = isAbsent ? excusedByKey.get(key) : undefined;
+  return typeof saved === 'boolean' ? saved : onLeave;
+}
+
 function getRowCheckboxes(row: Element | null): {
   present: HTMLInputElement | null;
   absent: HTMLInputElement | null;
+  excused: HTMLInputElement | null;
 } {
-  if (!row) return { present: null, absent: null };
+  if (!row) return { present: null, absent: null, excused: null };
   return {
     present: row.querySelector<HTMLInputElement>('.attendance-present-check'),
     absent: row.querySelector<HTMLInputElement>('.attendance-absent-check'),
+    excused: row.querySelector<HTMLInputElement>('.attendance-excused-check'),
   };
 }
 
 function syncRowAttendanceClasses(row: Element | null): void {
   if (!row) return;
-  const { present, absent } = getRowCheckboxes(row);
+  const { present, absent, excused } = getRowCheckboxes(row);
   row.classList.toggle('is-present', Boolean(present?.checked));
   row.classList.toggle('is-absent', Boolean(absent?.checked));
+  if (excused) excused.disabled = !absent?.checked;
 }
 
 function formatAsOfLabel(asOf: string, timezone?: string): string {
@@ -269,12 +290,20 @@ function formatAbsenceDates(dates: string[]): string {
 function renderAbsenceReportRows(rows: AbsenceRollupRow[]): void {
   const body = safeGet<HTMLTableSectionElement>('attendanceAbsenceReportBody');
   const countEl = safeGet('attendanceRepeatAbsenceCount');
+  const unexcusedCountEl = safeGet('attendanceUnexcusedLimitCount');
   if (!body) return;
 
-  if (countEl) countEl.textContent = String(rows.length);
+  if (countEl) {
+    countEl.textContent = String(
+      rows.filter((row) => row.absenceCount >= ATTENDANCE_REPEAT_ABSENCE_MIN).length
+    );
+  }
+  if (unexcusedCountEl) {
+    unexcusedCountEl.textContent = String(rows.filter((row) => row.overUnexcusedLimit).length);
+  }
 
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="5" class="empty">No employees with ${ATTENDANCE_REPEAT_ABSENCE_MIN} or more absences in the past ${ATTENDANCE_LOOKBACK_DAYS} days.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="6" class="empty">No employees with ${ATTENDANCE_REPEAT_ABSENCE_MIN} or more absences in the past ${ATTENDANCE_LOOKBACK_DAYS} days, or ${ATTENDANCE_UNEXCUSED_LIMIT}+ unexcused in the past ${ATTENDANCE_UNEXCUSED_WINDOW_DAYS} days.</td></tr>`;
     window.renderMobileAbsenceCards?.([]);
     return;
   }
@@ -292,6 +321,13 @@ function renderAbsenceReportRows(rows: AbsenceRollupRow[]): void {
           <td>${escapeHtml(row.employeeId)}</td>
           <td>${escapeHtml(row.department || '—')}</td>
           <td><span class="badge badge-absent">${row.absenceCount}</span></td>
+          <td>${
+            row.unexcusedCount
+              ? `<span class="badge ${row.overUnexcusedLimit ? 'badge-absent' : 'badge-leave'}"${
+                  row.overUnexcusedLimit ? ' title="At or over the unexcused absence limit"' : ''
+                }>${row.unexcusedCount}</span>`
+              : '<span class="muted">0</span>'
+          }</td>
           <td class="muted attendance-absence-dates">${escapeHtml(formatAbsenceDates(row.absenceDates))}</td>
         </tr>
       `
@@ -304,6 +340,8 @@ function renderAbsenceReportRows(rows: AbsenceRollupRow[]): void {
       name: row.name,
       department: row.department || '—',
       absenceCount: row.absenceCount,
+      unexcusedCount: row.unexcusedCount,
+      overUnexcusedLimit: row.overUnexcusedLimit,
       datesLabel: formatAbsenceDates(row.absenceDates),
     }))
   );
@@ -313,7 +351,7 @@ async function loadAbsenceReportPanel(): Promise<void> {
   const body = safeGet<HTMLTableSectionElement>('attendanceAbsenceReportBody');
   if (!body || !canViewAttendance()) return;
 
-  body.innerHTML = '<tr><td colspan="5" class="empty">Loading absence report…</td></tr>';
+  body.innerHTML = '<tr><td colspan="6" class="empty">Loading absence report…</td></tr>';
 
   try {
     await ensureEmployeesLoaded();
@@ -324,9 +362,11 @@ async function loadAbsenceReportPanel(): Promise<void> {
   } catch (error) {
     console.error('[Attendance] Absence report failed:', error);
     body.innerHTML =
-      '<tr><td colspan="5" class="empty">Could not load repeated absence report.</td></tr>';
+      '<tr><td colspan="6" class="empty">Could not load repeated absence report.</td></tr>';
     const countEl = safeGet('attendanceRepeatAbsenceCount');
     if (countEl) countEl.textContent = '—';
+    const unexcusedCountEl = safeGet('attendanceUnexcusedLimitCount');
+    if (unexcusedCountEl) unexcusedCountEl.textContent = '—';
   }
 }
 
@@ -358,12 +398,16 @@ function applyChecklistToSnapshot(): AttendanceSummary {
     const row = body?.querySelector<HTMLTableRowElement>(
       `tr.attendance-employee-row[data-attendance-key="${CSS.escape(key)}"]`
     );
-    const { present: presentCheck, absent: absentCheck } = getRowCheckboxes(row);
+    const {
+      present: presentCheck,
+      absent: absentCheck,
+      excused: excusedCheck,
+    } = getRowCheckboxes(row);
 
     if (presentCheck?.checked) {
       present.push(person);
     } else if (absentCheck?.checked) {
-      absent.push(person);
+      absent.push({ ...person, excused: Boolean(excusedCheck?.checked) });
     }
   });
 
@@ -393,7 +437,7 @@ function groupRollCallEmployeesByPaySection(
 
 function renderRollCallSectionHeader(label: string, count: number): string {
   return `<tr class="attendance-roll-call-section-row">
-    <td colspan="5">
+    <td colspan="6">
       <span class="attendance-roll-call-section-label">${escapeHtml(label)}</span>
       <span class="muted attendance-roll-call-section-count">${count}</span>
     </td>
@@ -403,13 +447,15 @@ function renderRollCallSectionHeader(label: string, count: number): string {
 function renderEmployeeChecklistRow(
   employee: EmployeeRow,
   presentKeys: Set<string>,
-  absentKeys: Set<string>
+  absentKeys: Set<string>,
+  excusedByKey: Map<string, boolean | undefined>
 ): string {
   const person = personFromEmployee(employee);
   const key = personKey(person);
   const isPresent = presentKeys.has(key);
   const isAbsent = absentKeys.has(key);
   const onLeave = isLeaveProtectedEmployee(employee);
+  const isExcused = isRowExcused(key, isAbsent, onLeave, excusedByKey);
   const classes = ['attendance-employee-row'];
   if (isPresent) classes.push('is-present');
   if (isAbsent) classes.push('is-absent');
@@ -438,6 +484,16 @@ function renderEmployeeChecklistRow(
         aria-label="Absent: ${escapeHtml(person.name)}"
       />
     </td>
+    <td class="attendance-check-cell">
+      <input
+        type="checkbox"
+        class="attendance-excused-check"
+        data-attendance-key="${escapeHtml(key)}"
+        ${isExcused ? 'checked' : ''}
+        ${isAbsent ? '' : 'disabled'}
+        aria-label="Excused absence: ${escapeHtml(person.name)}"
+      />
+    </td>
     <td class="attendance-name-cell">${escapeHtml(person.name)}${leaveBadge}</td>
     <td>${escapeHtml(person.employeeId)}</td>
     <td>${escapeHtml(person.department || '—')}</td>
@@ -452,7 +508,7 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
 
   if (!employees.length) {
     body.innerHTML =
-      '<tr><td colspan="5" class="empty">No active employees in your roster.</td></tr>';
+      '<tr><td colspan="6" class="empty">No active employees in your roster.</td></tr>';
     window.renderMobileAttendanceRollCall?.([]);
     updateAttendanceKpis(snapshot);
     return;
@@ -460,6 +516,7 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
 
   const presentKeys = presentKeySet(snapshot);
   const absentKeys = absentKeySet(snapshot);
+  const excusedByKey = absentExcusedMap(snapshot);
   const grouped = groupRollCallEmployeesByPaySection(employees);
   const sectionHtml: string[] = [];
 
@@ -470,7 +527,7 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
     sectionHtml.push(renderRollCallSectionHeader(section.label, sectionEmployees.length));
     sectionHtml.push(
       ...sectionEmployees.map((employee) =>
-        renderEmployeeChecklistRow(employee, presentKeys, absentKeys)
+        renderEmployeeChecklistRow(employee, presentKeys, absentKeys, excusedByKey)
       )
     );
   });
@@ -483,6 +540,7 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
     department: string;
     presentChecked: boolean;
     absentChecked: boolean;
+    excusedChecked: boolean;
     sectionLabel?: string;
   }> = [];
 
@@ -497,6 +555,12 @@ function renderAttendanceChecklist(snapshot: AttendanceSummary): void {
         department: person.department || '—',
         presentChecked: presentKeys.has(key),
         absentChecked: absentKeys.has(key),
+        excusedChecked: isRowExcused(
+          key,
+          absentKeys.has(key),
+          isLeaveProtectedEmployee(employee),
+          excusedByKey
+        ),
         sectionLabel: index === 0 ? section.label : undefined,
       });
     });
@@ -797,7 +861,8 @@ function bindAttendanceUi(): void {
       const target = event.target as HTMLInputElement | null;
       if (
         !target?.classList.contains('attendance-present-check') &&
-        !target?.classList.contains('attendance-absent-check')
+        !target?.classList.contains('attendance-absent-check') &&
+        !target?.classList.contains('attendance-excused-check')
       ) {
         return;
       }

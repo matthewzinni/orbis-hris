@@ -1,0 +1,38 @@
+# Daily unexcused absence alert — emails HR and the supervisor when an employee reaches
+# 4 unexcused absences in a rolling 90 days (see scripts/unexcused_absence_alert.py).
+# Schedule: weekdays 10:00 AM US Eastern (14:00 UTC during EDT; change to 15:00 UTC in winter/EST).
+# Uses the same repository secrets as the weekly HR report.
+
+name: Unexcused Absence Alert
+
+on:
+  schedule:
+    - cron: '0 14 * * 1-5'
+  workflow_dispatch:
+
+concurrency:
+  group: unexcused-absence-alert
+  cancel-in-progress: false
+
+jobs:
+  send-alerts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send unexcused absence alerts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          ATTENDANCE_ALERT_MAIL_TO: ${{ secrets.ATTENDANCE_ALERT_MAIL_TO }}
+          ORBIS_APP_URL: ${{ secrets.ORBIS_APP_URL }}
+          WEEKLY_REPORT_MAX_ATTEMPTS: '3'
+          WEEKLY_REPORT_RETRY_WAIT_SECONDS: '120'
+        run: python3 scripts/unexcused_absence_alert.py
