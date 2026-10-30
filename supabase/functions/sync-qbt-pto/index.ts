@@ -96,10 +96,16 @@ function nameTokens(value: unknown): string[] {
   return normText(value).split(' ').filter((t) => t && !NAME_SUFFIXES.has(t));
 }
 
+// Exact or known-nickname match only. A generic startsWith() prefix fallback used to be
+// allowed here, but it could silently misattribute one person's PTO balance to a different
+// employee who merely shares a last name and a first-name prefix (e.g. QBT "Marcus Reyes"
+// matching Orbis "Mark Reyes") -- and with only one such employee on the roster, there was
+// no second candidate to trip the "matches N employees" ambiguity guard. Fail to "unmatched"
+// (shown for manual review) rather than risk a wrong silent match. Same logic as
+// scripts/sync_qbt_pto_balances.py -- keep both in sync.
 function firstCompatible(a: string, b: string): boolean {
   if (a === b) return true;
-  if (NICKNAMES[a] === b || NICKNAMES[b] === a) return true;
-  return Math.min(a.length, b.length) >= 3 && (a.startsWith(b) || b.startsWith(a));
+  return NICKNAMES[a] === b || NICKNAMES[b] === a;
 }
 
 /**
@@ -275,6 +281,7 @@ Deno.serve(async (req) => {
       });
 
     let updated = 0;
+    const failed: Array<{ name: string; employee_id: string; reason: string }> = [];
     if (!dryRun) {
       for (const m of matched) {
         const { error } = await admin
@@ -286,7 +293,11 @@ Deno.serve(async (req) => {
             pto_balance_breakdown: m.breakdown,
           })
           .eq('id', m.employee_id);
-        if (error) throw new Error(`Updating ${m.name}: ${error.message}`);
+        if (error) {
+          console.error(`[sync-qbt-pto] Updating ${m.name}:`, error.message);
+          failed.push({ name: m.name, employee_id: m.employee_id, reason: error.message });
+          continue;
+        }
         updated++;
       }
     }
@@ -301,6 +312,7 @@ Deno.serve(async (req) => {
       as_of: asOf,
       qbt_users: sorted.length,
       updated,
+      failed,
       matched,
       unmatched,
       active_without_qbt_match: notInQbt,

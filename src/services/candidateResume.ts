@@ -194,9 +194,6 @@ export async function uploadCandidateResume(
   }
 
   const prior = parseResumeReference(existingValue);
-  if (prior) {
-    await removeFromBucket(prior.bucket, prior.path);
-  }
 
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_') || 'resume.pdf';
   const filePath = `${id}/${Date.now()}_${safeName}`;
@@ -219,6 +216,11 @@ export async function uploadCandidateResume(
       if (!uploadResult.error) {
         const reference = formatResumeReference(bucket, fallbackPath);
         await updateCandidateResumeRow(id, reference);
+        // Only remove the old file once the new one is uploaded and saved -- otherwise a
+        // failed upload would leave the candidate with no resume at all.
+        if (prior) {
+          await removeFromBucket(prior.bucket, prior.path);
+        }
         return reference;
       }
     }
@@ -233,6 +235,10 @@ export async function uploadCandidateResume(
   } catch (err) {
     await removeFromBucket(bucket, filePath);
     throw err;
+  }
+
+  if (prior) {
+    await removeFromBucket(prior.bucket, prior.path);
   }
 
   return reference;

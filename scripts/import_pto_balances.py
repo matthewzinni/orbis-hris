@@ -251,6 +251,8 @@ def main() -> None:
         eprint("--dry-run: no updates applied.")
         return
 
+    failed: list[tuple[str, str]] = []
+    updated = 0
     for emp_id, hours, name in updates:
         try:
             rest_json(
@@ -262,10 +264,17 @@ def main() -> None:
                 body={"pto_balance_hours": hours, "pto_balance_as_of": as_of},
             )
             eprint(f"Updated {name} ({emp_id}) → {hours:.2f} hr")
+            updated += 1
         except Exception as err:
-            die(f"Update failed for {emp_id}: {err}")
+            failed.append((f"{name} ({emp_id})", str(err)))
+            eprint(f"  FAILED: {name} ({emp_id}): {err}")
 
-    eprint("Done.")
+    eprint(f"Done. Updated {updated} of {len(updates)}.")
+    if failed:
+        eprint(f"{len(failed)} employee(s) FAILED to update and were skipped:")
+        for who, reason in failed:
+            eprint(f"  {who}: {reason}")
+        die(f"{len(failed)} of {len(updates)} employee updates failed — see list above.")
 
 
 if __name__ == "__main__":

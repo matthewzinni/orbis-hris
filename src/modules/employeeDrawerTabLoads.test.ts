@@ -67,4 +67,14 @@ describe.sequential('employeeDrawerTabLoads', () => {
     tabLoads.loadEmployeeDrawerTab('notes', 'emp-2');
     expect(loader).not.toHaveBeenCalled();
   });
+
+  it('isCurrentDrawerEmployee reflects the employee the drawer last loaded, for loaders to guard their own DOM writes', () => {
+    tabLoads.loadEmployeeDrawerTab('notes', 'emp-1');
+    expect(tabLoads.isCurrentDrawerEmployee('emp-1')).toBe(true);
+    expect(tabLoads.isCurrentDrawerEmployee('emp-2')).toBe(false);
+
+    tabLoads.loadEmployeeDrawerTab('notes', 'emp-2');
+    expect(tabLoads.isCurrentDrawerEmployee('emp-1')).toBe(false);
+    expect(tabLoads.isCurrentDrawerEmployee('emp-2')).toBe(true);
+  });
 });

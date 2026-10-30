@@ -6,6 +6,7 @@ import {
   isSupervisorUser,
   employeeMatchesSupervisorAccess,
 } from './access';
+import { supervisorNameMatches } from './supervisorNameMatch';
 import type { EmployeeLike } from './accessTypes';
 import type { InternalJobInterest, InternalJobPosting } from '../types/internalJobBoardTypes';
 
@@ -31,25 +32,11 @@ export function hiringManagerMatchesScope(hiringManagerName: string): boolean {
 
   const scopeName = String(
     getCurrentUserAccess()?.supervisor_name || getCurrentUserAccess()?.display_name || ''
-  )
-    .trim()
-    .toLowerCase();
+  ).trim();
 
-  const hiringManager = String(hiringManagerName || '')
-    .trim()
-    .toLowerCase();
+  if (!scopeName || !String(hiringManagerName || '').trim()) return false;
 
-  if (!scopeName || !hiringManager) return false;
-
-  if (hiringManager.includes(scopeName) || scopeName.includes(hiringManager)) return true;
-
-  const normalize = (value: string) => value.replace(/[^a-z0-9]/g, '');
-  const normalizedScope = normalize(scopeName);
-  const normalizedManager = normalize(hiringManager);
-
-  return (
-    normalizedManager.includes(normalizedScope) || normalizedScope.includes(normalizedManager)
-  );
+  return supervisorNameMatches(hiringManagerName, scopeName);
 }
 
 export function canViewInternalJobInterest(interest: InternalJobInterest | null | undefined): boolean {

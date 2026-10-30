@@ -145,11 +145,15 @@ def name_tokens(value: Any) -> list[str]:
 
 
 def first_compatible(a: str, b: str) -> bool:
+    """Exact or known-nickname match only. A generic startswith() prefix fallback used to be
+    allowed here, but it could silently misattribute one person's PTO balance to a different
+    employee who merely shares a last name and a first-name prefix (e.g. QBT "Marcus Reyes"
+    matching Orbis "Mark Reyes") -- and with only one such employee on the roster, there was
+    no second candidate to trip the "matches N employees" ambiguity guard. Fail to "unmatched"
+    (shown for manual review) rather than risk a wrong silent match."""
     if a == b:
         return True
-    if NICKNAMES.get(a) == b or NICKNAMES.get(b) == a:
-        return True
-    return min(len(a), len(b)) >= 3 and (a.startswith(b) or b.startswith(a))
+    return NICKNAMES.get(a) == b or NICKNAMES.get(b) == a
 
 
 def match_users(users: list[dict[str, Any]], employees: list[dict[str, Any]]):
@@ -336,14 +340,29 @@ def main() -> None:
         print("\nDry run — nothing written.")
         return
 
+    failed: list[tuple[str, str]] = []
+    updated = 0
     for user, emp, _how, total, breakdown in matched:
-        patch_employee(base_url, service_key, str(emp.get("id")), {
-            "pto_balance_hours": total,
-            "pto_balance_as_of": today,
-            "pto_balance_source": SOURCE,
-            "pto_balance_breakdown": breakdown,
-        })
-    print(f"\nUpdated {len(matched)} employees (as of {today}).")
+        emp_id = str(emp.get("id"))
+        emp_name = f"{emp.get('first_name', '')} {emp.get('last_name', '')}".strip()
+        try:
+            patch_employee(base_url, service_key, emp_id, {
+                "pto_balance_hours": total,
+                "pto_balance_as_of": today,
+                "pto_balance_source": SOURCE,
+                "pto_balance_breakdown": breakdown,
+            })
+            updated += 1
+        except RuntimeError as err:
+            failed.append((emp_name or emp_id, str(err)))
+            eprint(f"  FAILED: {emp_name or emp_id}: {err}")
+
+    print(f"\nUpdated {updated} of {len(matched)} employees (as of {today}).")
+    if failed:
+        print(f"{len(failed)} employee(s) FAILED to update and were skipped (balances left stale):")
+        for name, reason in failed:
+            print(f"  {name}: {reason}")
+        die(f"{len(failed)} of {len(matched)} employee updates failed — see list above.")
 
 
 if __name__ == "__main__":

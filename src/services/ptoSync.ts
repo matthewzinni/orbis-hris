@@ -15,6 +15,7 @@ export type PtoSyncResult = {
   asOf: string;
   qbtUsers: number;
   updated: number;
+  failed: { name: string; employeeId: string; reason: string }[];
   matched: PtoSyncMatch[];
   unmatched: { name: string; email: string; reason: string }[];
   activeWithoutQbtMatch: string[];
@@ -59,6 +60,9 @@ export async function syncPtoFromQuickBooksTime(options: { dryRun: boolean }): P
     asOf: String(body.as_of || ''),
     qbtUsers: Number(body.qbt_users || 0),
     updated: Number(body.updated || 0),
+    failed: (
+      (body.failed as { name: string; employee_id: string; reason: string }[]) || []
+    ).map((f) => ({ name: f.name, employeeId: f.employee_id, reason: f.reason })),
     matched: (body.matched as PtoSyncMatch[]) || [],
     unmatched: (body.unmatched as PtoSyncResult['unmatched']) || [],
     activeWithoutQbtMatch: (body.active_without_qbt_match as string[]) || [],

@@ -43,6 +43,7 @@ const EDIT_UI = {
 };
 
 let currentIncidentId: string | null = null;
+let isIncidentSaveInProgress = false;
 
 function resetIncidentForm(): void {
   setDrawerInputValue('incidentDate', todayInputValue());
@@ -213,51 +214,62 @@ export async function deleteIncidentRecord(incidentId: string, employeeId: strin
 }
 
 export async function saveIncidentRecord(): Promise<void> {
-  stopAllDictation();
-
-  const employeeId = getEmployeeId(getDrawerEmployee());
-  if (!employeeId) {
-    showToast('Open an employee before saving an incident record.', 'error');
+  if (isIncidentSaveInProgress) {
+    showToast('Incident save already in progress. Please wait.', 'error');
     return;
   }
 
-  const incidentPayload = buildIncidentPayload(employeeId);
-  if (!incidentPayload.incident_type && !incidentPayload.description) {
-    showToast('Enter an incident type or description before saving.', 'error');
-    return;
-  }
+  isIncidentSaveInProgress = true;
 
-  const incidentId = currentIncidentId || window.currentIncidentId;
-  const result = await saveEmployeeRecordRow<IncidentRecord>(
-    TABLE,
-    incidentPayload,
-    incidentId,
-    {
-      logPrefix: 'Incidents',
-      updateMatch: incidentId ? { employee_id: employeeId } : undefined,
+  try {
+    stopAllDictation();
+
+    const employeeId = getEmployeeId(getDrawerEmployee());
+    if (!employeeId) {
+      showToast('Open an employee before saving an incident record.', 'error');
+      return;
     }
-  );
 
-  if (result.error) {
-    console.error('Incident save failed:', result.error);
-    showToast(result.error.message || 'Could not save incident record.', 'error');
-    return;
+    const incidentPayload = buildIncidentPayload(employeeId);
+    if (!incidentPayload.incident_type && !incidentPayload.description) {
+      showToast('Enter an incident type or description before saving.', 'error');
+      return;
+    }
+
+    const incidentId = currentIncidentId || window.currentIncidentId;
+    const result = await saveEmployeeRecordRow<IncidentRecord>(
+      TABLE,
+      incidentPayload,
+      incidentId,
+      {
+        logPrefix: 'Incidents',
+        updateMatch: incidentId ? { employee_id: employeeId } : undefined,
+      }
+    );
+
+    if (result.error) {
+      console.error('Incident save failed:', result.error);
+      showToast(result.error.message || 'Could not save incident record.', 'error');
+      return;
+    }
+
+    const savedIncident = Array.isArray(result.data)
+      ? (result.data[0] as IncidentRecord | undefined)
+      : undefined;
+    const reloadEmployeeId = String(savedIncident?.employee_id || employeeId);
+
+    showToast(incidentId ? 'Incident record updated.' : 'Incident record saved.');
+
+    currentIncidentId = null;
+    window.currentIncidentId = null;
+    window.currentIncidentReportId = null;
+    clearRecordEditModeUi(EDIT_UI);
+    resetIncidentForm();
+
+    await refreshIncidentDependentUi(reloadEmployeeId);
+  } finally {
+    isIncidentSaveInProgress = false;
   }
-
-  const savedIncident = Array.isArray(result.data)
-    ? (result.data[0] as IncidentRecord | undefined)
-    : undefined;
-  const reloadEmployeeId = String(savedIncident?.employee_id || employeeId);
-
-  showToast(incidentId ? 'Incident record updated.' : 'Incident record saved.');
-
-  currentIncidentId = null;
-  window.currentIncidentId = null;
-  window.currentIncidentReportId = null;
-  clearRecordEditModeUi(EDIT_UI);
-  resetIncidentForm();
-
-  await refreshIncidentDependentUi(reloadEmployeeId);
 }
 
 window.saveIncidentRecord = saveIncidentRecord;

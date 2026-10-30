@@ -52,6 +52,15 @@ function renderResult(result: PtoSyncResult): void {
     .map((u) => `<li>${esc(u.name)}${u.email ? ` (${esc(u.email)})` : ''} — <span class="muted">${esc(u.reason)}</span></li>`)
     .join('');
   const missing = result.activeWithoutQbtMatch.map((n) => `<li>${esc(n)}</li>`).join('');
+  const failedRows = (result.failed || [])
+    .map((f) => `<li>${esc(f.name)} — <span class="muted">${esc(f.reason)}</span></li>`)
+    .join('');
+  const failedSection = result.failed && result.failed.length
+    ? `<details open style="margin-top: 8px">
+        <summary><strong style="color: var(--danger, #b91c1c)">Failed to update (${result.failed.length})</strong> — balance left unchanged</summary>
+        <ul>${failedRows}</ul>
+      </details>`
+    : '';
 
   el.innerHTML = `
     <details open style="margin-top: 12px">
@@ -61,6 +70,7 @@ function renderResult(result: PtoSyncResult): void {
         <tbody>${matchedRows || '<tr><td colspan="5" class="muted">None</td></tr>'}</tbody>
       </table></div>
     </details>
+    ${failedSection}
     <details ${result.unmatched.length ? 'open' : ''} style="margin-top: 8px">
       <summary><strong>QuickBooks Time users not matched (${result.unmatched.length})</strong> — skipped</summary>
       <ul>${unmatchedRows || '<li class="muted">None</li>'}</ul>
@@ -89,12 +99,20 @@ async function run(dryRun: boolean): Promise<void> {
   try {
     const result = await syncPtoFromQuickBooksTime({ dryRun });
     renderResult(result);
+    const hasFailures = !dryRun && result.failed && result.failed.length > 0;
     const msg = dryRun
       ? `Preview: ${result.matched.length} would update, ${result.unmatched.length} not matched. Nothing was changed.`
-      : `Updated ${result.updated} employees (as of ${result.asOf}). ${result.unmatched.length} not matched.`;
-    setStatus(msg, 'success');
+      : `Updated ${result.updated} employees (as of ${result.asOf}). ${result.unmatched.length} not matched.${
+          hasFailures ? ` ${result.failed.length} FAILED to update — see below.` : ''
+        }`;
+    setStatus(msg, hasFailures ? 'error' : 'success');
     if (!dryRun) {
-      toast('PTO balances updated from QuickBooks Time.');
+      toast(
+        hasFailures
+          ? `PTO sync finished with ${result.failed.length} failure(s). Check the results below.`
+          : 'PTO balances updated from QuickBooks Time.',
+        hasFailures ? 'error' : 'success'
+      );
       if (typeof window.refreshOrbisWorkspace === 'function') void window.refreshOrbisWorkspace();
     }
   } catch (err) {

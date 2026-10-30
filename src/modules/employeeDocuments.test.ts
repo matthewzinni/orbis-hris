@@ -1,12 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createSignedUrl = vi.fn();
+const selectChain = vi.fn();
 
 vi.mock('../services/supabaseClient', () => ({
   supabaseClient: {
     storage: {
       from: () => ({ createSignedUrl }),
     },
+    from: () => ({
+      select: () => ({
+        in: () => ({
+          order: selectChain,
+        }),
+      }),
+    }),
   },
 }));
 
@@ -18,7 +26,14 @@ vi.mock('../ui/confirmModal', () => ({
   showOrbisConfirm: vi.fn(),
 }));
 
-import { openEmployeeDocument } from './employeeDocuments';
+const { isCurrentDrawerEmployee } = vi.hoisted(() => ({
+  isCurrentDrawerEmployee: vi.fn(() => true),
+}));
+vi.mock('./employeeDrawerTabLoads', () => ({ isCurrentDrawerEmployee }));
+
+vi.mock('./handbookAcknowledgments', () => ({ loadHandbookAcknowledgments: vi.fn() }));
+
+import { loadEmployeeDocuments, openEmployeeDocument } from './employeeDocuments';
 
 describe('openEmployeeDocument', () => {
   const replace = vi.fn();
@@ -82,5 +97,44 @@ describe('openEmployeeDocument', () => {
     await openEmployeeDocument('employee/file.pdf');
 
     expect(assign).toHaveBeenCalledWith('https://example.test/document');
+  });
+});
+
+describe('loadEmployeeDocuments', () => {
+  let target: { innerHTML: string; querySelectorAll: () => HTMLButtonElement[] };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    target = { innerHTML: '', querySelectorAll: () => [] as HTMLButtonElement[] };
+    vi.stubGlobal('window', {
+      safeGet: () => target,
+      currentEmployee: null,
+      showToast: vi.fn(),
+    });
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    isCurrentDrawerEmployee.mockReturnValue(true);
+  });
+
+  it('renders the fetched documents when still the active drawer employee', async () => {
+    selectChain.mockResolvedValue({
+      data: [{ id: 'd1', file_name: 'w2.pdf', uploaded_at: '2026-01-01' }],
+      error: null,
+    });
+
+    await loadEmployeeDocuments('emp-1');
+
+    expect(target.innerHTML).toContain('w2.pdf');
+  });
+
+  it('does not render into the shared container if the drawer switched employees mid-fetch', async () => {
+    selectChain.mockResolvedValue({
+      data: [{ id: 'd1', file_name: 'w2.pdf', uploaded_at: '2026-01-01' }],
+      error: null,
+    });
+    isCurrentDrawerEmployee.mockReturnValue(false);
+
+    await loadEmployeeDocuments('emp-1');
+
+    expect(target.innerHTML).toBe('<div class="empty">Loading documents...</div>');
   });
 });

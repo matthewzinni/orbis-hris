@@ -150,6 +150,12 @@ const EMPLOYEE_RELATED_TABLES = [
   'care_follow_ups',
   'care_resources_shared',
   'care_wellness_check_ins',
+  'investigation_subjects',
+  'internal_job_interest',
+  'handbook_acknowledgment_forms',
+  'leadership_enrollments',
+  'leadership_workshop_participants',
+  'leadership_development_goals',
 ] as const;
 
 let isEmployeeSaveInProgress = false;
@@ -241,6 +247,22 @@ async function cascadeEmployeeIdChange(
         `Employee saved but related ${table.replaceAll('_', ' ')} records could not be relinked: ${error.message}`
       );
     }
+  }
+
+  // leadership_coaching_sessions keys on participant_employee_id, not employee_id -- can't join
+  // the uniform loop above.
+  const { error: coachingError } = await (client.from!('leadership_coaching_sessions') as {
+    update: (payload: Record<string, string>) => {
+      eq: (column: string, value: string) => Promise<{ error: { message?: string } | null }>;
+    };
+  })
+    .update({ participant_employee_id: newId })
+    .eq('participant_employee_id', oldId);
+
+  if (coachingError) {
+    return new Error(
+      `Employee saved but leadership coaching session records could not be relinked: ${coachingError.message}`
+    );
   }
 
   const { error: candidateError } = await (client.from!('candidates') as {

@@ -350,89 +350,90 @@ function buildInvestigationEmployeeSearchText(investigation: Investigation): str
     .toLowerCase();
 }
 
+/** Row ids currently stored for `investigationId` under any of `roles`, to delete after a
+ * successful re-insert rather than before -- deleting first left a real window where a
+ * failed insert (network error, etc.) would leave the investigation with zero subjects. */
+async function fetchSubjectIdsForRoles(investigationId: string, roles: string[]): Promise<string[]> {
+  const { data, error } = await supabaseClient
+    .from('investigation_subjects')
+    .select('id')
+    .eq('investigation_id', investigationId)
+    .in('subject_role', roles);
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data || []) as Array<{ id: string }>).map((row) => row.id);
+}
+
+async function deleteSubjectsByIds(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+
+  const { error } = await supabaseClient.from('investigation_subjects').delete().in('id', ids);
+
+  if (error) {
+    throw error;
+  }
+}
+
 async function syncTargetedSubjects(
   investigationId: string,
   employeeIds: string[]
 ): Promise<void> {
-  const { error: deleteTargetedError } = await supabaseClient
-    .from('investigation_subjects')
-    .delete()
-    .eq('investigation_id', investigationId)
-    .eq('subject_role', 'targeted');
+  const staleIds = await fetchSubjectIdsForRoles(investigationId, ['targeted', 'respondent']);
 
-  if (deleteTargetedError) {
-    throw deleteTargetedError;
+  if (employeeIds.length) {
+    const rows = employeeIds.map((employeeId) => {
+      const employee = findEmployeeById(employeeId);
+      return {
+        investigation_id: investigationId,
+        employee_id: employeeId,
+        subject_role: 'targeted',
+        display_name: employee
+          ? employeeDisplayName(employee as Parameters<typeof employeeDisplayName>[0])
+          : employeeId,
+      };
+    });
+
+    const { error: insertError } = await supabaseClient
+      .from('investigation_subjects')
+      .insert(rows);
+
+    if (insertError) {
+      throw insertError;
+    }
   }
 
-  const { error: deleteRespondentError } = await supabaseClient
-    .from('investigation_subjects')
-    .delete()
-    .eq('investigation_id', investigationId)
-    .eq('subject_role', 'respondent');
-
-  if (deleteRespondentError) {
-    throw deleteRespondentError;
-  }
-
-  if (!employeeIds.length) {
-    return;
-  }
-
-  const rows = employeeIds.map((employeeId) => {
-    const employee = findEmployeeById(employeeId);
-    return {
-      investigation_id: investigationId,
-      employee_id: employeeId,
-      subject_role: 'targeted',
-      display_name: employee
-        ? employeeDisplayName(employee as Parameters<typeof employeeDisplayName>[0])
-        : employeeId,
-    };
-  });
-
-  const { error: insertError } = await supabaseClient
-    .from('investigation_subjects')
-    .insert(rows);
-
-  if (insertError) {
-    throw insertError;
-  }
+  await deleteSubjectsByIds(staleIds);
 }
 
 async function syncFocusSubjects(investigationId: string, employeeIds: string[]): Promise<void> {
-  const { error: deleteError } = await supabaseClient
-    .from('investigation_subjects')
-    .delete()
-    .eq('investigation_id', investigationId)
-    .eq('subject_role', 'focus');
+  const staleIds = await fetchSubjectIdsForRoles(investigationId, ['focus']);
 
-  if (deleteError) {
-    throw deleteError;
+  if (employeeIds.length) {
+    const rows = employeeIds.map((employeeId) => {
+      const employee = findEmployeeById(employeeId);
+      return {
+        investigation_id: investigationId,
+        employee_id: employeeId,
+        subject_role: 'focus',
+        display_name: employee
+          ? employeeDisplayName(employee as Parameters<typeof employeeDisplayName>[0])
+          : employeeId,
+      };
+    });
+
+    const { error: insertError } = await supabaseClient
+      .from('investigation_subjects')
+      .insert(rows);
+
+    if (insertError) {
+      throw insertError;
+    }
   }
 
-  if (!employeeIds.length) {
-    return;
-  }
-
-  const rows = employeeIds.map((employeeId) => {
-    const employee = findEmployeeById(employeeId);
-    return {
-      investigation_id: investigationId,
-      employee_id: employeeId,
-      subject_role: 'focus',
-      display_name: employee
-        ? employeeDisplayName(employee as Parameters<typeof employeeDisplayName>[0])
-        : employeeId,
-    };
-  });
-
-  const { error: insertError } = await supabaseClient
-    .from('investigation_subjects')
-    .insert(rows);
-
-  if (insertError) {
-    throw insertError;
-  }
+  await deleteSubjectsByIds(staleIds);
 }
 
 function resolveReportedByFromForm(): { employeeId: string; displayName: string } {

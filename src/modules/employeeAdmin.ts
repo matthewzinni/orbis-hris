@@ -26,6 +26,7 @@ import { employeeToPayrollSnapshot } from '../services/payrollHandoff';
 type EmployeeRow = Record<string, unknown>;
 
 let benefitsEligibilityBindingsReady = false;
+let isEmployeeLifecycleActionInProgress = false;
 
 function safeGet(id: string): HTMLElement | null {
   if (typeof window.safeGet === 'function') {
@@ -100,6 +101,12 @@ const EMPLOYEE_DELETE_RELATED_TABLES = [
   'care_follow_ups',
   'care_resources_shared',
   'care_wellness_check_ins',
+  'investigation_subjects',
+  'internal_job_interest',
+  'handbook_acknowledgment_forms',
+  'leadership_enrollments',
+  'leadership_workshop_participants',
+  'leadership_development_goals',
 ] as const;
 
 async function deleteEmployeeDocumentStorageForEmployee(
@@ -187,6 +194,21 @@ export async function deleteEmployeeById(
     }
   }
 
+  // leadership_coaching_sessions keys on participant_employee_id, not employee_id -- can't join
+  // the uniform loop above.
+  const { error: coachingError } = await supabaseClient
+    .from('leadership_coaching_sessions')
+    .delete()
+    .eq('participant_employee_id', targetId);
+  if (coachingError) {
+    console.error('Could not delete related rows from leadership_coaching_sessions:', coachingError);
+    return {
+      error: new Error(
+        `Could not delete related leadership coaching session records: ${coachingError.message}`
+      ),
+    };
+  }
+
   const linkError = await clearEmployeePortalLinks(targetId);
   if (linkError) {
     return { error: linkError };
@@ -202,124 +224,144 @@ export async function deleteEmployeeById(
 }
 
 export async function runDeleteEmployee(): Promise<void> {
+  if (isEmployeeLifecycleActionInProgress) {
+    showToast('An employee action is already in progress. Please wait.', 'error');
+    return;
+  }
+
   const currentEmployee = getCurrentEmployee();
   if (!currentEmployee) {
     showToast('Open an employee first.', 'error');
     return;
   }
 
-  const employeeName =
-    `${currentEmployee.first || currentEmployee.first_name || ''} ${currentEmployee.last || currentEmployee.last_name || ''}`.trim() ||
-    'this employee';
+  isEmployeeLifecycleActionInProgress = true;
+  try {
+    const employeeName =
+      `${currentEmployee.first || currentEmployee.first_name || ''} ${currentEmployee.last || currentEmployee.last_name || ''}`.trim() ||
+      'this employee';
 
-  const confirmed = await showOrbisConfirm(
-    `Permanently delete ${employeeName}'s employee file? This removes the record completely and cannot be undone.`,
-    {
-      title: 'Delete employee',
-      confirmLabel: 'Delete permanently',
-      danger: true,
+    const confirmed = await showOrbisConfirm(
+      `Permanently delete ${employeeName}'s employee file? This removes the record completely and cannot be undone.`,
+      {
+        title: 'Delete employee',
+        confirmLabel: 'Delete permanently',
+        danger: true,
+      }
+    );
+
+    if (!confirmed) return;
+
+    const employeeId = String(
+      currentEmployee.id || currentEmployee.employee_id || currentEmployee.dbId || ''
+    );
+    const { error } = await deleteEmployeeById(employeeId);
+
+    if (error) {
+      showToast(error.message || 'Could not delete employee.', 'error');
+      return;
     }
-  );
 
-  if (!confirmed) return;
+    recordAuditEvent('Deleted Employee', currentEmployee, 'Employee record permanently deleted.');
+    showToast('Employee deleted permanently.', 'success');
+    await refreshDashboardAfterEmployeeChange();
 
-  const employeeId = String(
-    currentEmployee.id || currentEmployee.employee_id || currentEmployee.dbId || ''
-  );
-  const { error } = await deleteEmployeeById(employeeId);
-
-  if (error) {
-    showToast(error.message || 'Could not delete employee.', 'error');
-    return;
-  }
-
-  recordAuditEvent('Deleted Employee', currentEmployee, 'Employee record permanently deleted.');
-  showToast('Employee deleted permanently.', 'success');
-  await refreshDashboardAfterEmployeeChange();
-
-  if (typeof window.closeDrawer === 'function') {
-    window.closeDrawer();
+    if (typeof window.closeDrawer === 'function') {
+      window.closeDrawer();
+    }
+  } finally {
+    isEmployeeLifecycleActionInProgress = false;
   }
 }
 
 export async function runTerminateEmployee(): Promise<void> {
+  if (isEmployeeLifecycleActionInProgress) {
+    showToast('An employee action is already in progress. Please wait.', 'error');
+    return;
+  }
+
   const currentEmployee = getCurrentEmployee();
   if (!currentEmployee) {
     showToast('Open an employee first.', 'error');
     return;
   }
 
-  const employeeName = employeeTerminationDisplayName(
-    currentEmployee as Record<string, unknown>
-  );
-
-  const confirmed = await showOrbisConfirm(
-    `Terminate ${employeeName}? This will mark them as TERMINATED but keep their file.`,
-    {
-      title: 'Terminate employee',
-      confirmLabel: 'Terminate',
-      danger: true,
-    }
-  );
-
-  if (!confirmed) return;
-
-  const targetId = String(
-    currentEmployee.id || currentEmployee.employee_id || currentEmployee.dbId || ''
-  ).trim();
-
-  const termDate = new Date().toISOString().slice(0, 10);
-  const payrollBefore = employeeToPayrollSnapshot(currentEmployee as Record<string, unknown>);
-  const terminationFields = buildTerminationUpdatePayload({
-    employee: currentEmployee as Record<string, unknown>,
-    terminationDate: termDate,
-  });
-
-  const { error } = await supabaseClient
-    .from('employees')
-    .update(terminationFields)
-    .eq('id', targetId);
-
-  if (error) {
-    console.error(error);
-    showToast('Could not terminate employee.', 'error');
-    return;
-  }
-
-  recordAuditEvent(
-    'Terminated Employee',
-    currentEmployee,
-    'Employee marked terminated with file retained for turnover reporting.'
-  );
-
+  isEmployeeLifecycleActionInProgress = true;
   try {
-    const { warnings, payrollHandoffs } = await runEmployeeTerminationSideEffects({
-      employeeId: targetId,
-      employee: currentEmployee as Record<string, unknown>,
-      payrollBefore,
-      payrollAfter: payrollSnapshotAfterTermination(
-        currentEmployee as Record<string, unknown>,
-        terminationFields
-      ),
-    });
-    if (warnings.length) {
-      showToast(`Employee terminated, but: ${warnings.join(' ')}`, 'error');
-    } else if (payrollHandoffs > 0) {
-      showToast(
-        `Logged ${payrollHandoffs} payroll handoff${payrollHandoffs === 1 ? '' : 's'} for external payroll.`,
-        'success'
-      );
-    } else {
-      showToast('Employee terminated. File retained for turnover reporting.', 'success');
-    }
-  } catch (err) {
-    console.warn('[EmployeeAdmin] Termination side effects failed:', err);
-    showToast('Employee terminated, but follow-up tasks may be incomplete.', 'error');
-  }
-  await refreshDashboardAfterEmployeeChange();
+    const employeeName = employeeTerminationDisplayName(
+      currentEmployee as Record<string, unknown>
+    );
 
-  if (typeof window.closeDrawer === 'function') {
-    window.closeDrawer();
+    const confirmed = await showOrbisConfirm(
+      `Terminate ${employeeName}? This will mark them as TERMINATED but keep their file.`,
+      {
+        title: 'Terminate employee',
+        confirmLabel: 'Terminate',
+        danger: true,
+      }
+    );
+
+    if (!confirmed) return;
+
+    const targetId = String(
+      currentEmployee.id || currentEmployee.employee_id || currentEmployee.dbId || ''
+    ).trim();
+
+    const termDate = new Date().toISOString().slice(0, 10);
+    const payrollBefore = employeeToPayrollSnapshot(currentEmployee as Record<string, unknown>);
+    const terminationFields = buildTerminationUpdatePayload({
+      employee: currentEmployee as Record<string, unknown>,
+      terminationDate: termDate,
+    });
+
+    const { error } = await supabaseClient
+      .from('employees')
+      .update(terminationFields)
+      .eq('id', targetId);
+
+    if (error) {
+      console.error(error);
+      showToast('Could not terminate employee.', 'error');
+      return;
+    }
+
+    recordAuditEvent(
+      'Terminated Employee',
+      currentEmployee,
+      'Employee marked terminated with file retained for turnover reporting.'
+    );
+
+    try {
+      const { warnings, payrollHandoffs } = await runEmployeeTerminationSideEffects({
+        employeeId: targetId,
+        employee: currentEmployee as Record<string, unknown>,
+        payrollBefore,
+        payrollAfter: payrollSnapshotAfterTermination(
+          currentEmployee as Record<string, unknown>,
+          terminationFields
+        ),
+      });
+      if (warnings.length) {
+        showToast(`Employee terminated, but: ${warnings.join(' ')}`, 'error');
+      } else if (payrollHandoffs > 0) {
+        showToast(
+          `Logged ${payrollHandoffs} payroll handoff${payrollHandoffs === 1 ? '' : 's'} for external payroll.`,
+          'success'
+        );
+      } else {
+        showToast('Employee terminated. File retained for turnover reporting.', 'success');
+      }
+    } catch (err) {
+      console.warn('[EmployeeAdmin] Termination side effects failed:', err);
+      showToast('Employee terminated, but follow-up tasks may be incomplete.', 'error');
+    }
+    await refreshDashboardAfterEmployeeChange();
+
+    if (typeof window.closeDrawer === 'function') {
+      window.closeDrawer();
+    }
+  } finally {
+    isEmployeeLifecycleActionInProgress = false;
   }
 }
 

@@ -1,4 +1,5 @@
 import { loadHandbookAcknowledgments } from './handbookAcknowledgments';
+import { isCurrentDrawerEmployee } from './employeeDrawerTabLoads';
 import { canAccessPerformanceReviews } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
 import { showOrbisConfirm } from '../ui/confirmModal';
@@ -213,6 +214,11 @@ export async function loadEmployeeDocuments(employeeId: string): Promise<void> {
       .select('*')
       .in('employee_id', idsToSearch)
       .order('uploaded_at', { ascending: false });
+
+    // The drawer may have switched to a different employee while this fetch was in flight.
+    // docHistory is a single shared container, so bail rather than render a stale employee's
+    // documents into whoever's drawer is now open.
+    if (!isCurrentDrawerEmployee(primaryEmployeeId)) return;
 
     if (error) {
       console.error('[EmployeeDocuments] Load failed:', error);

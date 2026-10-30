@@ -544,7 +544,7 @@ async function downloadDocument(doc: DocumentRecord): Promise<void> {
   link.click();
 }
 
-async function deleteDocument(doc: DocumentRecord): Promise<void> {
+export async function deleteDocument(doc: DocumentRecord): Promise<void> {
   const confirmed = await showOrbisConfirm(
     `Delete "${doc.title}" from the Document Library?`,
     {
@@ -571,29 +571,30 @@ async function deleteDocument(doc: DocumentRecord): Promise<void> {
     const { error: storageError } = await db.storage.from(target.bucket).remove([target.path]);
 
     if (storageError) {
-      devWarn(`Storage delete warning for ${target.bucket}/${target.path}:`, storageError);
-    } else {
-      devLog(`Deleted storage file: ${target.bucket}/${target.path}`);
+      console.error(`Storage delete failed for ${target.bucket}/${target.path}:`, storageError);
+      showOrbisToast('Could not delete the file from storage. Document was not removed.', 'error');
+      return;
     }
+
+    devLog(`Deleted storage file: ${target.bucket}/${target.path}`);
   }
 
   if (doc.id && !doc.id.includes('/')) {
     const { error: tableError } = await db.from(DOCUMENT_TABLE).delete().eq('id', doc.id);
 
     if (tableError) {
-      devWarn('Table delete warning:', tableError);
+      console.error('Table delete failed:', tableError);
+      showOrbisToast('Could not delete the document record. Please try again.', 'error');
+      return;
     }
   }
 
-  documents = documents.filter((item) => {
-    return !(item.file_name === doc.file_name && item.title === doc.title);
-  });
+  documents = documents.filter((item) => item.id !== doc.id);
 
   renderDocumentsLibrary();
+  showOrbisToast(`Deleted "${doc.title}".`);
 
-  setTimeout(async () => {
-    await loadDocuments();
-  }, 500);
+  await loadDocuments();
 }
 
 async function getUsableDocumentUrl(doc: DocumentRecord, download: boolean): Promise<string> {

@@ -1,5 +1,7 @@
 # Weekly Orbis HR email — runs in the cloud (no Mac awake required).
-# Schedule: Monday 1:00 PM US Eastern (17:00 UTC during EDT; change to 18:00 UTC in winter/EST).
+# Schedule: Monday 1:00 PM US Eastern. GitHub cron is UTC, so it fires at 17:00 and 18:00 UTC
+# and the script only sends from whichever slot is 1 PM Eastern that day (handles daylight
+# saving automatically — same pattern as weekly-time-off-email.yml and sync-qbt-pto.yml).
 # Retries: Python script retries SMTP up to 5 times; this job retries the whole run once more if needed.
 
 name: Weekly Orbis HR Report
@@ -7,6 +9,7 @@ name: Weekly Orbis HR Report
 on:
   schedule:
     - cron: '0 17 * * 1'
+    - cron: '0 18 * * 1'
   workflow_dispatch:
 
 concurrency:
@@ -33,4 +36,8 @@ jobs:
           ORBIS_APP_URL: ${{ secrets.ORBIS_APP_URL }}
           WEEKLY_REPORT_MAX_ATTEMPTS: '5'
           WEEKLY_REPORT_RETRY_WAIT_SECONDS: '300'
-        run: python3 scripts/weekly_orbis_report_email.py
+          CRON_SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          args=()
+          if [ "${{ github.event_name }}" = "schedule" ]; then args+=(--scheduled); fi
+          python3 scripts/weekly_orbis_report_email.py "${args[@]}"

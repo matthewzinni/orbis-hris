@@ -1226,6 +1226,14 @@ export async function moveCandidateToStage(candidateId: string, newStage: string
   }
 
   if (newStage === 'Hired') {
+    const candidateName =
+      `${candidate.first_name || ''} ${candidate.last_name || ''}`.trim() || 'this candidate';
+    const confirmed = await showOrbisConfirm(
+      `Mark ${candidateName} as Hired? This immediately creates or updates their employee record and cannot be undone from here.`,
+      { title: 'Hire candidate', confirmLabel: 'Hire', danger: true }
+    );
+    if (!confirmed) return;
+
     await convertCandidateToEmployee(candidateId);
     return;
   }
@@ -1389,6 +1397,49 @@ async function convertCandidateToEmployeeInternal(candidateId: string): Promise<
     (existingEmployee.data?.[0]?.id ? String(existingEmployee.data[0].id) : '');
 
   if (matchedEmployeeId) {
+    const { data: matchedEmployee, error: matchedEmployeeError } = await supabaseClient
+      .from('employees')
+      .select('id, position, department')
+      .eq('id', matchedEmployeeId)
+      .maybeSingle();
+
+    if (matchedEmployeeError) {
+      devWarn('Could not load matched employee before applying candidate fields:', matchedEmployeeError);
+    }
+
+    const updates: Record<string, string> = {};
+    const newPosition = String(data.position || '').trim();
+    const newDepartment = String(data.department || '').trim();
+    const candidatePhone = String(data.phone || '').trim();
+
+    if (newPosition && newPosition !== String(matchedEmployee?.position || '').trim()) {
+      updates.position = newPosition;
+    }
+    if (newDepartment && newDepartment !== String(matchedEmployee?.department || '').trim()) {
+      updates.department = newDepartment;
+    }
+    if (candidatePhone) {
+      updates.phone = candidatePhone;
+    }
+    if (candidateEmail) {
+      if (candidateEmail.endsWith('@btwglobal.com')) {
+        updates.work_email = candidateEmail;
+      } else {
+        updates.personal_email = candidateEmail;
+      }
+    }
+
+    if (Object.keys(updates).length) {
+      const { error: updateError } = await supabaseClient
+        .from('employees')
+        .update(updates)
+        .eq('id', matchedEmployeeId);
+
+      if (updateError) {
+        console.error('Could not update matched employee from candidate fields:', updateError);
+      }
+    }
+
     await supabaseClient
       .from('candidates')
       .update({ stage: 'Hired', linked_employee_id: matchedEmployeeId })

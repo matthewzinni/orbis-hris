@@ -10,6 +10,9 @@ node_modules/
 # Stay interview import data (may contain PII)
 scripts/data/*.csv
 scripts/.env.weekly_report
+
+# Removed: contained real employee names and PTO balances, not synthetic example data
+scripts/examples/pto_balances_2026-06-03.csv
 scripts/logs/
 scripts/output/
 
