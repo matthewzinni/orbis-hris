@@ -6,6 +6,23 @@ For a **second customer** (not BTW Global): after `npm run db:push` on a new Sup
 
 **Never run bootstrap on BTW production.**
 
+## Unexcused absence alert (`unexcused_absence_alert.py`)
+
+Emails HR (`ATTENDANCE_ALERT_MAIL_TO`, or `MAIL_TO`) and the employee's supervisor when someone reaches **4 unexcused absences in a rolling 90 days**.
+
+- An absence counts when roll call saved it with **Excused** unticked and no approved leave request covers that day. Roll calls saved before the Excused box existed are not counted.
+- Each alert is recorded in `attendance_unexcused_alerts`, so an employee is emailed once when they reach the limit, then once per new unexcused absence while still over it.
+- The email goes to HR and the supervisor only. It does not warn the employee; HR issues any warning through Discipline.
+- Limit and window: `ATTENDANCE_UNEXCUSED_LIMIT` / `ATTENDANCE_UNEXCUSED_WINDOW_DAYS` (defaults 4 / 90). If you change them, change `ATTENDANCE_UNEXCUSED_LIMIT` / `ATTENDANCE_UNEXCUSED_WINDOW_DAYS` in `src/services/attendanceAbsenceReport.ts` too, so the Attendance page matches.
+
+Setup (after `npm run db:push` creates the table). It uses the same `scripts/.env.weekly_report` and GitHub secrets as the weekly report:
+
+```bash
+python3 scripts/unexcused_absence_alert.py --dry-run
+```
+
+Schedule: `.github/workflows/unexcused-absence-alert.yml` runs **weekdays at 10:00 AM US Eastern**. Test it with `gh workflow run unexcused-absence-alert.yml`. Optional secret `ATTENDANCE_ALERT_MAIL_TO` sends alerts to different HR recipients than the weekly report.
+
 ## Weekly HR email (`weekly_orbis_report_email.py`)
 
 Sends an HTML snapshot (headcount, stay interviews due, open investigations, discipline, operations) to **matthew.zinni@btwglobal.com** by default.

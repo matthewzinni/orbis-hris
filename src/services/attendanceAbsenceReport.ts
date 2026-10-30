@@ -1,19 +1,50 @@
 import { employeeMatchesAttendanceScope } from './access';
 import type { EmployeeLike } from './accessTypes';
-import { normalizePeopleList, type AttendancePerson } from './attendance';
+import { isUnexcusedAbsence, normalizePeopleList, type AttendancePerson } from './attendance';
 import { employeeDisplayName } from './employeeUtils';
 import { supabaseClient } from './supabaseClient';
 
 export const ATTENDANCE_LOOKBACK_DAYS = 28;
 export const ATTENDANCE_REPEAT_ABSENCE_MIN = 2;
+/** Keep in sync with ATTENDANCE_UNEXCUSED_LIMIT / _WINDOW_DAYS in scripts/unexcused_absence_alert.py. */
+export const ATTENDANCE_UNEXCUSED_LIMIT = 4;
+export const ATTENDANCE_UNEXCUSED_WINDOW_DAYS = 90;
 
 export type AbsenceRollupRow = {
   employeeId: string;
   name: string;
   department: string;
+  /** Absences (excused or not) in the past ATTENDANCE_LOOKBACK_DAYS. */
   absenceCount: number;
   absenceDates: string[];
+  /** Unexcused absences in the past ATTENDANCE_UNEXCUSED_WINDOW_DAYS. */
+  unexcusedCount: number;
+  overUnexcusedLimit: boolean;
 };
+
+/** Counts for one employee's absence dates, newest window first. Dates are YYYY-MM-DD. */
+export function summarizeEmployeeAbsences(
+  absenceDates: Iterable<string>,
+  unexcusedDates: Iterable<string>,
+  endDate: string,
+  options?: { lookbackDays?: number; unexcusedWindowDays?: number; unexcusedLimit?: number }
+): { absenceDates: string[]; unexcusedCount: number; overUnexcusedLimit: boolean } {
+  const lookbackDays = options?.lookbackDays ?? ATTENDANCE_LOOKBACK_DAYS;
+  const windowDays = options?.unexcusedWindowDays ?? ATTENDANCE_UNEXCUSED_WINDOW_DAYS;
+  const limit = options?.unexcusedLimit ?? ATTENDANCE_UNEXCUSED_LIMIT;
+  const end = new Date(`${endDate}T12:00:00`);
+  const lookbackStart = isoDateDaysAgo(lookbackDays - 1, end);
+  const windowStart = isoDateDaysAgo(windowDays - 1, end);
+
+  const recent = [...new Set(absenceDates)]
+    .filter((date) => date >= lookbackStart && date <= endDate)
+    .sort((left, right) => right.localeCompare(left));
+  const unexcusedCount = [...new Set(unexcusedDates)].filter(
+    (date) => date >= windowStart && date <= endDate
+  ).length;
+
+  return { absenceDates: recent, unexcusedCount, overUnexcusedLimit: unexcusedCount >= limit };
+}
 
 type EmployeeRow = Record<string, unknown>;
 
@@ -75,7 +106,10 @@ export async function loadRepeatedAbsenceReport(options?: {
   const lookbackDays = options?.lookbackDays ?? ATTENDANCE_LOOKBACK_DAYS;
   const minAbsences = options?.minAbsences ?? ATTENDANCE_REPEAT_ABSENCE_MIN;
   const endDate = String(options?.endDate || new Date().toISOString().slice(0, 10)).trim();
-  const startDate = isoDateDaysAgo(lookbackDays - 1, new Date(`${endDate}T12:00:00`));
+  const startDate = isoDateDaysAgo(
+    Math.max(lookbackDays, ATTENDANCE_UNEXCUSED_WINDOW_DAYS) - 1,
+    new Date(`${endDate}T12:00:00`)
+  );
 
   const { data, error } = await supabaseClient.rpc('orbis_list_attendance_snapshots', {
     p_from: startDate,
@@ -95,6 +129,7 @@ export async function loadRepeatedAbsenceReport(options?: {
       department: string;
       keys: Set<string>;
       dates: Set<string>;
+      unexcusedDates: Set<string>;
     }
   >();
 
@@ -117,6 +152,7 @@ export async function loadRepeatedAbsenceReport(options?: {
 
       if (existing) {
         existing.dates.add(date);
+        if (isUnexcusedAbsence(person)) existing.unexcusedDates.add(date);
         keys.forEach((value) => existing.keys.add(value));
         return;
       }
@@ -137,20 +173,31 @@ export async function loadRepeatedAbsenceReport(options?: {
         ).trim(),
         keys,
         dates: new Set([date]),
+        unexcusedDates: new Set(isUnexcusedAbsence(person) ? [date] : []),
       });
     });
   });
 
   return [...byEmployee.values()]
-    .map((row) => ({
-      employeeId: row.employeeId,
-      name: row.name,
-      department: row.department,
-      absenceCount: row.dates.size,
-      absenceDates: [...row.dates].sort((left, right) => right.localeCompare(left)),
-    }))
-    .filter((row) => row.absenceCount >= minAbsences)
+    .map((row) => {
+      const summary = summarizeEmployeeAbsences(row.dates, row.unexcusedDates, endDate, {
+        lookbackDays,
+      });
+      return {
+        employeeId: row.employeeId,
+        name: row.name,
+        department: row.department,
+        absenceCount: summary.absenceDates.length,
+        absenceDates: summary.absenceDates,
+        unexcusedCount: summary.unexcusedCount,
+        overUnexcusedLimit: summary.overUnexcusedLimit,
+      };
+    })
+    .filter((row) => row.absenceCount >= minAbsences || row.overUnexcusedLimit)
     .sort((left, right) => {
+      if (left.overUnexcusedLimit !== right.overUnexcusedLimit) {
+        return left.overUnexcusedLimit ? -1 : 1;
+      }
       if (right.absenceCount !== left.absenceCount) {
         return right.absenceCount - left.absenceCount;
       }

@@ -6,7 +6,7 @@
           <div class="page" id="attendancePage">
             <div class="toolbar attendance-toolbar">
               <div class="toolbar-left">
-                <span class="muted">Check Present or Absent per person, then save (Leave status unchanged)</span>
+                <span class="muted">Check Present or Absent per person (tick Excused for excused absences), then save (Leave status unchanged)</span>
               </div>
               <div class="toolbar-right attendance-manual-actions">
                 <button class="button primary" id="attendanceSaveBtn" type="button">Save attendance</button>
@@ -27,6 +27,11 @@
                 <div class="kpi-label">Repeat absences</div>
                 <div class="kpi-value" id="attendanceRepeatAbsenceCount">—</div>
                 <div class="kpi-sub">2+ absences in the past 4 weeks</div>
+              </div>
+              <div class="kpi-card alert">
+                <div class="kpi-label">Unexcused limit</div>
+                <div class="kpi-value" id="attendanceUnexcusedLimitCount">—</div>
+                <div class="kpi-sub">4+ unexcused in the past 90 days</div>
               </div>
             </div>
             <div class="card attendance-live-status-card" id="attendanceLiveStatusCard">
@@ -64,7 +69,8 @@
                 <div>
                   <span>Repeated absences</span>
                   <p class="muted attendance-absence-report-sub">
-                    Employees marked absent on 2 or more roll calls in the past 4 weeks.
+                    Employees marked absent on 2 or more roll calls in the past 4 weeks, or with 4+
+                    unexcused absences in the past 90 days (HR and the supervisor are emailed).
                   </p>
                 </div>
                 <button class="button soft sm" id="attendanceAbsenceReportRefreshBtn" type="button">
@@ -81,12 +87,13 @@
                         <th>ID</th>
                         <th>Department</th>
                         <th>Absences</th>
+                        <th>Unexcused (90 days)</th>
                         <th>Dates absent</th>
                       </tr>
                     </thead>
                     <tbody id="attendanceAbsenceReportBody">
                       <tr>
-                        <td colspan="5" class="empty">Loading absence report…</td>
+                        <td colspan="6" class="empty">Loading absence report…</td>
                       </tr>
                     </tbody>
                   </table>
@@ -123,6 +130,7 @@
                       <tr>
                         <th class="attendance-check-col">Present</th>
                         <th class="attendance-check-col">Absent</th>
+                        <th class="attendance-check-col">Excused</th>
                         <th>Name</th>
                         <th>ID</th>
                         <th>Department</th>
@@ -130,7 +138,7 @@
                     </thead>
                     <tbody id="attendanceChecklistBody">
                       <tr>
-                        <td colspan="5" class="empty">Loading employees…</td>
+                        <td colspan="6" class="empty">Loading employees…</td>
                       </tr>
                     </tbody>
                   </table>

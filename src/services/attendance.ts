@@ -4,6 +4,8 @@ export type AttendancePerson = {
   employeeId: string;
   name: string;
   department?: string;
+  /** Absent list only. Saved roll calls before this flag existed leave it undefined (not counted as unexcused). */
+  excused?: boolean;
 };
 
 export type AttendanceSummary = {
@@ -33,11 +35,18 @@ function normalizePerson(input: unknown): AttendancePerson | null {
 
   if (!employeeId && !name) return null;
 
-  return {
+  const person: AttendancePerson = {
     employeeId: employeeId || '—',
     name: name || employeeId || 'Unknown',
     department: department || undefined,
   };
+  if (typeof row.excused === 'boolean') person.excused = row.excused;
+  return person;
+}
+
+/** Only absences explicitly saved as not excused count toward the unexcused limit. */
+export function isUnexcusedAbsence(person: AttendancePerson): boolean {
+  return person.excused === false;
 }
 
 export function normalizePeopleList(value: unknown): AttendancePerson[] {
