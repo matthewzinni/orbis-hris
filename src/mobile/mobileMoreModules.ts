@@ -20,6 +20,7 @@ type AttendanceRollRow = {
   department: string;
   presentChecked: boolean;
   absentChecked: boolean;
+  excusedChecked: boolean;
   sectionLabel?: string;
 };
 
@@ -28,6 +29,8 @@ type AbsenceRow = {
   name: string;
   department: string;
   absenceCount: number;
+  unexcusedCount: number;
+  overUnexcusedLimit: boolean;
   datesLabel: string;
 };
 
@@ -191,6 +194,10 @@ export function renderMobileAttendanceRollCall(rows: AttendanceRollRow[]): void 
             <input type="checkbox" class="attendance-absent-check" data-sync-absent="${esc(row.attendanceKey)}" ${row.absentChecked ? 'checked' : ''} />
             Absent
           </label>
+          <label class="orbis-mobile-attendance-toggle">
+            <input type="checkbox" class="attendance-excused-check" data-sync-excused="${esc(row.attendanceKey)}" ${row.excusedChecked ? 'checked' : ''} ${row.absentChecked ? '' : 'disabled'} />
+            Excused
+          </label>
         </div>
       </div>`
       )
@@ -212,6 +219,7 @@ export function renderMobileAbsenceCards(rows: AbsenceRow[]): void {
       <button type="button" class="orbis-mobile-module-card" data-attendance-open-employee="${esc(row.employeeId)}">
         <div class="orbis-mobile-module-card-top">
           <span class="badge badge-absent">${esc(row.absenceCount)} absences</span>
+          ${row.unexcusedCount ? `<span class="badge ${row.overUnexcusedLimit ? 'badge-absent' : 'badge-leave'}">${esc(row.unexcusedCount)} unexcused (90 days)</span>` : ''}
         </div>
         <div class="orbis-mobile-module-card-title">${esc(row.name)}</div>
         <div class="orbis-mobile-module-card-meta">${esc(row.department || '—')}</div>
@@ -273,7 +281,7 @@ export function renderMobileOrgChartDrill(): void {
 
 function syncAttendanceCheckboxToTable(
   attendanceKey: string,
-  kind: 'present' | 'absent',
+  kind: 'present' | 'absent' | 'excused',
   checked: boolean
 ): void {
   const row = document.querySelector<HTMLTableRowElement>(
@@ -281,9 +289,7 @@ function syncAttendanceCheckboxToTable(
   );
   if (!row) return;
 
-  const input = row.querySelector<HTMLInputElement>(
-    kind === 'present' ? '.attendance-present-check' : '.attendance-absent-check'
-  );
+  const input = row.querySelector<HTMLInputElement>(`.attendance-${kind}-check`);
   if (!input) return;
 
   input.checked = checked;
@@ -370,6 +376,7 @@ function bindMobileMoreModuleEvents(): void {
 
     const presentId = input.dataset.syncPresent;
     const absentId = input.dataset.syncAbsent;
+    const excusedId = input.dataset.syncExcused;
 
     if (presentId) {
       syncAttendanceCheckboxToTable(presentId, 'present', input.checked);
@@ -384,6 +391,15 @@ function bindMobileMoreModuleEvents(): void {
         syncAttendanceCheckboxToTable(absentId, 'present', false);
       }
     }
+
+    if (excusedId) {
+      syncAttendanceCheckboxToTable(excusedId, 'excused', input.checked);
+    }
+
+    const card = input.closest('.orbis-mobile-attendance-card');
+    const absentToggle = card?.querySelector<HTMLInputElement>('.attendance-absent-check');
+    const excusedToggle = card?.querySelector<HTMLInputElement>('.attendance-excused-check');
+    if (absentToggle && excusedToggle) excusedToggle.disabled = !absentToggle.checked;
   });
 
   window.addEventListener('orbis:layout-change', () => {

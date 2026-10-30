@@ -239,12 +239,60 @@ Reports button, `npx supabase secrets set QBT_PTO_TYPES=...`.
 
 Local: `python3 scripts/sync_qbt_pto_balances.py --dry-run` (uses `scripts/.env.weekly_report`).
 
+## Live attendance from QuickBooks Time (every 5 minutes)
+
+Shows each mapped employee's live clock status on the Attendance page: `on_clock`,
+`worked_clocked_out`, `manual_entry` (hand-entered in QBT, not from a physical clock), or
+`no_punch`. `no_punch` only displays as "Absent" once the employee's scheduled start time has
+passed in America/New_York; employees with no scheduled start time set never auto-flag absent.
+This is purely additive — the existing manual roll-call checklist (`attendance_manual_snapshots`)
+is untouched, and this is a **different system** from the older, unrelated `intuit-workforce-attendance`
+function (a generic "Intuit Workforce" API, not QuickBooks Time).
+
+Matching is **by explicit id only** (`employees.qbt_user_id`) — never by name. Set it per employee,
+along with their scheduled start time, in **Settings & Admin → QuickBooks Time attendance mapping**
+(admins only); unmapped QuickBooks Time users are listed there too.
+
+Pieces:
+- Migration `20261029200000_qbt_attendance_schema.sql` — adds `employees.qbt_user_id`,
+  `employees.scheduled_start_time`, and the `attendance_live_status` table (service-role writes only).
+- Migration `20261029210000_qbt_attendance_cron.sql` — enables `pg_cron`/`pg_net` (first use in this
+  project) and schedules the 5-minute sync. **Requires a one-time manual step after applying** (see below).
+- Edge Function `sync-qbt-attendance` — called by `pg_cron` every 5 minutes, or on demand via
+  Attendance → **Sync now** (admins). `verify_jwt = false` in `supabase/config.toml` — the cron path
+  authenticates with a dedicated secret, not a Supabase JWT, so the platform gateway must not block it.
+
+Deploy:
+
+```bash
+npx supabase db push                                   # applies both new migrations
+npx supabase secrets set QBT_ACCESS_TOKEN=...           # same token as the PTO sync, if not already set
+npx supabase secrets set ATTENDANCE_SYNC_SECRET=...     # a new random value -- NOT the service role key
+npx supabase functions deploy sync-qbt-attendance
+git push                                                # Vercel redeploys the UI
+```
+
+**One-time manual step** (per environment — training and production separately; run in the Supabase
+SQL editor, never commit these values):
+
+```sql
+select vault.create_secret('https://YOUR_PROJECT.supabase.co/functions/v1/sync-qbt-attendance', 'qbt_attendance_function_url');
+select vault.create_secret('the same random value you set as ATTENDANCE_SYNC_SECRET', 'attendance_sync_secret');
+```
+
+Without this step the migration's `cron.schedule` job runs every 5 minutes but fails harmlessly
+(no URL/secret to call) until the Vault secrets exist.
+
+First run: Attendance → **Sync now** (admins) to test on demand without waiting on the cron schedule.
+Confirm `pg_cron` itself is working by waiting ~5–10 minutes and checking that "Last synced" advances
+with no manual action.
+
 ## Smoke test (production)
 
 1. Hard refresh or incognito → `https://www.orbis-btw.com`
 2. Sign in
 3. Dashboard KPIs load (not stuck on skeletons)
-4. Open **Attendance** → click **Sync now** → Present/Absent populate
+4. Open **Attendance** → click **Sync now** on the "Live from QuickBooks Time" card → statuses populate
 5. Open an employee → Stay Interviews tab
 6. Care & Engagement (admin: can edit; supervisor: read-only banner, no create buttons)
 7. Sign out

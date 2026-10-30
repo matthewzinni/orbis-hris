@@ -91,11 +91,21 @@
 }
 
 #attendancePage .attendance-present-check,
-#attendancePage .attendance-absent-check {
+#attendancePage .attendance-absent-check,
+#attendancePage .attendance-excused-check {
   width: 1.05rem;
   height: 1.05rem;
   margin: 0;
   cursor: pointer;
+}
+
+#attendancePage .attendance-excused-check {
+  accent-color: #16a34a;
+}
+
+#attendancePage .attendance-excused-check:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 #attendancePage .attendance-present-check {
