@@ -1,13 +1,13 @@
 # Daily unexcused absence alert — emails HR and the supervisor when an employee reaches
 # 4 unexcused absences in a rolling 90 days (see scripts/unexcused_absence_alert.py).
-# Schedule: weekdays 10:00 AM US Eastern (14:00 UTC during EDT; change to 15:00 UTC in winter/EST).
+# Schedule: weekdays 10:00 AM US Eastern (15:00 UTC during EST; change to 14:00 UTC in summer/EDT).
 # Uses the same repository secrets as the weekly HR report.
 
 name: Unexcused Absence Alert
 
 on:
   schedule:
-    - cron: '0 14 * * 1-5'
+    - cron: '0 15 * * 1-5'
   workflow_dispatch:
 
 concurrency:
