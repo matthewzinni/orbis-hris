@@ -276,20 +276,21 @@ def build_html(week: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 
 
-def scheduled_run_should_send() -> bool:
-    """GitHub cron is UTC. The workflow fires at two UTC hours so one of them is 7 AM Eastern
-    in both daylight and standard time; only that run sends."""
-    cron = os.environ.get("CRON_SCHEDULE", "").strip()
+def scheduled_run_should_send(now: datetime | None = None) -> bool:
+    """The workflow fires several times on Monday morning because GitHub can start scheduled
+    runs hours late. Send from the first run at or after 7 AM Eastern on Monday; the workflow
+    skips runs once this week's email has gone out."""
     target = int(os.environ.get("TIME_OFF_SEND_HOUR_ET", "7"))
-    if not cron:
-        return True
-    try:
-        utc_hour = int(cron.split()[1])
-    except (IndexError, ValueError):
-        return True
-    today_utc = datetime.now(timezone.utc).date()
-    slot = datetime(today_utc.year, today_utc.month, today_utc.day, utc_hour, tzinfo=timezone.utc)
-    return slot.astimezone(ET).hour == target
+    now_et = (now or datetime.now(timezone.utc)).astimezone(ET)
+    return now_et.weekday() == 0 and now_et.hour >= target
+
+
+def mark_sent() -> None:
+    """Tell the workflow this run sent the email, so it can record that for later runs."""
+    output = os.environ.get("GITHUB_OUTPUT")
+    if output:
+        with open(output, "a", encoding="utf-8") as fh:
+            fh.write("sent=true\n")
 
 
 def main() -> None:
@@ -297,11 +298,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Email leadership this week's time off from QuickBooks Time")
     parser.add_argument("--dry-run", action="store_true", help="Print the email; do not send")
     parser.add_argument("--week-of", help="Any date in the week to report (YYYY-MM-DD). Default: this week")
-    parser.add_argument("--scheduled", action="store_true", help="Skip unless this cron slot is 7 AM Eastern")
+    parser.add_argument("--scheduled", action="store_true", help="Skip unless it is Monday, 7 AM Eastern or later")
     args = parser.parse_args()
 
     if args.scheduled and not scheduled_run_should_send():
-        print("Not the 7 AM Eastern slot for today's time zone offset; skipping.")
+        print("Not yet 7 AM Eastern on Monday; skipping.")
         return
 
     ref = date.fromisoformat(args.week_of) if args.week_of else datetime.now(ET).date()
@@ -321,6 +322,7 @@ def main() -> None:
         die("No recipients resolved.")
     send_email_with_retries(subject, html, recipients)
     print(f"Sent '{subject}' to {', '.join(recipients)}")
+    mark_sent()
 
 
 if __name__ == "__main__":
