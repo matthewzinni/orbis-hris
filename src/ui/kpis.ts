@@ -26,6 +26,7 @@ import {
 import { getEmployeeTenureMonths } from '../services/employeeTenure';
 import { loadIronShiftAwardRosterMap } from '../services/ironShiftAwards';
 import { getEmployeeMapKeys, hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
+import { refreshInsuranceCheckinKpi } from './insuranceCheckinCard';
 import {
   buildHrIntelligenceContext,
   computeTurnoverRiskPercentage,
@@ -1114,6 +1115,7 @@ export function renderKpiEmployeeMetrics(): void {
   buildKpiHoverDetails();
 
   void refreshPerformanceReviewsDueKpi();
+  refreshInsuranceCheckinKpi(employees);
 
   if (typeof window.renderDashboardCharts === 'function') {
     window.renderDashboardCharts(employees);

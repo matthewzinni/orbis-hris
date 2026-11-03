@@ -223,3 +223,37 @@
   color: #e8eef7;
 }
 
+
+/* Dashboard insurance check-in card and modal */
+.insurance-checkin-card {
+  cursor: pointer;
+}
+
+.insurance-checkin-card:focus-visible {
+  outline: 2px solid var(--space-accent, #4f8cff);
+  outline-offset: 2px;
+}
+
+.insurance-checkin-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 12px;
+  color: var(--muted, #9aa8bc);
+}
+
+.insurance-checkin-check {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.insurance-checkin-check input {
+  width: 18px;
+  height: 18px;
+}
+
+.insurance-checkin-meta {
+  font-size: 0.75rem;
+}
