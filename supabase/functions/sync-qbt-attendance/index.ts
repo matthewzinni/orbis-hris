@@ -192,10 +192,13 @@ Deno.serve(async (req) => {
     });
 
     const onClockUserIds = new Set<string>();
+    const shiftSecondsByUser = new Map<string, number>();
     Object.entries(currentTotals).forEach(([userId, row]) => {
       const totals = row as QbtCurrentTotal;
       if (totals?.on_the_clock) onClockUserIds.add(String(userId));
+      if (typeof totals?.shift_seconds === 'number') shiftSecondsByUser.set(String(userId), totals.shift_seconds);
     });
+    const now = new Date();
 
     const matched: Array<{
       employee_id: string;
@@ -217,7 +220,9 @@ Deno.serve(async (req) => {
       }
       const derived = deriveAttendanceStatus(
         onClockUserIds.has(String(qbtUserId)),
-        timesheetsByQbtUser.get(String(qbtUserId)) || []
+        timesheetsByQbtUser.get(String(qbtUserId)) || [],
+        shiftSecondsByUser.get(String(qbtUserId)),
+        now
       );
       matched.push({
         employee_id: employee.id,

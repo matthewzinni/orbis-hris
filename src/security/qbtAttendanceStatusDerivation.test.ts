@@ -19,6 +19,21 @@ describe('deriveAttendanceStatus', () => {
     expect(result).toEqual({ status: 'on_clock', clockInAt: null, clockOutAt: null });
   });
 
+  it('estimates clock-in from the shift length when the open entry is not returned', () => {
+    const result = deriveAttendanceStatus(true, [], 5400, new Date('2026-11-03T13:30:00Z'));
+    expect(result).toEqual({ status: 'on_clock', clockInAt: '2026-11-03T12:00:00.000Z', clockOutAt: null });
+  });
+
+  it('prefers the open entry start over the shift-length estimate', () => {
+    const result = deriveAttendanceStatus(
+      true,
+      [{ user_id: 1, type: 'regular', start: '2026-11-03T11:17:00Z', end: '' }],
+      5400,
+      new Date('2026-11-03T13:30:00Z')
+    );
+    expect(result.clockInAt).toBe('2026-11-03T11:17:00Z');
+  });
+
   it('is worked_clocked_out when not on the clock but a regular timesheet entry exists today', () => {
     const result = deriveAttendanceStatus(false, [
       { user_id: 1, type: 'regular', start: '2026-10-29T12:00:00Z', end: '2026-10-29T20:00:00Z' },
