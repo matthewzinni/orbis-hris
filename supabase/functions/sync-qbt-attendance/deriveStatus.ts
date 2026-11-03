@@ -19,13 +19,21 @@ export type DerivedAttendance = {
   clockOutAt: string | null;
 };
 
+// shiftSeconds/now: QBT's current_totals shift length, used to estimate the clock-in time when
+// the open timesheet itself isn't returned (QBT hides some users' timesheets from the API token).
 export function deriveAttendanceStatus(
   isOnClock: boolean,
-  todaysTimesheets: QbtTimesheet[]
+  todaysTimesheets: QbtTimesheet[],
+  shiftSeconds?: number | null,
+  now?: Date
 ): DerivedAttendance {
   if (isOnClock) {
     const openEntry = todaysTimesheets.find((t) => t.start && !t.end);
-    return { status: 'on_clock', clockInAt: openEntry?.start || null, clockOutAt: null };
+    let clockInAt = openEntry?.start || null;
+    if (!clockInAt && now && typeof shiftSeconds === 'number' && shiftSeconds > 0) {
+      clockInAt = new Date(now.getTime() - shiftSeconds * 1000).toISOString();
+    }
+    return { status: 'on_clock', clockInAt, clockOutAt: null };
   }
 
   const regularEntry = todaysTimesheets.find((t) => (t.type || 'regular') === 'regular');
