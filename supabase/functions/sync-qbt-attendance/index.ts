@@ -175,7 +175,9 @@ Deno.serve(async (req) => {
 
     const [users, timesheetsByUser, currentTotals] = await Promise.all([
       qbtGetAll(token, 'users', 'users', { active: 'true' }),
-      qbtGetAll(token, 'timesheets', 'timesheets', { start_date: today, end_date: today }),
+      // QBT leaves open (still on the clock) timesheets out unless on_the_clock is 'both', which
+      // left every on-the-clock row without a clock-in time.
+      qbtGetAll(token, 'timesheets', 'timesheets', { start_date: today, end_date: today, on_the_clock: 'both' }),
       fetchCurrentTotals(token),
     ]);
 
