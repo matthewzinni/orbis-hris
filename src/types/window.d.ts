@@ -347,6 +347,7 @@ declare global {
     openCareEngagementView?: () => void;
     getCareEngagementDataset?: () => CareEngagementDataset | null;
     loadEmployeeCareSupport?: (employeeId: string) => Promise<void>;
+    loadEmployeeBenefits?: (employeeId: string) => Promise<void>;
     invalidateEmployeeCareSupportCache?: () => void;
     loadDashboardOverview?: () => Promise<void>;
     refreshOrbisWorkspace?: () => Promise<void>;
