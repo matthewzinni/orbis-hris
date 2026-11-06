@@ -36,6 +36,18 @@ describe('parseSalaryImport', () => {
     expect(JSON.stringify(result)).not.toContain('111-22-3333');
   });
 
+  it('skips EN "Benefit" (benefit-salary override) rows from pay history', () => {
+    const csv = [
+      HEADER,
+      ',Pat,Example,01/15/2020,Active,Base,03/01/2025,"$90,000.00",,,,Merit',
+      ',Pat,Example,01/15/2020,Active,Benefit,03/01/2025,,,,"$95,000.00",',
+    ].join('\n');
+    const result = parseSalaryImport(csv);
+    expect(result.history).toHaveLength(1);
+    expect(result.history[0]).toMatchObject({ salary_type: 'Base', annual_base_salary: 90000 });
+    expect(result.warnings).toEqual([]);
+  });
+
   it('keeps people with no salary rows and warns about them', () => {
     const csv = [HEADER, ',Lee,Nopay,02/02/2022,Active,,,,,,,'].join('\n');
     const result = parseSalaryImport(csv);
@@ -64,6 +76,8 @@ describe('salary math', () => {
     expect(inferPayBasis({ pay_basis: 'Hourly', annual_base_salary: null, hourly_rate: null })).toBe('hourly');
     expect(inferPayBasis({ pay_basis: 'Salary', annual_base_salary: null, hourly_rate: null })).toBe('annual');
     expect(inferPayBasis({ annual_base_salary: null, hourly_rate: 18 })).toBe('hourly');
+    expect(inferPayBasis({ annual_base_salary: 37440, hourly_rate: 18 })).toBe('hourly');
+    expect(inferPayBasis({ annual_base_salary: 90000, hourly_rate: null })).toBe('annual');
     expect(inferPayBasis({ annual_base_salary: null, hourly_rate: null })).toBeNull();
   });
 

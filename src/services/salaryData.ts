@@ -76,8 +76,9 @@ export function inferPayBasis(input: {
   const declared = String(input.pay_basis || '').trim().toLowerCase();
   if (declared.startsWith('hour')) return 'hourly';
   if (declared.startsWith('annual') || declared.startsWith('salar')) return 'annual';
-  if (input.annual_base_salary) return 'annual';
+  // EN fills both for hourly staff (annual = rate × hours × 52), so a rate means hourly.
   if (input.hourly_rate) return 'hourly';
+  if (input.annual_base_salary) return 'annual';
   return null;
 }
 
@@ -133,7 +134,9 @@ export function parseSalaryImport(text: string): SalaryImportParseResult {
     const annual = parseMoney(cell(cells, 'annual'));
     const hourly = parseMoney(cell(cells, 'hourly'));
     const effective = toIsoDate(cell(cells, 'effective'));
-    if (annual === null && hourly === null && !effective) continue; // person with no salary rows
+    // EN "Benefit" rows (benefit-salary overrides for insurance) and blank rows carry
+    // no pay amount: they are not pay history.
+    if (annual === null && hourly === null) continue;
 
     history.push({
       person_key: key,
@@ -197,9 +200,12 @@ function byEffectiveDesc(a: SalaryHistoryRow, b: SalaryHistoryRow): number {
   return String(b.effective_date || '').localeCompare(String(a.effective_date || ''));
 }
 
-/** EN marks one row "Current"; otherwise the latest row effective on or before today. */
+/**
+ * EN's page marks one row "Current" (its CSV says "Base"); otherwise the latest row
+ * with a pay amount that is effective on or before today.
+ */
 export function currentSalaryRow<T extends SalaryHistoryRow>(rows: T[], todayIso: string): T | null {
-  const sorted = [...rows].sort(byEffectiveDesc);
+  const sorted = rows.filter((row) => row.annual_base_salary || row.hourly_rate).sort(byEffectiveDesc);
   return (
     sorted.find((row) => /^current$/i.test(row.salary_type)) ||
     sorted.find((row) => !row.effective_date || row.effective_date <= todayIso) ||

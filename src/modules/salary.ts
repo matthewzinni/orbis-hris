@@ -211,7 +211,9 @@ function renderDetail(roster: EmployeeLike[]): string {
     return `<tr>
       <td>${esc(shortDate(row.effective_date))}</td>
       <td>${esc(row.salary_type || '')}</td>
-      <td>${row.annual_base_salary ? money(row.annual_base_salary) : row.hourly_rate ? `${money(row.hourly_rate, true)}/hr` : '—'}
+      <td>${row.hourly_rate && (row.pay_basis === 'hourly' || !row.annual_base_salary)
+        ? `${money(row.hourly_rate, true)}/hr`
+        : row.annual_base_salary ? money(row.annual_base_salary) : '—'}
         ${row.hours_per_week ? `<div class="muted">${esc(row.hours_per_week)} hrs/wk</div>` : ''}</td>
       <td>${money(annual.amount)}${annual.estimated ? ' <span class="muted">est.</span>' : ''}</td>
       <td>${raise === null ? '—' : `${raise > 0 ? '+' : ''}${raise}%`}</td>
