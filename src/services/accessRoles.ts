@@ -24,6 +24,7 @@ import {
   setSupervisedEmployeeIds,
   syncAccessToWindow,
 } from './accessState';
+import { canViewSalaries } from './accessScopes';
 
 export type { UserAccessRow, OrbisAccessState, EmployeeLike } from './accessTypes';
 export {
@@ -63,6 +64,7 @@ export const EMPLOYEE_PORTAL_SECTIONS = new Set([
 const ADMIN_PORTAL_SECTIONS = new Set(['myTasksView', 'myDirectoryView']);
 
 const ADMIN_ONLY_SECTIONS = new Set([
+  'salaryView',
   'candidatesView',
   'documentsView',
   'janusView',
@@ -358,6 +360,10 @@ export function canAccessOrbisApp(): boolean {
 export function canAccessAppSection(sectionId: string): boolean {
   const section = String(sectionId || '').trim();
   if (!section) return false;
+
+  if (section === 'salaryView') {
+    return canViewSalaries();
+  }
 
   if (section === 'janusView') {
     return canAccessJanus();

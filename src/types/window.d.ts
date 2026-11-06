@@ -372,6 +372,8 @@ declare global {
     queueEmployeeSignatureAndOpenPdf?: typeof queueEmployeeSignatureAndOpenPdf;
     bootErSigningFromUrl?: () => void;
     loadReportsSection?: (force?: boolean) => Promise<void>;
+    loadSalarySection?: (force?: boolean) => Promise<void>;
+    clearSalaryState?: () => void;
     exportReportsStayInterviewsExcel?: () => void;
     exportReportsHeadcountExcel?: () => void;
     exportReportsInsuranceRosterExcel?: () => void;

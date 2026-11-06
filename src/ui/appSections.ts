@@ -65,6 +65,7 @@ const SECTION_LABELS: Record<string, string> = {
   activityView: 'Activity',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
+  salaryView: 'Salary',
   settingsView: 'Admin & Settings',
 };
 
@@ -290,6 +291,17 @@ const APP_SECTIONS: AppSection[] = [
     onEnter: () => {
       if (typeof window.loadReportsSection === 'function') {
         void window.loadReportsSection();
+      }
+    },
+  },
+  {
+    id: 'salaryView',
+    rootId: 'orbisSectionSalary',
+    targetId: 'salaryPage',
+    aliases: ['salary', 'salaries', 'compensation'],
+    onEnter: () => {
+      if (typeof window.loadSalarySection === 'function') {
+        void window.loadSalarySection();
       }
     },
   },
