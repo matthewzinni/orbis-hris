@@ -407,6 +407,7 @@ export function applyAdminDashboardView(): void {
 }
 
 export function clearOrbisSessionState(): void {
+  window.clearSalaryState?.();
   delete (window as { currentUserEmail?: string }).currentUserEmail;
   setCurrentUserAccess(null, 'user');
   window.EMPLOYEES = [];
