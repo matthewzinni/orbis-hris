@@ -634,6 +634,7 @@ function normalizeDrawerTabName(tabName: string): string {
   if (raw.includes('notes')) return 'notes';
   if (raw.includes('profile')) return 'profile';
   if (raw.includes('caresupport') || raw.includes('careengagement')) return 'caresupport';
+  if (raw.includes('benefit')) return 'benefits';
 
   const tabMap: Record<string, string> = {
     profile: 'profile',
@@ -654,6 +655,7 @@ function normalizeDrawerTabName(tabName: string): string {
     history: 'history',
     employeeadmin: 'employeeadmin',
     caresupport: 'caresupport',
+    benefits: 'benefits',
   };
 
   return tabMap[raw] || raw;

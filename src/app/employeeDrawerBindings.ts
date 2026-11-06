@@ -18,6 +18,7 @@ import { loadEmployeeDocuments } from '../modules/employeeDocuments';
 import { loadEmployeeHistory } from '../ui/history';
 import { initAccessibleDrawerTabs } from '../ui/drawerTabs';
 import { loadEmployeeCareSupport } from '../modules/employeeCareSupport';
+import { loadEmployeeBenefits } from '../modules/employeeBenefits';
 import { loadEmployeeManualAtRisk, loadEmployeeManualImpactPlayer } from '../modules/employeeFlags';
 import { loadEmployeePayrollHandoffs } from '../modules/payrollHandoff';
 
@@ -47,6 +48,7 @@ export function initializeEmployeeDrawerBindings(): void {
       documents: loadEmployeeDocuments,
       history: loadEmployeeHistory,
       'care-support': loadEmployeeCareSupport,
+      benefits: loadEmployeeBenefits,
       employee: async (id, context) => {
         await Promise.all([
           loadEmployeeManualAtRisk(id, context),
