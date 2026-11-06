@@ -1,0 +1,34 @@
+
+        <section
+          id="orbisSectionSalary"
+          class="orbis-app-section hidden"
+          data-section="salaryView"
+          aria-hidden="true"
+        >
+          <div class="page" id="salaryPage">
+            <div class="page-header">
+              <div>
+                <h1>Salary</h1>
+                <p class="muted">Private — visible only to Matthew Zinni. Salary history comes from Employee Navigator.</p>
+              </div>
+              <div class="salary-import-actions">
+                <label class="button soft">
+                  Import salary CSV
+                  <input type="file" accept=".csv,text/csv" data-salary-import hidden />
+                </label>
+              </div>
+            </div>
+            <details class="salary-refresh-help">
+              <summary>How to refresh from Employee Navigator</summary>
+              <ol>
+                <li>Employee Navigator has no company-wide salary history report; each employee's
+                  Employee Record → Compensation page has its own "Export CSV".</li>
+                <li>Combine them into one CSV with these columns: First Name, Last Name, Hire Date,
+                  Employment Status, Salary Type, Effective Date, Annual Base Salary, Hourly Rate,
+                  Hours Per Week, Annual Benefit Salary, Change Reason.</li>
+                <li>Import it here, review the matches, then Save import. Delete the CSV afterwards.</li>
+              </ol>
+            </details>
+            <div id="salaryPanel" class="salary-panel"></div>
+          </div>
+        </section>

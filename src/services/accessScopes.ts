@@ -62,6 +62,14 @@ export function canAdjustPtoBalance(): boolean {
   return getCurrentAuthEmail() === PTO_BALANCE_EDITOR_EMAIL;
 }
 
+/** Only this account may see the Salary page (DB: public.orbis_can_view_salaries()). */
+export const SALARY_VIEWER_EMAIL = 'matthew.zinni@btwglobal.com';
+
+/** Salary page, nav link and data are Matthew-only — not other HR admins. */
+export function canViewSalaries(): boolean {
+  return getCurrentAuthEmail() === SALARY_VIEWER_EMAIL;
+}
+
 /** Private org-wide completed performance-review ledger is Matthew-only. */
 export function canViewCompletedPerformanceReviewsLedger(): boolean {
   return getCurrentAuthEmail() === PTO_BALANCE_EDITOR_EMAIL;
