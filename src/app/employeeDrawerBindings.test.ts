@@ -17,6 +17,7 @@ const handlers = vi.hoisted(() => ({
   loadEmployeeHistory: vi.fn(),
   initAccessibleDrawerTabs: vi.fn(),
   loadEmployeeCareSupport: vi.fn(),
+  loadEmployeeBenefits: vi.fn(),
   loadEmployeeManualAtRisk: vi.fn(),
   loadEmployeeManualImpactPlayer: vi.fn(),
   loadEmployeePayrollHandoffs: vi.fn(),
@@ -37,6 +38,7 @@ vi.mock('../modules/employeeDocuments', () => ({ loadEmployeeDocuments: handlers
 vi.mock('../ui/history', () => ({ loadEmployeeHistory: handlers.loadEmployeeHistory }));
 vi.mock('../ui/drawerTabs', () => ({ initAccessibleDrawerTabs: handlers.initAccessibleDrawerTabs }));
 vi.mock('../modules/employeeCareSupport', () => ({ loadEmployeeCareSupport: handlers.loadEmployeeCareSupport }));
+vi.mock('../modules/employeeBenefits', () => ({ loadEmployeeBenefits: handlers.loadEmployeeBenefits }));
 vi.mock('../modules/employeeFlags', () => ({ loadEmployeeManualAtRisk: handlers.loadEmployeeManualAtRisk, loadEmployeeManualImpactPlayer: handlers.loadEmployeeManualImpactPlayer }));
 vi.mock('../modules/payrollHandoff', () => ({ loadEmployeePayrollHandoffs: handlers.loadEmployeePayrollHandoffs }));
 import { initializeEmployeeDrawerBindings } from './employeeDrawerBindings';
@@ -67,6 +69,7 @@ describe('employee drawer application wiring', () => {
     ['onboarding', 'loadOnboardingTasks'], ['offboarding', 'loadOffboardingTasks'],
     ['time-off', 'loadEmployeeLeaveRequests'], ['documents', 'loadEmployeeDocuments'],
     ['history', 'loadEmployeeHistory'], ['care-support', 'loadEmployeeCareSupport'],
+    ['benefits', 'loadEmployeeBenefits'],
   ] as const)('connects %s to the correct exported loader', async (tab, handler) => {
     await loadEmployeeDrawerTab(tab);
     expect(handlers[handler]).toHaveBeenCalledWith('emp-1', expect.objectContaining({ employeeId: 'emp-1' }));

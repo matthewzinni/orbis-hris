@@ -1,0 +1,114 @@
+/* Employee drawer → Benefits tab (Employee Navigator snapshot). */
+
+.employee-benefits-panel .card + .card {
+  margin-top: 16px;
+}
+
+.benefits-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  line-height: 1.45;
+}
+
+.benefits-source {
+  margin-top: 8px;
+}
+
+.benefits-import-actions {
+  margin-top: 12px;
+}
+
+.benefits-refresh-help,
+.benefits-review-details {
+  margin-top: 12px;
+  font-size: 0.85rem;
+}
+
+.benefits-refresh-help summary,
+.benefits-review-details summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.benefits-refresh-help ol {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+.benefits-table-wrap {
+  overflow-x: auto;
+}
+
+.benefits-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.benefits-table th,
+.benefits-table td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line, #e5e9f0);
+}
+
+.benefits-table th {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.benefits-table .num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.benefits-table select {
+  min-width: 220px;
+  max-width: 100%;
+}
+
+.benefits-total {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--navy, #1e3a8a);
+  color: #fff;
+  text-align: center;
+}
+
+.benefits-total-label {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.benefits-total-value {
+  margin-top: 4px;
+  font-size: 1.7rem;
+  font-weight: 800;
+}
+
+.benefits-review-heading {
+  margin: 16px 0 6px;
+}
+
+.benefits-missing-list {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  columns: 2;
+}
+
+.benefits-review-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+@media (max-width: 640px) {
+  .benefits-missing-list {
+    columns: 1;
+  }
+}

@@ -10,6 +10,7 @@ import './styles/orbis-space-theme.css';
 import './styles/orbis-polish.css';
 import './styles/styles.css';
 import './styles/care-engagement.css';
+import './styles/employee-benefits.css';
 import './styles/orbis-alerts.css';
 import './styles/org-chart.css';
 import './styles/attendance.css';

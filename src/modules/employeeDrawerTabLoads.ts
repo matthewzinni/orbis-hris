@@ -10,7 +10,7 @@ import {
 export const EMPLOYEE_DRAWER_TABS = [
   'profile', 'notes', 'discipline', 'incidents', 'meetings', 'stay-interviews',
   'reviews', 'emergency', 'onboarding', 'offboarding', 'time-off', 'documents',
-  'history', 'care-support', 'employee',
+  'history', 'care-support', 'benefits', 'employee',
 ] as const;
 export type EmployeeDrawerTab = typeof EMPLOYEE_DRAWER_TABS[number];
 export type EmployeeDrawerLoader = (
