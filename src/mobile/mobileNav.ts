@@ -40,6 +40,7 @@ const SECTION_LABELS: Record<string, string> = {
   activityView: 'Activity',
   investigationsView: 'Investigations',
   reportsView: 'Reports',
+  salaryView: 'Salary',
   settingsView: 'Admin & Settings',
 };
 
@@ -47,6 +48,7 @@ const MORE_SECTION_IDS = [
   'documentsView',
   'janusView',
   'reportsView',
+  'salaryView',
   'investigationsView',
   'operationsView',
   'careEngagementView',
@@ -162,6 +164,7 @@ const SECTION_TO_TAB: Record<string, MobileTabId> = {
   careEngagementView: 'more',
   investigationsView: 'more',
   reportsView: 'more',
+  salaryView: 'more',
   settingsView: 'more',
   activityView: 'more',
   myTimeOffView: 'more',

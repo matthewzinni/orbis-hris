@@ -134,6 +134,9 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
     case 'care-support':
       runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeCareSupport?.(id));
       break;
+    case 'benefits':
+      runDrawerTabLoad(tabName, id, generation, () => window.loadEmployeeBenefits?.(id));
+      break;
     case 'employee':
       runDrawerTabLoad(tabName, id, generation, () => {
         window.loadEmployeeManualAtRisk?.(id);

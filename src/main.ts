@@ -10,6 +10,8 @@ import './styles/orbis-space-theme.css';
 import './styles/orbis-polish.css';
 import './styles/styles.css';
 import './styles/care-engagement.css';
+import './styles/employee-benefits.css';
+import './styles/salary.css';
 import './styles/orbis-alerts.css';
 import './styles/org-chart.css';
 import './styles/attendance.css';
@@ -163,6 +165,7 @@ import {
   saveOperationsIssueRecord,
 } from './modules/lazyOperationsIssues';
 import './modules/employeeCareSupport';
+import './modules/employeeBenefits';
 import {
   applyCareEngagementCenterAccess,
 } from './modules/lazyCareEngagement';
@@ -172,6 +175,7 @@ import {
 import {
   applyInvestigationsCenterAccess,
 } from './modules/lazyInvestigations';
+import './modules/lazySalary';
 import './ui/loadingUi';
 import './ui/dashboardRetry';
 import './ui/confirmModal';

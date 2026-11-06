@@ -347,6 +347,7 @@ declare global {
     openCareEngagementView?: () => void;
     getCareEngagementDataset?: () => CareEngagementDataset | null;
     loadEmployeeCareSupport?: (employeeId: string) => Promise<void>;
+    loadEmployeeBenefits?: (employeeId: string) => Promise<void>;
     invalidateEmployeeCareSupportCache?: () => void;
     loadDashboardOverview?: () => Promise<void>;
     refreshOrbisWorkspace?: () => Promise<void>;
@@ -371,6 +372,8 @@ declare global {
     queueEmployeeSignatureAndOpenPdf?: typeof queueEmployeeSignatureAndOpenPdf;
     bootErSigningFromUrl?: () => void;
     loadReportsSection?: (force?: boolean) => Promise<void>;
+    loadSalarySection?: (force?: boolean) => Promise<void>;
+    clearSalaryState?: () => void;
     exportReportsStayInterviewsExcel?: () => void;
     exportReportsHeadcountExcel?: () => void;
     exportReportsInsuranceRosterExcel?: () => void;
