@@ -882,3 +882,13 @@ body.authenticated .toolbar-header p {
     color: #111 !important;
   }
 }
+
+/* Hiring guide + checklist: --navy text is too dark on the space theme */
+body.authenticated .hiring-guide-title,
+body.authenticated .hiring-checklist legend {
+  color: var(--space-text-bright);
+}
+
+body.authenticated .hiring-guide-owner {
+  color: #b9d3ff;
+}
