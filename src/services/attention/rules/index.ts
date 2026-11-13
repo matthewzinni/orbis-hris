@@ -1,4 +1,7 @@
-import { collectCandidateInterviewAttentionItems } from './candidates';
+import {
+  collectCandidateDecisionAttentionItems,
+  collectCandidateInterviewAttentionItems,
+} from './candidates';
 import { collectDisciplineAttentionItems } from './discipline';
 import { collectMeetingAttentionItems } from './meetings';
 import { collectMissingEmployeeInfoAttentionItems } from './missingEmployeeInfo';
@@ -33,6 +36,11 @@ export const ATTENTION_RULES: AttentionRule[] = [
     collect: collectCandidateInterviewAttentionItems,
   },
   {
+    id: 'candidate_decision_due',
+    label: 'Hiring decisions due within 5 business days of the supervisor interview',
+    collect: collectCandidateDecisionAttentionItems,
+  },
+  {
     id: 'employee_missing_required',
     label: 'Missing required employee information',
     collect: collectMissingEmployeeInfoAttentionItems,
@@ -40,6 +48,7 @@ export const ATTENTION_RULES: AttentionRule[] = [
 ];
 
 export {
+  collectCandidateDecisionAttentionItems,
   collectCandidateInterviewAttentionItems,
   collectDisciplineAttentionItems,
   collectMeetingAttentionItems,

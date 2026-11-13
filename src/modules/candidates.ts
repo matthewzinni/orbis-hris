@@ -30,6 +30,13 @@ import {
 } from '../services/candidateResume';
 import { devLog, devWarn, devError } from '../utils/devLog';
 import { filterCandidatesByStage } from './candidateFilters';
+import {
+  INTERVIEW_TYPES,
+  decisionStatus,
+  formatShortDate,
+  localTodayIso,
+  stageRequiresHireApproval,
+} from '../services/hiringProcess';
 
 interface CandidateRecord {
   id?: string;
@@ -51,6 +58,12 @@ interface CandidateRecord {
   interview_status?: string;
   interview_notes?: string;
   linked_employee_id?: string | null;
+  requested_by?: string | null;
+  hire_approved_date?: string | null;
+  csuite_leader?: string | null;
+  csuite_notified_date?: string | null;
+  screening_completed_date?: string | null;
+  supervisor_interview_completed_date?: string | null;
   [key: string]: unknown;
 }
 
@@ -62,6 +75,34 @@ let isConvertInProgress = false;
 let pendingCandidateResumeFile: File | null = null;
 let candidateResumeUiBound = false;
 let candidateResumeViewAvailable = false;
+/** Stage the open drawer record had when it was loaded (null for a new candidate). */
+let currentCandidateLoadedStage: string | null = null;
+/** True once a loaded record shows the hiring checklist columns exist in Supabase. */
+let hiringChecklistColumnsAvailable = false;
+
+const HIRING_CHECKLIST_INPUT_IDS = new Set([
+  'candidateStageInput',
+  'candidateHireApprovedDateInput',
+  'candidateCsuiteNotifiedDateInput',
+  'candidateScreeningCompletedDateInput',
+  'candidateSupervisorInterviewCompletedDateInput',
+]);
+
+const HIRE_APPROVAL_REQUIRED_MESSAGE =
+  "Cole must approve this hire before screening. Add the date in the candidate's Hiring Checklist.";
+
+/** True when moving to `nextStage` would skip Cole's approval. Records already past Applied are left alone. */
+function hireApprovalMissing(
+  nextStage: unknown,
+  approvedDate: unknown,
+  previousStage: unknown,
+  columnsAvailable: boolean
+): boolean {
+  if (!columnsAvailable) return false;
+  if (!stageRequiresHireApproval(nextStage)) return false;
+  if (String(approvedDate || '').trim()) return false;
+  return !stageRequiresHireApproval(previousStage);
+}
 
 function bindCandidateStageFilter(): HTMLSelectElement | null {
   const filter = safeGet<HTMLSelectElement>('candidateStageFilter');
@@ -212,6 +253,10 @@ const CANDIDATE_DATE_FIELDS = [
   'interview_date',
   'target_start_date',
   'offer_date',
+  'hire_approved_date',
+  'csuite_notified_date',
+  'screening_completed_date',
+  'supervisor_interview_completed_date',
 ] as const;
 
 const CANDIDATE_TIME_FIELDS = ['interview_time'] as const;
@@ -410,6 +455,14 @@ function getCandidateDrawerValues(): CandidateRecord {
   };
 }
 
+function inviteInterviewPhrase(interviewType: string): string {
+  const label =
+    interviewType === 'Screening (HR)'
+      ? 'screening interview'
+      : (interviewType || 'interview').toLowerCase();
+  return `${/^[aeiou]/.test(label) ? 'an' : 'a'} ${label}`;
+}
+
 function buildInterviewInviteMailto(candidate: CandidateRecord): string {
   const email = String(candidate.email || '').trim();
   const firstName = String(candidate.first_name || '').trim();
@@ -425,7 +478,7 @@ function buildInterviewInviteMailto(candidate: CandidateRecord): string {
     `Hi ${firstName || 'there'},`,
     '',
     'Thank you for your interest in a position with BTW Global.',
-    `We would like to invite you to an ${interviewType ? interviewType.toLowerCase() : 'interview'}.`,
+    `We would like to invite you to ${inviteInterviewPhrase(interviewType)}.`,
     `Proposed schedule: ${whenText}.`,
     '',
     'Please reply to confirm your availability, or share a better time that works for you.',
@@ -1017,6 +1070,12 @@ export async function saveCandidateRecord(): Promise<void> {
         getInputValue('candidateAppliedDateInput', 'candidateAppliedDate', 'appliedDate', 'newCandidateAppliedDate') ||
         drawerValues.applied_date ||
         '',
+      requested_by: getInputValue('candidateRequestedByInput'),
+      hire_approved_date: getInputValue('candidateHireApprovedDateInput'),
+      csuite_leader: getInputValue('candidateCsuiteLeaderInput'),
+      csuite_notified_date: getInputValue('candidateCsuiteNotifiedDateInput'),
+      screening_completed_date: getInputValue('candidateScreeningCompletedDateInput'),
+      supervisor_interview_completed_date: getInputValue('candidateSupervisorInterviewCompletedDateInput'),
     };
 
     const normalizedPayload = sanitizeCandidatePayload(normalizeCandidateNames(candidatePayload));
@@ -1029,6 +1088,19 @@ export async function saveCandidateRecord(): Promise<void> {
     }
 
     if (!validateCandidateDepartmentForSave(String(normalizedPayload.department || ''))) {
+      return;
+    }
+
+    if (
+      hireApprovalMissing(
+        normalizedPayload.stage,
+        normalizedPayload.hire_approved_date,
+        currentCandidateId ? currentCandidateLoadedStage : null,
+        hiringChecklistColumnsAvailable
+      )
+    ) {
+      showToast(HIRE_APPROVAL_REQUIRED_MESSAGE, 'error');
+      safeGet<HTMLInputElement>('candidateHireApprovedDateInput')?.focus();
       return;
     }
 
@@ -1222,6 +1294,18 @@ export async function moveCandidateToStage(candidateId: string, newStage: string
 
   if (!candidate || !canAccessCandidate(candidate)) {
     showToast('Candidate not found.', 'error');
+    return;
+  }
+
+  if (
+    hireApprovalMissing(
+      newStage,
+      candidate.hire_approved_date,
+      candidate.stage,
+      'hire_approved_date' in candidate
+    )
+  ) {
+    showToast(HIRE_APPROVAL_REQUIRED_MESSAGE, 'error');
     return;
   }
 
@@ -1989,7 +2073,19 @@ function fillCandidateDrawerFields(candidate: CandidateRecord): void {
     candidateInterviewStatus: String(candidate.interview_status || ''),
     candidateInterviewNotes: String(candidate.interview_notes || ''),
     candidateLinkedEmployeeIdInput: linkedEmployeeId,
+    candidateRequestedByInput: String(candidate.requested_by || ''),
+    candidateHireApprovedDateInput: String(candidate.hire_approved_date || ''),
+    candidateCsuiteLeaderInput: String(candidate.csuite_leader || ''),
+    candidateCsuiteNotifiedDateInput: String(candidate.csuite_notified_date || ''),
+    candidateScreeningCompletedDateInput: String(candidate.screening_completed_date || ''),
+    candidateSupervisorInterviewCompletedDateInput: String(
+      candidate.supervisor_interview_completed_date || ''
+    ),
   };
+
+  currentCandidateLoadedStage = candidate.id ? String(candidate.stage || 'Applied') : null;
+  if ('hire_approved_date' in candidate) hiringChecklistColumnsAvailable = true;
+  ensureInterviewTypeOption(String(candidate.interview_type || ''));
 
   Object.entries(fieldValues).forEach(([id, value]) => {
     const field = safeGet<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>(id);
@@ -2003,6 +2099,56 @@ function fillCandidateDrawerFields(candidate: CandidateRecord): void {
   void refreshCandidateResumeAvailability(candidate);
   renderInternalCandidateBanner(candidate);
   updateConvertCandidateButtonLabel(candidate);
+  renderHiringChecklistStatus();
+}
+
+/** Keeps older interview types (Phone Screen, Panel, ...) selectable so saving does not erase them. */
+function ensureInterviewTypeOption(value: string): void {
+  const select = safeGet<HTMLSelectElement>('candidateInterviewType');
+  if (!select) return;
+
+  select.querySelectorAll('option[data-legacy-interview-type]').forEach((option) => option.remove());
+  if (!value || (INTERVIEW_TYPES as readonly string[]).includes(value)) return;
+
+  const option = document.createElement('option');
+  option.value = value;
+  option.textContent = `${value} (older type)`;
+  option.dataset.legacyInterviewType = 'true';
+  select.appendChild(option);
+}
+
+function renderHiringChecklistStatus(): void {
+  document.querySelectorAll<HTMLElement>('#candidateHiringChecklist [data-checklist-step]').forEach((step) => {
+    const input = step.querySelector<HTMLInputElement>('input');
+    step.classList.toggle('is-done', Boolean(input?.value.trim()));
+  });
+
+  const box = safeGet('candidateDecisionDue');
+  const text = safeGet('candidateDecisionDueText');
+  if (!box || !text) return;
+
+  const status = decisionStatus(
+    {
+      stage: getInputValue('candidateStageInput'),
+      supervisor_interview_completed_date: getInputValue(
+        'candidateSupervisorInterviewCompletedDateInput'
+      ),
+    },
+    localTodayIso()
+  );
+
+  box.dataset.state = status.state;
+  if (status.state === 'decided') {
+    text.textContent = 'Decision made';
+  } else if (status.state === 'waiting') {
+    text.textContent = 'After the supervisor interview';
+  } else if (status.state === 'overdue') {
+    text.textContent = `${formatShortDate(status.dueDate)} · ${status.daysLate} day${status.daysLate === 1 ? '' : 's'} late`;
+  } else {
+    const left =
+      status.daysLeft === 0 ? 'today' : `in ${status.daysLeft} day${status.daysLeft === 1 ? '' : 's'}`;
+    text.textContent = `${formatShortDate(status.dueDate)} · ${left}`;
+  }
 }
 
 export async function openCandidateDrawer(candidateId: string): Promise<void> {
@@ -2260,6 +2406,13 @@ function bindCandidateEvents(): void {
     event.preventDefault();
     void emailCandidateSummaryToLeadership();
   });
+
+  const onChecklistInput = (event: Event) => {
+    const target = event.target as HTMLElement | null;
+    if (target?.id && HIRING_CHECKLIST_INPUT_IDS.has(target.id)) renderHiringChecklistStatus();
+  };
+  document.addEventListener('input', onChecklistInput);
+  document.addEventListener('change', onChecklistInput);
 
   document.addEventListener('change', (event) => {
     const target = event.target as HTMLElement | null;
