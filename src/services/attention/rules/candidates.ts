@@ -9,6 +9,11 @@ import { buildAttentionDedupeKey } from '../dedupe';
 import { severityFromDaysUntilDue, statusFromDueDate } from '../severity';
 import type { AttentionItem } from '../types';
 import { daysUntil, evaluationTimestamp, isoDateFromValue, todayIsoDate } from '../utils';
+import {
+  decisionStatus,
+  formatShortDate,
+  localTodayIso,
+} from '../../hiringProcess';
 
 type CandidateRow = {
   id?: string;
@@ -119,6 +124,72 @@ export async function collectCandidateInterviewAttentionItems(): Promise<Attenti
       sourceId,
       recommendedAction: 'Update interview status or move the candidate to the next pipeline stage.',
       route: { type: 'candidate', candidateId: sourceId, drawerTab: 'interview' },
+      evaluatedAt,
+    });
+  });
+
+  return items;
+}
+
+type CandidateDecisionRow = CandidateRow & {
+  supervisor_interview_completed_date?: string | null;
+};
+
+/** Alert one business day before and after the 5-business-day hiring decision deadline. */
+export async function collectCandidateDecisionAttentionItems(): Promise<AttentionItem[]> {
+  if (!isAdminUser() && !isSupervisorUser()) return [];
+
+  const { data, error } = await supabaseClient
+    .from('candidates')
+    .select(
+      'id, first_name, last_name, department, position, stage, linked_employee_id, supervisor_interview_completed_date'
+    )
+    .not('supervisor_interview_completed_date', 'is', null);
+
+  if (error) {
+    // Column is missing until the hiring checklist migration is applied.
+    console.warn('[Attention] Candidate decision query failed:', error.message || error);
+    return [];
+  }
+
+  const today = localTodayIso();
+  const evaluatedAt = evaluationTimestamp();
+  const items: AttentionItem[] = [];
+
+  (data || []).forEach((row: CandidateDecisionRow) => {
+    if (!candidateInScope(row)) return;
+
+    const status = decisionStatus(row, today);
+    if (status.state !== 'due' && status.state !== 'overdue') return;
+    if (status.state === 'due' && status.daysLeft > 1) return;
+
+    const sourceId = String(row.id || '').trim();
+    if (!sourceId) return;
+
+    const name = candidateDisplayName(row);
+    const days = status.state === 'overdue' ? -status.daysLate : status.daysLeft;
+    const dedupeKey = buildAttentionDedupeKey('candidate', 'candidate', sourceId, 'decision');
+    const title =
+      status.state === 'overdue'
+        ? `Hiring decision overdue — ${name}`
+        : `Hiring decision due ${days === 0 ? 'today' : 'tomorrow'} — ${name}`;
+
+    items.push({
+      id: dedupeKey,
+      dedupeKey,
+      category: 'candidate',
+      severity: severityFromDaysUntilDue(days),
+      status: statusFromDueDate(status.dueDate, days),
+      title,
+      explanation: `${String(row.position || 'Candidate').trim()} · Decision due ${formatShortDate(status.dueDate)} (5 business days after supervisor interview)`,
+      candidateId: sourceId,
+      employeeName: name,
+      responsibleRole: isAdminUser() ? 'admin' : 'supervisor',
+      dueDate: status.dueDate,
+      sourceType: 'candidate',
+      sourceId,
+      recommendedAction: 'Make the hiring decision: move the candidate to Offer or Rejected.',
+      route: { type: 'candidate', candidateId: sourceId, drawerTab: 'profile' },
       evaluatedAt,
     });
   });

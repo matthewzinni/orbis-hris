@@ -119,6 +119,48 @@
                       </button>
                     </div>
                   </div>
+                  <fieldset class="hiring-checklist" id="candidateHiringChecklist">
+                    <legend>Hiring Checklist</legend>
+                    <p class="muted hiring-checklist-hint">
+                      Fill in the date each step is done. Cole's approval is required before screening.
+                    </p>
+                    <div class="two-col">
+                      <div class="field">
+                        <label for="candidateRequestedByInput">Referred / requested by</label>
+                        <input
+                          id="candidateRequestedByInput"
+                          type="text"
+                          placeholder="Employee who referred, or lead who asked"
+                        />
+                      </div>
+                      <div class="field hiring-checklist-step" data-checklist-step>
+                        <label for="candidateHireApprovedDateInput">Cole approved hire</label>
+                        <input id="candidateHireApprovedDateInput" type="date" />
+                      </div>
+                      <div class="field">
+                        <label for="candidateCsuiteLeaderInput">C-Suite leader</label>
+                        <input id="candidateCsuiteLeaderInput" type="text" placeholder="Leader over this department" />
+                      </div>
+                      <div class="field hiring-checklist-step" data-checklist-step>
+                        <label for="candidateCsuiteNotifiedDateInput">C-Suite leader told</label>
+                        <input id="candidateCsuiteNotifiedDateInput" type="date" />
+                      </div>
+                      <div class="field hiring-checklist-step" data-checklist-step>
+                        <label for="candidateScreeningCompletedDateInput">Screening interview done</label>
+                        <input id="candidateScreeningCompletedDateInput" type="date" />
+                      </div>
+                      <div class="field hiring-checklist-step" data-checklist-step>
+                        <label for="candidateSupervisorInterviewCompletedDateInput">Supervisor interview done</label>
+                        <input id="candidateSupervisorInterviewCompletedDateInput" type="date" />
+                      </div>
+                    </div>
+                    <div class="hiring-decision" id="candidateDecisionDue" data-state="waiting" aria-live="polite">
+                      <span class="hiring-decision-label">Decision due</span>
+                      <span class="hiring-decision-value" id="candidateDecisionDueText">
+                        After the supervisor interview
+                      </span>
+                    </div>
+                  </fieldset>
                   <div class="field">
                     <label for="candidateNotesInput">Profile Summary</label>
                     <textarea
@@ -232,11 +274,8 @@
                       <label for="candidateInterviewType">Interview Type</label>
                       <select id="candidateInterviewType">
                         <option value="">Select interview type</option>
-                        <option value="Phone Screen">Phone Screen</option>
-                        <option value="Video Interview">Video Interview</option>
-                        <option value="Onsite Interview">Onsite Interview</option>
-                        <option value="Panel Interview">Panel Interview</option>
-                        <option value="Final Interview">Final Interview</option>
+                        <option value="Screening (HR)">Screening (HR)</option>
+                        <option value="Supervisor Interview">Supervisor Interview</option>
                       </select>
                     </div>
                     <div class="field">
