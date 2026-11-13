@@ -62,6 +62,7 @@ interface CandidateRecord {
   hire_approved_date?: string | null;
   csuite_leader?: string | null;
   csuite_notified_date?: string | null;
+  direct_supervisor?: string | null;
   screening_completed_date?: string | null;
   supervisor_interview_completed_date?: string | null;
   [key: string]: unknown;
@@ -1074,6 +1075,7 @@ export async function saveCandidateRecord(): Promise<void> {
       hire_approved_date: getInputValue('candidateHireApprovedDateInput'),
       csuite_leader: getInputValue('candidateCsuiteLeaderInput'),
       csuite_notified_date: getInputValue('candidateCsuiteNotifiedDateInput'),
+      direct_supervisor: getInputValue('candidateDirectSupervisorInput'),
       screening_completed_date: getInputValue('candidateScreeningCompletedDateInput'),
       supervisor_interview_completed_date: getInputValue('candidateSupervisorInterviewCompletedDateInput'),
     };
@@ -2077,6 +2079,7 @@ function fillCandidateDrawerFields(candidate: CandidateRecord): void {
     candidateHireApprovedDateInput: String(candidate.hire_approved_date || ''),
     candidateCsuiteLeaderInput: String(candidate.csuite_leader || ''),
     candidateCsuiteNotifiedDateInput: String(candidate.csuite_notified_date || ''),
+    candidateDirectSupervisorInput: String(candidate.direct_supervisor || ''),
     candidateScreeningCompletedDateInput: String(candidate.screening_completed_date || ''),
     candidateSupervisorInterviewCompletedDateInput: String(
       candidate.supervisor_interview_completed_date || ''
