@@ -14,6 +14,27 @@
               class="orbis-mobile-portal-quicklinks hidden"
               aria-label="Quick links"
             ></nav>
+            <div class="card time-clock-card hidden" id="timeClockCard" aria-live="polite">
+              <div class="card-header">Time clock</div>
+              <div class="card-body time-clock-body">
+                <div class="time-clock-status">
+                  <div class="time-clock-state" id="timeClockState">Loading…</div>
+                  <div class="muted" id="timeClockDetail"></div>
+                </div>
+                <div class="time-clock-actions">
+                  <button type="button" class="button primary time-clock-button hidden" id="timeClockInBtn">
+                    Clock in
+                  </button>
+                  <button type="button" class="button danger time-clock-button hidden" id="timeClockOutBtn">
+                    Clock out
+                  </button>
+                </div>
+                <div class="muted time-clock-note">
+                  Punches go straight to QuickBooks Time. You can still use the QuickBooks Time app — a shift started
+                  in one can be ended in the other.
+                </div>
+              </div>
+            </div>
             <div class="card">
               <div class="card-header">
                 <span id="myProfilePageTitle">My Profile</span>

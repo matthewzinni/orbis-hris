@@ -247,6 +247,8 @@ export async function loadMyProfilePortal(): Promise<void> {
     employeeId = (await ensureLinkedEmployeeRecord()) || '';
   }
 
+  if (typeof window.loadTimeClockCard === 'function') void window.loadTimeClockCard();
+
   const readOnly = safeGet('myProfileReadOnlyGrid');
   const ecList = safeGet('myEcList');
 
