@@ -94,6 +94,7 @@ import './modules/employeeIronShift';
 import './modules/lazyReports';
 import './modules/lazySettingsAdmin';
 import { initAppShell, showAuthenticatedOrbisView, showAuthView } from './app/appShell';
+import { initPasswordSetupLink, startPasswordSetupFromUrl } from './modules/passwordSetup';
 import { initAppSections, showAppSection } from './ui/appSections';
 import { switchMainView } from './ui/navigation';
 import './services/auditTrail';
@@ -442,6 +443,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   initAppShell();
   registerLegacyBridges();
   bootErSigningFromUrl();
+  initPasswordSetupLink();
+
+  // Opened from a "set your password" email: show that screen and don't boot the app until it's saved.
+  if (startPasswordSetupFromUrl(showAuthView)) return;
 
   watchAuthState((event, sessionData) => {
     devLog('Auth event:', event, sessionData);
