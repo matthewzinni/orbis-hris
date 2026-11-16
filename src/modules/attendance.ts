@@ -36,6 +36,7 @@ import {
   type LiveAttendanceRow,
   type LiveAttendanceStatus,
 } from '../services/attendanceLiveStatus';
+import { describePunches, formatWorkedHours } from './attendancePunchText';
 import { getEmployees, normalizeEmployeeStatus } from './employees';
 
 type EmployeeRow = {
@@ -405,7 +406,7 @@ function renderLiveAttendanceRows(rows: LiveAttendanceRow[]): void {
   if (!body) return;
 
   if (!rows.length) {
-    body.innerHTML = '<tr><td colspan="3" class="empty">No QuickBooks Time data yet. Click "Sync now" or map employees in Settings.</td></tr>';
+    body.innerHTML = '<tr><td colspan="5" class="empty">No QuickBooks Time data yet. Click "Sync now" or map employees in Settings.</td></tr>';
     return;
   }
 
@@ -438,6 +439,10 @@ function renderLiveAttendanceRows(rows: LiveAttendanceRow[]): void {
           <td>${escapeHtml(name)}</td>
           <td><span class="badge ${badgeClass}">${escapeHtml(label)}</span></td>
           <td class="muted">${escapeHtml(formatClockTime(row.clockInAt))}</td>
+          <td class="muted">${escapeHtml(row.status === 'on_clock' ? '—' : formatClockTime(row.clockOutAt))}</td>
+          <td class="muted attendance-live-punches">${escapeHtml(describePunches(row.punches) || '—')}${
+            row.workedSeconds ? `<div class="attendance-live-hours">${escapeHtml(formatWorkedHours(row.workedSeconds))} worked</div>` : ''
+          }</td>
         </tr>
       `;
     })
@@ -470,7 +475,7 @@ async function loadLiveAttendancePanel(): Promise<void> {
     console.error('[Attendance] Live status load failed:', error);
     liveAttendanceRows = [];
     liveAttendanceDate = null;
-    body.innerHTML = '<tr><td colspan="3" class="empty">Could not load live attendance.</td></tr>';
+    body.innerHTML = '<tr><td colspan="5" class="empty">Could not load live attendance.</td></tr>';
     updateAttendanceKpis(ensureWorkingSnapshot());
   }
 }

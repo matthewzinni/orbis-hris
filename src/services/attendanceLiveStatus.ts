@@ -10,8 +10,21 @@ export type LiveAttendanceRow = {
   status: LiveAttendanceStatus;
   clockInAt: string | null;
   clockOutAt: string | null;
+  /** All in/out pairs today, earliest first (out = null while on the clock). */
+  punches?: LivePunch[];
+  workedSeconds?: number | null;
   syncedAt: string;
 };
+
+export type LivePunch = { in: string; out: string | null };
+
+function toPunches(raw: unknown): LivePunch[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((p) => (p || {}) as Record<string, unknown>)
+    .filter((p) => typeof p.in === 'string' && p.in)
+    .map((p) => ({ in: String(p.in), out: p.out ? String(p.out) : null }));
+}
 
 export type AttendanceSyncMatch = {
   employeeId: string;
@@ -101,7 +114,7 @@ export async function syncAttendanceFromQuickBooksTime(
 export async function loadTodaysLiveAttendance(): Promise<LiveAttendanceRow[]> {
   const { data, error } = await supabaseClient
     .from('attendance_live_status')
-    .select('employee_id, status, clock_in_at, clock_out_at, synced_at')
+    .select('employee_id, status, clock_in_at, clock_out_at, punches, worked_seconds, synced_at')
     .eq('attendance_date', attendanceDateEt());
 
   if (error) {
@@ -118,6 +131,8 @@ export async function loadTodaysLiveAttendance(): Promise<LiveAttendanceRow[]> {
     status: String(row.status || 'no_punch') as LiveAttendanceStatus,
     clockInAt: row.clock_in_at ? String(row.clock_in_at) : null,
     clockOutAt: row.clock_out_at ? String(row.clock_out_at) : null,
+    punches: toPunches(row.punches),
+    workedSeconds: row.worked_seconds == null ? null : Number(row.worked_seconds),
     syncedAt: String(row.synced_at || ''),
   }));
 }

@@ -207,6 +207,8 @@ Deno.serve(async (req) => {
       status: string;
       clockInAt: string | null;
       clockOutAt: string | null;
+      punches: Array<{ in: string; out: string | null }>;
+      workedSeconds: number;
     }> = [];
     const unmatched: Array<{ qbt_user_id: string; name: string }> = [];
 
@@ -231,6 +233,8 @@ Deno.serve(async (req) => {
         status: derived.status,
         clockInAt: derived.clockInAt,
         clockOutAt: derived.clockOutAt,
+        punches: derived.punches,
+        workedSeconds: derived.workedSeconds,
       });
     });
 
@@ -248,6 +252,8 @@ Deno.serve(async (req) => {
               status: m.status,
               clock_in_at: m.clockInAt,
               clock_out_at: m.clockOutAt,
+              punches: m.punches,
+              worked_seconds: m.workedSeconds,
               synced_at: syncedAt,
             },
             { onConflict: 'employee_id' }

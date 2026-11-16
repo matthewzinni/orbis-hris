@@ -512,3 +512,15 @@
   font-size: 0.8rem;
   color: var(--danger, #b91c1c);
 }
+
+/* Attendance → Live from QuickBooks Time: full-day punches (lunch included) */
+.attendance-live-punches {
+  font-size: 0.85rem;
+  line-height: 1.35;
+  min-width: 220px;
+}
+
+.attendance-live-hours {
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
