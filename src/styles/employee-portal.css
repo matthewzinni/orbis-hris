@@ -457,3 +457,34 @@
   overflow-x: auto;
   padding: 4px 0 8px;
 }
+
+/* My Profile → Time clock (qbt-clock) */
+.time-clock-body {
+  display: grid;
+  gap: 12px;
+}
+
+.time-clock-state {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.time-clock-actions {
+  display: flex;
+}
+
+.time-clock-button {
+  min-height: 52px;
+  min-width: 200px;
+  font-size: 1.05rem;
+}
+
+.time-clock-note {
+  font-size: 0.8rem;
+}
+
+@media (max-width: 640px) {
+  .time-clock-button {
+    width: 100%;
+  }
+}

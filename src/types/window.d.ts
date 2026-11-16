@@ -175,6 +175,7 @@ declare global {
     loadMyHandbookPortal?: () => Promise<void>;
     loadMyDirectoryPortal?: () => Promise<void>;
     loadMyTimeOffPortal?: () => Promise<void>;
+    loadTimeClockCard?: () => Promise<void>;
     loadInternalJobBoard?: (force?: boolean) => Promise<void>;
     ensureInternalJobBoardLoaded?: (force?: boolean) => void;
     openInternalJobBoardView?: (postingId?: string, tab?: 'openings' | 'manage' | 'pipeline') => void;
