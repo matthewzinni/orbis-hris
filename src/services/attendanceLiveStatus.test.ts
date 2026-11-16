@@ -70,6 +70,8 @@ describe('loadTodaysLiveAttendance', () => {
         status: 'worked_clocked_out',
         clockInAt: '2026-10-29T12:00:00.000Z',
         clockOutAt: '2026-10-29T20:00:00.000Z',
+        punches: [],
+        workedSeconds: null,
         syncedAt: '2026-10-29T20:05:00.000Z',
       },
     ]);

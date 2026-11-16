@@ -7,21 +7,52 @@ import { describe, expect, it } from 'vitest';
 import { deriveAttendanceStatus } from '../../supabase/functions/sync-qbt-attendance/deriveStatus';
 
 describe('deriveAttendanceStatus', () => {
+  // A normal day: in 7:15, out for lunch 12:30, back 1:00, out 4:14 (ET, as QBT returns it).
+  const lunchDay = [
+    { user_id: 1, type: 'regular', start: '2026-07-14T13:00:00-04:00', end: '2026-07-14T20:00:00-04:00' },
+    { user_id: 1, type: 'regular', start: '2026-07-14T07:15:00-04:00', end: '2026-07-14T12:30:00-04:00' },
+  ];
+
+  it('uses the FIRST clock-in and LAST clock-out of the day when someone clocks out for lunch', () => {
+    const result = deriveAttendanceStatus(false, lunchDay);
+    expect(result.clockInAt).toBe('2026-07-14T07:15:00-04:00');
+    expect(result.clockOutAt).toBe('2026-07-14T20:00:00-04:00');
+    expect(result.punches).toEqual([
+      { in: '2026-07-14T07:15:00-04:00', out: '2026-07-14T12:30:00-04:00' },
+      { in: '2026-07-14T13:00:00-04:00', out: '2026-07-14T20:00:00-04:00' },
+    ]);
+    expect(result.workedSeconds).toBe((5.25 + 7) * 3600);
+  });
+
+  it('keeps the morning clock-in (not the back-from-lunch time) while on the clock after lunch', () => {
+    const result = deriveAttendanceStatus(
+      true,
+      [lunchDay[1], { user_id: 1, type: 'regular', start: '2026-07-14T13:00:00-04:00', end: '' }],
+      undefined,
+      new Date('2026-07-14T14:00:00-04:00')
+    );
+    expect(result.status).toBe('on_clock');
+    expect(result.clockInAt).toBe('2026-07-14T07:15:00-04:00');
+    expect(result.clockOutAt).toBeNull();
+    expect(result.punches[1]).toEqual({ in: '2026-07-14T13:00:00-04:00', out: null });
+    expect(result.workedSeconds).toBe((5.25 + 1) * 3600);
+  });
+
   it('is on_clock when currently on the clock, using the open timesheet entry for clock-in time', () => {
     const result = deriveAttendanceStatus(true, [
       { user_id: 1, type: 'regular', start: '2026-10-29T12:00:00Z', end: null },
     ]);
-    expect(result).toEqual({ status: 'on_clock', clockInAt: '2026-10-29T12:00:00Z', clockOutAt: null });
+    expect(result).toMatchObject({ status: 'on_clock', clockInAt: '2026-10-29T12:00:00Z', clockOutAt: null });
   });
 
   it('is on_clock with no clock-in time if there is no open entry to read it from', () => {
     const result = deriveAttendanceStatus(true, []);
-    expect(result).toEqual({ status: 'on_clock', clockInAt: null, clockOutAt: null });
+    expect(result).toEqual({ status: 'on_clock', clockInAt: null, clockOutAt: null, punches: [], workedSeconds: 0 });
   });
 
   it('estimates clock-in from the shift length when the open entry is not returned', () => {
     const result = deriveAttendanceStatus(true, [], 5400, new Date('2026-11-03T13:30:00Z'));
-    expect(result).toEqual({ status: 'on_clock', clockInAt: '2026-11-03T12:00:00.000Z', clockOutAt: null });
+    expect(result).toMatchObject({ status: 'on_clock', clockInAt: '2026-11-03T12:00:00.000Z', clockOutAt: null });
   });
 
   it('prefers the open entry start over the shift-length estimate', () => {
@@ -38,10 +69,11 @@ describe('deriveAttendanceStatus', () => {
     const result = deriveAttendanceStatus(false, [
       { user_id: 1, type: 'regular', start: '2026-10-29T12:00:00Z', end: '2026-10-29T20:00:00Z' },
     ]);
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       status: 'worked_clocked_out',
       clockInAt: '2026-10-29T12:00:00Z',
       clockOutAt: '2026-10-29T20:00:00Z',
+      workedSeconds: 8 * 3600,
     });
   });
 
@@ -56,7 +88,7 @@ describe('deriveAttendanceStatus', () => {
     const result = deriveAttendanceStatus(false, [
       { user_id: 1, type: 'manual', start: '2026-10-29T12:00:00Z', end: '2026-10-29T16:00:00Z' },
     ]);
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       status: 'manual_entry',
       clockInAt: '2026-10-29T12:00:00Z',
       clockOutAt: '2026-10-29T16:00:00Z',
@@ -68,6 +100,8 @@ describe('deriveAttendanceStatus', () => {
       status: 'no_punch',
       clockInAt: null,
       clockOutAt: null,
+      punches: [],
+      workedSeconds: 0,
     });
   });
 
