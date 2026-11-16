@@ -27,7 +27,7 @@ Env (GitHub Actions secrets or scripts/.env.weekly_report):
 Usage:
   python3 scripts/sync_qbt_pto_balances.py --dry-run    # show matches + balances, write nothing
   python3 scripts/sync_qbt_pto_balances.py              # write balances
-  python3 scripts/sync_qbt_pto_balances.py --scheduled  # cron mode (only runs at 6 AM ET)
+  python3 scripts/sync_qbt_pto_balances.py --scheduled  # cron mode (runs at or after 6 AM ET)
 """
 
 from __future__ import annotations
@@ -262,9 +262,11 @@ def patch_employee(base_url: str, service_key: str, employee_id: str, body: dict
 
 
 def scheduled_run_should_go() -> bool:
+    # GitHub often starts scheduled jobs hours late, so run any time from SYNC_HOUR_ET onward
+    # (not only during that hour). A second run the same day just rewrites the same balances.
     now = datetime.now(timezone.utc).astimezone(ET)
-    if now.hour != SYNC_HOUR_ET:
-        print(f"Scheduled slot is {now:%H:%M} ET, not {SYNC_HOUR_ET}:00 ET — skipping (other slot runs).")
+    if now.hour < SYNC_HOUR_ET:
+        print(f"Scheduled slot is {now:%H:%M} ET, before {SYNC_HOUR_ET}:00 ET — skipping (later slot runs).")
         return False
     return True
 
@@ -272,7 +274,7 @@ def scheduled_run_should_go() -> bool:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dry-run", action="store_true", help="Show matches and balances; write nothing.")
-    parser.add_argument("--scheduled", action="store_true", help="Cron mode: only run at PTO_SYNC_HOUR_ET.")
+    parser.add_argument("--scheduled", action="store_true", help="Cron mode: only run at or after PTO_SYNC_HOUR_ET.")
     args = parser.parse_args()
 
     bootstrap_config()

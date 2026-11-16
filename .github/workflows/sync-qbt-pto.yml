@@ -1,6 +1,6 @@
 # Daily PTO balance sync: QuickBooks Time (TSheets / Intuit Workforce) → Orbis employees.pto_balance_hours.
 # Schedule: 6:00 AM US Eastern every day. GitHub cron is UTC, so it fires at 10:00 and 11:00 UTC and the
-# script only runs from whichever slot is 6 AM Eastern that day (handles daylight saving).
+# script skips any slot that lands before 6 AM Eastern (handles daylight saving; GitHub often starts late).
 # Manual run: GitHub → Actions → Sync PTO from QuickBooks Time → Run workflow.
 #   Manual runs are a DRY RUN by default (prints matched / unmatched, writes nothing).
 #   Set "dry_run" to false to write balances.
