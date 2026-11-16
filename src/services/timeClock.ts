@@ -41,9 +41,40 @@ function browserTimeZone(): string {
   }
 }
 
-export async function callTimeClock(action: TimeClockAction): Promise<TimeClockState> {
+export type PunchLocation = { latitude: number; longitude: number; accuracy: number | null };
+
+/** Message for a failed location request (GeolocationPositionError code). */
+export function locationErrorMessage(code: number | null): string {
+  if (code === 1) {
+    return 'Location is blocked for Orbis. Allow location for this site in your browser settings (and turn on Location Services for your browser on your phone), then try again.';
+  }
+  if (code === 3) return 'Your phone took too long to find your location. Move to an open area or near a window and try again.';
+  return 'Your phone could not find your location. Turn on Location Services and try again.';
+}
+
+/** Ask the browser for the current position (prompts the employee the first time). */
+export function getPunchLocation(timeoutMs = 15000): Promise<PunchLocation> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      reject(new Error('This browser cannot share your location, so you cannot clock in here. Use the QuickBooks Time app.'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: Number.isFinite(pos.coords.accuracy) ? pos.coords.accuracy : null,
+        }),
+      (err) => reject(new Error(locationErrorMessage(err?.code ?? null))),
+      { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 0 }
+    );
+  });
+}
+
+export async function callTimeClock(action: TimeClockAction, location?: PunchLocation): Promise<TimeClockState> {
   const { data, error } = await supabaseClient.functions.invoke('qbt-clock', {
-    body: { action, tz: browserTimeZone() },
+    body: { action, tz: browserTimeZone(), ...(location ? { location } : {}) },
   });
   if (error) throw new Error(await describeInvokeFailure(error));
   const body = (data || {}) as Record<string, unknown>;

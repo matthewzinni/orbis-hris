@@ -64,6 +64,39 @@
                 </div>
               </div>
             </div>
+            <div class="card punch-locations-card" id="punchLocationsCard">
+              <div class="card-header punch-locations-header">
+                <div>
+                  <span>Clock-in locations</span>
+                  <p class="muted punch-locations-sub">
+                    Where each clock-in and clock-out happened — from Orbis (exact location at the tap) or the
+                    QuickBooks Time app (its closest GPS point, within 15 minutes).
+                  </p>
+                </div>
+                <div class="punch-locations-controls">
+                  <input class="input" type="date" id="punchLocationsDate" aria-label="Day" />
+                  <button class="button soft sm" id="punchLocationsLoadBtn" type="button">Show</button>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="table-wrap">
+                  <table class="punch-locations-table">
+                    <thead>
+                      <tr>
+                        <th>Employee</th>
+                        <th>Clock in</th>
+                        <th>Clock out</th>
+                      </tr>
+                    </thead>
+                    <tbody id="punchLocationsBody">
+                      <tr>
+                        <td colspan="3" class="empty">Pick a day and click Show.</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
             <div class="card attendance-absence-report-card" id="attendanceAbsenceReportCard">
               <div class="card-header attendance-absence-report-header">
                 <div>

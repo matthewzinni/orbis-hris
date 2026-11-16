@@ -166,6 +166,9 @@ const APP_SECTIONS: AppSection[] = [
       if (typeof window.loadAttendance === 'function') {
         void window.loadAttendance();
       }
+      if (typeof window.initPunchLocationsCard === 'function') {
+        window.initPunchLocationsCard();
+      }
     },
   },
   {

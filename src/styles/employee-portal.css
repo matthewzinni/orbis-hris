@@ -488,3 +488,27 @@
     width: 100%;
   }
 }
+
+/* Attendance → Clock-in locations (punch-locations) */
+.punch-locations-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.punch-locations-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.punch-loc-meta {
+  font-size: 0.75rem;
+}
+
+.punch-loc-missing {
+  font-size: 0.8rem;
+  color: var(--danger, #b91c1c);
+}

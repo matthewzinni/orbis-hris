@@ -71,3 +71,18 @@ export function sumWorkedSeconds(sheets: ClockTimesheet[], now: Date): number {
     return sum + Math.max(0, Number(t.duration || 0));
   }, 0);
 }
+
+export type PunchLocation = { latitude: number; longitude: number; accuracy: number | null };
+
+/** Location the browser sent with a punch; null when missing or not a real coordinate. */
+export function parsePunchLocation(raw: unknown): PunchLocation | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as Record<string, unknown>;
+  const latitude = Number(r.latitude);
+  const longitude = Number(r.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  if (latitude === 0 && longitude === 0) return null; // "null island": a failed fix, not a place
+  const acc = Number(r.accuracy);
+  return { latitude, longitude, accuracy: Number.isFinite(acc) && acc >= 0 ? Math.round(acc * 10) / 10 : null };
+}
