@@ -7,12 +7,23 @@
 // can punch for someone else. Times are the server's clock (no back-dating); the browser's time
 // zone only decides which local offset the timesheet is stored with.
 //
-// Body: { action: 'status' | 'clock_in' | 'clock_out', tz?: IANA time zone }
+// Location is REQUIRED to clock in or out: the punch is refused (nothing sent to QuickBooks Time)
+// without a valid GPS point, and the point is saved to time_clock_punches after QBT accepts it.
+//
+// Body: { action: 'status' | 'clock_in' | 'clock_out', tz?: IANA time zone,
+//         location?: { latitude, longitude, accuracy } }  (required for clock_in / clock_out)
 // Secrets: QBT_ACCESS_TOKEN. SUPABASE_SERVICE_ROLE_KEY is provided by Supabase.
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { jsonResponse, requireOrbisAuth } from '../_shared/orbisEdgeAuth.ts';
-import { localDate, localIso, resolveTimeZone, sumWorkedSeconds, type ClockTimesheet } from './time.ts';
+import {
+  localDate,
+  localIso,
+  parsePunchLocation,
+  resolveTimeZone,
+  sumWorkedSeconds,
+  type ClockTimesheet,
+} from './time.ts';
 
 const QBT_API = 'https://rest.tsheets.com/api/v1';
 
@@ -90,10 +101,14 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     if (!token || !serviceKey) throw new ClockError('The time clock is not set up yet. Tell HR.', 503);
 
-    const body = (await req.json().catch(() => ({}))) as { action?: string; tz?: string };
+    const body = (await req.json().catch(() => ({}))) as { action?: string; tz?: string; location?: unknown };
     const action = String(body.action || 'status');
     if (!['status', 'clock_in', 'clock_out'].includes(action)) throw new ClockError('Unknown action.');
     const tz = resolveTimeZone(body.tz);
+    const location = parsePunchLocation(body.location);
+    if (action !== 'status' && !location) {
+      throw new ClockError('Turn on location for this site to clock in or out. Your location is saved with each punch.', 422);
+    }
 
     // Who is calling: email from their own session, then their approved Orbis access row.
     const userClient = createClient(auth.supabaseUrl, auth.supabaseAnonKey, {
@@ -135,6 +150,7 @@ Deno.serve(async (req) => {
     const today = localDate(now, tz);
     let open = await openTimesheet(token, qbtUserId, localDate(new Date(now.getTime() - 2 * 86400000), tz));
     let message = '';
+    let punchedSheetId: number | null = null;
 
     if (action === 'clock_in') {
       if (open) throw new ClockError('You are already clocked in.', 409);
@@ -153,12 +169,29 @@ Deno.serve(async (req) => {
         })
       );
       open = created;
+      punchedSheetId = created.id ?? null;
       message = 'Clocked in.';
     } else if (action === 'clock_out') {
       if (!open?.id) throw new ClockError('You are not clocked in.', 409);
       writeResult(await qbt(token, 'PUT', 'timesheets', { data: [{ id: open.id, end: localIso(now, tz) }] }));
+      punchedSheetId = open.id;
       open = null;
       message = 'Clocked out.';
+    }
+
+    if (action !== 'status' && location) {
+      // The punch is already in QuickBooks Time; a failed location save must not undo it, but log it.
+      const { error: punchErr } = await admin.from('time_clock_punches').insert({
+        employee_id: employeeId,
+        qbt_user_id: qbtUserId,
+        qbt_timesheet_id: punchedSheetId,
+        action,
+        punched_at: now.toISOString(),
+        latitude: location.latitude,
+        longitude: location.longitude,
+        accuracy_m: location.accuracy,
+      });
+      if (punchErr) console.error('[qbt-clock] location not saved:', punchErr.message);
     }
 
     const sheets = await todaysTimesheets(token, qbtUserId, today);

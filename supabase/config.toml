@@ -53,6 +53,9 @@ verify_jwt = true
 [functions.qbt-clock]
 verify_jwt = true
 
+[functions.punch-locations]
+verify_jwt = true
+
 [functions.push-leave-to-qbt]
 verify_jwt = true
 

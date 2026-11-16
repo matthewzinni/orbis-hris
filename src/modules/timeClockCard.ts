@@ -6,6 +6,7 @@ import { getLinkedEmployeeId, hasPersonalEmployeePortal } from '../services/acce
 import {
   callTimeClock,
   formatClockTime,
+  getPunchLocation,
   formatWorked,
   liveWorkedSeconds,
   type TimeClockAction,
@@ -70,7 +71,12 @@ async function run(action: TimeClockAction): Promise<void> {
   busy = true;
   render();
   try {
-    state = await callTimeClock(action);
+    if (action !== 'status') {
+      const detail = el('timeClockDetail');
+      if (detail) detail.textContent = 'Getting your location…';
+    }
+    const location = action === 'status' ? undefined : await getPunchLocation();
+    state = await callTimeClock(action, location);
     if (state.message) toast(state.message, 'success');
     render();
   } catch (err) {

@@ -139,6 +139,7 @@ import './modules/stayInterviewOrgInsights';
 import './modules/timeOffReportCard';
 import './modules/ptoSyncCard';
 import './modules/timeClockCard';
+import './modules/punchLocationsCard';
 import './modules/qbtAttendanceMapping';
 import './modules/emergencyContacts';
 import './modules/employeeDocuments';
