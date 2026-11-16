@@ -9,6 +9,7 @@ import {
   employeeNameForLeave,
   formatLeaveDateRange,
   leaveStatusLabel,
+  leaveQbtStatusText,
   leaveTypeLabel,
   loadApprovedLeaveOutToday,
   loadLeaveRequestsForEmployee,
@@ -107,6 +108,15 @@ function renderLeaveActions(record: LeaveRequestRecord): string {
   return `<div class="leave-request-actions">${buttons.join('')}</div>`;
 }
 
+function renderQbtStatus(record: LeaveRequestRecord): string {
+  const text = leaveQbtStatusText(record);
+  if (!text) return '';
+  const failed = record.qbt_sync_status === 'failed';
+  return `<div class="leave-request-qbt muted" style="font-size:0.8rem${
+    failed ? ';color:var(--danger, #b91c1c)' : ''
+  }">${esc(text)}</div>`;
+}
+
 function renderLeaveRow(record: LeaveRequestRecord): string {
   const actions = renderLeaveActions(record);
 
@@ -120,6 +130,7 @@ function renderLeaveRow(record: LeaveRequestRecord): string {
     </div>
     <div class="leave-request-dates">${esc(formatLeaveDateRange(record))}${hours ? ` · ${esc(hours)}` : ''}${intermittent}</div>
     ${record.notes ? `<div class="leave-request-notes muted">${esc(record.notes)}</div>` : ''}
+    ${renderQbtStatus(record)}
     ${actions}
   </div>`;
 }

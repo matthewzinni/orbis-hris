@@ -50,6 +50,9 @@ verify_jwt = true
 [functions.sync-qbt-pto]
 verify_jwt = true
 
+[functions.push-leave-to-qbt]
+verify_jwt = true
+
 [functions.sync-qbt-attendance]
 # false (like document-signature) because pg_cron authenticates with a dedicated shared
 # secret, not a Supabase-issued JWT -- the platform gateway would reject that bearer token
