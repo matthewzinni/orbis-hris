@@ -4,6 +4,7 @@
  * The same sync runs daily at 6 AM ET (sync-qbt-pto GitHub workflow).
  */
 import { isAdminUser } from '../services/access';
+import { reconcileLeaveWithQbt } from '../services/leaveQbtPush';
 import { PtoSyncError, syncPtoFromQuickBooksTime, type PtoSyncResult } from '../services/ptoSync';
 import { showOrbisConfirm } from '../ui/confirmModal';
 
@@ -97,6 +98,23 @@ async function run(dryRun: boolean): Promise<void> {
   setBusy(true);
   setStatus(dryRun ? 'Checking QuickBooks Time…' : 'Updating PTO balances from QuickBooks Time…');
   try {
+    // Send approved Orbis PTO that hasn't reached QuickBooks Time yet, so the balances pulled next include it.
+    let pushNote = '';
+    if (!dryRun) {
+      try {
+        const pushed = await reconcileLeaveWithQbt();
+        const sent = pushed.filter((p) => ['created', 'replaced', 'canceled'].includes(p.result)).length;
+        const failed = pushed.filter((p) => p.result === 'failed').length;
+        if (sent || failed) {
+          pushNote = ` Sent ${sent} Orbis time-off change(s) to QuickBooks Time${failed ? `; ${failed} failed (see the request)` : ''}.`;
+        }
+      } catch (pushErr) {
+        pushNote = ` Could not send Orbis time off to QuickBooks Time: ${
+          pushErr instanceof Error ? pushErr.message : String(pushErr)
+        }.`;
+      }
+    }
+
     const result = await syncPtoFromQuickBooksTime({ dryRun });
     renderResult(result);
     const hasFailures = !dryRun && result.failed && result.failed.length > 0;
@@ -104,7 +122,7 @@ async function run(dryRun: boolean): Promise<void> {
       ? `Preview: ${result.matched.length} would update, ${result.unmatched.length} not matched. Nothing was changed.`
       : `Updated ${result.updated} employees (as of ${result.asOf}). ${result.unmatched.length} not matched.${
           hasFailures ? ` ${result.failed.length} FAILED to update — see below.` : ''
-        }`;
+        }${pushNote}`;
     setStatus(msg, hasFailures ? 'error' : 'success');
     if (!dryRun) {
       toast(

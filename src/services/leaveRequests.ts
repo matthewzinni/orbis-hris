@@ -13,6 +13,7 @@ import {
 import { supabaseClient } from './supabaseClient';
 import { employeeDisplayName } from './employeeUtils';
 import { createPayrollHandoff } from './payrollHandoff';
+import { cancelLeaveInQbt, pushLeaveToQbt } from './leaveQbtPush';
 
 export type LeaveRequestStatus = 'requested' | 'approved' | 'denied' | 'cancelled';
 
@@ -40,6 +41,9 @@ export type LeaveRequestRecord = {
   deduct_from_pto_balance: boolean;
   created_at: string;
   created_by: string | null;
+  /** QuickBooks Time push state (push-leave-to-qbt): synced, canceled, skipped, failed, sending. */
+  qbt_sync_status?: string | null;
+  qbt_sync_error?: string | null;
 };
 
 export type LeaveRequestDraft = {
@@ -87,7 +91,28 @@ function mapRow(row: Record<string, unknown>): LeaveRequestRecord {
     deduct_from_pto_balance: row.deduct_from_pto_balance === false ? false : true,
     created_at: String(row.created_at || ''),
     created_by: row.created_by ? String(row.created_by) : null,
+    qbt_sync_status: row.qbt_sync_status ? String(row.qbt_sync_status) : null,
+    qbt_sync_error: row.qbt_sync_error ? String(row.qbt_sync_error) : null,
   };
+}
+
+/** One-line QuickBooks Time status for an approved PTO request (empty when not applicable). */
+export function leaveQbtStatusText(record: LeaveRequestRecord): string {
+  if (record.leave_type !== 'pto') return '';
+  switch (record.qbt_sync_status) {
+    case 'synced':
+      return record.status === 'approved' ? 'In QuickBooks Time' : '';
+    case 'canceled':
+      return 'Canceled in QuickBooks Time';
+    case 'sending':
+      return 'Sending to QuickBooks Time…';
+    case 'failed':
+      return `Not in QuickBooks Time: ${record.qbt_sync_error || 'send failed'}`;
+    case 'skipped':
+      return record.qbt_sync_error && record.status === 'approved' ? record.qbt_sync_error : '';
+    default:
+      return record.status === 'approved' && record.deduct_from_pto_balance ? 'Not sent to QuickBooks Time yet' : '';
+  }
 }
 
 export function leaveTypeLabel(type: LeaveType | string): string {
@@ -283,6 +308,8 @@ export async function approveLeaveRequest(
     throw new Error(error.message || 'Could not approve leave request.');
   }
 
+  void pushLeaveToQbt(id);
+
   const shouldSetLeave = options?.setEmployeeLeaveStatus !== false;
   const name = options?.employeeName || record.employee_id;
 
@@ -354,6 +381,8 @@ export async function denyLeaveRequest(requestId: string, notes?: string): Promi
   if (error) {
     throw new Error(error.message || 'Could not deny leave request.');
   }
+
+  void pushLeaveToQbt(id);
 }
 
 export async function cancelLeaveRequest(requestId: string): Promise<void> {
@@ -368,6 +397,8 @@ export async function cancelLeaveRequest(requestId: string): Promise<void> {
   if (error) {
     throw new Error(error.message || 'Could not cancel leave request.');
   }
+
+  void pushLeaveToQbt(id);
 }
 
 export async function updateLeaveRequest(
@@ -401,7 +432,9 @@ export async function updateLeaveRequest(
     throw new Error(error.message || 'Could not update leave request.');
   }
 
-  return mapRow((data || {}) as Record<string, unknown>);
+  const updated = mapRow((data || {}) as Record<string, unknown>);
+  if (updated.status === 'approved') void pushLeaveToQbt(id);
+  return updated;
 }
 
 export async function deleteLeaveRequest(requestId: string): Promise<void> {
@@ -411,6 +444,9 @@ export async function deleteLeaveRequest(requestId: string): Promise<void> {
 
   const id = normalize(requestId);
   if (!id) return;
+
+  // Cancel the QuickBooks Time copy first; once the row is gone Orbis can't find it again.
+  await cancelLeaveInQbt(id);
 
   const { error } = await supabaseClient.from('leave_requests').delete().eq('id', id);
 
