@@ -83,15 +83,26 @@ export function buildOrgTreeModel(roots: OrgChartNode[]): OrgTreeModel {
   };
   const tagged = pooled.map((person) => ({ ...person, reportsTo: soleLeader(person) }));
   const ofLeader = (name: string) => tagged.filter((p) => p.reportsTo === name);
-  const shared = tagged.filter((p) => !p.reportsTo);
   const [first, ...rest] = leaders;
   const topReports = [
     ...ofLeader(first.name),
-    ...shared,
+    ...centerStaffBetweenLeaders(tagged.filter((p) => !p.reportsTo)),
     ...rest.flatMap((leader) => ofLeader(leader.name)),
   ];
 
   return { leaders, topReports, unmatched };
+}
+
+/**
+ * Shared reports with no team (e.g. a director without staff) go in the middle, between the
+ * leaders who run organizations, so the outer ends of the bar belong to those leaders and
+ * lines drawn out to the sides (diagonals) never cross it.
+ */
+function centerStaffBetweenLeaders(people: OrgTreePerson[]): OrgTreePerson[] {
+  const leadersWithTeams = people.filter((p) => p.children.length > 0);
+  const staff = people.filter((p) => p.children.length === 0);
+  const half = Math.ceil(leadersWithTeams.length / 2);
+  return [...leadersWithTeams.slice(0, half), ...staff, ...leadersWithTeams.slice(half)];
 }
 
 export function isManager(person: OrgTreePerson): boolean {

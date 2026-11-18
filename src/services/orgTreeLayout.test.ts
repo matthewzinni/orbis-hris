@@ -101,3 +101,17 @@ describe('hasDottedLineToTop', () => {
     expect(hasDottedLineToTop(ops)).toBe(false);
   });
 });
+
+describe('top row order', () => {
+  it('puts shared reports without a team between the leaders who run organizations', () => {
+    const extra = [
+      emp('20', 'David', 'Allewalt', 'CBO', 'Trent & Brent Wynne'),
+      emp('21', 'Kyle', 'Hodges', 'MTO Manager', 'David Allewalt'),
+      emp('22', 'Daniel', 'Cheng', 'Director of International', 'Trent & Brent Wynne'),
+    ];
+    const { roots } = buildOrgChart([...roster, ...extra]);
+    const names = buildOrgTreeModel(roots).topReports.map((p) => p.name);
+    const shared = names.filter((n) => ['Cole Woolard', 'Daniel Cheng', 'David Allewalt'].includes(n));
+    expect(shared[1]).toBe('Daniel Cheng');
+  });
+});
