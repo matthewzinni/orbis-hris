@@ -150,7 +150,38 @@ export async function loadOrgChart(): Promise<void> {
   renderOrgChart();
 }
 
+const ORG_CHART_WINDOW_URL = '/org-chart.html';
+const ORG_CHART_WINDOW_NAME = 'orbisOrgChart';
+
+/** Opens the top-down tree chart in its own window (reused if it is already open). */
+export function openOrgChartWindow(): void {
+  const opened = window.open(ORG_CHART_WINDOW_URL, ORG_CHART_WINDOW_NAME);
+  if (opened) {
+    opened.focus();
+  } else {
+    window.location.href = ORG_CHART_WINDOW_URL;
+  }
+}
+
+/** The desktop sidebar's Org Chart button opens the tree window instead of the in-app list. */
+function bindSidebarOrgChartWindow(): void {
+  document.addEventListener(
+    'click',
+    (event) => {
+      const target = event.target as HTMLElement | null;
+      const button = target?.closest('.orbis-sidebar [data-nav-view="orgChartView"]');
+      if (!button) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      openOrgChartWindow();
+    },
+    true
+  );
+}
+
 function bindOrgChartControls(): void {
+  document.getElementById('orgChartOpenWindowBtn')?.addEventListener('click', openOrgChartWindow);
+
   document.getElementById('orgChartActiveOnly')?.addEventListener('change', () => {
     renderOrgChart();
   });
@@ -188,3 +219,4 @@ window.renderOrgChart = renderOrgChart;
 window.loadOrgChart = loadOrgChart;
 
 bindOrgChartControls();
+bindSidebarOrgChartWindow();
