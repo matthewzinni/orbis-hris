@@ -19,6 +19,7 @@
   --oc-b4: #8a3fb0;
   --oc-b5: #9a6b00;
   --oc-b6: #1f6fb4;
+  --oc-side: #9a6b00;
   --oc-display: 'Archivo', system-ui, sans-serif;
   --oc-body: 'Inter', system-ui, sans-serif;
   color-scheme: light;
@@ -43,6 +44,7 @@
     --oc-b4: #c58cf0;
     --oc-b5: #e0b443;
     --oc-b6: #6cb2f0;
+    --oc-side: #e0b443;
     color-scheme: dark;
   }
 }
@@ -89,9 +91,13 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
 .oc-tree li.oc-node:first-child::after { border-top-left-radius: 8px; }
 .oc-tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; height: 22px; border-left: 2px solid var(--oc-line); }
 .oc-drop-line { width: 2px; background: var(--oc-line); flex: none; }
-/* A dotted-line relationship: this person's own connector to the row above is dashed. */
-.oc-tree li.oc-node.oc-dotted::before,
-.oc-tree li.oc-node.oc-dotted::after { border-style: dashed; }
+/* Dotted-line relationship (HR): a box beside its leader, joined by a dashed line only. */
+.oc-leader-slot { position: relative; }
+.oc-side { position: absolute; top: 0; height: 100%; display: flex; align-items: center; }
+.oc-side-right { left: 100%; }
+.oc-side-left { right: 100%; flex-direction: row-reverse; }
+.oc-side-line { width: 44px; border-top: 2px dashed var(--oc-line); flex: none; }
+.oc-side .oc-box { --c: var(--oc-side); flex: none; }
 .oc-tree > ul > li.oc-node::before,
 .oc-tree > ul > li.oc-node::after { display: none; }
 
@@ -135,7 +141,7 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
     --oc-bg: #ffffff; --oc-surface: #ffffff; --oc-surface-2: #f7f8fc; --oc-fg: #171a2b; --oc-muted: #4a5070;
     --oc-line: #8e94b0; --oc-border: #c9cde0; --oc-accent: #3c40c0; --oc-accent-soft: #e6e7fb;
     --oc-leader: #171a2b; --oc-leader-fg: #ffffff;
-    --oc-b1: #0f7b6c; --oc-b2: #b4441f; --oc-b3: #4b4fd8; --oc-b4: #8a3fb0; --oc-b5: #9a6b00; --oc-b6: #1f6fb4;
+    --oc-b1: #0f7b6c; --oc-b2: #b4441f; --oc-b3: #4b4fd8; --oc-b4: #8a3fb0; --oc-b5: #9a6b00; --oc-b6: #1f6fb4; --oc-side: #9a6b00;
     color-scheme: light;
   }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }

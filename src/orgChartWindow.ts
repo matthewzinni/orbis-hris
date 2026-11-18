@@ -99,21 +99,40 @@ function buildTree(model: OrgTreeModel, reports: { person: OrgTreePerson; index:
   const rootUl = el('ul');
   const rootLi = el('li', 'oc-node');
   const leaders = el('div', 'oc-leaders');
-  for (const leader of model.leaders) leaders.append(personBox(leader, '--oc-leader', 'oc-leader'));
+  const slots = new Map<string, HTMLElement>();
+  for (const leader of model.leaders) {
+    const slot = el('div', 'oc-leader-slot');
+    slot.append(personBox(leader, '--oc-leader', 'oc-leader'));
+    slots.set(leader.name, slot);
+    leaders.append(slot);
+  }
   rootLi.append(leaders);
-  if (reports.length) {
+
+  // Dotted-line people (HR) hang off their leader's box, not the managers' row.
+  const lastLeader = model.leaders[model.leaders.length - 1]?.name || '';
+  const treeReports = reports.filter(({ person }) => {
+    if (!hasDottedLineToTop(person)) return true;
+    const to = person.reportsTo || lastLeader;
+    const slot = slots.get(to);
+    if (!slot) return true;
+    managerOf.set(person.name, to);
+    const onLeft = model.leaders.length > 1 && model.leaders[0].name === to;
+    const side = el('div', `oc-side ${onLeft ? 'oc-side-left' : 'oc-side-right'}`);
+    side.append(el('div', 'oc-side-line'), personBox(person, '--oc-side', '', `Dotted line to ${to}`));
+    slot.append(side);
+    return false;
+  });
+
+  if (treeReports.length) {
     const ul = el('ul');
-    for (const { person, index } of reports) {
+    for (const { person, index } of treeReports) {
       const color = BRANCH_COLORS[index % BRANCH_COLORS.length];
-      const dotted = hasDottedLineToTop(person);
-      const to = person.reportsTo || topName;
-      const note = dotted ? `Dotted line to ${to}` : person.reportsTo ? `Reports to ${person.reportsTo}` : '';
+      const note = person.reportsTo ? `Reports to ${person.reportsTo}` : '';
       const li = branch(person, color, person.reportsTo || topName, note);
       if (sitsBelowLeadershipRow(person)) {
         li.classList.add('oc-drop');
         li.prepend(el('div', 'oc-drop-line'));
       }
-      if (dotted) li.classList.add('oc-dotted');
       ul.append(li);
     }
     rootLi.append(ul);
