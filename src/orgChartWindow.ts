@@ -209,15 +209,32 @@ try {
   /* storage unavailable */
 }
 
-/** Stretches each drop line so a lowered box lines up with the row below its siblings. */
+/**
+ * Stretches each drop line so a lowered box lines up with the associates: the row of
+ * team cards and boxes two levels below its siblings (e.g. the cards under Cole's managers).
+ * Falls back to one row down when no sibling has a second level.
+ */
 function alignDroppedBoxes(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>('li.oc-drop').forEach((li) => {
     const line = li.querySelector<HTMLElement>(':scope > .oc-drop-line');
     if (!line) return;
-    const siblings = [...(li.parentElement?.children || [])].filter((c) => c !== li && !c.classList.contains('oc-drop'));
+    line.style.height = '0px';
+    const siblings = [...(li.parentElement?.children || [])].filter(
+      (c) => c !== li && !c.classList.contains('oc-drop')
+    );
+    const lineTop = line.getBoundingClientRect().top;
+    const associateTops = siblings.flatMap((c) =>
+      [...c.querySelectorAll<HTMLElement>(
+        ':scope > ul > li.oc-node > ul > li.oc-node > .oc-box, :scope > ul > li.oc-node > ul > li.oc-node > .oc-team'
+      )].map((n) => n.getBoundingClientRect().top)
+    );
+    if (associateTops.length) {
+      line.style.height = `${Math.max(0, Math.min(...associateTops) - lineTop)}px`;
+      return;
+    }
     const tallest = Math.max(
       0,
-      ...siblings.map((c) => (c.querySelector<HTMLElement>(':scope > .oc-box')?.offsetHeight || 0))
+      ...siblings.map((c) => c.querySelector<HTMLElement>(':scope > .oc-box')?.offsetHeight || 0)
     );
     line.style.height = `${tallest + DROP_GAP_PX}px`;
   });

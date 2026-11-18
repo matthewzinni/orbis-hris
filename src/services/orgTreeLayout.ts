@@ -103,7 +103,7 @@ const LEADERSHIP_TITLE =
 
 /**
  * Someone who reports straight to the top row but leads no one and holds no leadership title
- * (e.g. a junior specialist under an owner) is drawn one row lower, below the executives,
+ * (e.g. a junior specialist under an owner) is drawn down at the associates' level,
  * while still connected to the leader they report to.
  */
 export function sitsBelowLeadershipRow(person: OrgTreePerson): boolean {
