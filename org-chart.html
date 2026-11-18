@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Org Chart | Orbis</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600&display=swap"
+    />
+    <link rel="stylesheet" href="/src/styles/org-chart-window.css" />
+  </head>
+  <body>
+    <div class="oc-top">
+      <header class="oc-header">
+        <div>
+          <h1 id="ocTitle">Org Chart</h1>
+          <p class="oc-sub" id="ocSummary">Loading the roster…</p>
+        </div>
+        <div class="oc-controls">
+          <div class="oc-search">
+            <label for="ocSearch">Find a person</label>
+            <input id="ocSearch" type="search" placeholder="Name, title or department" autocomplete="off" />
+          </div>
+          <div class="oc-seg" role="group" aria-label="Zoom">
+            <button id="ocFit" type="button" aria-pressed="true">Fit to screen</button>
+            <button id="ocFull" type="button" aria-pressed="false">Actual size</button>
+          </div>
+          <button id="ocPrint" class="oc-button" type="button">Print / Save PDF</button>
+        </div>
+      </header>
+      <div id="ocChain" class="oc-chain" aria-live="polite"></div>
+      <div id="ocLegend" class="oc-legend"></div>
+    </div>
+    <div class="oc-stage" id="ocStage">
+      <div class="oc-scaler" id="ocScaler">
+        <div class="oc-tree" id="ocTree" role="tree" aria-label="Reporting hierarchy"></div>
+      </div>
+    </div>
+    <div class="oc-print-pages" id="ocPrintPages" aria-hidden="true"></div>
+    <section class="oc-unmatched" id="ocUnmatched" hidden>
+      <h2>Supervisor not found on the roster</h2>
+      <p>These people have a supervisor on file that doesn’t match anyone in Orbis, so they aren’t placed in the tree.</p>
+      <ul id="ocUnmatchedList"></ul>
+    </section>
+    <script type="module" src="/src/orgChartWindow.ts"></script>
+  </body>
+</html>
