@@ -6,6 +6,7 @@ import {
   groupTeamByTitle,
   showEveryReportAsBox,
   sitsBelowLeadershipRow,
+  hasCounselDottedLine,
   teamGroupLabel,
 } from './orgTreeLayout';
 
@@ -89,5 +90,14 @@ describe('sitsBelowLeadershipRow', () => {
     const { roots } = buildOrgChart(roster);
     const top = Object.fromEntries(buildOrgTreeModel(roots).topReports.map((p) => [p.name, sitsBelowLeadershipRow(p)]));
     expect(top).toEqual({ 'Sam Montgomery': true, 'Cole Woolard': false, 'Matthew Zinni': false });
+  });
+});
+
+describe('hasCounselDottedLine', () => {
+  it('gives HR a dotted line to outside counsel and no one else', () => {
+    const hr = { key: 'x', name: 'Pat', title: 'HR Director', department: 'Human Resources', supervisor: '', children: [] };
+    const ops = { ...hr, title: 'COO', department: 'Executive' };
+    expect(hasCounselDottedLine(hr)).toBe(true);
+    expect(hasCounselDottedLine(ops)).toBe(false);
   });
 });

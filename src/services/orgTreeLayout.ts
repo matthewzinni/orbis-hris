@@ -110,6 +110,16 @@ export function sitsBelowLeadershipRow(person: OrgTreePerson): boolean {
   return !isManager(person) && !LEADERSHIP_TITLE.test(person.title);
 }
 
+const HR_DEPARTMENT = /^(human resources|hr|people( operations)?)$/i;
+
+/**
+ * HR reporting straight to the top row gets a dotted line to outside employment counsel:
+ * the independent path HR uses when a concern involves someone HR reports to.
+ */
+export function hasCounselDottedLine(person: OrgTreePerson): boolean {
+  return HR_DEPARTMENT.test(person.department.trim());
+}
+
 export function countReports(person: OrgTreePerson): number {
   return person.children.reduce((sum, child) => sum + 1 + countReports(child), 0);
 }
