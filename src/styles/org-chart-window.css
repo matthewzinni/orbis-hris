@@ -78,7 +78,7 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
 .oc-tree li.oc-node { position: relative; padding: 22px 7px 0; display: flex; flex-direction: column; align-items: center; }
 .oc-tree > ul > li.oc-node { padding-top: 0; }
 .oc-tree li.oc-node::before,
-.oc-tree li.oc-node::after { content: ''; position: absolute; top: 0; right: 50%; width: 50%; height: 22px; border-top: 2px solid var(--oc-line); }
+.oc-tree li.oc-node::after { content: ''; position: absolute; top: 0; right: 50%; width: 50%; height: 22px; border: 0 solid var(--oc-line); border-top-width: 2px; }
 .oc-tree li.oc-node::after { right: auto; left: 50%; border-left: 2px solid var(--oc-line); }
 .oc-tree li.oc-node:only-child::before,
 .oc-tree li.oc-node:only-child::after { display: none; }
@@ -89,8 +89,9 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
 .oc-tree li.oc-node:first-child::after { border-top-left-radius: 8px; }
 .oc-tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; height: 22px; border-left: 2px solid var(--oc-line); }
 .oc-drop-line { width: 2px; background: var(--oc-line); flex: none; }
-.oc-dotted-line { width: 0; height: 30px; border-left: 2px dashed var(--oc-line); flex: none; }
-.oc-box.oc-external { background: var(--oc-surface-2); border: 1.5px dashed var(--oc-line); border-top: 1.5px dashed var(--oc-line); }
+/* A dotted-line relationship: this person's own connector to the row above is dashed. */
+.oc-tree li.oc-node.oc-dotted::before,
+.oc-tree li.oc-node.oc-dotted::after { border-style: dashed; }
 .oc-tree > ul > li.oc-node::before,
 .oc-tree > ul > li.oc-node::after { display: none; }
 

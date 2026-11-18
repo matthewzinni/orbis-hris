@@ -8,7 +8,7 @@ import {
   isManager,
   showEveryReportAsBox,
   sitsBelowLeadershipRow,
-  hasCounselDottedLine,
+  hasDottedLineToTop,
   teamGroupLabel,
   type OrgTreeModel,
   type OrgTreePerson,
@@ -53,18 +53,6 @@ function personBox(person: OrgTreePerson, color: string, variant = '', note = ''
   }
   tag(box, person);
   return box;
-}
-
-/** Dotted connector plus an outside-counsel box: HR's independent escalation path. */
-function counselDottedLine(): HTMLElement[] {
-  const line = el('div', 'oc-dotted-line');
-  const box = el('div', 'oc-box oc-external');
-  box.append(
-    el('div', 'oc-name', 'Outside Employment Counsel'),
-    el('div', 'oc-title', 'Independent escalation path'),
-    el('div', 'oc-note', 'Dotted line · not a reporting line')
-  );
-  return [line, box];
 }
 
 function teamCard(people: OrgTreePerson[], color: string, managerName: string): HTMLElement {
@@ -117,15 +105,15 @@ function buildTree(model: OrgTreeModel, reports: { person: OrgTreePerson; index:
     const ul = el('ul');
     for (const { person, index } of reports) {
       const color = BRANCH_COLORS[index % BRANCH_COLORS.length];
-      const note = person.reportsTo ? `Reports to ${person.reportsTo}` : '';
+      const dotted = hasDottedLineToTop(person);
+      const to = person.reportsTo || topName;
+      const note = dotted ? `Dotted line to ${to}` : person.reportsTo ? `Reports to ${person.reportsTo}` : '';
       const li = branch(person, color, person.reportsTo || topName, note);
       if (sitsBelowLeadershipRow(person)) {
         li.classList.add('oc-drop');
         li.prepend(el('div', 'oc-drop-line'));
       }
-      if (hasCounselDottedLine(person)) {
-        li.querySelector(':scope > .oc-box')?.after(...counselDottedLine());
-      }
+      if (dotted) li.classList.add('oc-dotted');
       ul.append(li);
     }
     rootLi.append(ul);

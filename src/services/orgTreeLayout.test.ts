@@ -6,7 +6,7 @@ import {
   groupTeamByTitle,
   showEveryReportAsBox,
   sitsBelowLeadershipRow,
-  hasCounselDottedLine,
+  hasDottedLineToTop,
   teamGroupLabel,
 } from './orgTreeLayout';
 
@@ -93,11 +93,11 @@ describe('sitsBelowLeadershipRow', () => {
   });
 });
 
-describe('hasCounselDottedLine', () => {
-  it('gives HR a dotted line to outside counsel and no one else', () => {
+describe('hasDottedLineToTop', () => {
+  it('draws only the HR line to the top row as dotted', () => {
     const hr = { key: 'x', name: 'Pat', title: 'HR Director', department: 'Human Resources', supervisor: '', children: [] };
     const ops = { ...hr, title: 'COO', department: 'Executive' };
-    expect(hasCounselDottedLine(hr)).toBe(true);
-    expect(hasCounselDottedLine(ops)).toBe(false);
+    expect(hasDottedLineToTop(hr)).toBe(true);
+    expect(hasDottedLineToTop(ops)).toBe(false);
   });
 });

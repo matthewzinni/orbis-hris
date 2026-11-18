@@ -113,10 +113,10 @@ export function sitsBelowLeadershipRow(person: OrgTreePerson): boolean {
 const HR_DEPARTMENT = /^(human resources|hr|people( operations)?)$/i;
 
 /**
- * HR reporting straight to the top row gets a dotted line to outside employment counsel:
- * the independent path HR uses when a concern involves someone HR reports to.
+ * HR's line to the top row is drawn dotted rather than solid: HR answers to that leader
+ * administratively but must stay independent enough to document concerns involving them.
  */
-export function hasCounselDottedLine(person: OrgTreePerson): boolean {
+export function hasDottedLineToTop(person: OrgTreePerson): boolean {
   return HR_DEPARTMENT.test(person.department.trim());
 }
 
