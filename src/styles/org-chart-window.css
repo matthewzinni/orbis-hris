@@ -91,6 +91,17 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
 .oc-tree li.oc-node:first-child::after { border-top-left-radius: 8px; }
 .oc-tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; height: 22px; border-left: 2px solid var(--oc-line); }
 .oc-drop-line { width: 2px; background: var(--oc-line); flex: none; }
+/* Diagonal reports (one owner, no team) leave the bar; an SVG line joins them to the owner. */
+.oc-tree { position: relative; }
+.oc-tree li.oc-node.oc-diagonal::before,
+.oc-tree li.oc-node.oc-diagonal::after { display: none; }
+.oc-tree li.oc-node.oc-diagonal > .oc-drop-line { visibility: hidden; }
+.oc-tree li.oc-node.oc-visual-first::before { border: 0 none; }
+.oc-tree li.oc-node.oc-visual-first::after { border-top-left-radius: 8px; }
+.oc-tree li.oc-node.oc-visual-last::after { border: 0 none; }
+.oc-tree li.oc-node.oc-visual-last::before { border-right: 2px solid var(--oc-line); border-top-right-radius: 8px; }
+svg.oc-diagonals { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+svg.oc-diagonals line { stroke: var(--oc-line); stroke-width: 2; }
 /* Dotted-line relationship (HR): the owners' stem is lengthened and a dashed line
    branches sideways from it to the HR box, separate from the managers' bar. */
 .oc-staff { display: grid; grid-template-columns: 1fr 2px 1fr; width: 100%; }
