@@ -88,6 +88,7 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
 .oc-tree li.oc-node:last-child::before { border-right: 2px solid var(--oc-line); border-top-right-radius: 8px; }
 .oc-tree li.oc-node:first-child::after { border-top-left-radius: 8px; }
 .oc-tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; height: 22px; border-left: 2px solid var(--oc-line); }
+.oc-drop-line { width: 2px; background: var(--oc-line); flex: none; }
 .oc-tree > ul > li.oc-node::before,
 .oc-tree > ul > li.oc-node::after { display: none; }
 
