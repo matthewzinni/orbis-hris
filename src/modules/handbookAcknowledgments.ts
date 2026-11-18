@@ -32,7 +32,7 @@ export function renderSignedHandbook(record: HandbookAcknowledgment): string {
     </body></html>`;
 }
 
-function viewSignedHandbook(record: HandbookAcknowledgment): void {
+export function viewSignedHandbook(record: HandbookAcknowledgment): void {
   const viewer = window.open('about:blank', '_blank');
   if (!viewer) {
     window.showToast?.('Allow pop-ups to view the signed acknowledgement.', 'error');

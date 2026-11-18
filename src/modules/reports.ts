@@ -9,6 +9,7 @@ import {
   isActiveDashboardEmployee,
 } from '../services/employeeUtils';
 import { isOpenDisciplineStatus } from '../services/hrIntelligence';
+import { initLeadershipBriefing } from './leadershipBriefing';
 
 type EmployeeRow = Record<string, unknown>;
 
@@ -780,6 +781,8 @@ export async function loadReportsSection(force = false): Promise<void> {
   if (!isAdminUser()) {
     return;
   }
+
+  initLeadershipBriefing();
 
   if (reportsSectionLoaded && !force) {
     renderReportsMetricSnapshots();

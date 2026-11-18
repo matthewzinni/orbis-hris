@@ -1,3 +1,4 @@
+import { initializeHandbookSignatureTracker } from './modules/handbookSignatureTracker';
 import { initMobileLayout } from './mobile/mobileLayout';
 initMobileLayout();
 import './styles/responsive-tokens.css';
@@ -348,6 +349,7 @@ async function initializeProtectedModules(): Promise<boolean> {
   try {
     devLog('Initializing Documents Library...');
     await initializeDocumentsLibrary();
+    initializeHandbookSignatureTracker();
     initializePolicyCampaignsAdmin();
     void loadPolicyCampaignsAdmin();
     devLog('Documents Library initialized successfully');
