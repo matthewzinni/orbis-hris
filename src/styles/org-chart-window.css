@@ -102,17 +102,10 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
 .oc-tree li.oc-node.oc-visual-last::before { border-right: 2px solid var(--oc-line); border-top-right-radius: 8px; }
 svg.oc-diagonals { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 svg.oc-diagonals line { stroke: var(--oc-line); stroke-width: 2; }
-/* Dotted-line relationship (HR): the owners' stem is lengthened and a dashed line
-   branches sideways from it to the HR box, separate from the managers' bar. */
-.oc-staff { display: grid; grid-template-columns: 1fr 2px 1fr; width: 100%; }
-.oc-staff-stem { grid-column: 2; grid-row: 1; background: var(--oc-line); }
-.oc-staff-side { grid-row: 1; display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
-.oc-staff-left { grid-column: 1; justify-self: end; }
-.oc-staff-right { grid-column: 3; justify-self: start; }
-.oc-staff-item { display: flex; align-items: center; }
-.oc-staff-left .oc-staff-item { flex-direction: row-reverse; }
-.oc-side-line { width: 44px; border-top: 2px dashed var(--oc-line); flex: none; }
-.oc-staff-item .oc-box { flex: none; }
+/* Island (HR): same row as off-chain staff, with no connecting lines. */
+.oc-tree li.oc-node.oc-island::before,
+.oc-tree li.oc-node.oc-island::after { display: none; }
+.oc-tree li.oc-node.oc-island > .oc-drop-line { visibility: hidden; }
 .oc-tree > ul > li.oc-node::before,
 .oc-tree > ul > li.oc-node::after { display: none; }
 

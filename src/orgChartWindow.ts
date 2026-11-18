@@ -8,7 +8,7 @@ import {
   isManager,
   showEveryReportAsBox,
   sitsBelowLeadershipRow,
-  hasDottedLineToTop,
+  isIsland,
   teamGroupLabel,
   type OrgTreeModel,
   type OrgTreePerson,
@@ -108,36 +108,21 @@ function buildTree(model: OrgTreeModel, reports: { person: OrgTreePerson; index:
   }
   rootLi.append(leaders);
 
-  // Dotted-line people (HR) branch sideways off the owners' stem, above the managers' row.
-  const lastLeader = model.leaders[model.leaders.length - 1]?.name || '';
-  const staffLeft: HTMLElement[] = [];
-  const staffRight: HTMLElement[] = [];
-  const treeReports = reports.filter(({ person }) => {
-    if (!hasDottedLineToTop(person)) return true;
-    const to = person.reportsTo || lastLeader;
-    if (!slots.has(to)) return true;
-    managerOf.set(person.name, to);
-    const item = el('div', 'oc-staff-item');
-    item.append(el('div', 'oc-side-line'), personBox(person, '--oc-side', '', `Dotted line to ${to}`));
-    const onLeft = model.leaders.length > 1 && model.leaders[0].name === to;
-    (onLeft ? staffLeft : staffRight).push(item);
-    return false;
-  });
-  if (staffLeft.length || staffRight.length) {
-    const staff = el('div', 'oc-staff');
-    const left = el('div', 'oc-staff-side oc-staff-left');
-    left.append(...staffLeft);
-    const right = el('div', 'oc-staff-side oc-staff-right');
-    right.append(...staffRight);
-    staff.append(left, el('div', 'oc-staff-stem'), right);
-    rootLi.append(staff);
-  }
+  const treeReports = reports;
 
   if (treeReports.length) {
     const ul = el('ul');
     for (const { person, index } of treeReports) {
       const color = BRANCH_COLORS[index % BRANCH_COLORS.length];
       const note = person.reportsTo ? `Reports to ${person.reportsTo}` : '';
+      if (isIsland(person)) {
+        // HR stands apart: same row as other off-chain staff, no connecting lines at all.
+        const island = el('li', 'oc-node oc-drop oc-island');
+        island.append(el('div', 'oc-drop-line'), personBox(person, '--oc-side', '', note));
+        managerOf.set(person.name, person.reportsTo || topName);
+        ul.append(island);
+        continue;
+      }
       const li = branch(person, color, person.reportsTo || topName, note);
       if (sitsBelowLeadershipRow(person)) {
         li.classList.add('oc-drop');
@@ -151,7 +136,9 @@ function buildTree(model: OrgTreeModel, reports: { person: OrgTreePerson; index:
       ul.append(li);
     }
     // The bar's ends belong to the first and last people still hanging from it.
-    const onBar = [...ul.children].filter((c) => !c.classList.contains('oc-diagonal'));
+    const onBar = [...ul.children].filter(
+      (c) => !c.classList.contains('oc-diagonal') && !c.classList.contains('oc-island')
+    );
     onBar[0]?.classList.add('oc-visual-first');
     onBar[onBar.length - 1]?.classList.add('oc-visual-last');
     rootLi.append(ul);
@@ -271,8 +258,9 @@ function drawDiagonals(tree: HTMLElement | null): void {
     const b = target.getBoundingClientRect();
     const toLeft = b.left + b.width / 2 < a.left + a.width / 2;
     const line = document.createElementNS(SVG_NS, 'line');
-    line.setAttribute('x1', String((toLeft ? a.left + 12 : a.right - 12) - origin.left));
-    line.setAttribute('y1', String(a.bottom - origin.top));
+    // Leave from the middle of the owner's outer edge so the line clears the bar below.
+    line.setAttribute('x1', String((toLeft ? a.left : a.right) - origin.left));
+    line.setAttribute('y1', String(a.top + a.height / 2 - origin.top));
     line.setAttribute('x2', String(b.left + b.width / 2 - origin.left));
     line.setAttribute('y2', String(b.top - origin.top));
     svg.append(line);

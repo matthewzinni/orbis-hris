@@ -6,7 +6,7 @@ import {
   groupTeamByTitle,
   showEveryReportAsBox,
   sitsBelowLeadershipRow,
-  hasDottedLineToTop,
+  isIsland,
   teamGroupLabel,
 } from './orgTreeLayout';
 
@@ -93,12 +93,12 @@ describe('sitsBelowLeadershipRow', () => {
   });
 });
 
-describe('hasDottedLineToTop', () => {
-  it('draws only the HR line to the top row as dotted', () => {
+describe('isIsland', () => {
+  it('sets only HR apart as an island', () => {
     const hr = { key: 'x', name: 'Pat', title: 'HR Director', department: 'Human Resources', supervisor: '', children: [] };
     const ops = { ...hr, title: 'COO', department: 'Executive' };
-    expect(hasDottedLineToTop(hr)).toBe(true);
-    expect(hasDottedLineToTop(ops)).toBe(false);
+    expect(isIsland(hr)).toBe(true);
+    expect(isIsland(ops)).toBe(false);
   });
 });
 

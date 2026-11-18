@@ -124,10 +124,10 @@ export function sitsBelowLeadershipRow(person: OrgTreePerson): boolean {
 const HR_DEPARTMENT = /^(human resources|hr|people( operations)?)$/i;
 
 /**
- * HR's line to the top row is drawn dotted rather than solid: HR answers to that leader
- * administratively but must stay independent enough to document concerns involving them.
+ * HR reporting to the top row is drawn as an island: a box with no connecting lines,
+ * set apart from the management chain it may need to document independently.
  */
-export function hasDottedLineToTop(person: OrgTreePerson): boolean {
+export function isIsland(person: OrgTreePerson): boolean {
   return HR_DEPARTMENT.test(person.department.trim());
 }
 
