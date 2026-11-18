@@ -108,20 +108,30 @@ function buildTree(model: OrgTreeModel, reports: { person: OrgTreePerson; index:
   }
   rootLi.append(leaders);
 
-  // Dotted-line people (HR) hang off their leader's box, not the managers' row.
+  // Dotted-line people (HR) branch sideways off the owners' stem, above the managers' row.
   const lastLeader = model.leaders[model.leaders.length - 1]?.name || '';
+  const staffLeft: HTMLElement[] = [];
+  const staffRight: HTMLElement[] = [];
   const treeReports = reports.filter(({ person }) => {
     if (!hasDottedLineToTop(person)) return true;
     const to = person.reportsTo || lastLeader;
-    const slot = slots.get(to);
-    if (!slot) return true;
+    if (!slots.has(to)) return true;
     managerOf.set(person.name, to);
+    const item = el('div', 'oc-staff-item');
+    item.append(el('div', 'oc-side-line'), personBox(person, '--oc-side', '', `Dotted line to ${to}`));
     const onLeft = model.leaders.length > 1 && model.leaders[0].name === to;
-    const side = el('div', `oc-side ${onLeft ? 'oc-side-left' : 'oc-side-right'}`);
-    side.append(el('div', 'oc-side-line'), personBox(person, '--oc-side', '', `Dotted line to ${to}`));
-    slot.append(side);
+    (onLeft ? staffLeft : staffRight).push(item);
     return false;
   });
+  if (staffLeft.length || staffRight.length) {
+    const staff = el('div', 'oc-staff');
+    const left = el('div', 'oc-staff-side oc-staff-left');
+    left.append(...staffLeft);
+    const right = el('div', 'oc-staff-side oc-staff-right');
+    right.append(...staffRight);
+    staff.append(left, el('div', 'oc-staff-stem'), right);
+    rootLi.append(staff);
+  }
 
   if (treeReports.length) {
     const ul = el('ul');
