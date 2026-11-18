@@ -5,6 +5,7 @@ import {
   countReports,
   groupTeamByTitle,
   showEveryReportAsBox,
+  sitsBelowLeadershipRow,
   teamGroupLabel,
 } from './orgTreeLayout';
 
@@ -29,7 +30,7 @@ const roster = [
   emp('8', 'Austin', 'Woolard', 'Fulfillment Associate', 'Will Respess'),
   emp('9', 'James', 'Gruber', 'Facility Director', 'Cole Woolard'),
   emp('10', 'Pat', 'Nobody', 'Associate', 'Someone Gone'),
-  emp('11', 'Sam', 'Montgomery', 'Technology Associate', 'Brent Wynne'),
+  emp('11', 'Sam', 'Montgomery', 'Junior Systems Architect', 'Brent Wynne'),
   emp('12', 'Matthew', 'Zinni', 'HR Director', 'Trent Wynne'),
 ];
 
@@ -80,5 +81,13 @@ describe('groupTeamByTitle', () => {
     const groups = groupTeamByTitle(will.children);
     expect(groups).toHaveLength(1);
     expect(teamGroupLabel(groups[0])).toBe('Fulfillment Associates (2)');
+  });
+});
+
+describe('sitsBelowLeadershipRow', () => {
+  it('drops non-leaders under the owners one row and keeps directors and executives up', () => {
+    const { roots } = buildOrgChart(roster);
+    const top = Object.fromEntries(buildOrgTreeModel(roots).topReports.map((p) => [p.name, sitsBelowLeadershipRow(p)]));
+    expect(top).toEqual({ 'Sam Montgomery': true, 'Cole Woolard': false, 'Matthew Zinni': false });
   });
 });

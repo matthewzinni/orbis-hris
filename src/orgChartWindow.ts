@@ -7,6 +7,7 @@ import {
   groupTeamByTitle,
   isManager,
   showEveryReportAsBox,
+  sitsBelowLeadershipRow,
   teamGroupLabel,
   type OrgTreeModel,
   type OrgTreePerson,
@@ -104,7 +105,12 @@ function buildTree(model: OrgTreeModel, reports: { person: OrgTreePerson; index:
     for (const { person, index } of reports) {
       const color = BRANCH_COLORS[index % BRANCH_COLORS.length];
       const note = person.reportsTo ? `Reports to ${person.reportsTo}` : '';
-      ul.append(branch(person, color, person.reportsTo || topName, note));
+      const li = branch(person, color, person.reportsTo || topName, note);
+      if (sitsBelowLeadershipRow(person)) {
+        li.classList.add('oc-drop');
+        li.prepend(el('div', 'oc-drop-line'));
+      }
+      ul.append(li);
     }
     rootLi.append(ul);
   }
@@ -180,10 +186,28 @@ try {
   /* storage unavailable */
 }
 
+/** Stretches each drop line so a lowered box lines up with the row below its siblings. */
+function alignDroppedBoxes(root: ParentNode): void {
+  root.querySelectorAll<HTMLElement>('li.oc-drop').forEach((li) => {
+    const line = li.querySelector<HTMLElement>(':scope > .oc-drop-line');
+    if (!line) return;
+    const siblings = [...(li.parentElement?.children || [])].filter((c) => c !== li && !c.classList.contains('oc-drop'));
+    const tallest = Math.max(
+      0,
+      ...siblings.map((c) => (c.querySelector<HTMLElement>(':scope > .oc-box')?.offsetHeight || 0))
+    );
+    line.style.height = `${tallest + DROP_GAP_PX}px`;
+  });
+}
+
+/** Gap from a box to the next row's boxes: the ul's 22px stem plus each li's 22px connector. */
+const DROP_GAP_PX = 44;
+
 function layout(): void {
   const stage = $('ocStage');
   const scaler = $('ocScaler');
   scaler.style.zoom = '';
+  alignDroppedBoxes($('ocTree'));
   const styles = getComputedStyle(stage);
   const avail =
     stage.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight) - 2;
@@ -218,6 +242,7 @@ function sizePageForPrint(): void {
   const scaler = page?.querySelector<HTMLElement>('.oc-print-scaler');
   const head = page?.querySelector<HTMLElement>('.oc-print-head');
   if (!page || !scaler || !head) return;
+  alignDroppedBoxes(page);
   // The chart's natural (max-content) size, not whatever width the print layout gives the page.
   const contentWidth = Math.max(scaler.scrollWidth, head.scrollWidth);
   const contentHeight = scaler.scrollHeight + head.offsetHeight;
@@ -307,7 +332,10 @@ async function load(): Promise<void> {
   sizePageForPrint();
   const today = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
   $('ocSummary').textContent = `${total} employees · reporting lines as of ${today}`;
-  document.fonts?.ready.then(layout);
+  document.fonts?.ready.then(() => {
+    layout();
+    sizePageForPrint();
+  });
   layout();
 }
 
