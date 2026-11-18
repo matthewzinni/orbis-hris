@@ -103,10 +103,9 @@ export function resetDrawerForms(): void {
   }
 
   setFieldValue('atRiskReasonInput', '');
-  setFieldValue('impactPlayerReasonInput', '');
+  setFieldValue('ironShiftReasonInput', '');
 
   window.currentManualAtRiskState = { flagged: false, reason: '' };
-  window.currentManualImpactPlayerState = { flagged: false, reason: '' };
 
   window.isCreatingEmployee = preserveCreateMode;
 

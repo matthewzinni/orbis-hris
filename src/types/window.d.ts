@@ -63,13 +63,9 @@ declare global {
     currentMainView?: string;
     getEmployeeMapKeys?: (employee: Record<string, unknown>) => string[];
     getEmployeeRiskMeta?: (employee: Record<string, unknown>) => Record<string, unknown> | null;
-    getEmployeeImpactMeta?: (employee: Record<string, unknown>) => Record<string, unknown> | null;
     isEmployeeAtRisk?: (employee: Record<string, unknown>) => boolean;
-    isEmployeeImpactPlayer?: (employee: Record<string, unknown>) => boolean;
     hasActiveRiskMeta?: (meta: Record<string, unknown> | null | undefined) => boolean;
-    hasActiveImpactMeta?: (meta: Record<string, unknown> | null | undefined) => boolean;
     buildRiskBadgeHtml?: (meta: Record<string, unknown> | null) => string;
-    buildImpactBadgeHtml?: (meta: Record<string, unknown> | null) => string;
     updateEmployeeRowBadges?: () => void;
     EMPLOYEES?: Record<string, unknown>[];
     isCreatingEmployee?: boolean;
@@ -92,11 +88,8 @@ declare global {
     loadStayInterviews?: (employeeId: string) => void | Promise<void>;
     loadEmployeeOnboarding?: (employeeId: string) => void;
     loadEmployeeManualAtRisk?: (employeeId: string) => void | Promise<void>;
-    loadEmployeeManualImpactPlayer?: (employeeId: string) => void | Promise<void>;
     markEmployeeAtRisk?: () => void | Promise<void>;
     clearAtRiskStatus?: () => void | Promise<void>;
-    markImpactPlayer?: () => void | Promise<void>;
-    clearImpactPlayerStatus?: () => void | Promise<void>;
     openDrawer?: (employee: Record<string, unknown>) => void;
     closeDrawer?: () => void;
     resetEmployeeDrawerShell?: () => void;
@@ -137,6 +130,7 @@ declare global {
     refreshIronShiftAwardRosterMap?: () => Promise<void>;
     loadIronShiftAwardsFallback?: () => Promise<void>;
     renderEmployeeIronShiftAdminSection?: (employee: Record<string, unknown> | null | undefined) => void;
+    giveIronShiftAward?: () => Promise<void>;
     ALL_EMPLOYEES?: Record<string, unknown>[];
     currentEmployeeRoster?: Record<string, unknown>[];
     renderBasicDashboardKpis?: (employees?: Record<string, unknown>[]) => void;
@@ -148,7 +142,6 @@ declare global {
     initKpiHoverUi?: () => void;
     syncKpiCardTooltip?: (card: Element | null, text: string) => void;
     updateTurnoverRiskKpi?: (rate: number, subtext: string) => void;
-    currentImpactPlayerRosterMap?: Record<string, unknown>;
     currentIronShiftRosterMap?: Record<string, unknown>;
     currentAtRiskRosterMap?: Record<string, unknown>;
     loadSummaryMetrics?: () => Promise<void>;
@@ -200,7 +193,6 @@ declare global {
     SpeechRecognition?: typeof SpeechRecognition;
     webkitSpeechRecognition?: typeof SpeechRecognition;
     currentManualAtRiskState?: { flagged: boolean; reason: string };
-    currentManualImpactPlayerState?: { flagged: boolean; reason: string };
     sanitizeDisciplineAutofillLeak?: (forceClear?: boolean) => void;
     getCurrentEmployeeForOrbis?: () => Record<string, unknown> | null;
     ensureDrawerTabFallbacks?: (employee?: Record<string, unknown> | null) => void;
@@ -357,7 +349,6 @@ declare global {
     loadReviewDashboard?: () => Promise<void>;
     loadExecutiveInsightFallback?: () => Promise<void>;
     loadRiskEmployeesFallback?: () => Promise<void>;
-    loadImpactPlayersFallback?: () => Promise<void>;
     cleanReviewDashboardLooseCount?: () => void;
     buildRiskPreview?: () => void;
     loadPolicyCampaignsAdmin?: () => Promise<void>;

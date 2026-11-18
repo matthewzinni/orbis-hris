@@ -50,7 +50,6 @@ type OrbisRosterWindow = Window & {
   currentUser?: { email?: string; name?: string } | null;
   isCreatingEmployee?: boolean;
   currentAtRiskRosterMap?: Record<string, unknown>;
-  currentImpactPlayerRosterMap?: Record<string, unknown>;
   openEmployeeDrawer?: (id: string) => Promise<void>;
   openDrawer?: (employee: RosterEmployee) => void;
   syncOpenedEmployeeRecordId?: (id: string) => void;

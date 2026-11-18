@@ -180,9 +180,9 @@ function ensureDashboardEmployeeLinkBindings(): void {
   }
 
   const riskEl = safeGet('riskEmployees');
-  const impactEl = safeGet('impactPlayers');
+  const ironShiftEl = safeGet('ironShiftAwards');
 
-  if (!riskEl && !impactEl) {
+  if (!riskEl && !ironShiftEl) {
     return;
   }
 
@@ -206,7 +206,7 @@ function ensureDashboardEmployeeLinkBindings(): void {
   };
 
   riskEl?.addEventListener('click', handleEmployeeLinkClick);
-  impactEl?.addEventListener('click', handleEmployeeLinkClick);
+  ironShiftEl?.addEventListener('click', handleEmployeeLinkClick);
 }
 
 async function openEmployeeStayInterviewTab(employeeId: string): Promise<void> {
@@ -811,62 +811,6 @@ export async function loadRiskEmployeesFallback(): Promise<void> {
     .join('');
 }
 
-export async function loadImpactPlayersFallback(): Promise<void> {
-  const employees = getDashboardEmployees().filter((e) => isActiveDashboardEmployee(e));
-
-  const impactPlayers = employees
-    .filter((employee) => {
-      if (typeof window.isEmployeeImpactPlayer === 'function') {
-        return window.isEmployeeImpactPlayer(employee);
-      }
-
-      if (typeof window.getEmployeeImpactMeta === 'function') {
-        return Boolean(window.getEmployeeImpactMeta(employee));
-      }
-
-      return false;
-    })
-    .sort(compareEmployeesByLastName);
-
-  setText('kImpactPlayers', String(impactPlayers.length));
-
-  const container =
-    resolveDashboardListContainer('impactPlayers', 'impactPlayersDashboardList') ||
-    getOrCreateDashboardSectionBody('Impact Players', 'impactPlayers');
-
-  if (!container) return;
-
-  if (!impactPlayers.length) {
-    container.innerHTML =
-      '<div class="empty">No impact players currently flagged.</div>';
-    return;
-  }
-
-  ensureDashboardEmployeeLinkBindings();
-
-  container.innerHTML = impactPlayers
-    .slice(0, 8)
-    .map((employee) => {
-      const impactMeta =
-        typeof window.getEmployeeImpactMeta === 'function'
-          ? window.getEmployeeImpactMeta(employee)
-          : null;
-      const scoreText =
-        impactMeta?.reviewScore !== null && impactMeta?.reviewScore !== undefined
-          ? `Review score: ${Number(impactMeta.reviewScore).toFixed(1)}`
-          : '';
-
-      return `
-        <div class="dashboard-list-item">
-            ${renderDashboardEmployeeNameLink(employee, 'Open impact player')}
-            <span>${esc(employee.department || employee.dept || '')}</span>
-            ${scoreText ? `<small>${esc(scoreText)}</small>` : ''}
-        </div>
-      `;
-    })
-    .join('');
-}
-
 function formatIronShiftAwardDate(value: string): string {
   const raw = String(value || '').trim();
   if (!raw) return '';
@@ -959,7 +903,6 @@ async function runDashboardOverviewLoads(): Promise<DashboardSyncStatus> {
     loadReviewDashboardFallback(),
     loadExecutiveInsightFallback(),
     loadRiskEmployeesFallback(),
-    loadImpactPlayersFallback(),
     loadIronShiftAwardsFallback(),
   ]);
 
@@ -1100,7 +1043,6 @@ window.loadReviewDashboardFallback = loadReviewDashboardFallback;
 window.loadReviewDashboard = loadReviewDashboardFallback;
 window.loadExecutiveInsightFallback = loadExecutiveInsightFallback;
 window.loadRiskEmployeesFallback = loadRiskEmployeesFallback;
-window.loadImpactPlayersFallback = loadImpactPlayersFallback;
 window.loadIronShiftAwardsFallback = loadIronShiftAwardsFallback;
 window.cleanReviewDashboardLooseCount = cleanReviewDashboardLooseCount;
 window.getOrCreateDashboardSectionBody = getOrCreateDashboardSectionBody;

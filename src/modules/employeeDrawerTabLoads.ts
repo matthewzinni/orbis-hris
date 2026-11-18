@@ -140,7 +140,6 @@ export function loadEmployeeDrawerTab(tabName: string, employeeId?: string): voi
     case 'employee':
       runDrawerTabLoad(tabName, id, generation, () => {
         window.loadEmployeeManualAtRisk?.(id);
-        window.loadEmployeeManualImpactPlayer?.(id);
         return window.loadEmployeePayrollHandoffs?.(id);
       });
       break;

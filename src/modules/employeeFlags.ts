@@ -1,4 +1,4 @@
-// Manual at-risk / impact player flags (employee admin drawer)
+// Manual at-risk flags (employee admin drawer)
 
 import { canEditEmployeeAdmin } from '../services/access';
 import { supabaseClient } from '../services/supabaseClient';
@@ -13,7 +13,6 @@ type FlagMeta = {
   openIncidentCount?: number;
   flaggedDate?: string;
   flaggedBy?: string;
-  highReview?: boolean;
 };
 
 function safeGet(id: string): HTMLElement | null {
@@ -74,19 +73,6 @@ function removeEmployeeFromAtRiskMap(employee: EmployeeRow): void {
   window.currentAtRiskRosterMap = map;
 }
 
-function removeEmployeeFromImpactMap(employee: EmployeeRow): void {
-  const map = window.currentImpactPlayerRosterMap || {};
-  const keysToRemove = new Set(getEmployeeMapKeys(employee));
-
-  Object.keys(map).forEach((key) => {
-    if (keysToRemove.has(key)) {
-      delete map[key];
-    }
-  });
-
-  window.currentImpactPlayerRosterMap = map;
-}
-
 function getEmployeeMapKeys(employee: EmployeeRow): string[] {
   return [employee.dbId, employee.id, employee.employee_id, employee.displayId]
     .filter(Boolean)
@@ -98,17 +84,6 @@ function setManualAtRiskUi(flagged: boolean, reason = ''): void {
   const input = safeGet('atRiskReasonInput') as HTMLTextAreaElement | null;
   if (input) {
     input.value = window.currentManualAtRiskState.reason;
-  }
-}
-
-function setManualImpactPlayerUi(flagged: boolean, reason = ''): void {
-  window.currentManualImpactPlayerState = {
-    flagged: !!flagged,
-    reason: String(reason || '').trim(),
-  };
-  const input = safeGet('impactPlayerReasonInput') as HTMLTextAreaElement | null;
-  if (input) {
-    input.value = window.currentManualImpactPlayerState.reason;
   }
 }
 
@@ -124,10 +99,6 @@ async function refreshAfterFlagChange(employee: EmployeeRow): Promise<void> {
 
   if (typeof window.loadRiskEmployeesFallback === 'function') {
     await window.loadRiskEmployeesFallback();
-  }
-
-  if (typeof window.loadImpactPlayersFallback === 'function') {
-    await window.loadImpactPlayersFallback();
   }
 
   if (typeof window.renderRoster === 'function') {
@@ -170,39 +141,6 @@ export async function loadEmployeeManualAtRisk(employeeId: string): Promise<void
   }
 
   setManualAtRiskUi(true, latest.note_text || '');
-}
-
-export async function loadEmployeeManualImpactPlayer(employeeId: string): Promise<void> {
-  const currentEmployee = getCurrentEmployee();
-  const actualEmployeeId = String(currentEmployee?.dbId || employeeId || '').trim();
-
-  if (!actualEmployeeId) {
-    setManualImpactPlayerUi(false, '');
-    return;
-  }
-
-  const { data, error } = await supabaseClient
-    .from('employee_notes')
-    .select('id, note_type, note_text, note_date, created_at')
-    .eq('employee_id', actualEmployeeId)
-    .in('note_type', ['Impact Player Flag', 'Impact Player Cleared'])
-    .order('created_at', { ascending: false })
-    .limit(1);
-
-  if (error) {
-    console.error(error);
-    setManualImpactPlayerUi(false, '');
-    return;
-  }
-
-  const latest = data?.[0] as { note_type?: string; note_text?: string } | undefined;
-
-  if (!latest || latest.note_type !== 'Impact Player Flag') {
-    setManualImpactPlayerUi(false, '');
-    return;
-  }
-
-  setManualImpactPlayerUi(true, latest.note_text || '');
 }
 
 export async function markEmployeeAtRisk(): Promise<void> {
@@ -284,86 +222,6 @@ export async function clearAtRiskStatus(): Promise<void> {
   await refreshAfterFlagChange(currentEmployee);
 }
 
-export async function markImpactPlayer(): Promise<void> {
-  const currentEmployee = ensureCanEditEmployeeFlags();
-  if (!currentEmployee) return;
-
-  const reason = String(
-    (safeGet('impactPlayerReasonInput') as HTMLTextAreaElement | null)?.value || ''
-  ).trim();
-
-  if (!reason) {
-    showToast('Enter a reason before marking the employee as an Impact Player.', 'error');
-    return;
-  }
-
-  const employeeDbId = getEmployeeDbId(currentEmployee);
-
-  const { error } = await supabaseClient.from('employee_notes').insert([
-    {
-      employee_id: employeeDbId,
-      note_date: todayInputValue(),
-      note_type: 'Impact Player Flag',
-      note_text: reason,
-    },
-  ]);
-
-  if (error) {
-    console.error(error);
-    showToast('Could not mark employee as an Impact Player.', 'error');
-    return;
-  }
-
-  showToast('Employee marked as an Impact Player.');
-  recordAuditEvent('Marked Impact Player', currentEmployee, reason);
-  setManualImpactPlayerUi(true, reason);
-
-  const impactMeta: FlagMeta = {
-    manualReason: reason,
-    flaggedDate: todayInputValue(),
-    flaggedBy: '',
-    highReview: false,
-    reviewScore: null,
-  };
-
-  const impactMap = window.currentImpactPlayerRosterMap || {};
-  getEmployeeMapKeys(currentEmployee).forEach((key) => {
-    impactMap[key] = impactMeta;
-  });
-  window.currentImpactPlayerRosterMap = impactMap;
-
-  await refreshAfterFlagChange(currentEmployee);
-}
-
-export async function clearImpactPlayerStatus(): Promise<void> {
-  const currentEmployee = ensureCanEditEmployeeFlags();
-  if (!currentEmployee) return;
-
-  const employeeDbId = getEmployeeDbId(currentEmployee);
-  const { error } = await supabaseClient.from('employee_notes').insert([
-    {
-      employee_id: employeeDbId,
-      note_date: todayInputValue(),
-      note_type: 'Impact Player Cleared',
-      note_text: '',
-    },
-  ]);
-
-  if (error) {
-    console.error(error);
-    showToast('Could not clear Impact Player flag.', 'error');
-    return;
-  }
-
-  showToast('Impact Player flag cleared.');
-  recordAuditEvent('Cleared Impact Player', currentEmployee, 'Manual Impact Player flag cleared');
-  setManualImpactPlayerUi(false, '');
-
-  removeEmployeeFromImpactMap(currentEmployee);
-
-  await refreshAfterFlagChange(currentEmployee);
-}
-
 function bindEmployeeFlagButtons(): void {
   if ((window as { __employeeFlagButtonsBound?: boolean }).__employeeFlagButtonsBound) {
     return;
@@ -386,14 +244,6 @@ function bindEmployeeFlagButtons(): void {
           event.preventDefault();
           void clearAtRiskStatus();
           break;
-        case 'markImpactPlayerBtn':
-          event.preventDefault();
-          void markImpactPlayer();
-          break;
-        case 'clearImpactPlayerBtn':
-          event.preventDefault();
-          void clearImpactPlayerStatus();
-          break;
         default:
           break;
       }
@@ -405,8 +255,5 @@ function bindEmployeeFlagButtons(): void {
 bindEmployeeFlagButtons();
 
 window.loadEmployeeManualAtRisk = loadEmployeeManualAtRisk;
-window.loadEmployeeManualImpactPlayer = loadEmployeeManualImpactPlayer;
 window.markEmployeeAtRisk = markEmployeeAtRisk;
 window.clearAtRiskStatus = clearAtRiskStatus;
-window.markImpactPlayer = markImpactPlayer;
-window.clearImpactPlayerStatus = clearImpactPlayerStatus;

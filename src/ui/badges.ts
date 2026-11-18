@@ -1,4 +1,4 @@
-// At-risk / impact player / iron shift roster badges
+// At-risk / iron shift roster badges
 
 type IronShiftAwardMeta = {
   summary: string;
@@ -12,7 +12,6 @@ type EmployeeRow = Record<string, unknown>;
 type FlagMeta = {
   manualReason?: string;
   lowReview?: boolean;
-  highReview?: boolean;
   reviewScore?: number | null;
   openIncidentCount?: number;
   disciplineRisk?: boolean;
@@ -32,10 +31,6 @@ function esc(value: unknown): string {
 
 function getRiskMap(): Record<string, FlagMeta> {
   return (window.currentAtRiskRosterMap || {}) as Record<string, FlagMeta>;
-}
-
-function getImpactMap(): Record<string, FlagMeta> {
-  return (window.currentImpactPlayerRosterMap || {}) as Record<string, FlagMeta>;
 }
 
 export function getEmployeeMapKeys(employee: EmployeeRow | null | undefined): string[] {
@@ -78,14 +73,6 @@ export function hasActiveRiskMeta(meta: FlagMeta | null | undefined): boolean {
   );
 }
 
-export function hasActiveImpactMeta(meta: FlagMeta | null | undefined): boolean {
-  if (!meta) return false;
-
-  return (
-    meta.highReview === true || String(meta.manualReason || '').trim() !== ''
-  );
-}
-
 export function getEmployeeRiskMeta(employee: EmployeeRow | null | undefined): FlagMeta | null {
   if (!employee) return null;
 
@@ -98,30 +85,8 @@ export function getEmployeeRiskMeta(employee: EmployeeRow | null | undefined): F
   return resolveFlagMetaFromMap(getRiskMap(), employee, hasActiveRiskMeta);
 }
 
-export function getEmployeeImpactMeta(employee: EmployeeRow | null | undefined): FlagMeta | null {
-  if (!employee) return null;
-
-  if (
-    isTruthyFlag(employee.impact_player) ||
-    isTruthyFlag(employee.is_impact_player) ||
-    isTruthyFlag(employee.impactPlayer)
-  ) {
-    return (
-      resolveFlagMetaFromMap(getImpactMap(), employee, hasActiveImpactMeta) || {
-        manualReason: String(employee.impact_reason || '').trim(),
-      }
-    );
-  }
-
-  return resolveFlagMetaFromMap(getImpactMap(), employee, hasActiveImpactMeta);
-}
-
 export function isEmployeeAtRisk(employee: EmployeeRow | null | undefined): boolean {
   return Boolean(getEmployeeRiskMeta(employee));
-}
-
-export function isEmployeeImpactPlayer(employee: EmployeeRow | null | undefined): boolean {
-  return Boolean(getEmployeeImpactMeta(employee));
 }
 
 export function buildRiskBadgeHtml(riskMeta: FlagMeta | null): string {
@@ -188,34 +153,6 @@ export function getEmployeeIronShiftMetaFromBadges(
   return null;
 }
 
-export function buildImpactBadgeHtml(impactMeta: FlagMeta | null): string {
-  if (!hasActiveImpactMeta(impactMeta)) return '';
-
-  const lines = ['Impact Player'];
-
-  if (impactMeta.manualReason) {
-    lines.push('', `Reason: ${impactMeta.manualReason}`);
-  }
-
-  if (impactMeta.highReview && impactMeta.reviewScore !== null && impactMeta.reviewScore !== undefined) {
-    lines.push('', `Review Score: ${Number(impactMeta.reviewScore).toFixed(1)}`);
-  }
-
-  if (impactMeta.flaggedDate) {
-    const flaggedDateLabel = new Date(`${impactMeta.flaggedDate}T00:00:00`).toLocaleDateString(
-      'en-US',
-      { month: 'short', day: 'numeric' }
-    );
-    lines.push('', `Flagged: ${flaggedDateLabel}`);
-  }
-
-  if (impactMeta.flaggedBy) {
-    lines.push('', `By: ${impactMeta.flaggedBy}`);
-  }
-
-  return `<span class="badge" style="background:#ecfdf5; color:#065f46; border:1px solid #a7f3d0; font-weight:700;" title="${esc(lines.join('\n'))}">Impact Player</span>`;
-}
-
 export function updateEmployeeRowBadges(): void {
   const employees = Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : [];
   const rows = document.querySelectorAll('#employeeTable tbody tr, #employeeRosterBody tr');
@@ -252,21 +189,16 @@ export function updateEmployeeRowBadges(): void {
     }
 
     const riskHtml = buildRiskBadgeHtml(getEmployeeRiskMeta(employee));
-    const impactHtml = buildImpactBadgeHtml(getEmployeeImpactMeta(employee));
     const ironShiftHtml = buildIronShiftBadgeHtml(getEmployeeIronShiftMetaFromBadges(employee));
 
-    badgeContainer.innerHTML = `${impactHtml}${ironShiftHtml}${riskHtml}`;
+    badgeContainer.innerHTML = `${ironShiftHtml}${riskHtml}`;
   });
 }
 
 window.getEmployeeMapKeys = getEmployeeMapKeys;
 window.getEmployeeRiskMeta = getEmployeeRiskMeta;
-window.getEmployeeImpactMeta = getEmployeeImpactMeta;
 window.isEmployeeAtRisk = isEmployeeAtRisk;
-window.isEmployeeImpactPlayer = isEmployeeImpactPlayer;
 window.hasActiveRiskMeta = hasActiveRiskMeta;
-window.hasActiveImpactMeta = hasActiveImpactMeta;
 window.buildRiskBadgeHtml = buildRiskBadgeHtml;
-window.buildImpactBadgeHtml = buildImpactBadgeHtml;
 window.buildIronShiftBadgeHtml = buildIronShiftBadgeHtml;
 window.updateEmployeeRowBadges = updateEmployeeRowBadges;

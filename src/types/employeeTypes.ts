@@ -4,7 +4,6 @@
 
 export interface EmployeeFlags {
     atRisk?: boolean;
-    impactPlayer?: boolean;
     disciplineRisk?: boolean;
 }
 
