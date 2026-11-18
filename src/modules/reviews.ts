@@ -62,10 +62,6 @@ interface ReviewEmployee {
   last_name?: string;
   first?: string;
   last?: string;
-  impact_player?: boolean;
-  is_impact_player?: boolean;
-  impactPlayer?: boolean;
-  impact_reason?: string;
   at_risk?: boolean;
   atRisk?: boolean;
   risk_reason?: string;
@@ -252,33 +248,7 @@ function applyReviewAutoSignals(
 ): void {
   const employeeKeys = getEmployeeKeys(employee, employeeId);
 
-  window.currentImpactPlayerRosterMap = window.currentImpactPlayerRosterMap || {};
   window.currentAtRiskRosterMap = window.currentAtRiskRosterMap || {};
-
-  window.currentImpactPlayerRosterMap = window.currentImpactPlayerRosterMap;
-  window.currentAtRiskRosterMap = window.currentAtRiskRosterMap;
-
-  if (averageScore >= 4 && employeeKeys.length) {
-    employeeKeys.forEach((key) => {
-      window.currentImpactPlayerRosterMap![key] = {
-        highReview: true,
-        reviewScore: averageScore,
-        manualReason: '',
-        flaggedDate: todayInputValue(),
-        flaggedBy: 'Review Auto-Signal',
-      };
-    });
-
-    if (employee) {
-      employee.impact_player = true;
-      employee.is_impact_player = true;
-      employee.impactPlayer = true;
-      employee.impact_reason = `Review Auto-Signal: ${averageScore.toFixed(1)}`;
-    }
-
-    showToast(`${employeeDisplayName(employee)} flagged as Impact Player.`, 'success');
-    return;
-  }
 
   if (averageScore > 0 && averageScore <= 2 && employeeKeys.length) {
     employeeKeys.forEach((key) => {
@@ -308,10 +278,6 @@ async function refreshReviewDependentUi(employeeId: string): Promise<void> {
 
   const { refreshDerivedUiProfile } = await import('../services/derivedDataRefresh');
   await refreshDerivedUiProfile('reviews');
-
-  if (typeof window.loadImpactPlayersFallback === 'function') {
-    await window.loadImpactPlayersFallback();
-  }
 
   if (typeof window.loadRiskEmployeesFallback === 'function') {
     await window.loadRiskEmployeesFallback();

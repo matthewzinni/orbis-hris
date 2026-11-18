@@ -25,7 +25,7 @@ import {
 } from '../services/employeeUtils';
 import { getEmployeeTenureMonths } from '../services/employeeTenure';
 import { loadIronShiftAwardRosterMap } from '../services/ironShiftAwards';
-import { getEmployeeMapKeys, hasActiveImpactMeta, hasActiveRiskMeta } from './badges';
+import { getEmployeeMapKeys, hasActiveRiskMeta } from './badges';
 import { refreshInsuranceCheckinKpi } from './insuranceCheckinCard';
 import {
   buildHrIntelligenceContext,
@@ -64,9 +64,6 @@ interface KpiEmployeeRecord {
   tenure_months?: number | string;
   tenureMonths?: number | string;
   at_risk?: boolean;
-  impact_player?: boolean;
-  is_impact_player?: boolean;
-  impactPlayer?: boolean;
   [key: string]: unknown;
 }
 
@@ -90,14 +87,6 @@ type AtRiskMeta = {
   operationsPressure?: boolean;
 };
 
-type ImpactPlayerMeta = {
-  manualReason?: string;
-  highReview?: boolean;
-  reviewScore?: number | null;
-  flaggedDate?: string;
-  flaggedBy?: string;
-};
-
 type LatestReviewEntry = {
   avgScore: number | null;
   sortDate: string;
@@ -114,10 +103,6 @@ function escapeHtml(value: unknown): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;');
-}
-
-function getEmployeeKey(employee: KpiEmployeeRecord): string {
-  return String(employee.id || employee.employee_id || '');
 }
 
 function resolveAtRiskMapMeta(
@@ -153,17 +138,6 @@ export function updateTurnoverRiskKpi(rate: number, subtext: string): void {
   if (typeof window.hideKpiGridLoading === 'function') {
     window.hideKpiGridLoading();
   }
-}
-
-function isImpactPlayer(employee: KpiEmployeeRecord): boolean {
-  const key = getEmployeeKey(employee);
-
-  return Boolean(
-    employee.impact_player ||
-      employee.is_impact_player ||
-      employee.impactPlayer ||
-      (key && window.currentImpactPlayerRosterMap?.[key])
-  );
 }
 
 function isIronShiftRecipient(employee: KpiEmployeeRecord): boolean {
@@ -272,7 +246,6 @@ function buildKpiMetrics(employees: KpiEmployeeRecord[]): KpiMetric[] {
   const activeEmployees = employees.filter(isActiveDashboardEmployee);
   const inHouseFteCount = activeEmployees.filter(isInHouseFteEmployee).length;
   const atRiskEmployees = activeEmployees.filter(isAtRisk);
-  const impactPlayers = activeEmployees.filter(isImpactPlayer);
   const ironShiftRecipients = activeEmployees.filter(isIronShiftRecipient);
   const anniversaries = getAnniversariesNext30Days(activeEmployees);
 
@@ -312,12 +285,6 @@ function buildKpiMetrics(employees: KpiEmployeeRecord[]): KpiMetric[] {
       label: 'At-Risk Employees',
       value: atRiskEmployees.length,
       helper: atRiskEmployees.map(employeeDisplayName).join(', ') || 'No current at-risk employees',
-    },
-    {
-      id: 'kImpactPlayers',
-      label: 'Impact Players',
-      value: impactPlayers.length,
-      helper: impactPlayers.map(employeeDisplayName).join(', ') || 'No current impact players',
     },
     {
       id: 'kIronShiftAwards',
@@ -569,31 +536,6 @@ export async function refreshPerformanceReviewsDueKpi(): Promise<void> {
   }
 }
 
-function applyReviewImpactPlayers(
-  latestReviewByEmployee: Record<string, LatestReviewEntry>
-): void {
-  const impactMap = (window.currentImpactPlayerRosterMap || {}) as Record<string, ImpactPlayerMeta>;
-
-  Object.entries(latestReviewByEmployee).forEach(([employeeId, item]) => {
-    if (item.avgScore === null || item.avgScore < 4) return;
-
-    if (!impactMap[employeeId]) {
-      impactMap[employeeId] = {
-        manualReason: '',
-        flaggedDate: '',
-        flaggedBy: '',
-        highReview: false,
-        reviewScore: null,
-      };
-    }
-
-    impactMap[employeeId].highReview = true;
-    impactMap[employeeId].reviewScore = item.avgScore;
-  });
-
-  window.currentImpactPlayerRosterMap = impactMap;
-}
-
 function ensureAtRiskMeta(employeeId: string): AtRiskMeta {
   const map = window.currentAtRiskRosterMap || {};
   if (!map[employeeId]) {
@@ -734,14 +676,6 @@ function employeeHasAtRiskMeta(employee: KpiEmployeeRecord): boolean {
 function pruneInactiveAtRiskMap(map: Record<string, AtRiskMeta>): void {
   Object.keys(map).forEach((key) => {
     if (!hasActiveRiskMeta(map[key])) {
-      delete map[key];
-    }
-  });
-}
-
-function pruneInactiveImpactMap(map: Record<string, ImpactPlayerMeta>): void {
-  Object.keys(map).forEach((key) => {
-    if (!hasActiveImpactMeta(map[key])) {
       delete map[key];
     }
   });
@@ -959,14 +893,6 @@ export function buildKpiHoverDetails(): void {
     'No employees currently flagged'
   );
 
-  const impactPlayerNames = activeEmployees
-    .filter(isImpactPlayer)
-    .map(employeeDisplayName)
-    .filter(Boolean)
-    .sort(compareKpiText);
-
-  setKpiCardTooltip('cardImpactPlayers', impactPlayerNames, 'No impact players');
-
   const ironShiftNames = activeEmployees
     .filter(isIronShiftRecipient)
     .map(employeeDisplayName)
@@ -1136,7 +1062,6 @@ async function ensureKpiEmployeeRoster(): Promise<void> {
 
 export async function loadSummaryMetrics(): Promise<void> {
   const atRiskMap = (window.currentAtRiskRosterMap || {}) as Record<string, AtRiskMeta>;
-  const impactMap = (window.currentImpactPlayerRosterMap || {}) as Record<string, ImpactPlayerMeta>;
   const failedMetrics: string[] = [];
 
   hideKpiRetryBanner();
@@ -1149,7 +1074,6 @@ export async function loadSummaryMetrics(): Promise<void> {
       disciplineLoad,
       reviewsRes,
       manualRiskRes,
-      impactPlayerRes,
       investigationsRes,
       operationsRes,
     ] = await Promise.all([
@@ -1163,11 +1087,6 @@ export async function loadSummaryMetrics(): Promise<void> {
         .from('employee_notes')
         .select('employee_id, note_type, note_text, note_date, created_at, created_by')
         .in('note_type', ['At-Risk Flag', 'At-Risk Cleared'])
-        .order('created_at', { ascending: false }),
-      supabaseClient
-        .from('employee_notes')
-        .select('employee_id, note_type, note_text, note_date, created_at')
-        .in('note_type', ['Impact Player Flag', 'Impact Player Cleared'])
         .order('created_at', { ascending: false }),
       supabaseClient
         .from('investigations')
@@ -1381,95 +1300,12 @@ export async function loadSummaryMetrics(): Promise<void> {
     pruneInactiveAtRiskMap(atRiskMap);
     window.currentAtRiskRosterMap = atRiskMap;
 
-    const latestImpactPlayerByEmployee: Record<string, Record<string, unknown>> = {};
-    const manualSuppressedImpactIds = new Set<string>();
-
-    if (!impactPlayerRes.error) {
-      (impactPlayerRes.data || []).forEach((row) => {
-        const employeeId = String((row as { employee_id?: string }).employee_id || '');
-        if (!employeeId) return;
-        if (!latestImpactPlayerByEmployee[employeeId]) {
-          latestImpactPlayerByEmployee[employeeId] = row as Record<string, unknown>;
-        }
-      });
-
-      Object.entries(latestImpactPlayerByEmployee).forEach(([employeeId, row]) => {
-        if (String(row.note_type || '') === 'Impact Player Cleared') {
-          manualSuppressedImpactIds.add(employeeId);
-        }
-      });
-
-      Object.keys(impactMap).forEach((key) => {
-        impactMap[key] = {
-          ...impactMap[key],
-          highReview: false,
-          reviewScore: null,
-          manualReason: '',
-        };
-      });
-
-      Object.entries(latestImpactPlayerByEmployee).forEach(([employeeId, row]) => {
-        if (String(row.note_type || '') !== 'Impact Player Flag') return;
-        if (manualSuppressedImpactIds.has(employeeId)) return;
-
-        impactMap[employeeId] = {
-          manualReason: String(row.note_text || '').trim(),
-          flaggedDate: String(row.note_date || '').trim(),
-          flaggedBy: '',
-          highReview: false,
-          reviewScore: null,
-        };
-      });
-    } else {
-      console.error(impactPlayerRes.error);
-      failedMetrics.push('impact player flags');
-    }
-
-    if (manualSuppressedImpactIds.size) {
-      Object.keys(latestReviewByEmployee).forEach((employeeId) => {
-        if (manualSuppressedImpactIds.has(employeeId)) {
-          delete latestReviewByEmployee[employeeId];
-        }
-      });
-    }
-
-    applyReviewImpactPlayers(latestReviewByEmployee);
-    pruneInactiveImpactMap(impactMap);
-    window.currentImpactPlayerRosterMap = impactMap;
-
     const atRiskRosterEmployees = rosterEmployees.filter(
       (employee) =>
         employeeHasAtRiskMeta(employee) ||
         (typeof window.isEmployeeAtRisk === 'function' && window.isEmployeeAtRisk(employee))
     );
     const atRiskEmployees = atRiskRosterEmployees.length;
-    const impactRosterMap = window.currentImpactPlayerRosterMap || impactMap;
-    const impactPlayers = (Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : []).filter(
-      (employee) => {
-        if (typeof window.isEmployeeImpactPlayer === 'function') {
-          return window.isEmployeeImpactPlayer(employee as KpiEmployeeRecord);
-        }
-
-        const record = employee as KpiEmployeeRecord;
-        const keys = [record.id, record.employee_id, record.dbId, record.displayId]
-          .filter(Boolean)
-          .map(String);
-
-        if (
-          record.impact_player ||
-          record.is_impact_player ||
-          record.impactPlayer
-        ) {
-          return true;
-        }
-
-        return keys.some((key) => {
-          const meta = impactRosterMap[key];
-          return meta && hasActiveImpactMeta(meta);
-        });
-      }
-    ).length;
-
     const hasAnyData = !reviewsRes.error;
 
     if (hasAnyData) {
@@ -1484,15 +1320,6 @@ export async function loadSummaryMetrics(): Promise<void> {
       failedMetrics.push('at-risk summary');
       setKpiText('kAtRiskEmployees', '—');
       setKpiText('kAtRiskEmployeesSub', 'Could not load review score data');
-    }
-
-    setKpiText('kImpactPlayers', impactPlayers);
-    const impactSubEl = safeGet('kImpactPlayersSub');
-    if (impactSubEl) {
-      impactSubEl.textContent =
-        impactPlayers === 0
-          ? 'No employees currently flagged as high-impact contributors'
-          : `${impactPlayers} high-impact employee${impactPlayers === 1 ? '' : 's'} based on reviews or recognition`;
     }
 
     const ironShiftRecipients = (Array.isArray(window.EMPLOYEES) ? window.EMPLOYEES : []).filter(
@@ -1535,10 +1362,6 @@ export async function loadSummaryMetrics(): Promise<void> {
       await window.loadRiskEmployeesFallback();
     }
 
-    if (typeof window.loadImpactPlayersFallback === 'function') {
-      await window.loadImpactPlayersFallback();
-    }
-
     if (typeof window.loadIronShiftAwardsFallback === 'function') {
       await window.loadIronShiftAwardsFallback();
     }
@@ -1563,13 +1386,6 @@ export async function loadSummaryMetrics(): Promise<void> {
     setKpiText('kOpenDiscipline', '—');
     setKpiText('kAtRiskEmployees', '—');
     setKpiText('kAtRiskEmployeesSub', 'Could not load review score data');
-    setKpiText('kImpactPlayers', '—');
-
-    const impactSubEl = safeGet('kImpactPlayersSub');
-    if (impactSubEl) {
-      impactSubEl.textContent = 'Could not load impact player data';
-    }
-
     setKpiText('kIronShiftAwards', '—');
 
     const ironShiftSubEl = safeGet('kIronShiftAwardsSub');

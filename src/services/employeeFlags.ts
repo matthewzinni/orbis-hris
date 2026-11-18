@@ -6,7 +6,6 @@ import type { Employee } from '../types/employeeTypes';
 
 export interface EmployeeFlagResult {
     atRisk: boolean;
-    impactPlayer: boolean;
     disciplineRisk: boolean;
     reasons: string[];
 }
@@ -28,8 +27,6 @@ export function evaluateEmployeeFlags(employee: Employee): EmployeeFlagResult {
         lowReviewRisk ||
         incidentRisk;
 
-    const impactPlayer = reviewScore >= 4.5;
-
     if (disciplineRisk) {
         reasons.push('Discipline Risk');
     }
@@ -44,7 +41,6 @@ export function evaluateEmployeeFlags(employee: Employee): EmployeeFlagResult {
 
     return {
         atRisk,
-        impactPlayer,
         disciplineRisk,
         reasons
     };

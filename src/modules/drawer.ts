@@ -73,7 +73,6 @@ interface DrawerEmployeeRecord {
   dbId?: string;
 
   at_risk?: boolean;
-  impact_player?: boolean;
 
   [key: string]: unknown;
 }
@@ -470,16 +469,6 @@ function populateDrawer(employee: DrawerEmployeeRecord): void {
 
   if (atRiskBadge) {
     atRiskBadge.style.display = riskMeta ? 'inline-flex' : 'none';
-  }
-
-  const impactBadge = safeGet('drawerImpactPlayerBadge');
-  const impactMeta =
-    typeof window.getEmployeeImpactMeta === 'function'
-      ? window.getEmployeeImpactMeta(employee)
-      : null;
-
-  if (impactBadge) {
-    impactBadge.style.display = impactMeta ? 'inline-flex' : 'none';
   }
 }
 

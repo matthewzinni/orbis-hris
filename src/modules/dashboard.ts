@@ -53,12 +53,6 @@ export async function loadRiskEmployees(): Promise<void> {
   }
 }
 
-export async function loadImpactPlayers(): Promise<void> {
-  if (typeof (window as any).loadImpactPlayers === 'function') {
-    await (window as any).loadImpactPlayers();
-  }
-}
-
 export async function loadRecentActivity(): Promise<void> {
   if (typeof window.loadManagerHome === 'function') {
     await window.loadManagerHome(true);

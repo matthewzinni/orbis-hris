@@ -3,6 +3,7 @@
 export const SYSTEM_EMPLOYEE_NOTE_TYPES = [
   'At-Risk Flag',
   'At-Risk Cleared',
+  // Impact Player was retired in favor of Iron Shift Awards; keep its old rows hidden.
   'Impact Player Flag',
   'Impact Player Cleared',
 ] as const;

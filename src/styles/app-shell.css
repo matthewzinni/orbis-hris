@@ -1098,10 +1098,6 @@ body.authenticated #appView {
   border-left-color: var(--accent-warn);
 }
 
-#cardImpactPlayers {
-  border-left-color: var(--accent-success);
-}
-
 #cardIronShiftAwards {
   border-left-color: #64748b;
 }

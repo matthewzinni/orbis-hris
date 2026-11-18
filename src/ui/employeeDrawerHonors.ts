@@ -1,5 +1,5 @@
 import { getEmployeeIronShiftMeta } from '../services/ironShiftAwards';
-import { buildImpactBadgeHtml, buildIronShiftBadgeHtml } from './badges';
+import { buildIronShiftBadgeHtml } from './badges';
 
 function esc(value: unknown): string {
   if (typeof window.esc === 'function') {
@@ -25,12 +25,7 @@ export function buildEmployeeHonorBadgesHtml(
 ): string {
   if (!employee) return '';
 
-  const badges = [
-    typeof window.getEmployeeImpactMeta === 'function'
-      ? buildImpactBadgeHtml(window.getEmployeeImpactMeta(employee))
-      : '',
-    buildIronShiftBadgeHtml(getEmployeeIronShiftMeta(employee)),
-  ].filter(Boolean);
+  const badges = [buildIronShiftBadgeHtml(getEmployeeIronShiftMeta(employee))].filter(Boolean);
 
   if (!badges.length) return '';
   return `<div class="employee-honor-badges">${badges.join('')}</div>`;

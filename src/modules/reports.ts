@@ -97,7 +97,6 @@ function renderReportsMetricSnapshots(): void {
     ['reportsKpiOpenDiscipline', 'kOpenDiscipline'],
     ['reportsKpiReviewsDue', 'kReviewsDue'],
     ['reportsKpiPerformanceReviewsDue', 'kPerformanceReviewsDue'],
-    ['reportsKpiImpactPlayers', 'kImpactPlayers'],
     ['reportsKpiIronShiftAwards', 'kIronShiftAwards'],
   ];
 

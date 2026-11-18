@@ -810,20 +810,12 @@ function populateOpenedDrawerContent(
 
     const markAtRiskBtn = domGet('markAtRiskBtn');
     const clearAtRiskBtn = domGet('clearAtRiskBtn');
-    const markImpactPlayerBtn = domGet('markImpactPlayerBtn');
-    const clearImpactPlayerBtn = domGet('clearImpactPlayerBtn');
 
     if (markAtRiskBtn && typeof window.markEmployeeAtRisk === 'function') {
         markAtRiskBtn.onclick = window.markEmployeeAtRisk;
     }
     if (clearAtRiskBtn && typeof window.clearAtRiskStatus === 'function') {
         clearAtRiskBtn.onclick = window.clearAtRiskStatus;
-    }
-    if (markImpactPlayerBtn && typeof window.markImpactPlayer === 'function') {
-        markImpactPlayerBtn.onclick = window.markImpactPlayer;
-    }
-    if (clearImpactPlayerBtn && typeof window.clearImpactPlayerStatus === 'function') {
-        clearImpactPlayerBtn.onclick = window.clearImpactPlayerStatus;
     }
 
     cleanVisibleDrawerNameInputs();

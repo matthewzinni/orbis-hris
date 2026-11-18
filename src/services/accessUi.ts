@@ -89,7 +89,7 @@ const EMPLOYEE_ADMIN_FIELD_IDS = [
   'empNotes',
   'notes',
   'atRiskReasonInput',
-  'impactPlayerReasonInput',
+  'ironShiftReasonInput',
 ];
 
 const EMPLOYEE_ID_FIELD_IDS = [
@@ -102,8 +102,7 @@ const EMPLOYEE_ID_FIELD_IDS = [
 const EMPLOYEE_FLAG_BUTTON_IDS = [
   'markAtRiskBtn',
   'clearAtRiskBtn',
-  'markImpactPlayerBtn',
-  'clearImpactPlayerBtn',
+  'giveIronShiftAwardBtn',
 ];
 
 function setEmployeeAdminFieldsLocked(locked: boolean, lockTitle: string): void {
