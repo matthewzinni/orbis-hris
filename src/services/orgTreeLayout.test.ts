@@ -6,6 +6,7 @@ import {
   groupTeamByTitle,
   showEveryReportAsBox,
   sitsBelowLeadershipRow,
+  isIsland,
   teamGroupLabel,
 } from './orgTreeLayout';
 
@@ -89,5 +90,28 @@ describe('sitsBelowLeadershipRow', () => {
     const { roots } = buildOrgChart(roster);
     const top = Object.fromEntries(buildOrgTreeModel(roots).topReports.map((p) => [p.name, sitsBelowLeadershipRow(p)]));
     expect(top).toEqual({ 'Sam Montgomery': true, 'Cole Woolard': false, 'Matthew Zinni': false });
+  });
+});
+
+describe('isIsland', () => {
+  it('sets only HR apart as an island', () => {
+    const hr = { key: 'x', name: 'Pat', title: 'HR Director', department: 'Human Resources', supervisor: '', children: [] };
+    const ops = { ...hr, title: 'COO', department: 'Executive' };
+    expect(isIsland(hr)).toBe(true);
+    expect(isIsland(ops)).toBe(false);
+  });
+});
+
+describe('top row order', () => {
+  it('puts shared reports without a team between the leaders who run organizations', () => {
+    const extra = [
+      emp('20', 'David', 'Allewalt', 'CBO', 'Trent & Brent Wynne'),
+      emp('21', 'Kyle', 'Hodges', 'MTO Manager', 'David Allewalt'),
+      emp('22', 'Daniel', 'Cheng', 'Director of International', 'Trent & Brent Wynne'),
+    ];
+    const { roots } = buildOrgChart([...roster, ...extra]);
+    const names = buildOrgTreeModel(roots).topReports.map((p) => p.name);
+    const shared = names.filter((n) => ['Cole Woolard', 'Daniel Cheng', 'David Allewalt'].includes(n));
+    expect(shared[1]).toBe('Daniel Cheng');
   });
 });

@@ -8,6 +8,7 @@ import {
   isManager,
   showEveryReportAsBox,
   sitsBelowLeadershipRow,
+  isIsland,
   teamGroupLabel,
   type OrgTreeModel,
   type OrgTreePerson,
@@ -98,20 +99,48 @@ function buildTree(model: OrgTreeModel, reports: { person: OrgTreePerson; index:
   const rootUl = el('ul');
   const rootLi = el('li', 'oc-node');
   const leaders = el('div', 'oc-leaders');
-  for (const leader of model.leaders) leaders.append(personBox(leader, '--oc-leader', 'oc-leader'));
+  const slots = new Map<string, HTMLElement>();
+  for (const leader of model.leaders) {
+    const slot = el('div', 'oc-leader-slot');
+    slot.append(personBox(leader, '--oc-leader', 'oc-leader'));
+    slots.set(leader.name, slot);
+    leaders.append(slot);
+  }
   rootLi.append(leaders);
-  if (reports.length) {
+
+  const treeReports = reports;
+
+  if (treeReports.length) {
     const ul = el('ul');
-    for (const { person, index } of reports) {
+    for (const { person, index } of treeReports) {
       const color = BRANCH_COLORS[index % BRANCH_COLORS.length];
       const note = person.reportsTo ? `Reports to ${person.reportsTo}` : '';
+      if (isIsland(person)) {
+        // HR stands apart: same row as other off-chain staff, no connecting lines at all.
+        const island = el('li', 'oc-node oc-drop oc-island');
+        island.append(el('div', 'oc-drop-line'), personBox(person, '--oc-side', '', note));
+        managerOf.set(person.name, person.reportsTo || topName);
+        ul.append(island);
+        continue;
+      }
       const li = branch(person, color, person.reportsTo || topName, note);
       if (sitsBelowLeadershipRow(person)) {
         li.classList.add('oc-drop');
         li.prepend(el('div', 'oc-drop-line'));
+        // Reports to one owner only: drawn on its own diagonal from that owner, off the bar.
+        if (person.reportsTo && slots.has(person.reportsTo)) {
+          li.classList.add('oc-diagonal');
+          li.dataset.diagonalFrom = person.reportsTo;
+        }
       }
       ul.append(li);
     }
+    // The bar's ends belong to the first and last people still hanging from it.
+    const onBar = [...ul.children].filter(
+      (c) => !c.classList.contains('oc-diagonal') && !c.classList.contains('oc-island')
+    );
+    onBar[0]?.classList.add('oc-visual-first');
+    onBar[onBar.length - 1]?.classList.add('oc-visual-last');
     rootLi.append(ul);
   }
   rootUl.append(rootLi);
@@ -186,18 +215,57 @@ try {
   /* storage unavailable */
 }
 
-/** Stretches each drop line so a lowered box lines up with the row below its siblings. */
+/**
+ * Stretches each drop line so a lowered box sits one row down, just under the senior
+ * leaders it is listed beside (level with their managers).
+ */
 function alignDroppedBoxes(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>('li.oc-drop').forEach((li) => {
     const line = li.querySelector<HTMLElement>(':scope > .oc-drop-line');
     if (!line) return;
-    const siblings = [...(li.parentElement?.children || [])].filter((c) => c !== li && !c.classList.contains('oc-drop'));
+    const siblings = [...(li.parentElement?.children || [])].filter(
+      (c) => c !== li && !c.classList.contains('oc-drop')
+    );
     const tallest = Math.max(
       0,
-      ...siblings.map((c) => (c.querySelector<HTMLElement>(':scope > .oc-box')?.offsetHeight || 0))
+      ...siblings.map((c) => c.querySelector<HTMLElement>(':scope > .oc-box')?.offsetHeight || 0)
     );
     line.style.height = `${tallest + DROP_GAP_PX}px`;
   });
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** Draws each diagonal from its owner's box down to the person's box (unzoomed coordinates). */
+function drawDiagonals(tree: HTMLElement | null): void {
+  if (!tree) return;
+  tree.querySelector(':scope > svg.oc-diagonals')?.remove();
+  const items = [...tree.querySelectorAll<HTMLElement>('li.oc-diagonal')];
+  if (!items.length) return;
+  const origin = tree.getBoundingClientRect();
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'oc-diagonals');
+  svg.setAttribute('width', String(tree.scrollWidth));
+  svg.setAttribute('height', String(tree.scrollHeight));
+  svg.setAttribute('aria-hidden', 'true');
+  for (const li of items) {
+    const target = li.querySelector<HTMLElement>(':scope > .oc-box');
+    const from = [...tree.querySelectorAll<HTMLElement>('.oc-leader-slot > .oc-box')].find(
+      (b) => b.dataset.name === li.dataset.diagonalFrom
+    );
+    if (!target || !from) continue;
+    const a = from.getBoundingClientRect();
+    const b = target.getBoundingClientRect();
+    const toLeft = b.left + b.width / 2 < a.left + a.width / 2;
+    const line = document.createElementNS(SVG_NS, 'line');
+    // Leave from the middle of the owner's outer edge so the line clears the bar below.
+    line.setAttribute('x1', String((toLeft ? a.left : a.right) - origin.left));
+    line.setAttribute('y1', String(a.top + a.height / 2 - origin.top));
+    line.setAttribute('x2', String(b.left + b.width / 2 - origin.left));
+    line.setAttribute('y2', String(b.top - origin.top));
+    svg.append(line);
+  }
+  tree.prepend(svg);
 }
 
 /** Gap from a box to the next row's boxes: the ul's 22px stem plus each li's 22px connector. */
@@ -208,6 +276,7 @@ function layout(): void {
   const scaler = $('ocScaler');
   scaler.style.zoom = '';
   alignDroppedBoxes($('ocTree'));
+  drawDiagonals($('ocTree'));
   const styles = getComputedStyle(stage);
   const avail =
     stage.clientWidth - parseFloat(styles.paddingLeft) - parseFloat(styles.paddingRight) - 2;
@@ -243,6 +312,7 @@ function sizePageForPrint(): void {
   const head = page?.querySelector<HTMLElement>('.oc-print-head');
   if (!page || !scaler || !head) return;
   alignDroppedBoxes(page);
+  drawDiagonals(page.querySelector<HTMLElement>('.oc-tree'));
   // The chart's natural (max-content) size, not whatever width the print layout gives the page.
   const contentWidth = Math.max(scaler.scrollWidth, head.scrollWidth);
   const contentHeight = scaler.scrollHeight + head.offsetHeight;

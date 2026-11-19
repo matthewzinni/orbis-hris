@@ -19,6 +19,7 @@
   --oc-b4: #8a3fb0;
   --oc-b5: #9a6b00;
   --oc-b6: #1f6fb4;
+  --oc-side: #9a6b00;
   --oc-display: 'Archivo', system-ui, sans-serif;
   --oc-body: 'Inter', system-ui, sans-serif;
   color-scheme: light;
@@ -43,6 +44,7 @@
     --oc-b4: #c58cf0;
     --oc-b5: #e0b443;
     --oc-b6: #6cb2f0;
+    --oc-side: #e0b443;
     color-scheme: dark;
   }
 }
@@ -78,7 +80,7 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
 .oc-tree li.oc-node { position: relative; padding: 22px 7px 0; display: flex; flex-direction: column; align-items: center; }
 .oc-tree > ul > li.oc-node { padding-top: 0; }
 .oc-tree li.oc-node::before,
-.oc-tree li.oc-node::after { content: ''; position: absolute; top: 0; right: 50%; width: 50%; height: 22px; border-top: 2px solid var(--oc-line); }
+.oc-tree li.oc-node::after { content: ''; position: absolute; top: 0; right: 50%; width: 50%; height: 22px; border: 0 solid var(--oc-line); border-top-width: 2px; }
 .oc-tree li.oc-node::after { right: auto; left: 50%; border-left: 2px solid var(--oc-line); }
 .oc-tree li.oc-node:only-child::before,
 .oc-tree li.oc-node:only-child::after { display: none; }
@@ -89,6 +91,21 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
 .oc-tree li.oc-node:first-child::after { border-top-left-radius: 8px; }
 .oc-tree ul ul::before { content: ''; position: absolute; top: 0; left: 50%; height: 22px; border-left: 2px solid var(--oc-line); }
 .oc-drop-line { width: 2px; background: var(--oc-line); flex: none; }
+/* Diagonal reports (one owner, no team) leave the bar; an SVG line joins them to the owner. */
+.oc-tree { position: relative; }
+.oc-tree li.oc-node.oc-diagonal::before,
+.oc-tree li.oc-node.oc-diagonal::after { display: none; }
+.oc-tree li.oc-node.oc-diagonal > .oc-drop-line { visibility: hidden; }
+.oc-tree li.oc-node.oc-visual-first::before { border: 0 none; }
+.oc-tree li.oc-node.oc-visual-first::after { border-top-left-radius: 8px; }
+.oc-tree li.oc-node.oc-visual-last::after { border: 0 none; }
+.oc-tree li.oc-node.oc-visual-last::before { border-right: 2px solid var(--oc-line); border-top-right-radius: 8px; }
+svg.oc-diagonals { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+svg.oc-diagonals line { stroke: var(--oc-line); stroke-width: 2; }
+/* Island (HR): same row as off-chain staff, with no connecting lines. */
+.oc-tree li.oc-node.oc-island::before,
+.oc-tree li.oc-node.oc-island::after { display: none; }
+.oc-tree li.oc-node.oc-island > .oc-drop-line { visibility: hidden; }
 .oc-tree > ul > li.oc-node::before,
 .oc-tree > ul > li.oc-node::after { display: none; }
 
@@ -132,7 +149,7 @@ body { margin: 0; background: var(--oc-bg); color: var(--oc-fg); font-family: va
     --oc-bg: #ffffff; --oc-surface: #ffffff; --oc-surface-2: #f7f8fc; --oc-fg: #171a2b; --oc-muted: #4a5070;
     --oc-line: #8e94b0; --oc-border: #c9cde0; --oc-accent: #3c40c0; --oc-accent-soft: #e6e7fb;
     --oc-leader: #171a2b; --oc-leader-fg: #ffffff;
-    --oc-b1: #0f7b6c; --oc-b2: #b4441f; --oc-b3: #4b4fd8; --oc-b4: #8a3fb0; --oc-b5: #9a6b00; --oc-b6: #1f6fb4;
+    --oc-b1: #0f7b6c; --oc-b2: #b4441f; --oc-b3: #4b4fd8; --oc-b4: #8a3fb0; --oc-b5: #9a6b00; --oc-b6: #1f6fb4; --oc-side: #9a6b00;
     color-scheme: light;
   }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
