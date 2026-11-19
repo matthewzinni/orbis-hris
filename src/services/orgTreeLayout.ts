@@ -96,7 +96,7 @@ export function buildOrgTreeModel(roots: OrgChartNode[]): OrgTreeModel {
 /**
  * Shared reports with no team (e.g. a director without staff) go in the middle, between the
  * leaders who run organizations, so the outer ends of the bar belong to those leaders and
- * lines drawn out to the sides (diagonals) never cross it.
+ * the bar stays balanced.
  */
 function centerStaffBetweenLeaders(people: OrgTreePerson[]): OrgTreePerson[] {
   const leadersWithTeams = people.filter((p) => p.children.length > 0);
