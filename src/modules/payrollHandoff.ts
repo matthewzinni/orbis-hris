@@ -229,7 +229,7 @@ export async function logManualPayrollHandoff(): Promise<void> {
     });
 
     if (!row) {
-      showToast('A pending handoff of this type already exists.', 'error');
+      showToast('An identical pending handoff already exists.', 'error');
       return;
     }
 
