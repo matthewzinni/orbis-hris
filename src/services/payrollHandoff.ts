@@ -136,15 +136,22 @@ export async function loadPendingPayrollHandoffs(): Promise<PayrollHandoffRecord
   return (data || []).map((row) => mapRow(row as Record<string, unknown>));
 }
 
-async function hasPendingHandoff(
+/**
+ * True when an identical handoff (same employee, change type, effective date and summary)
+ * is still pending. Only exact repeats are skipped: an older pending handoff of the same
+ * type must not block a new change, or payroll would never be emailed about it.
+ */
+async function hasIdenticalPendingHandoff(
   employeeId: string,
-  changeType: PayrollChangeType
+  draft: { change_type: PayrollChangeType; effective_date: string; summary: string }
 ): Promise<boolean> {
   const { data, error } = await supabaseClient
     .from('payroll_handoffs')
     .select('id')
     .eq('employee_id', employeeId)
-    .eq('change_type', changeType)
+    .eq('change_type', draft.change_type)
+    .eq('effective_date', draft.effective_date)
+    .eq('summary', draft.summary)
     .eq('status', 'pending')
     .limit(1);
 
@@ -162,7 +169,16 @@ export async function createPayrollHandoff(
   const employeeId = normalize(draft.employee_id);
   if (!employeeId) return null;
 
-  if (await hasPendingHandoff(employeeId, draft.change_type)) {
+  const effectiveDate = normalize(draft.effective_date) || todayIso();
+  const summary = normalize(draft.summary);
+
+  if (
+    await hasIdenticalPendingHandoff(employeeId, {
+      change_type: draft.change_type,
+      effective_date: effectiveDate,
+      summary,
+    })
+  ) {
     return null;
   }
 
@@ -172,8 +188,8 @@ export async function createPayrollHandoff(
       {
         employee_id: employeeId,
         change_type: draft.change_type,
-        effective_date: draft.effective_date || todayIso(),
-        summary: draft.summary,
+        effective_date: effectiveDate,
+        summary,
         payload: draft.payload || {},
         status: 'pending',
         created_by: createdByEmail(),
