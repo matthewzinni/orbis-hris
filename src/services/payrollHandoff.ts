@@ -5,6 +5,7 @@
 import { getCurrentUserAccess } from './access';
 import { supabaseClient } from './supabaseClient';
 import { employeeDisplayName } from './employeeUtils';
+import { requestPayrollChangeEmail } from './payrollChangeEmail';
 
 export type PayrollHandoffStatus = 'pending' | 'sent' | 'confirmed' | 'cancelled';
 
@@ -186,7 +187,9 @@ export async function createPayrollHandoff(
     throw new Error(error.message || 'Could not log payroll handoff.');
   }
 
-  return mapRow((data || {}) as Record<string, unknown>);
+  const record = mapRow((data || {}) as Record<string, unknown>);
+  requestPayrollChangeEmail(record.id);
+  return record;
 }
 
 export async function updatePayrollHandoffStatus(
