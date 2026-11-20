@@ -137,6 +137,12 @@ describe('payroll change email', () => {
     const send = source.indexOf('await sendSmtpEmail(');
     expect(claim).toBeGreaterThan(0);
     expect(send).toBeGreaterThan(claim);
-    expect(source).toContain("requireOrbisAuth(req, 'orbis_is_admin'");
+    expect(source).toContain("requireOrbisAuth(req, 'orbis_access_is_approved'");
+    // Non-admins are limited to leave handoffs they may approve, checked before any send.
+    const adminCheck = source.indexOf("'orbis_is_admin'");
+    const approverCheck = source.indexOf("'orbis_can_approve_leave_request'");
+    expect(adminCheck).toBeGreaterThan(0);
+    expect(approverCheck).toBeGreaterThan(adminCheck);
+    expect(claim).toBeGreaterThan(approverCheck);
   });
 });

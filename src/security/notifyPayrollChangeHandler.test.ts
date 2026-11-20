@@ -9,6 +9,9 @@ type Row = Record<string, unknown>;
 const db: { payroll_handoffs: Row[]; employees: Row[] } = { payroll_handoffs: [], employees: [] };
 const sent: Array<{ to: string[]; subject: string; text: string }> = [];
 let failNextSend = false;
+/** What the caller's own RPC checks answer: admin, and which leave requests they may approve. */
+const caller = { isAdmin: true, approvableLeaveIds: new Set<string>() };
+const rpcCalls: Array<{ name: string; args?: Row }> = [];
 
 function query(table: keyof typeof db) {
   const filters: Array<(row: Row) => boolean> = [];
@@ -56,6 +59,14 @@ vi.mock('../../supabase/functions/_shared/orbisEdgeAuth.ts', () => ({
     supabaseAnonKey: 'anon',
     authHeader: 'Bearer x',
   }),
+  orbisRpcAllowed: async (_url: string, _key: string, _auth: string, name: string, _log: string, args?: Row) => {
+    rpcCalls.push({ name, args });
+    if (name === 'orbis_is_admin') return caller.isAdmin;
+    if (name === 'orbis_can_approve_leave_request') {
+      return caller.approvableLeaveIds.has(String(args?.p_leave_request_id || ''));
+    }
+    return false;
+  },
 }));
 
 vi.mock('../../supabase/functions/_shared/smtp.ts', () => ({
@@ -116,6 +127,9 @@ describe('notify-payroll-change handler', () => {
   beforeEach(async () => {
     sent.length = 0;
     failNextSend = false;
+    caller.isAdmin = true;
+    caller.approvableLeaveIds = new Set();
+    rpcCalls.length = 0;
     Object.keys(env).forEach((k) => delete env[k]);
     Object.assign(env, {
       SUPABASE_SERVICE_ROLE_KEY: 'service',
@@ -201,5 +215,59 @@ describe('notify-payroll-change handler', () => {
     expect(dry).toMatchObject({ dry_run: true, would_send: true, event: 'new_hire' });
     expect(db.payroll_handoffs[0].payroll_email_sent_at).toBeNull();
     expect(sent).toHaveLength(0);
+  });
+
+  describe('supervisor callers', () => {
+    const leavePayload = {
+      leave_request_id: 'lr-1',
+      leave_type: 'unpaid',
+      start_date: '2026-12-01',
+      end_date: '2026-12-03',
+    };
+
+    beforeEach(() => {
+      caller.isAdmin = false;
+      env.PAYROLL_NOTIFY_EVENTS = 'new_hire,termination,unpaid_leave,paid_leave';
+    });
+
+    it('emails once for a leave approval the supervisor can approve', async () => {
+      caller.approvableLeaveIds.add('lr-1');
+      seed('status', { payload: leavePayload, created_by: 'supervisor@btwglobal.com' });
+
+      expect(await call({ handoff_id: 'h-1' })).toMatchObject({ status: 200, ok: true, event: 'unpaid_leave' });
+      expect(await call({ handoff_id: 'h-1' })).toMatchObject({ skipped: true, reason: 'Already emailed' });
+
+      expect(sent).toHaveLength(1);
+      expect(sent[0].text.split('\n')[0]).toBe(
+        'Cole, Jordan Rivera was approved for unpaid leave (Tue, Dec 1, 2026 – Thu, Dec 3, 2026). Please adjust their pay for those dates.'
+      );
+      expect(rpcCalls).toContainEqual({
+        name: 'orbis_can_approve_leave_request',
+        args: { p_leave_request_id: 'lr-1' },
+      });
+      expect(db.payroll_handoffs[0].status).toBe('sent');
+    });
+
+    it('rejects a leave handoff for someone outside the supervisor\'s team', async () => {
+      seed('status', { payload: leavePayload });
+      expect(await call({ handoff_id: 'h-1' })).toMatchObject({ status: 403, error: 'Forbidden' });
+      expect(sent).toHaveLength(0);
+      expect(db.payroll_handoffs[0].payroll_email_sent_at).toBeNull();
+    });
+
+    it('rejects handoffs that are not leave approvals', async () => {
+      caller.approvableLeaveIds.add('lr-1');
+      seed('termination');
+      expect(await call({ handoff_id: 'h-1' })).toMatchObject({ status: 403 });
+      seed('new_hire');
+      expect(await call({ handoff_id: 'h-1' })).toMatchObject({ status: 403 });
+      expect(sent).toHaveLength(0);
+    });
+
+    it('does not allow supervisors to preview emails with dry_run', async () => {
+      caller.approvableLeaveIds.add('lr-1');
+      seed('status', { payload: leavePayload });
+      expect(await call({ handoff_id: 'h-1', dry_run: true })).toMatchObject({ status: 403 });
+    });
   });
 });

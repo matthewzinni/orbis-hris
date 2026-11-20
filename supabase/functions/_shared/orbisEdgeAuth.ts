@@ -35,14 +35,15 @@ export async function orbisRpcAllowed(
   supabaseAnonKey: string,
   authHeader: string,
   rpcName: string,
-  logPrefix: string
+  logPrefix: string,
+  rpcArgs?: Record<string, unknown>
 ): Promise<boolean> {
   const client = createClient(supabaseUrl, supabaseAnonKey, {
     auth: { persistSession: false },
     global: { headers: { Authorization: authHeader } },
   });
 
-  const { data, error } = await client.rpc(rpcName);
+  const { data, error } = await client.rpc(rpcName, rpcArgs);
   if (error) {
     console.error(`[${logPrefix}] ${rpcName} failed:`, error.message);
     return false;
