@@ -44,6 +44,31 @@ After `npm run db:push` (migration `20260611120000_account_registration_approval
 
 **PTO requests** require approval by the employee’s **direct supervisor** or **admin**.
 
+## Payroll change emails (Edge Function)
+
+Every new row in `payroll_handoffs` (new hire, termination, rehire, leave approval, status / pay type /
+title / department / benefits change, or a manual **Log for payroll** entry) calls `notify-payroll-change`,
+which emails payroll/accounting once. The first line follows the event, e.g.
+"Cole, Jane Doe was hired. Please add them to payroll." /
+"Cole, Jane Doe has been terminated. Please process their final paycheck."
+After a successful send the handoff is marked **Sent to payroll**; a failed send is logged in
+`payroll_handoffs.payroll_email_error` and never blocks the change itself.
+
+Uses the same SMTP secrets as time off emails, plus:
+
+```bash
+supabase secrets set PAYROLL_NOTIFY_EMAILS=cole.woolard@btwglobal.com   # required; nothing sends when unset
+supabase secrets set PAYROLL_NOTIFY_CONTACT_NAME=Cole                   # first word of the email
+# Which events email (default: new_hire,termination). Keys are in notify-payroll-change/compose.ts
+supabase secrets set PAYROLL_NOTIFY_EVENTS=new_hire,termination,rehire,unpaid_leave,paid_leave,status_change,pay_type,title,department,benefits,manual
+
+npx supabase db push                                  # 20261120120000_payroll_handoff_email_status.sql
+npx supabase functions deploy notify-payroll-change
+```
+
+Preview an email without sending (admin session in the browser console):
+`supabaseClient.functions.invoke('notify-payroll-change', { body: { handoff_id, dry_run: true } })`
+
 ## Time off email notifications (Edge Function)
 
 When an employee submits PTO, Orbis calls `notify-leave-request`. It emails leadership admins and the employee’s **supervisor** (from roster + `user_access`).
