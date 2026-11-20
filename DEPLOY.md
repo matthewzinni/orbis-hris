@@ -62,9 +62,13 @@ supabase secrets set PAYROLL_NOTIFY_CONTACT_NAME=Cole                   # first 
 # Which events email (default: new_hire,termination). Keys are in notify-payroll-change/compose.ts
 supabase secrets set PAYROLL_NOTIFY_EVENTS=new_hire,termination,rehire,unpaid_leave,paid_leave,status_change,pay_type,title,department,benefits,manual
 
-npx supabase db push                                  # 20261120120000_payroll_handoff_email_status.sql
+npx supabase db push                                  # 20261120120000_payroll_handoff_email_status.sql, 20261120150000_leave_payroll_handoff_rpc.sql
 npx supabase functions deploy notify-payroll-change
 ```
+
+Leave approvals are logged through `orbis_log_leave_payroll_handoff`, so a **supervisor** approving a direct
+report's time off also logs the handoff and emails payroll. `payroll_handoffs` itself stays admin-only; the
+Edge Function accepts a non-admin caller only for a leave handoff they can approve.
 
 Preview an email without sending (admin session in the browser console):
 `supabaseClient.functions.invoke('notify-payroll-change', { body: { handoff_id, dry_run: true } })`

@@ -434,14 +434,16 @@ export async function submitEmployeeLeaveRequest(): Promise<void> {
 export async function approveLeaveRequestById(requestId: string): Promise<void> {
   const setLeave = Boolean(safeGet<HTMLInputElement>('leaveRequestSetStatusInput')?.checked);
   const rosterId = getCurrentEmployeeRosterId();
-  const name = employeeNameForLeave(rosterId);
 
   try {
-    await approveLeaveRequest(requestId, {
+    const { payrollNotified } = await approveLeaveRequest(requestId, {
       setEmployeeLeaveStatus: setLeave,
-      employeeName: name,
     });
-    showToast('Leave request approved.');
+    if (payrollNotified) {
+      showToast('Leave request approved.');
+    } else {
+      showToast('Leave request approved, but payroll could not be notified. Please tell HR.', 'error');
+    }
     await loadEmployeeLeaveRequests(rosterId);
     if (typeof window.loadEmployees === 'function') {
       await window.loadEmployees();

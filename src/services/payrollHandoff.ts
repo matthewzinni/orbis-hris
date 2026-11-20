@@ -192,6 +192,37 @@ export async function createPayrollHandoff(
   return record;
 }
 
+/**
+ * Log the payroll handoff for an approved leave request and ask payroll to be emailed.
+ * Runs server-side (orbis_log_leave_payroll_handoff) so supervisors, who cannot write
+ * payroll_handoffs directly, can log it for leave they approve. Logs once per request.
+ * Never throws: the approval has already saved by the time this runs.
+ */
+export async function logLeavePayrollHandoff(
+  leaveRequestId: string
+): Promise<{ ok: boolean; handoffId: string | null }> {
+  const id = normalize(leaveRequestId);
+  if (!id) return { ok: false, handoffId: null };
+
+  try {
+    const { data, error } = await supabaseClient.rpc('orbis_log_leave_payroll_handoff', {
+      p_leave_request_id: id,
+    });
+
+    if (error) {
+      console.error('[PayrollHandoff] Leave handoff failed:', error);
+      return { ok: false, handoffId: null };
+    }
+
+    const handoffId = normalize(data) || null;
+    if (handoffId) requestPayrollChangeEmail(handoffId);
+    return { ok: true, handoffId };
+  } catch (err) {
+    console.error('[PayrollHandoff] Leave handoff failed:', err);
+    return { ok: false, handoffId: null };
+  }
+}
+
 export async function updatePayrollHandoffStatus(
   handoffId: string,
   status: PayrollHandoffStatus,

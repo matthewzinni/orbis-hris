@@ -5,6 +5,10 @@
  * (src/services/payrollChangeEmail.ts). Each handoff emails at most once:
  * payroll_handoffs.payroll_email_sent_at is claimed atomically before sending.
  *
+ * Callers: admins, for any handoff. Other approved users (supervisors) only for a leave
+ * approval handoff whose leave request they may approve (orbis_can_approve_leave_request,
+ * the rule orbis_log_leave_payroll_handoff logs it under), and never as a dry run.
+ *
  * Secrets:
  *   PAYROLL_NOTIFY_EMAILS        recipients, comma-separated (required; nothing is sent when unset)
  *   PAYROLL_NOTIFY_CONTACT_NAME  first name the email opens with (default "Cole")
@@ -12,11 +16,11 @@
  *   SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASS / MAIL_FROM  (shared with notify-leave-request)
  *
  * Body: { handoff_id: string, dry_run?: boolean }
- *   dry_run returns the composed email without sending or marking the handoff.
+ *   dry_run returns the composed email without sending or marking the handoff (admins only).
  */
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { jsonResponse, requireOrbisAuth } from '../_shared/orbisEdgeAuth.ts';
+import { jsonResponse, orbisRpcAllowed, requireOrbisAuth } from '../_shared/orbisEdgeAuth.ts';
 import { sendSmtpEmail } from '../_shared/smtp.ts';
 import {
   composePayrollEmail,
@@ -31,7 +35,7 @@ const LOG = 'notify-payroll-change';
 const MAX_HANDOFF_AGE_MS = 24 * 60 * 60 * 1000;
 
 Deno.serve(async (req) => {
-  const auth = await requireOrbisAuth(req, 'orbis_is_admin', LOG);
+  const auth = await requireOrbisAuth(req, 'orbis_access_is_approved', LOG);
   if (!auth.ok) return auth.response;
 
   try {
@@ -64,6 +68,32 @@ Deno.serve(async (req) => {
 
     if (handoffErr || !handoff) {
       return jsonResponse({ error: 'Payroll handoff not found' }, 404);
+    }
+
+    const isAdmin = await orbisRpcAllowed(
+      auth.supabaseUrl,
+      auth.supabaseAnonKey,
+      auth.authHeader,
+      'orbis_is_admin',
+      LOG
+    );
+    if (!isAdmin) {
+      const payload = (handoff.payload || {}) as Record<string, unknown>;
+      const leaveRequestId = String(payload.leave_request_id || '').trim();
+      const allowed =
+        !dryRun &&
+        Boolean(leaveRequestId) &&
+        (await orbisRpcAllowed(
+          auth.supabaseUrl,
+          auth.supabaseAnonKey,
+          auth.authHeader,
+          'orbis_can_approve_leave_request',
+          LOG,
+          { p_leave_request_id: leaveRequestId }
+        ));
+      if (!allowed) {
+        return jsonResponse({ error: 'Forbidden' }, 403);
+      }
     }
 
     const { data: employee } = await admin

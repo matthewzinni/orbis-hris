@@ -12,7 +12,7 @@ import {
 } from './access';
 import { supabaseClient } from './supabaseClient';
 import { employeeDisplayName } from './employeeUtils';
-import { createPayrollHandoff } from './payrollHandoff';
+import { logLeavePayrollHandoff } from './payrollHandoff';
 import { cancelLeaveInQbt, pushLeaveToQbt } from './leaveQbtPush';
 
 export type LeaveRequestStatus = 'requested' | 'approved' | 'denied' | 'cancelled';
@@ -268,10 +268,10 @@ export async function createLeaveRequest(draft: LeaveRequestDraft): Promise<Leav
 
 export async function approveLeaveRequest(
   requestId: string,
-  options?: { setEmployeeLeaveStatus?: boolean; employeeName?: string }
-): Promise<void> {
+  options?: { setEmployeeLeaveStatus?: boolean }
+): Promise<{ payrollNotified: boolean }> {
   const id = normalize(requestId);
-  if (!id) return;
+  if (!id) return { payrollNotified: false };
 
   if (isEmployeeUser()) {
     throw new Error('Only your supervisor or HR can approve time off.');
@@ -311,7 +311,6 @@ export async function approveLeaveRequest(
   void pushLeaveToQbt(id);
 
   const shouldSetLeave = options?.setEmployeeLeaveStatus !== false;
-  const name = options?.employeeName || record.employee_id;
 
   if (shouldSetLeave && leaveOverlapsToday({ ...record, status: 'approved' })) {
     await supabaseClient
@@ -320,27 +319,14 @@ export async function approveLeaveRequest(
       .eq('id', record.employee_id);
   }
 
-  if (!record.payroll_notified) {
-    const handoff = await createPayrollHandoff({
-      employee_id: record.employee_id,
-      change_type: 'status',
-      effective_date: record.start_date,
-      summary: `Leave approved (${leaveTypeLabel(record.leave_type)}) — ${name} · ${formatLeaveDateRange(record)}`,
-      payload: {
-        leave_request_id: record.id,
-        leave_type: record.leave_type,
-        start_date: record.start_date,
-        end_date: record.end_date,
-      },
-    });
-
-    if (handoff) {
-      await supabaseClient
-        .from('leave_requests')
-        .update({ payroll_notified: true })
-        .eq('id', id);
-    }
+  // Logged server-side so supervisors can do it too; emails payroll once per request.
+  // A failure here must not undo or hide the approval that already saved.
+  let payrollNotified = record.payroll_notified;
+  if (!payrollNotified) {
+    payrollNotified = (await logLeavePayrollHandoff(id)).ok;
   }
+
+  return { payrollNotified };
 }
 
 export async function denyLeaveRequest(requestId: string, notes?: string): Promise<void> {
